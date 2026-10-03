@@ -52,11 +52,11 @@ export const WithAction: Story = () => (
   <div className="bg-surface-bg p-8">
     <EmptyState
       icon={<FolderIcon />}
-      title="No collections yet"
-      description="Get started by creating your first collection to organize your items."
+      title="No queries yet"
+      description="Get started by creating your first query to choose the media an automation acts on."
       action={{
-        label: 'Create Collection',
-        onClick: () => alert('Create collection clicked'),
+        label: 'New query',
+        onClick: () => alert('New query clicked'),
       }}
     />
   </div>
