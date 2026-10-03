@@ -10,7 +10,7 @@ specification against live source data.
 
 - **`MediaQuery`** — the specification: a **bound provider instance**, a `contentType`
   (`'movie' | 'show'`), and one-or-more **sources**, each `{ filterValues, role: 'include' | 'exclude' }`.
-  A saved query is a single-source include `MediaQuery`; the browse view is the same with URL-derived
+  A query is a single-source include `MediaQuery`; the browse view is the same with URL-derived
   `filterValues`.
 - **`MediaQueryEngine.evaluate(query): Promise<MediaItemSet>`** — the owner. Fetches the bound provider's
   items, normalizes them, merges DB enrichment, applies the predicate registry per source (`matchItems`),

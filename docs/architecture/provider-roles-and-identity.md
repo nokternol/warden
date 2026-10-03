@@ -150,7 +150,7 @@ never collapsed to one. `GET /api/media-queries/:id/preview` fans out over it, e
 once per instance and summing per-instance match counts into `{ count, instances: [{ providerId, name,
 count }] }`. The executor instead binds a specific provider by `automation.provider.id`, since it needs
 the actuator role on the same instance for `task.run` — an automation targets one instance; running the
-same saved query against two instances is two automations sharing that query record.
+same query against two instances is two automations sharing that query record.
 
 ## Browse: per-instance sublists, live display dedup, and instance-qualified filters
 
