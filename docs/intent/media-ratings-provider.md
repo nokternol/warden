@@ -31,7 +31,7 @@ file-technical-metadata) works by picking one winning value per item via `contes
 ## Proposed shape (not designed in detail — this is intent, not a spec)
 
 A `MediaRatingsProvider` role with its own persistence, distinct from both `NormalizedMovie`/
-`NormalizedShow`'s scalar fields and the `media_enrichment` EAV table:
+`NormalizedSeries`'s scalar fields and the `media_enrichment` EAV table:
 
 - One row per (media identity, source system, rating kind) — e.g. (item X, IMDb, `imdbRating`), (item
   X, Rotten Tomatoes, `rottenTomatoesRating`), (item X, TMDB, `tmdbRating`) — not one row per item with
@@ -70,7 +70,7 @@ decision at the time this doc was written, not a state this doc changes.
 | Radarr | `metacriticRating` / `metacriticVotes` | Metacritic 0–100 | Spec'd (`specs/radarr.md`), collision with OMDB's own Metacritic value. |
 | Radarr | `rottenTomatoesRating` / `rottenTomatoesVotes` | RT 0–100% | Spec'd, collision with OMDB's own RT value. |
 | Radarr | `traktRating` / `traktVotes` | Trakt scale (unconfirmed range) | Spec'd, no known collision. |
-| Sonarr | `communityRating` | Sonarr's own 0–10 | **Already live** — wired today, show-only, `filterRegistry.ts`'s `communityRating` rule. |
+| Sonarr | `communityRating` | Sonarr's own 0–10 | **Already live** — wired today, series-only, `filterRegistry.ts`'s `communityRating` rule. |
 | Sonarr | `communityRatingVotes` | vote count | Spec'd (`specs/sonarr.md`), not yet built. |
 | Plex | `plexRating` / `plexAudienceRating` | Opaque — whatever the configured metadata agent supplies | Spec'd (`specs/plex.md`), kept provider-prefixed by design (scale/provenance too agent-dependent to merge into any specific-scale field). |
 | Jellyfin | `jellyfinCommunityRating` / `jellyfinCriticRating` | Opaque, same reasoning as Plex | Spec'd (`specs/jellyfin.md`), kept provider-prefixed by design. |

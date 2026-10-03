@@ -8,7 +8,7 @@ didn't work (persist, appear on the domain shape, be filterable, or reach the br
 URL/UI). All six are now compiler-enforced. Two failure classes:
 
 **A. Does the field reach *anything* at all** — `activeFieldSet.ts` (does some provider
-declare it as producible), `movie.ts`/`show.ts` (does the domain shape carry it),
+declare it as producible), `movie.ts`/`series.ts` (does the domain shape carry it),
 `enrichmentJob.ts` (does the job actually persist it), `filterRegistry.ts` (does *any*
 rule read it, not just a range one). All four now fail to compile if a new field is
 missing.
@@ -27,11 +27,11 @@ fields. A `Record<_UncoveredField, never>` check (`_UncoveredField` = every
 fails to compile if a field has no producer anywhere — unreachable, since nothing would
 ever populate it.
 
-**`movie.ts`/`show.ts`'s `NormalizedMovie`/`NormalizedShow`** used to hand-pick a subset
+**`movie.ts`/`series.ts`'s `NormalizedMovie`/`NormalizedSeries`** used to hand-pick a subset
 of `EnrichmentFields` via `Pick<EnrichmentFields, 'tags' | 'playCount' | ...>` — a union
 that compiled fine even with a field silently missing from it (`Pick` only constrains
 the *listed* keys to be real ones; it doesn't require the list to be complete). Since no
-field is actually movie-only or show-only within `EnrichmentFields` today (that
+field is actually movie-only or series-only within `EnrichmentFields` today (that
 distinction lives in `sourceProviders`/`contentTypes` instead), both interfaces now
 simply extend `Partial<EnrichmentFields>` directly — not a check, a simplification that
 removes the maintenance burden rather than gating it.
@@ -86,7 +86,7 @@ each of the three layers:
 
 ## The mechanism
 
-**`contract/browseRangeKeys.ts`** declares `MovieRangeRuleKey`/`ShowRangeRuleKey` as plain
+**`contract/browseRangeKeys.ts`** declares `MovieRangeRuleKey`/`SeriesRangeRuleKey` as plain
 literal unions in the API contract, which both the server and the client import. The client may
 not import server code at all (dependency-cruiser forbids it), and the contract imports nothing
 from `server/`, so these lists are hand-declared rather than derived from `MEDIA_RULES` in place.
@@ -106,7 +106,7 @@ mismatched key — in either direction (registry has a key the contract doesn't,
 versa).
 
 **`media.procedures.ts`** and **`mediaQueryAdapters.ts`** each declare a "witness" map,
-keyed by `MovieRangeRuleKey`/`ShowRangeRuleKey` (so it's exhaustive — a missing rule
+keyed by `MovieRangeRuleKey`/`SeriesRangeRuleKey` (so it's exhaustive — a missing rule
 fails to compile), whose `gte`/`lte` values are typed `keyof typeof MOVIE_PARAM_TO_KEY`
 /`keyof typeof BROWSE_PARAM_BINDINGS` (so a typo'd or dangling param-name reference also
 fails to compile, naming the exact bad string):
@@ -187,7 +187,7 @@ story-only files, which by construction never need a real route.
 ## How it's wired
 
 - [`server/modules/media/activeFieldSet.ts`](ref:path:server/modules/media/activeFieldSet.ts) — `fieldsByProviderType` producer-coverage check.
-- [`server/modules/media/movie.ts`](ref:path:server/modules/media/movie.ts) / [`show.ts`](ref:path:server/modules/media/show.ts) — `Partial<EnrichmentFields>`.
+- [`server/modules/media/movie.ts`](ref:path:server/modules/media/movie.ts) / [`series.ts`](ref:path:server/modules/media/series.ts) — `Partial<EnrichmentFields>`.
 - [`server/modules/media/enrichmentJob.ts`](ref:path:server/modules/media/enrichmentJob.ts) — `EnrichmentWriteValues`.
 - [`server/modules/media/filterRegistry.ts`](ref:path:server/modules/media/filterRegistry.ts) — `MEDIA_RULES`, `sourceField`-coverage check, the range-key derivation, the bidirectional contract assertion.
 - [`contract/browseRangeKeys.ts`](ref:path:contract/browseRangeKeys.ts) — the range-rule key lists both sides share.

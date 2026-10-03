@@ -77,7 +77,7 @@ these, but currently emits into the void — no consumer subscribes to either fo
   first tick) is simply dropped. Any consumer built against an assumed order or assumed delivery will be
   quietly wrong under load or at boot.
 - **The event payload is deliberately underspecified** (`media:changed` carries no discriminator between
-  movie/show). This was a considered decision, not an oversight — the enrichment cache is whole-scope, so
+  movie/series). This was a considered decision, not an oversight — the enrichment cache is whole-scope, so
   a discriminator has no consumer to honour yet. Re-introducing one is only worth doing once a consumer
   actually segments its cache and needs it, expressed in that consumer's own vocabulary — not the
   provider/source axis the identity model happens to expose today.

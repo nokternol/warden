@@ -35,17 +35,17 @@ resolution, and enrichment all short-circuit to nothing (see the pipeline below)
 
 ## The single authority for catalog ownership
 
-[`providers/roles.ts`](ref:path:server/modules/providers/roles.ts) declares `SOURCE_OWNER_BY_KIND: Record<MediaKind, MetadataProviderType>`
-(`movie → RADARR`, `show → SONARR`) plus `isMediaSourceType`/`kindOfSourceType` derived from it. This is
+[`providers/roles.ts`](ref:path:server/modules/providers/roles.ts) declares `SOURCE_OWNER: Record<ContentType, MetadataProviderType>`
+(`movie → RADARR`, `series → SONARR`) plus `isMediaSourceType`/`contentTypeOfSourceType` derived from it. This is
 the *only* place that fact is declared:
 
 - `media/mediaSourceFactory.ts`'s `sourceOwnership()` (the `GET /api/media/sources` wire projection) and
-  `filterRegistry.ts`'s `ContentType` (a type alias of `MediaKind`) both derive from it — media never
+  the rule registry's per-content-type scoping both build on it — media never
   re-declares the map, only imports it (the one legal `media → providers` direction).
 - `ProviderSettingsService.assertNoActiveConflict` reads `isMediaSourceType` to decide whether the
   single-active-provider invariant (D8) applies — see below.
-- The identity job reads `SOURCE_OWNER_BY_KIND`/`kindOfSourceType` to know which provider types to fetch
-  and what `kind` to resolve their items under.
+- The identity job reads `SOURCE_OWNER`/`contentTypeOfSourceType` to know which provider types to fetch
+  and which content type (`kind`) to resolve their items under.
 
 A type graduating into the `MediaSource` role (Plex, per the still-open intent doc) would extend this one
 map; every consumer above inherits the change without its own edit.
@@ -70,9 +70,9 @@ future consumer can silently reintroduce last-one-wins.
 two-table split between the logical title and each instance's concrete copy of it:
 
 - **`media_identity` is the group** — one row per logical title, no per-source coordinate. Keyed
-  per-`kind` (`movie`/`show`, scoping the primary-id namespace: a TMDB movie id and a TMDB tv id with the
+  per-`kind` (a `ContentType`: `movie`/`series`, scoping the primary-id namespace: a TMDB movie id and a TMDB tv id with the
   same number are different titles) by a partial-unique index on its primary id (`tmdbId` for movies,
-  `tvdbId` for shows).
+  `tvdbId` for series).
 - **`media_item` is one row per instance's copy**, `UNIQUE(providerId, externalId)` — `providerId` is the
   *configured instance* (`metadata_provider.id`), not the provider type, so a non-4k Radarr and a 4k
   Radarr never collide; both copies attach to the same `media_identity` group when they report the same
@@ -130,7 +130,7 @@ access to `getMovies`/`getSeries`:
 ```ts
 interface MediaSource {
   getMediaItems(): Promise<MediaItemSet>;          // already normalized, self-describing provenance
-  idOf(item: NormalizedMovie | NormalizedShow): number | undefined;
+  idOf(item: NormalizedMovie | NormalizedSeries): number | undefined;
 }
 ```
 
@@ -178,7 +178,7 @@ every active instance — the provenance the client needs to label per-instance 
 **Instance-qualified filter values.** `qualityProfileIds` and `tagIds` are provider-*minted* numeric id
 spaces — each instance numbers its own profiles/tags independently, so instance A's id `1` and instance
 B's id `1` are two unrelated things. `MediaRule.instanceScoped` (`filterRegistry.ts`) marks exactly these
-four rule variants (movie/show × tags/profiles); every other rule (strings, universal facts, computed
+four rule variants (movie/series × tags/profiles); every other rule (strings, universal facts, computed
 measures) is unaffected. `FilterValueEntry` carries an optional `providerId`
 (`media_query_filter_values.providerId`, migration `0015`) that qualifies which instance's namespace the
 paired ids belong to — `undefined` means unqualified (today's pre-multi-instance semantics: the id is

@@ -27,7 +27,7 @@ identity model can key on, and which can't) — this belongs with that model's c
 
 ## Scope of the investigation (not yet started)
 
-- Whether this is representable as a static provider-type fact (mirroring `SOURCE_OWNER_BY_KIND`'s
+- Whether this is representable as a static provider-type fact (mirroring `SOURCE_OWNER`'s
   "known before any instance exists" property — e.g. "Tautulli requires an active Plex instance") or needs
   to be validated per-instance.
 - Where the dependency should surface: `assertNoActiveConflict`-style validation at configuration time,

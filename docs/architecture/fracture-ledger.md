@@ -66,7 +66,7 @@ is graphed, dated, and verified against code, not inferred from a plan.
   (`GET /api/media/movies|series` still expects the old param names) until that translator is retired;
   `toSaveValues()` in the same file is the permanent save-path adapter, not a shim.
 - **Deliberate behavior refinement, not a preserved bug:** `hasFile` is declared shared
-  (`contentTypes: ['movie', 'show']`) in the registry, but the old hand-built `MediaFilterBar` only ever
+  (`contentTypes: ['movie', 'series']`) in the registry, but the old hand-built `MediaFilterBar` only ever
   rendered it in the Movies section — series were never filterable by file presence via UI despite the
   registry always allowing it. The generic renderer now offers it in both sections when both providers are
   configured, since nothing about the field is actually movie-specific.
@@ -123,7 +123,7 @@ is graphed, dated, and verified against code, not inferred from a plan.
   interface (`index.ts`); zero old-path imports remained.
 - **Healed by — media is the second full feature module (North Star Phase 4, 2026-07-09):**
   `server/modules/media/` took on normalize, the domain shapes, the rule registry, the query engine, and
-  enrichment: `movie.ts`/`show.ts`, `mediaItem.ts`, `normalizeMedia.ts`, `filterRegistry.ts`,
+  enrichment: `movie.ts`/`series.ts`, `mediaItem.ts`, `normalizeMedia.ts`, `filterRegistry.ts`,
   `mediaQueryEngine.ts`, `enrichmentMerge.ts`, `enrichmentJob.ts` + `enrichmentJobFactory.ts`, and absorbed
   the three route-drawn `filterFields`/`backdrops`/`search` modules as `media.filterFields.*`/
   `media.backdrops.*`/`media.search.*` beside the pre-existing `media.handler.ts`. `server/domain/`,
@@ -295,6 +295,21 @@ is graphed, dated, and verified against code, not inferred from a plan.
   by the read model, the `updateStatus` input, the service, the hook, StatusDot and the dashboard
   summary. Rows offer Disable or Enable with power icons, and migration 0025 rewrites stored `paused`
   values to `disabled`. Archive remains unbuilt.
+
+### Movie or series — three spellings (recorded and healed 2026-10-03, MVP slice B2)
+
+- **Fracture:** one concept had three TypeScript names and two stored values. `ContentType` (the contract
+  and the registry alias), `MediaKind` (provider roles, identity resolution) and an inline
+  `z.enum(['movie', 'show'])` all described it, the stored and filtered value was `show` while the routes,
+  `series*` fields and UI copy said series, and the model was `NormalizedShow` in `show.ts`.
+- **How it misled:** a reader could not tell whether `show` and `series` were two concepts, and a type
+  edit in one declaration compiled while another still accepted the old value.
+- **Healed by:** one `ContentTypeSchema` / `ContentType` (`movie | series`) in `contract/schemas.ts`, imported
+  by the registry, the query engine, provider roles and the client. `MediaKind`, the registry alias and the
+  client's duplicate declaration are deleted. `NormalizedShow` is `NormalizedSeries` in `series.ts`,
+  `SOURCE_OWNER_BY_KIND` is `SOURCE_OWNER`, and migration 0026 rewrites stored `show` queries and
+  identities to `series` and rebuilds the tvdbId unique index under the new kind. Plex and Tautulli keep
+  their own `show` as an external spelling translated at the boundary.
 
 ## Open
 

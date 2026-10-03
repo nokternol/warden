@@ -56,7 +56,7 @@ media_identity
   doesn't need to live in storage at all.
 - **`value` is JSON-encoded `TEXT`, not typed columns.** Filter predicates
   ([`filterRegistry.ts`](ref:path:server/modules/media/filterRegistry.ts)) run entirely in-memory
-  against the reconstructed `NormalizedMovie`/`NormalizedShow` object, never against the database again
+  against the reconstructed `NormalizedMovie`/`NormalizedSeries` object, never against the database again
   — so `value` only needs to round-trip cleanly through the DAL, not carry query-time type fidelity. One
   JSON column handles numbers, strings, and booleans uniformly, no type-discriminator column.
 - **`fieldId` is a numeric FK to `enrichment_field`, not the literal string key.** libsql enforces
@@ -105,7 +105,7 @@ other.
 
 Before this change, `mediaEnrichment`'s six columns meant seven hand-maintained touch points existed for
 each new field: `schema.ts`, a migration, `EnrichmentFields`, `activeFieldSet.ts`'s
-`fieldsByProviderType`, `movie.ts`/`show.ts`'s field union, `enrichmentMerge.ts`'s copy-through,
+`fieldsByProviderType`, `movie.ts`/`series.ts`'s field union, `enrichmentMerge.ts`'s copy-through,
 `filterRegistry.ts`'s rule, and `enrichmentJob.ts`'s write values. Four of those already carry
 compile-time exhaustiveness checks unrelated to this rewrite (`docs/architecture/browse-range-param-enforcement.md`)
 and are untouched by it. This rewrite removes the remaining two that had no such

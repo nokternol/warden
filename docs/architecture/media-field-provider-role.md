@@ -103,18 +103,18 @@ both Radarr's and Sonarr's `qualityProfileId` remain hand-assigned in
 [`normalizeMedia.ts`](ref:path:server/modules/media/normalizeMedia.ts). A real, scoped gap, not an
 oversight: closing it is follow-on work, not part of what shipped.
 
-## `movie.ts`/`show.ts` carry every enrichment field, not a hand-picked subset
+## `movie.ts`/`series.ts` carry every enrichment field, not a hand-picked subset
 
 [`movie.ts`](ref:path:server/modules/media/movie.ts) and
-[`show.ts`](ref:path:server/modules/media/show.ts) no longer hand-type `tags`, `playCount`,
+[`series.ts`](ref:path:server/modules/media/series.ts) no longer hand-type `tags`, `playCount`,
 `lastWatchedAt`, `overseerrHasIssue`, `overseerrRequestStatus`, `tmdbStatus`, `plexAddedAt` — each
-interface extends `Partial<EnrichmentFields>` directly (no field is movie-only or show-only within
+interface extends `Partial<EnrichmentFields>` directly (no field is movie-only or series-only within
 `EnrichmentFields` itself; that distinction lives in `sourceProviders`/`contentTypes` instead). This
 started as an explicit `Partial<Pick<EnrichmentFields, 'tags' | 'playCount' | ...>>` union, but `Pick`
 only constrains the *listed* keys to be real ones — it doesn't require the list to be complete, so a
 new `EnrichmentFields` key could be silently left off it and nothing would fail to compile. `Partial<
 EnrichmentFields>` removes the union (and the maintenance burden) entirely, so a *new* field is now
-automatically carried on `NormalizedMovie`/`NormalizedShow` instead of needing a matching edit here.
+automatically carried on `NormalizedMovie`/`NormalizedSeries` instead of needing a matching edit here.
 (`enrichmentMerge.ts` no longer assigns fields one at a time — since
 [the EAV rewrite](ref:path:docs/architecture/media-enrichment-eav-model.md) it applies whatever
 `EnrichmentQueries.getByIdentityIds` returns via one generic `Object.assign`, so a field-type change
@@ -189,7 +189,7 @@ added above.
 [`activeFieldSet.ts`](ref:path:server/modules/media/activeFieldSet.ts) declares
 `fieldsByProviderType`, the single source of truth for which `EnrichmentFields` keys each provider
 type's adapter(s) produce — hand-authored, mirroring
-[`roles.ts`](ref:path:server/modules/providers/roles.ts)'s `SOURCE_OWNER_BY_KIND`, since an adapter's
+[`roles.ts`](ref:path:server/modules/providers/roles.ts)'s `SOURCE_OWNER`, since an adapter's
 field coverage lives in its generic type parameters, not something a runtime scan could discover:
 
 ```ts
@@ -231,21 +231,21 @@ calls it, either directly (`studio`, `runtimeMinutes`, `fileContainer`, `videoCo
 `overseerrRequestStatus`, `overseerrHasIssue`) or under a different rule key than the field itself
 (`watched`/`lastWatchedDaysAgo` read `playCount`/`lastWatchedAt`; `plexAddedDaysAgo` reads
 `plexAddedAt`; `jellyfinAddedDaysAgo` reads `jellyfinAddedAt`; `releaseDaysAgo` reads `releaseDate`).
-Every other rule — most of `NormalizedMovie`/`NormalizedShow`'s fields (`title`, `year`, `hasFile`,
+Every other rule — most of `NormalizedMovie`/`NormalizedSeries`'s fields (`title`, `year`, `hasFile`,
 `monitored`, `network`, `communityRating`, …) — stays hand-listed, correctly: they're source-owned
 fields with no `EnrichmentFields` entry to derive from.
 
 **Not content-type-scoped.** `deriveSourceProviders` has no awareness of which content type a rule
 applies to, so it's only safe to call for a field whose producer set doesn't vary by content type. The
-movie- and show-side `tagIds` rules both read the now-`EnrichmentFields`-backed `tags` field, but stay
+movie- and series-side `tagIds` rules both read the now-`EnrichmentFields`-backed `tags` field, but stay
 hand-listed (`[RADARR]` / `[SONARR]` respectively) rather than calling
 `deriveSourceProviders('tags')`, which would derive to `[RADARR, SONARR]` on *both* rules — wrong,
-since Sonarr can't produce a movie's tags and Radarr can't produce a show's.
+since Sonarr can't produce a movie's tags and Radarr can't produce a series'.
 
 Three previously-stale `sourceProviders` entries were corrected as part of this work, confirmed
 against [`docs/architecture/media-providers.md`](ref:path:docs/architecture/media-providers.md)'s
 provider catalog: `genres` (movie) and `imdbRating` are Radarr-only (no TMDB genres call or OMDB
-integration exists); `communityRating` (show) is Sonarr-only (Sonarr's `ratings` is a single
+integration exists); `communityRating` (series) is Sonarr-only (Sonarr's `ratings` is a single
 aggregate, no TMDB key configured). `network`'s `TVMAZE` entry is deliberately unchanged — real and
 buildable, just not yet wired to an adapter.
 

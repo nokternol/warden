@@ -97,7 +97,7 @@ server/
   modules/
     providers/     # connections (BaseProviderConnection + per-system), roles (MediaActuator),
                    # provider settings service, task enablement, identity-resolution job
-    media/         # normalize + NormalizedMovie/NormalizedShow shapes, filterRegistry,
+    media/         # normalize + NormalizedMovie/NormalizedSeries shapes, filterRegistry,
                    # MediaSource/MediaEnricher role contracts + their provider adapters,
                    # mediaQueryEngine, enrichment job + merge, backdrops, search
     mediaQueries/  # MediaQueryRecord CRUD + query health
