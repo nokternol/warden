@@ -576,7 +576,7 @@ names, so nothing is renamed twice.
   identity graph's writes), so items newer than the last identity run are still recorded. The soft-deleting
   identity job, `listRunItems` (paged, by title) and `listItemRuns` (service-level, no consumer yet),
   the `runItems` contract procedure at `GET /api/automations/runs/{runId}/items`, and the Runs page's
-  expandable `RunRow`.
+  expandable `RunRow` (which owns the run table's columns via `RunRow.Head`).
 - **Note:** `ActuatorTask.run(ids)` is batch-shaped and returns `void`, so the mapping records
   *targeted* items, and the run's status/error covers the batch. Per-item outcomes are post-MVP.
 - **Docs:** re-read `provider-roles-and-identity.md` and the `media_item`/Identity resolution rows in

@@ -130,7 +130,8 @@ the executor branches on `isMediaSourceType(providerSettings.type)`
 ([`server/modules/automations/automationExecutor.ts`](ref:path:server/modules/automations/automationExecutor.ts)).
 
 - **Source actuator (Radarr/Sonarr):** unchanged — the query evaluates against the instance's own
-  catalog and its native ids (`mediaSource.idOf`) feed the task directly.
+  catalog and its native ids (`mediaSource.idOf`) feed the task directly, one target per native id (an
+  item its catalog lists twice is targeted once).
 - **Non-source actuator (Plex/Jellyfin/Tautulli):** it owns no catalog, so the query evaluates against
   the content type's owning source instances (pooled via `MediaSourceFactory.sourcesFor`), and matched
   items are translated into the actuator's addressing space by `resolveActuatorTargets`
