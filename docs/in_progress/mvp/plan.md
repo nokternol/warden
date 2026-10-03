@@ -52,7 +52,7 @@ code. Every path to them is blocked by the scope declaration.
 | Search page, `/api/search/metadata` | A second way to find a title beside the title filter (F11). Its role is decided when un-deferred. |
 | `/api/providers/metadata` | No MVP consumer. |
 | `/api/app-settings` (the `appSettings` module, `settingsAwarePrecedence.ts`) | No UI and no consumer yet. It is the input to the post-MVP precedence work. |
-| Provider types SEERR and TVMAZE | Not buildable through `ProviderFactory` yet, so offering them is a reachable broken path (L1). |
+| Provider type TVMAZE | Not buildable through `ProviderFactory` yet (its API key is lost), so offering it is a reachable broken path (L1). |
 | Provider type OMDB | It feeds only the deferred ratings path. |
 | Provider type TMDB | Not in the verification stack (decision 9). Login-page backdrops keep using the `TMDB_API_KEY` environment setting, which is separate from the provider type. |
 | Filters with no control or no live producer | For example, `certification` has no lookup today. C5's invariant lists them in the declaration. |
@@ -77,6 +77,7 @@ already settled.
 | An action a provider offers | **Task** | — | `ActuatorTask`, unchanged. |
 | One execution of an automation | **Run**, page **Runs** *(8g)* | Activity | The page shows runs, the verb is Run Now, and the API is `/automations/runs`. |
 | Automation controls | **Run Now / Disable / Enable / Delete** *(decided)* | Pause, Resume, Play | Decision 2. |
+| The request-manager provider | **Seerr** *(decided)* | Overseerr, `OVERSEERR`, `OverseerrProvider`, `overseerr*` filter keys | Decision 9a. Seerr is Overseerr's API-compatible successor, so one type serves both servers. |
 | The product | **Warden** *(decided)* | Maintainarr | Decision 6. |
 
 ## Destination scenario
@@ -273,9 +274,10 @@ flowchart LR
   C2 --> C4[C4 one multi-select]
   C2 & B3 --> C5[C5 server decides exposure]
   D2[D2 run lists what changed]
+  B5 & C5 --> D3[D3 Seerr is the one request manager]
   E1[E1 image correct] --> E2[E2 compose] --> E3[E3 CI smoke + publish]
   A2 --> E3
-  C3 & C4 & C5 & D1 & D2 & F1 --> F2[F2 impeccable pass]
+  C3 & C4 & C5 & D1 & D2 & D3 & F1 --> F2[F2 impeccable pass]
   F2 & E3 --> G1[G1 acceptance + docs closure]
 ```
 
@@ -553,6 +555,27 @@ names, so nothing is renamed twice.
 - **Docs:** re-read `provider-roles-and-identity.md` and the `media_item`/Identity resolution rows in
   `VOCABULARY.md`.
 
+**D3 · Seerr is the one request-manager provider** *(decision 9a; after B5, C5)*
+- **Model:** Sonnet 5.5 (type consolidation with a data migration, guarded by B5's check).
+- **Why:** two type names (`OVERSEERR`, `SEERR`) for one implementation, with `SEERR` unbuildable
+  through `ProviderFactory`.
+- **Behaviours:**
+  - A Seerr provider pointed at an Overseerr server connects, tests, and enriches request status
+    and issues.
+  - The same provider pointed at a Seerr server behaves identically. This is verified live in G1,
+    after the NAS upgrade.
+  - An existing Overseerr provider, and every saved query using its filters, reads back as Seerr
+    after migration with no loss.
+  - The add-provider list offers Seerr and no Overseerr type.
+- **Expected end state:** `MetadataProviderType.SEERR` is the only request-manager type, built by
+  `ProviderFactory`. The connection class is `SeerrProvider`. Filter keys become `seerrRequestStatus`
+  and `seerrHasIssue`. The migration rewrites provider rows, `media_query_filter_values` keys and
+  enrichment rows. The `OVERSEERR` names join `VOCABULARY.md`'s retired names, so B5's check enforces
+  them.
+- **Deletes:** the `seerrProvider.ts` re-export alias. The single class now carries the one name.
+- **Docs:** fold the provider e2e `seerr.md`/`overseerr.md` specs' status into the implementation
+  map. Phase 9 is absorbed here.
+
 ### Track E — Containerised delivery
 
 **E1 · The image is correct** (after B5)
@@ -606,6 +629,7 @@ names, so nothing is renamed twice.
 
 **G1 · MVP acceptance and docs closure**
 - **Model:** Opus 5.5 (end-to-end acceptance and docs closure).
+- **Prerequisite:** the NAS runs Seerr in place of Overseerr (decision 9a).
 - Against the **published image** on the NAS stack, with `playwright-cli`:
   1. Every [In-scope](#in-scope) feature row.
   2. Every offered provider type: add, test, edit, delete.
@@ -630,8 +654,9 @@ names, so nothing is renamed twice.
 | 6 | Product and DB name | **Decided: Warden**, with default DB file `warden.db`. The NAS deployment renames its file once or pins `DB_PATH`. |
 | 7 | What "hidden" means | **Decided: blocked, not removed.** Deferred code stays compiled, typechecked and tested. Every path to it (page, nav, section, API procedure, provider type, filter, task) is blocked by the one scope declaration (S1). |
 | 8a–8g | Glossary names | **Open.** Recommendations are in the [Glossary](#glossary): Filter, Query, included/excluded query, Source (provider role only), movie/series, Automation vs Task, Runs. |
-| 9 | Offered provider types | **Decided: Radarr, Sonarr, Overseerr, Plex, Jellyfin, Tautulli**, the stack running on the NAS where G1 verifies them. TMDB, OMDB, SEERR and TVMAZE are deferred; SEERR un-defers when the NAS upgrades from Overseerr. Plex and Jellyfin both active exercises the contested-field precedence (`playCount`, `lastWatchedAt`) in G1. |
-| 10 | Offered tasks | **Open.** The offered types declare 32 tasks, all wired, with parameterized ones backed by options routes. (D) marks destructive. **Radarr:** unmonitorMovie, triggerSearch, deleteMovieWithFiles (D), deleteMovieKeepFiles (D), refreshMovie, rescanMovie, renameMovies, refreshCollection, changeQualityProfile, addTag, removeTag. **Sonarr:** unmonitorSeries, triggerSearch, deleteSeriesWithFiles (D), deleteSeriesKeepFiles (D), refreshSeries, rescanSeries, renameSeries, changeQualityProfile, addTag, removeTag. **Plex:** deleteFromLibrary (D), refreshMetadata, markPlayed, markUnplayed. **Jellyfin:** deleteItem (D), refreshMetadata, markPlayed, markUnplayed, addToCollection, removeFromCollection. **Tautulli:** deleteWatchHistory (D). **Overseerr:** none (enrichment only). Recommendation: offer all 32, with G1 running each once against a sacrificial item, so destructive ones are proven on throwaway media. Any task you don't want verified on the NAS is deferred instead. |
+| 9 | Offered provider types | **Decided: Radarr, Sonarr, Seerr, Plex, Jellyfin, Tautulli**, the stack running on the NAS where G1 verifies them. TMDB, OMDB and TVMAZE are deferred. Plex and Jellyfin both active exercises the contested-field precedence (`playCount`, `lastWatchedAt`) in G1. |
+| 9a | Overseerr vs Seerr | **Decided: one provider type, Seerr** (D3). Development continues against the NAS's current Overseerr, since the APIs match. The NAS upgrades to Seerr before G1, so acceptance verifies the offered type against the real target; the Seerr spec flagged its live compatibility as unverified. |
+| 10 | Offered tasks | **Open.** The offered types declare 32 tasks, all wired, with parameterized ones backed by options routes. (D) marks destructive. **Radarr:** unmonitorMovie, triggerSearch, deleteMovieWithFiles (D), deleteMovieKeepFiles (D), refreshMovie, rescanMovie, renameMovies, refreshCollection, changeQualityProfile, addTag, removeTag. **Sonarr:** unmonitorSeries, triggerSearch, deleteSeriesWithFiles (D), deleteSeriesKeepFiles (D), refreshSeries, rescanSeries, renameSeries, changeQualityProfile, addTag, removeTag. **Plex:** deleteFromLibrary (D), refreshMetadata, markPlayed, markUnplayed. **Jellyfin:** deleteItem (D), refreshMetadata, markPlayed, markUnplayed, addToCollection, removeFromCollection. **Tautulli:** deleteWatchHistory (D). **Seerr:** none (enrichment only). Recommendation: offer all 32, with G1 running each once against a sacrificial item, so destructive ones are proven on throwaway media. Any task you don't want verified on the NAS is deferred instead. |
 | 11 | Client/server contract mechanism | **Open.** Recommendation: **oRPC contract-first** (C0). Checked on npm 2026-10-03: oRPC 1.15.4 (released 2026-10-01, schema-agnostic, Zod 4 compatible); ts-rest 3.52.1 (last release 2025-06, peer `zod ^3`, incompatible with this repo's Zod 4.3); Zodios 10.9.6 (last release 2023-08, peer `zod ^3`, axios-based, unmaintained). The alternative is tightening the current bridge by hand (add method/path to the shared schemas, write our own typed client), which builds a homegrown second version of what oRPC already is. |
 
 ## Post-MVP (parked, in order)
