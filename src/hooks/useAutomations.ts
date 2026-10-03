@@ -1,7 +1,7 @@
 import { api } from '@app/lib/api/client';
 import { useApi } from '@app/lib/api/useApi';
 import type { CreateAutomationInput } from '@contract/automations';
-import type { AutomationDto } from '@contract/schemas';
+import type { AutomationDto, AutomationStatus } from '@contract/schemas';
 import { useState } from 'react';
 
 export type { AutomationDto, CreateAutomationInput };
@@ -31,7 +31,7 @@ export function useAutomations(options?: { kind?: 'user' | 'system' }) {
     }
   };
 
-  const setStatus = async (id: number, status: 'active' | 'paused'): Promise<void> => {
+  const setStatus = async (id: number, status: AutomationStatus): Promise<void> => {
     const updatedAutomation = await api.automations.updateStatus({ id, status });
     mutate(
       automations.map((x) => (x.id === id ? updatedAutomation : x)),

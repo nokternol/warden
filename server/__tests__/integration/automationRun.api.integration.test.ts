@@ -2,7 +2,7 @@ import { buildContainer } from '@server/container';
 import { automations } from '@server/database/schema';
 /**
  * POST /api/automations/:id/run — Phase 3 Run Now
- * Async 202 + background execute; unknown id → 404; kind-agnostic and ignores paused.
+ * Async 202 + background execute; unknown id → 404; kind-agnostic and ignores disabled.
  */
 import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
@@ -77,21 +77,21 @@ describe('POST /api/automations/:id/run — Phase 3', () => {
     expect(res.status).toBe(404);
   });
 
-  it('runs a paused automation once (status is not a gate)', async () => {
-    const [paused] = await getDb()
+  it('runs a disabled automation once (status is not a gate)', async () => {
+    const [disabledRow] = await getDb()
       .insert(automations)
       .values({
-        name: 'sys:paused',
+        name: 'sys:disabled',
         taskId: 'system:noop',
         schedule: '0 * * * *',
         kind: 'system',
-        status: 'paused',
+        status: 'disabled',
       })
       .returning();
 
-    const res = await client.post(`/api/automations/${paused.id}/run`);
+    const res = await client.post(`/api/automations/${disabledRow.id}/run`);
 
     expect(res.status).toBe(202);
-    await expect.poll(async () => (await runsFor(paused.id)).length).toBeGreaterThan(0);
+    await expect.poll(async () => (await runsFor(disabledRow.id)).length).toBeGreaterThan(0);
   });
 });

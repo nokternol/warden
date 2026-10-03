@@ -1,3 +1,4 @@
+import type { AutomationStatus } from '@contract/schemas';
 import { Cron } from 'croner';
 import { type SQL, eq, inArray } from 'drizzle-orm';
 import {
@@ -47,7 +48,7 @@ export interface AutomationDto {
   /** Present only when the task is parameterized and the automation stores a value. */
   taskParameter?: string;
   schedule: string;
-  status: 'active' | 'paused';
+  status: AutomationStatus;
   lastRun?: {
     at: string;
     itemCount: number;
@@ -103,7 +104,7 @@ function rowToDto(
     taskId: row.taskId,
     taskParameter: row.taskParameter ?? undefined,
     schedule: row.schedule,
-    status: row.status as 'active' | 'paused',
+    status: row.status,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -333,7 +334,7 @@ export class AutomationService {
       throw new ForbiddenError('System automations cannot be modified');
   }
 
-  async updateStatus(id: number, status: 'active' | 'paused'): Promise<AutomationDto> {
+  async updateStatus(id: number, status: AutomationStatus): Promise<AutomationDto> {
     await this.assertMutable(id);
     await this.db
       .update(automations)

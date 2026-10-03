@@ -176,6 +176,13 @@
       "when": 1785400000000,
       "tag": "0024_jellyfin_enrichment_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1785500000000,
+      "tag": "0025_automation_status_disabled",
+      "breakpoints": true
     }
   ]
 }

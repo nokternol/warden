@@ -342,7 +342,7 @@ describe('AutomationService', () => {
         })
         .returning();
 
-      await expect(automationService.updateStatus(row.id, 'paused')).rejects.toThrow(
+      await expect(automationService.updateStatus(row.id, 'disabled')).rejects.toThrow(
         ForbiddenError
       );
     });
@@ -369,8 +369,8 @@ describe('AutomationService', () => {
         schedule: '0 * * * *',
       });
 
-      const dto = await automationService.updateStatus(created.id, 'paused');
-      expect(dto.status).toBe('paused');
+      const dto = await automationService.updateStatus(created.id, 'disabled');
+      expect(dto.status).toBe('disabled');
       expect(dto.query!.name).toBe('Status Query');
       expect(dto.provider!.name).toBe('Test Sonarr');
       expect(dto.provider!.type).toBe(MetadataProviderType.SONARR);
@@ -388,7 +388,7 @@ describe('AutomationService', () => {
         schedule: '0 * * * *',
       });
 
-      const updated = await automationService.updateStatus(created.id, 'paused');
+      const updated = await automationService.updateStatus(created.id, 'disabled');
       expect(updated.createdAt).toMatch(ISO_REGEX);
       expect(updated.updatedAt).toMatch(ISO_REGEX);
     });

@@ -104,10 +104,10 @@ const activeAutomations: AutomationDto[] = [
   }),
 ];
 
-const pausedAutomation = mockAutomation({
+const disabledAutomation = mockAutomation({
   id: 5,
   name: 'Notify on 4K availability',
-  status: 'paused',
+  status: 'disabled',
   lastRun: { at: hoursAgo(336), itemCount: 6, status: 'success' },
 });
 
@@ -119,10 +119,10 @@ const neverRunAutomation = mockAutomation({
 
 // ── Stories ────────────────────────────────────────────────────────────────────
 
-/** Default state: mix of active and paused automations. */
+/** Default state: mix of active and disabled automations. */
 export const Default: Story = () => (
   <Shell>
-    <DashboardContent automations={[...activeAutomations.slice(0, 2), pausedAutomation]} />
+    <DashboardContent automations={[...activeAutomations.slice(0, 2), disabledAutomation]} />
   </Shell>
 );
 

@@ -1,3 +1,4 @@
+import type { AutomationStatus } from '@contract/schemas';
 import { sql } from 'drizzle-orm';
 import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { createdAt, updatedAt } from './columns/datetime';
@@ -170,7 +171,7 @@ export const automations = sqliteTable(
      *  string — quality profile, tag, collection); null for parameterless tasks. */
     taskParameter: text('taskParameter'),
     schedule: text('schedule').notNull(), // cron expression
-    status: text('status').notNull().default('active'), // 'active' | 'paused'
+    status: text('status').$type<AutomationStatus>().notNull().default('active'),
     lastRunAt: text('lastRunAt'),
     lastRunItemCount: integer('lastRunItemCount'),
     lastRunStatus: text('lastRunStatus'), // 'success' | 'error'

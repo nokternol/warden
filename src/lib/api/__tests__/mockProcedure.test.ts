@@ -13,7 +13,7 @@ const automation = {
   provider: null,
   taskId: 'triggerSearch',
   schedule: '0 3 * * 0',
-  status: 'paused' as const,
+  status: 'disabled' as const,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
 };

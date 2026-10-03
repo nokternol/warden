@@ -75,7 +75,6 @@ decided but not yet built; each slice moves its row into `VOCABULARY.md` when it
 | A query used by an automation, with role include/exclude | **Included / excluded query** *(8c)* | query source, `MediaQuerySource`, `automation_query_sources` | "Source" is reserved for one meaning (next row). | B6 |
 | A provider that owns media | **Source** *(8d)* | `sourceProviders` on rules (becomes `providers`) | Today "source" means four things. It keeps one. | B6 |
 | Movie or series | **movie / series** *(8e)* | show, `MediaKind`, `NormalizedShow` | Users see Sonarr's term, and the UI, routes and `series*` fields already say series. Persisted `'show'` values migrate. | B2 |
-| Automation controls | **Run Now / Disable / Enable / Delete** *(decided)* | Pause, Resume, Play | Decision 2. | B1 |
 | The request-manager provider | **Seerr** *(decided)* | Overseerr, `OVERSEERR`, `OverseerrProvider`, `overseerr*` rule keys | Decision 9a. Seerr is Overseerr's API-compatible successor, so one type serves both servers. | D3 |
 
 ## Destination scenario
