@@ -170,7 +170,7 @@ export const automations = sqliteTable(
      *  string — quality profile, tag, collection); null for parameterless tasks. */
     taskParameter: text('taskParameter'),
     schedule: text('schedule').notNull(), // cron expression
-    status: text('status').notNull().default('active'), // 'active' | 'paused'
+    status: text('status').notNull().default('active'), // AutomationStatus (contract/schemas.ts)
     lastRunAt: text('lastRunAt'),
     lastRunItemCount: integer('lastRunItemCount'),
     lastRunStatus: text('lastRunStatus'), // 'success' | 'error'

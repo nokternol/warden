@@ -120,6 +120,8 @@ export const AutomationQuerySourceSchema = z
   })
   .strict();
 
+export const AutomationStatusSchema = z.enum(['active', 'disabled']);
+
 export const AutomationSchema = z
   .object({
     id: z.number(),
@@ -131,7 +133,7 @@ export const AutomationSchema = z
     taskId: z.string(),
     taskParameter: z.string().optional(),
     schedule: z.string(),
-    status: z.enum(['active', 'paused']),
+    status: AutomationStatusSchema,
     lastRun: AutomationLastRunSchema.optional(),
     nextRun: z.string().optional(),
     createdAt: z.string(),
@@ -192,6 +194,7 @@ export const AutomationRunSchema = z
   })
   .strict();
 
+export type AutomationStatus = z.infer<typeof AutomationStatusSchema>;
 export type AutomationDto = z.infer<typeof AutomationSchema>;
 export type AutomationRunDto = z.infer<typeof AutomationRunSchema>;
 export type MediaQueryRecord = z.infer<typeof MediaQueryRecordSchema>;

@@ -138,7 +138,7 @@ export default function AutomationsPage() {
                   key={a.id}
                   automation={a}
                   onToggle={() => {
-                    void setStatus(a.id, a.status === 'active' ? 'paused' : 'active');
+                    void setStatus(a.id, a.status === 'active' ? 'disabled' : 'active');
                   }}
                   onDelete={() => {
                     void removeAutomation(a.id);

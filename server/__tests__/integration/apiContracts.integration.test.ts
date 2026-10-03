@@ -148,7 +148,7 @@ describe('API shape contracts — real server responses', () => {
 
   it('PATCH /api/automations/:id/status response matches AutomationSchema', async () => {
     const res = await client.patch(`/api/automations/${seededAutomationId}/status`, {
-      status: 'paused',
+      status: 'disabled',
     });
     expect(res.status).toBe(200);
     const result = AutomationSchema.safeParse((res.body as { data: unknown }).data);

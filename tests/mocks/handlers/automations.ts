@@ -1,5 +1,5 @@
 import { contract } from '@contract/index';
-import type { AutomationDto, MediaQueryRecord } from '@contract/schemas';
+import type { AutomationDto, AutomationStatus, MediaQueryRecord } from '@contract/schemas';
 import { mockProcedure } from '../contract';
 
 export const MOCK_AUTOMATIONS: AutomationDto[] = [
@@ -57,7 +57,7 @@ export const automationsHandlers = [
   }),
 
   mockProcedure(contract.automations.updateStatus, async ({ params, request }) => {
-    const body = (await request.json()) as { status: 'active' | 'paused' };
+    const body = (await request.json()) as { status: AutomationStatus };
     const base = MOCK_AUTOMATIONS.find((a) => a.id === Number(params.id)) ?? MOCK_AUTOMATIONS[0];
     return { ...base, status: body.status };
   }),

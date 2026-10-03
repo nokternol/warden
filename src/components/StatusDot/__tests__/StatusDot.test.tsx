@@ -8,8 +8,8 @@ describe('StatusDot', () => {
     expect(container.querySelector('span')).toBeInTheDocument();
   });
 
-  it('renders a span element for paused status', () => {
-    const { container } = render(<StatusDot status="paused" />);
+  it('renders a span element for disabled status', () => {
+    const { container } = render(<StatusDot status="disabled" />);
     expect(container.querySelector('span')).toBeInTheDocument();
   });
 

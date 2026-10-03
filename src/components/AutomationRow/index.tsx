@@ -100,7 +100,7 @@ export default function AutomationRow({
       {/* Next run + actions */}
       <div className="hidden sm:flex items-start justify-between gap-2 pt-0.5">
         <span className="text-sm text-text-muted">
-          {automation.status === 'paused' ? '—' : (nextRunLabel ?? '—')}
+          {automation.status === 'disabled' ? '—' : (nextRunLabel ?? '—')}
         </span>
         {confirming ? (
           <div className="flex items-center gap-1.5">

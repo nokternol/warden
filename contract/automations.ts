@@ -3,12 +3,11 @@ import { base } from './base';
 import {
   AutomationRunSchema,
   AutomationSchema,
+  AutomationStatusSchema,
   IdSchema,
   QueryIntSchema,
   emptyToUndefined,
 } from './schemas';
-
-const AutomationStatusSchema = z.enum(['active', 'paused']);
 
 /** One query an automation draws from, included in or excluded from its media set. */
 const QuerySourceInputSchema = z.object({

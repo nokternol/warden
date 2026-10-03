@@ -166,7 +166,7 @@ describe('useAutomations — network call count', () => {
   it('setStatus fires exactly one network request (PATCH, no subsequent GET)', async () => {
     const requests: string[] = [];
     const existing = makeAutomation({ id: 1, status: 'active' });
-    const updated = makeAutomation({ id: 1, status: 'paused' });
+    const updated = makeAutomation({ id: 1, status: 'disabled' });
 
     server.use(
       mockProcedure(contract.automations.list, ({ request }) => {
@@ -186,7 +186,7 @@ describe('useAutomations — network call count', () => {
     requests.length = 0;
 
     await act(async () => {
-      await result.current.setStatus(1, 'paused');
+      await result.current.setStatus(1, 'disabled');
     });
 
     expect(requests).toHaveLength(1);

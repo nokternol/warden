@@ -29,7 +29,7 @@ const EmptyAutomationIcon = () => (
 export function DashboardContent({ automations }: { automations: AutomationDto[] }) {
   const router = useRouter();
   const activeCount = automations.filter((a) => a.status === 'active').length;
-  const pausedCount = automations.filter((a) => a.status === 'paused').length;
+  const disabledCount = automations.filter((a) => a.status === 'disabled').length;
 
   const recentRuns = automations
     .filter((a) => a.lastRun)
@@ -45,8 +45,10 @@ export function DashboardContent({ automations }: { automations: AutomationDto[]
             {automations.length > 0 && (
               <span className="text-xs text-text-muted flex items-center gap-1.5">
                 {activeCount > 0 && <span className="text-primary">{activeCount} active</span>}
-                {activeCount > 0 && pausedCount > 0 && <span className="opacity-40">·</span>}
-                {pausedCount > 0 && <span className="text-warning">{pausedCount} paused</span>}
+                {activeCount > 0 && disabledCount > 0 && <span className="opacity-40">·</span>}
+                {disabledCount > 0 && (
+                  <span className="text-warning">{disabledCount} disabled</span>
+                )}
               </span>
             )}
           </div>
