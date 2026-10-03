@@ -15,7 +15,20 @@ describe('Login page', () => {
     // Intercept our backend auth endpoint — simulate successful login
     cy.intercept('POST', '/api/auth/plex', {
       statusCode: 200,
-      body: { success: true },
+      body: {
+        status: 'ok',
+        data: {
+          id: 1,
+          email: 'owner@example.com',
+          plexUsername: 'owner',
+          plexId: 4242,
+          avatar: null,
+          userType: 'plex',
+          isActive: true,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      },
     }).as('plexAuth');
 
     cy.visit('/login');
