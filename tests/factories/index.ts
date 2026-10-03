@@ -72,6 +72,7 @@ export function createMockConfig(
     DB_PATH: ':memory:',
     DB_LOGGING: false,
     TRUST_PROXY: false,
+    BYPASS_AUTH: false,
     ...overrides,
   };
 }

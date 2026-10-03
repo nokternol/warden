@@ -15,6 +15,7 @@ describe('config', () => {
       'LOG_DIR',
       'DB_PATH',
       'TRUST_PROXY',
+      'BYPASS_AUTH',
     ]) {
       delete process.env[key];
     }
@@ -88,6 +89,22 @@ describe('config', () => {
       process.env.TRUST_PROXY = '1';
       const config = loadConfig();
       expect(config.TRUST_PROXY).toBe(true);
+    });
+
+    it('leaves the auth bypass off unless BYPASS_AUTH is "true"', () => {
+      expect(loadConfig().BYPASS_AUTH).toBe(false);
+
+      _resetConfig();
+      process.env.BYPASS_AUTH = 'true';
+      expect(loadConfig().BYPASS_AUTH).toBe(true);
+    });
+
+    it('refuses to start in production with the auth bypass on', () => {
+      Object.assign(process.env, { NODE_ENV: 'production' });
+      process.env.SESSION_SECRET = 'test-secret';
+      process.env.BYPASS_AUTH = 'true';
+
+      expect(() => loadConfig()).toThrow('Invalid configuration');
     });
   });
 

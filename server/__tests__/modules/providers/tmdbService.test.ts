@@ -13,6 +13,7 @@ const config: AppConfig = {
   DB_PATH: ':memory:',
   DB_LOGGING: false,
   TRUST_PROXY: false,
+  BYPASS_AUTH: false,
   TMDB_API_KEY: 'test-key',
   SESSION_SECRET: 'test-secret',
 };
