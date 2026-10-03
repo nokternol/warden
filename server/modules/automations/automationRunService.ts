@@ -1,4 +1,4 @@
-import { desc, eq, inArray, sql } from 'drizzle-orm';
+import { asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import {
   automationRunItems,
   automationRuns,
@@ -42,10 +42,16 @@ export interface CreateRunData {
   targets?: MediaItem[];
 }
 
-export interface ListRunsOptions {
-  automationId?: number;
+/** A window onto a listing; unset fields fall back to the first page. */
+export interface PageRequest {
   limit?: number;
   offset?: number;
+}
+
+const DEFAULT_PAGE_SIZE = 50;
+
+export interface ListRunsOptions extends PageRequest {
+  automationId?: number;
 }
 
 function toDate(value: unknown): Date {
@@ -133,7 +139,7 @@ export class AutomationRunService {
   }
 
   async listRuns(opts: ListRunsOptions = {}): Promise<AutomationRunDto[]> {
-    const limit = opts.limit ?? 50;
+    const limit = opts.limit ?? DEFAULT_PAGE_SIZE;
     const offset = opts.offset ?? 0;
 
     let query = this.db
@@ -169,7 +175,7 @@ export class AutomationRunService {
     );
   }
 
-  async listRunItems(runId: number): Promise<RunItemPage> {
+  async listRunItems(runId: number, page: PageRequest = {}): Promise<RunItemPage> {
     const data = await this.db
       .select({
         mediaItemId: mediaItems.id,
@@ -180,8 +186,12 @@ export class AutomationRunService {
       .from(automationRunItems)
       .innerJoin(mediaItems, eq(automationRunItems.mediaItemId, mediaItems.id))
       .innerJoin(mediaIdentity, eq(mediaItems.mediaIdentityId, mediaIdentity.id))
-      .where(eq(automationRunItems.runId, runId));
-    return { data, total: data.length };
+      .where(eq(automationRunItems.runId, runId))
+      .orderBy(asc(mediaIdentity.title), asc(mediaItems.id))
+      .limit(page.limit ?? DEFAULT_PAGE_SIZE)
+      .offset(page.offset ?? 0);
+    const total = await this.db.$count(automationRunItems, eq(automationRunItems.runId, runId));
+    return { data, total };
   }
 
   async listItemRuns(mediaItemId: number): Promise<AutomationRunDto[]> {

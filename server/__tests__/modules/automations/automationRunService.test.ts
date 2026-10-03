@@ -237,4 +237,25 @@ describe('AutomationRunService', () => {
       expect(runs.map((r) => r.id)).toEqual([third.id, first.id]);
     });
   });
+
+  // ─── listRunItems ─────────────────────────────────────────────────────────
+
+  describe('listRunItems', () => {
+    it("pages a run's items by title, with the total across all pages", async () => {
+      const { automation, provider } = await seedFixtures();
+      const titles = ['Heat', 'Alien', 'Ronin', 'Brazil', 'Collateral'];
+      const run = await service.createRun({
+        automationId: automation.id,
+        status: 'success',
+        targets: titles.map((title, i) => catalogMovie(provider.id, i + 1, title)),
+      });
+
+      const page1 = await service.listRunItems(run.id, { limit: 2, offset: 0 });
+      const page2 = await service.listRunItems(run.id, { limit: 2, offset: 2 });
+
+      expect(page1.data.map((i) => i.title)).toEqual(['Alien', 'Brazil']);
+      expect(page2.data.map((i) => i.title)).toEqual(['Collateral', 'Heat']);
+      expect(page1.total).toBe(5);
+    });
+  });
 });
