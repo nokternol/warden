@@ -58,6 +58,33 @@ const directionRules = MODULES.map((mod) => {
 module.exports = {
   forbidden: [
     {
+      name: 'no-src-to-server',
+      severity: 'error',
+      comment:
+        'The client may reach the server only through the API contract (contract/), ' +
+        'never by importing server code — not even a type.',
+      from: { path: '^src/' },
+      to: { path: '^server/' },
+    },
+    {
+      name: 'no-server-to-src',
+      severity: 'error',
+      comment:
+        'The server may share code with the client only through the API contract ' +
+        '(contract/), never by importing client code.',
+      from: { path: '^server/' },
+      to: { path: '^src/' },
+    },
+    {
+      name: 'contract-depends-on-nothing-local',
+      severity: 'error',
+      comment:
+        'The API contract is the shared root both sides derive from: it imports neither ' +
+        'src/ nor server/ (only zod and @orpc/contract).',
+      from: { path: '^contract/' },
+      to: { path: '^(src|server)/' },
+    },
+    {
       name: 'no-module-internal-reach-in',
       severity: 'error',
       comment:
