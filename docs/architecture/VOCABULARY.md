@@ -62,7 +62,7 @@ the role interfaces it `implements`, never assumed from the connection base. Sou
 | **Automation** | A query bound to a task on a schedule — the product's unit of action. `kind: 'user' \| 'system'`; system automations are invariants (Run-Now-only, cannot be disabled or deleted). Spec: [`system-vs-user-automations.md`](ref:path:docs/architecture/system-vs-user-automations.md). | [`server/modules/automations/automationService.ts`](ref:path:server/modules/automations/automationService.ts) |
 | **AutomationExecutor** | Runs a task against the ids a query matches; binds the provider by `automation.provider.id`, dispatches via `source.tasks()`. Holds the in-flight guard that keeps manual and scheduled runs from overlapping. | [`server/modules/automations/automationExecutor.ts`](ref:path:server/modules/automations/automationExecutor.ts) |
 | **SystemTaskRunner** | Dispatch target for `system` automations (identity/enrichment jobs) — internal jobs, deliberately not actuator tasks. | [`server/modules/system/systemTaskRunner.ts`](ref:path:server/modules/system/systemTaskRunner.ts) |
-| **Run Now / Disable / Archive** | The UI verb model for automations — never Play/Pause, which would imply runtime control over an executing process. | [`src/pages/automations/index.page.tsx`](ref:path:src/pages/automations/index.page.tsx) |
+| **Run Now / Disable / Enable / Delete** | The UI verb model for automations — never Play/Pause, which would imply runtime control over an executing process. An automation's status is `active` or `disabled`, declared once as `AutomationStatusSchema`. Archive is a future verb, not built. | [`contract/schemas.ts`](ref:path:contract/schemas.ts) |
 
 ## API
 
@@ -82,6 +82,7 @@ fracture.
 | Query + task + schedule | **Automation** (user or system) | "Task" for automations (System page, stories) | A system automation is an automation, not a "Task". |
 | An action a provider offers | **Task** | — | `ActuatorTask`, unchanged. |
 | One execution of an automation | **Run**, page **Runs** | Activity | The page shows runs, the verb is Run Now, and the API is `/automations/runs`. |
+| An automation's controls and status | **Run Now / Disable / Enable / Delete**; status `active` or `disabled` | Pause, Resume, Play, status `paused` | Pause and Play imply control over an executing process; a disabled automation simply isn't scheduled. Stored `paused` values migrated to `disabled`. |
 | The product | **Warden** | Maintainarr | Log files are `warden-*.log`, the default database is `./config/db/warden.db`, and Plex lists the app as Warden. |
 
 ## Deprecated names — stop writing these
@@ -96,6 +97,7 @@ fracture.
 | Local SWR `fetcher`s, hand-written `/api/...` URLs | `api.<ns>.<procedure>` via `useApi` | Deleted (C0). |
 | "Saved query", `SavedQuery`, "collection" (a named set of filters) | Query (`MediaQuery`) | Renamed in UI copy, stories, API errors and docs (B5). |
 | "Task" for an automation (System page, stories) | Automation — Task means a provider action | Renamed (B5). |
+| Automation status `paused`, Pause / Resume / Play controls | Status `disabled`; Disable / Enable | Migration 0025 rewrites stored values; the literal unions are deleted (B1). |
 | Activity (page) | Runs, route `/runs` | Renamed (B5). |
 | service, integration (in UI copy) | Provider | Renamed (B5). |
 | Maintainarr | Warden | Renamed (B5): log filenames, Plex product and device name, default `DB_PATH`, fixtures, README links. |

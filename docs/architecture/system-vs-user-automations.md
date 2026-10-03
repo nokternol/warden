@@ -49,13 +49,13 @@ tables (`server/database/schema.ts:153,204`).
 ## UI placement
 
 - **Main dashboard / Automations** ([`src/components/AutomationRow/index.tsx`](ref:path:src/components/AutomationRow/index.tsx)) — user automations,
-  fully configurable, run history, Run Now + Pause/Resume + Delete (hard delete, behind an inline
+  fully configurable, run history, Run Now + Disable/Enable + Delete (hard delete, behind an inline
   confirm step).
 - **System → Tasks** — system automations. Read-only **except Run Now** — the one operator action
   permitted on a system task (schedule, last run, next run, run history, plus on-demand execution).
   Makes system health observable and operable without console access.
 
-The verb model today is Run Now / Pause-Resume / Delete. Delete is permanent — there is no archive
+The verb model today is Run Now / Disable / Enable / Delete, and an automation's status is `active` or `disabled` (`AutomationStatusSchema` in [`contract/schemas.ts`](ref:path:contract/schemas.ts)). A disabled automation is unscheduled but can still be run with Run Now. Delete is permanent — there is no archive
 or restore path; deleting a user automation also removes its run history.
 
 ## Run Now feedback

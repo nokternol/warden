@@ -281,6 +281,19 @@ is graphed, dated, and verified against code, not inferred from a plan.
   shows as a new device on plex.tv while existing sessions keep working). The plan's Glossary lives in
   `VOCABULARY.md`, with its retired names. A server running with the old default starts with a new
   database unless `DB_PATH` points at its existing file.
+### Automation verbs and status — stated three ways (recorded and healed 2026-10-03, MVP slice B1)
+
+- **Fracture:** one concept (switching an automation off) had three descriptions. `VOCABULARY.md` said
+  Run Now / Disable / Archive and never Play/Pause, the code stored status `paused` and drew Pause/Play
+  icons, and `system-vs-user-automations.md` said Pause/Resume/Delete. The status union
+  `'active' | 'paused'` was also typed separately in the contract, the read model, the service, the hook,
+  the mock handler and the page.
+- **How it misled:** a reader of the glossary looked for Disable and found Pause in every layer; a type
+  edit in one place compiled while another still accepted the old value.
+- **Healed by:** one `AutomationStatusSchema` (`active` or `disabled`) in `contract/schemas.ts`, consumed
+  by the read model, the `updateStatus` input, the service, the hook, StatusDot and the dashboard
+  summary. Rows offer Disable or Enable with power icons, and migration 0025 rewrites stored `paused`
+  values to `disabled`. Archive remains unbuilt.
 
 ## Open
 
