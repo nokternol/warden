@@ -57,5 +57,5 @@ enumeration, not curation.
 - **Structural schema gaps** (new column/table, not a settings-blob value): episodes, cast/crew,
   akas/alternate titles, broadcast schedule, and images/artwork have zero existing concept anywhere
   in `NormalizedShow`/`NormalizedMovie` for any provider. A duplicated inline `TvMazeProvider`
-  construction in `providers.handler.ts` (bypassing `ProviderFactory.createTvMaze()`) was also
+  construction in `providers.procedures.ts` (bypassing `ProviderFactory.createTvMaze()`) was also
   found and flagged as a process oddity, not a field gap.

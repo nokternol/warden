@@ -114,7 +114,8 @@ Test request/response handling:
 import { describe, it, expect, beforeAll } from 'vitest';
 import { createApiClient, expectSuccessResponse, expectErrorResponse } from '@tests/helpers/api';
 import express, { type Express } from 'express';
-import { createHealthRoutes } from './health.routes';
+import { serveApi } from '@server/kernel/api';
+import { createSystemProcedures } from '@server/modules/system';
 
 describe('Health API', () => {
   let app: Express;
@@ -123,7 +124,7 @@ describe('Health API', () => {
   beforeAll(() => {
     app = express();
     app.use(express.json());
-    app.use('/api/health', createHealthRoutes(mockCradle));
+    app.use(serveApi({ system: createSystemProcedures(mockCradle) }));
     client = createApiClient(app);
   });
 
@@ -137,8 +138,8 @@ describe('Health API', () => {
     });
   });
 
-  it('validates request body', async () => {
-    const response = await client.post('/api/health', { invalid: true });
+  it('validates input against the contract', async () => {
+    const response = await client.post('/api/automations/not-a-number/run');
 
     expectErrorResponse(response, 400, 'VALIDATION_ERROR');
   });
@@ -308,26 +309,30 @@ mockFetchUser.mockResolvedValue({ id: 2 });
 
 ### MSW (API Mocks)
 
-MSW automatically mocks HTTP in client tests:
+MSW automatically mocks HTTP in client tests. Warden's own API is mocked from the API contract:
 
 ```typescript
-// tests/mocks/handlers/users.ts
-import { http, HttpResponse } from 'msw';
+// tests/mocks/handlers/automations.ts
+import { contract } from '@contract/index';
+import { mockProcedure } from '../contract';
 
-export const userHandlers = [
-  http.get('/api/users/:id', ({ params }) => {
-    return HttpResponse.json({ id: params.id, name: 'John' });
-  }),
+export const automationsHandlers = [
+  mockProcedure(contract.automations.list, () => MOCK_AUTOMATIONS),
 ];
 
-// Override per test
+// Override per test — a raw failure goes at the procedure's own path
+import { contractPath } from '@tests/mocks/contract';
 import { server } from '@tests/mocks/server';
+import { http, HttpResponse } from 'msw';
 
 it('handles API error', async () => {
   server.use(
-    http.get('/api/users/:id', () => {
-      return HttpResponse.json({ error: 'Not found' }, { status: 404 });
-    })
+    http.get(contractPath(contract.automations.list), () =>
+      HttpResponse.json(
+        { status: 'error', error: { type: 'NOT_FOUND', message: 'Not found' } },
+        { status: 404 }
+      )
+    )
   );
 
   // Test error handling...

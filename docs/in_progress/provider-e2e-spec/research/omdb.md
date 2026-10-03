@@ -74,7 +74,7 @@ Verified directly:
 - Only two consumers exist, both outside the enrichment pipeline: `server/modules/providers/ratingsAggregation.ts`
   (merges TMDB/OMDB/TVMaze ratings, cross-checks `imdbId` agreement between TMDB and OMDB and logs a
   warning on mismatch — this cross-check function is itself evidence the codebase already
-  distrusts OMDB's title-match reliability) and `server/modules/providers/providers.handler.ts`'s
+  distrusts OMDB's title-match reliability) and `server/modules/providers/providers.procedures.ts`'s
   `getRatings` route (ad hoc `/ratings` endpoint, constructs `OmdbProvider` inline, not through
   `ProviderFactory`'s registered instance).
 - Not referenced anywhere in `server/modules/media/enrichment/enricherAdapters.ts` or

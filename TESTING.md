@@ -24,11 +24,9 @@ All test frameworks share the same HTTP handlers:
 - **Benefit**: Single source of truth for all mocked APIs
 
 ```typescript
-// tests/mocks/handlers/auth.ts
+// tests/mocks/handlers/auth.ts — typed against the API contract
 export const authHandlers = [
-  http.get('/api/v1/auth/me', () => {
-    return HttpResponse.json({ id: 1, username: 'testuser' });
-  }),
+  mockProcedure(contract.auth.me, () => MOCK_USER),
 ];
 ```
 
@@ -249,7 +247,7 @@ describe('Health API Integration', () => {
     app = express();
     app.use(express.json());
     app.use(requestIdMiddleware);
-    app.use('/api/health', createHealthRoutes(container.cradle));
+    app.use(serveApi({ system: createSystemProcedures(container.cradle) }));
     app.use(errorHandlerMiddleware);
 
     // 5. Create test client
@@ -334,13 +332,12 @@ export const WithProps: Story = () => <MyComponent variant="primary" />;
 
 ### 4. MSW Handler
 ```typescript
-// tests/mocks/handlers/my-api.ts
-import { http, HttpResponse } from 'msw';
+// tests/mocks/handlers/my-api.ts — mocks a contract procedure at its own method and path
+import { contract } from '@contract/index';
+import { mockProcedure } from '../contract';
 
 export const myApiHandlers = [
-  http.get('/api/v1/my-endpoint', () => {
-    return HttpResponse.json({ data: 'mock data' });
-  }),
+  mockProcedure(contract.myNamespace.myProcedure, () => MOCK_OUTPUT),
 ];
 
 // tests/mocks/handlers/index.ts

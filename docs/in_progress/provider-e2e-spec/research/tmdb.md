@@ -32,7 +32,7 @@ This is the entire wired surface. One field.
 ## Implemented-but-unwired (exists in `tmdbProvider.ts`, EnrichmentJob doesn't consume it)
 
 All of these are real, working methods on `TmdbProvider` today, called only by
-`ratingsAggregation.ts`/`providers.handler.ts`'s `getRatings` route or `TmdbService`'s
+`ratingsAggregation.ts`/`providers.procedures.ts`'s `getRatings` route or `TmdbService`'s
 trending-backdrops feature — never by `tmdbEnricher` or any `EnrichmentJob` path. None has an
 `EnrichmentFields` key, so even if an enricher called these methods tomorrow, the values have nowhere
 to land without a new key.

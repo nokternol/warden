@@ -12,13 +12,13 @@ server/
   index.ts           # Entry point and startup sequence
   kernel/            # Infrastructure with no domain meaning — the only home for it:
                      #   config (Zod-validated env), env, errors (AppError hierarchy),
-                     #   logger (getChildLogger), eventBus, defineRoute,
+                     #   logger (getChildLogger), eventBus, api (contract implementer),
                      #   middleware/ (requestId → requestLogger → … → errorHandler),
                      #   db (re-exports the DrizzleDb handle contract)
   database/          # Drizzle schema, migrations (session store moved to modules/auth/)
-  modules/           # Feature modules: schemas / handlers / routes, each owning its domain
-                     #   logic behind a crafted public interface (index.ts) — settings/ is the
-                     #   one still-transport-only module (no domain logic of its own)
+  modules/           # Feature modules: each implements its API contract procedures and owns its
+                     #   domain logic behind a crafted public interface (index.ts) — settings/ is
+                     #   the one transport-only module (no domain logic of its own)
   types/             # Shared types and Express augmentations
   __tests__/         # Server unit + integration tests
 ```
@@ -30,18 +30,19 @@ server/
   process; access before initialization throws. No silent fallbacks.
 - **Child loggers.** Every module logs through `getChildLogger('Label')`; pass `requestId` in metadata
   to trace one request across subsystems.
-- **Request lifecycle.** `requestId` → `requestLogger` → body parser → route handler (Zod validation
-  via `defineRoute`, business logic via injected services) → `errorHandler` last.
-- **Error propagation.** Handlers and services throw `AppError` subclasses; the global error handler
-  maps them to structured JSON (`{ status: 'error', error: { type, message } }`). Unknown errors return
+- **Request lifecycle.** `requestId` → `requestLogger` → body parser → session → `checkUser` →
+  `serveApi` (the contract procedure: input validation, default-deny auth, business logic via injected
+  services, output validation, envelope) → `errorHandler` last for anything outside the API.
+- **Error propagation.** Procedures and services throw `AppError` subclasses; `serveApi` maps them to
+  structured JSON (`{ status: 'error', error: { type, message } }`). Unknown errors return
   a generic message in production.
-- **Dependency injection.** `buildContainer()` registers services on a typed `Cradle`; handler
+- **Dependency injection.** `buildContainer()` registers services on a typed `Cradle`; procedure
   factories receive dependencies by destructuring — no global accessors inside request code.
 
 ## Where things are documented
 
 - [database/README.md](database/README.md) — Drizzle setup, schema, migrations
-- [modules/README.md](modules/README.md) — the schemas/handlers/routes transport pattern, plus
+- [modules/README.md](modules/README.md) — how modules implement API contract procedures, plus
   module-owned domain logic and container registration conventions
 - [../docs/architecture/server-architecture-north-star.md](../docs/architecture/server-architecture-north-star.md)
   — the target design this layout implements: module boundaries, the dependency direction graph, and the

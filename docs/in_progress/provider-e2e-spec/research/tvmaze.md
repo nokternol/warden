@@ -73,9 +73,9 @@ other depending on enrichment ordering — precedence ticket territory, flagged 
   (`tvmazeProvider.ts:63`) does a title search (`/search/shows?q=`), best-effort year-disambiguates
   when multiple results share a title, and reads `rating.average` plus `externals.thetvdb` /
   `externals.imdb` from the best match. Two call sites: `identityJobFactory.ts` is not one of
-  them — ratings are consumed by `providers.handler.ts`'s ad hoc `/ratings` route (line ~150),
+  them — ratings are consumed by `providers.procedures.ts`'s ad hoc `/ratings` route (line ~150),
   which additionally constructs a *second*, separate `TvMazeProvider` instance inline
-  (`providers.handler.ts:193-194`, bypassing `ProviderFactory.createTvMaze()` — a duplicated
+  (`providers.procedures.ts:193-194`, bypassing `ProviderFactory.createTvMaze()` — a duplicated
   construction path worth flagging even though behaviorally equivalent today).
 - **Identity resolution / TVDB crosswalk** (`server/modules/providers/identityJobFactory.ts:54`):
   `tvMazeLookup: this.providerFactory.createTvMaze(log)` is passed into `IdentityResolutionJob`,
@@ -93,7 +93,7 @@ other depending on enrichment ordering — precedence ticket territory, flagged 
 
 - **No `metadata_provider` row.** `MetadataProviderType.TVMAZE = 'TVMAZE'` is a valid schema enum
   value (`server/database/schema.ts:23`) but no settings row is ever created or read for it — both
-  construction sites (`createTvMaze()` and the inline construction in `providers.handler.ts`)
+  construction sites (`createTvMaze()` and the inline construction in `providers.procedures.ts`)
   hardcode the URL and `apiKey: null` rather than reading from `metadata_providers`. Given TVMaze is
   keyless and has one fixed public base URL, **this may be intentionally a "no DB config needed"
   provider** rather than a gap — note explicitly rather than leaving blank, per ticket instructions.
@@ -232,5 +232,5 @@ Noting this explicitly as empty-by-design rather than an unflagged gap, per tick
   episode-by-number endpoint, cast endpoint, crew endpoint, akas endpoint, seasons endpoint
   (including season-level network/webChannel granularity), images endpoint, `singlesearch`
   endpoint, `embed=` query param, and `lookup/shows`'s unused `imdb=`/`tvrage=` modes. Plus the
-  duplicated inline `TvMazeProvider` construction in `providers.handler.ts` and the missing
+  duplicated inline `TvMazeProvider` construction in `providers.procedures.ts` and the missing
   `PROVIDER_REGISTRY` entry as process/config-layer findings (not fields, counted separately above).

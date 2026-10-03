@@ -9,9 +9,8 @@ HTTP transport down to the system job, and exposes it through one crafted public
 ```
 providers/
   index.ts                    # Public interface — the only import surface for code outside the module
-  providers.schemas.ts        # Zod API contract
-  providers.handler.ts        # Route handlers: actuator tasks, ad-hoc metadata, aggregated ratings
-  providers.routes.ts         # HTTP wiring
+  providers.procedures.ts     # API contract procedures: actuator tasks, task options, ad-hoc metadata,
+                              #   aggregated ratings (instance CRUD lives in settings/)
   connections/                # BaseProviderConnection + one class per external system
   roles.ts                    # Capability role providers own: MediaActuator (task discovery)
   ratingsAggregation.ts       # Cross-provider rating aggregation (Tmdb/Omdb/TvMaze), module-private

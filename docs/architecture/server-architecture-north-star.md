@@ -9,7 +9,7 @@ for the history of how it converged). This doc describes the one design that won
 
 ## The design
 
-**Feature modules own everything for their domain** — schemas, handlers, routes, services, domain
+**Feature modules own everything for their domain** — their API procedures, services, domain
 logic, and jobs. There is no flat `server/services/` layer; every service lives inside the module that
 owns it. A module is a vertical slice of the product, not an HTTP surface.
 
@@ -34,9 +34,9 @@ owns it. A module is a vertical slice of the product, not an HTTP surface.
   ([`db.ts`](ref:path:server/kernel/db.ts)), error hierarchy
   ([`errors.ts`](ref:path:server/kernel/errors.ts)), a generic TTL cache
   ([`cache.ts`](ref:path:server/kernel/cache.ts)), middleware
-  ([`middleware/`](ref:path:server/kernel/middleware/index.ts)), and
-  [`defineRoute`](ref:path:server/kernel/defineRoute.ts). Every module may depend on the kernel; the
-  kernel depends on no module.
+  ([`middleware/`](ref:path:server/kernel/middleware/index.ts)), and the API contract implementer
+  ([`api.ts`](ref:path:server/kernel/api.ts)), which serves the top-level `contract/` that the client
+  shares. Every module may depend on the kernel; the kernel depends on no module.
 - **The container splits into mechanism, registrations, and assembly.** Every module owns a
   `<module>.registrations.ts` beside its `index.ts`, exporting a `<Module>Cradle` interface (the slice
   of the app cradle the module contributes) and a `register<Module>Dependencies(container)` function
@@ -93,7 +93,7 @@ actions on media they own, not a role media consumes, so it never had a reason t
 
 ```
 server/
-  kernel/          # eventBus, logger, config, db, errors, cache, middleware, defineRoute
+  kernel/          # eventBus, logger, config, db, errors, cache, middleware, api (contract implementer)
   modules/
     providers/     # connections (BaseProviderConnection + per-system), roles (MediaActuator),
                    # provider settings service, task enablement, identity-resolution job
@@ -130,8 +130,10 @@ Boundary decisions this inventory encodes:
 
 ## What does not change
 
-- The transport pattern inside a module (schemas / handlers / routes, `defineRoute`, Zod validation,
-  Awilix cradle injection) is the part of the design that already worked and stayed as-is.
+- Awilix cradle injection is the part of the design that already worked and stayed as-is. The HTTP
+  transport inside a module has since become a single `<module>.procedures.ts` implementing the
+  module's part of the top-level API contract (`contract/`), replacing the earlier schemas / handlers /
+  routes trio.
 - Server-side authority principles already won by healed fractures stay won: registries project
   descriptors, roles own their tasks, the client derives and never re-declares.
 
@@ -142,7 +144,8 @@ The direction graph and the module-privacy rule above are not just prose — a r
 (`yarn depcruise:ci`, wired into `.github/workflows/quality-gate.yml`
 alongside `lint:ci`/`typecheck`/`test:run`): nothing outside a module may import a file inside it other
 than its `index.ts`, and cross-module imports are restricted to the edges declared above. A module
-omitted from another's allow-list is forbidden as a target by default. This is the mechanism that keeps
+omitted from another's allow-list is forbidden as a target by default. The same config also forbids
+`server/` and `src/` from importing each other and `contract/` from importing either. This is the mechanism that keeps
 this doc's "current fact" status honest going forward — read the config and this doc as one design
 stated twice, once for humans and once for CI; a future direction change updates both in the same PR.
 The fracture ledger's "Server layering" entry (now Healed) is the historical record of how this design

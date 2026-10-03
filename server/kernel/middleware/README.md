@@ -12,7 +12,7 @@ The order in `server/index.ts` matters. Current pipeline:
 3. express.json()  — Body parsing
 4. requestId       — Assigns req.requestId (must be before logger)
 5. requestLogger   — Starts timer, logs on response finish
-6. [routes]        — API routes + Next.js catch-all
+6. [routes]        — /api (checkUser + the API contract via serveApi) + Next.js catch-all
 7. errorHandler    — Catches thrown errors (MUST be last)
 ```
 
@@ -20,10 +20,13 @@ The order in `server/index.ts` matters. Current pipeline:
 
 ## How Errors Flow
 
-1. A route handler or service throws an `AppError` subclass (or any `Error`).
-2. If the handler is wrapped in `asyncHandler()`, the rejected promise is forwarded to `next(err)`.
-3. Express skips all remaining middleware and jumps to `errorHandlerMiddleware`.
-4. The error handler logs with `requestId`, then returns a structured `ApiErrorResponse`.
+API procedures don't reach this handler: `serveApi` (`server/kernel/api.ts`) turns an error a procedure
+throws into the same `{ status: 'error', error: { type, message } }` envelope with its status. The error
+handler covers everything else Express runs (body parsing, session, the Next.js catch-all):
+
+1. Middleware throws an `AppError` subclass (or any `Error`), or calls `next(err)`.
+2. Express skips all remaining middleware and jumps to `errorHandlerMiddleware`.
+3. The error handler logs with `requestId`, then returns a structured `ApiErrorResponse`.
 
 ## Adding New Middleware
 

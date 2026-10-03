@@ -28,52 +28,41 @@ mocks/
 
 ## Creating Handlers
 
+Warden's own API is mocked from the API contract with `mockProcedure` (`tests/mocks/contract.ts`): the
+handler answers at the procedure's own method and path, inside the `{ status: 'ok', data }` envelope,
+and the resolver is typed as the procedure's output, so a mock that drifts from the contract fails to
+compile. No mock writes an `/api/...` URL.
+
 ```typescript
-// tests/mocks/handlers/users.ts
-import { http, HttpResponse } from 'msw';
+// tests/mocks/handlers/automations.ts
+import { contract } from '@contract/index';
+import { mockProcedure } from '../contract';
 
-export const userHandlers = [
-  http.get('/api/users/:id', ({ params }) => {
-    return HttpResponse.json({
-      status: 'ok',
-      data: { id: params.id, name: 'John Doe', email: 'john@example.com' },
-    });
-  }),
-
-  http.post('/api/users', async ({ request }) => {
-    const body = await request.json();
-    return HttpResponse.json({
-      status: 'ok',
-      data: { id: 1, ...body },
-    }, { status: 201 });
-  }),
+export const automationsHandlers = [
+  mockProcedure(contract.automations.list, () => MOCK_AUTOMATIONS),
+  mockProcedure(contract.automations.run, () => null),
 ];
-
-// tests/mocks/handlers/index.ts
-import { userHandlers } from './users';
-
-export const handlers = [...userHandlers];
 ```
+
+External systems (Radarr, Plex, plex.tv, …) are not in the contract and are mocked with plain
+`http.get(...)` handlers.
 
 ## Overriding Mocks
 
-Override handlers per test:
+Override handlers per test the same way. For a response the contract can't express (a raw 500 or a
+proxy error page), use `contractPath(procedure)` for the URL:
 
 ```typescript
+import { contract } from '@contract/index';
+import { contractPath, mockProcedure } from '@tests/mocks/contract';
 import { server } from '@tests/mocks/server';
 import { http, HttpResponse } from 'msw';
 
-it('handles 404', async () => {
+it('surfaces a failure', async () => {
   server.use(
-    http.get('/api/users/:id', () => {
-      return HttpResponse.json(
-        { status: 'error', error: { type: 'NOT_FOUND', message: 'User not found' } },
-        { status: 404 }
-      );
-    })
+    http.get(contractPath(contract.providers.tasks), () => new HttpResponse(null, { status: 500 }))
   );
-
-  // Test error handling...
+  // …
 });
 ```
 

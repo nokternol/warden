@@ -26,7 +26,7 @@ API exposes:
 - Any gap that would require a *structural* schema change (new column/table, not just a new config
   value in the existing `settings` JSON blob) — flag, don't design.
 
-Known context to start from: Partially wired: tmdbEnricher only calls getStatus(tmdbId) -> tmdbStatus. getMovieDetailsEnriched/getTvDetailsEnriched (certification, keywords, collection, spoken languages, origin country), getMovieWatchProviders/getTvWatchProviders, and getRatings are implemented but NOT consumed by EnrichmentJob — only by the separate ratingsAggregation.ts/providers.handler.ts getRatings route and TmdbService's trending-backdrops feature. filterRegistry.ts already lists TMDB as a sourceProviders entry for genres/year/certification even though no enricher populates those fields from TMDB today — confirm whether to wire real enrichment or correct the stale registry entry.
+Known context to start from: Partially wired: tmdbEnricher only calls getStatus(tmdbId) -> tmdbStatus. getMovieDetailsEnriched/getTvDetailsEnriched (certification, keywords, collection, spoken languages, origin country), getMovieWatchProviders/getTvWatchProviders, and getRatings are implemented but NOT consumed by EnrichmentJob — only by the separate ratingsAggregation.ts/providers.procedures.ts getRatings route and TmdbService's trending-backdrops feature. filterRegistry.ts already lists TMDB as a sourceProviders entry for genres/year/certification even though no enricher populates those fields from TMDB today — confirm whether to wire real enrichment or correct the stale registry entry.
 
 Do not decide what to build yet — that's the follow-on decision ticket. This ticket is exhaustive
 enumeration, not curation.
@@ -42,7 +42,7 @@ enumeration, not curation.
 - Confirmed the known state exactly: `tmdbEnricher` only calls `getStatus(tmdbId)` -> `tmdbStatus`
   (`EnrichmentFields`'s only TMDB key, `activeFieldSet.ts`'s only TMDB producer entry); everything else
   in `tmdbProvider.ts` (`getMovieDetailsEnriched`/`getTvDetailsEnriched`, watch-providers, `getRatings`)
-  is implemented but consumed only by `ratingsAggregation.ts`/`providers.handler.ts`'s `getRatings`
+  is implemented but consumed only by `ratingsAggregation.ts`/`providers.procedures.ts`'s `getRatings`
   route and `TmdbService`'s trending-backdrops feature — none of it reaches `EnrichmentJob`.
 - `filterRegistry.ts`'s `year`/`certification`/`genres` rules hand-list `MetadataProviderType.TMDB` in
   `sourceProviders` directly, bypassing `activeFieldSet.ts`'s `fieldsByProviderType` (whose only TMDB

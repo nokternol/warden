@@ -191,7 +191,7 @@ container can register it as a separate SEERR-typed provider."
 **Wired into the media-item pipeline?** No. `ProviderFactory.create`
 ([`server/modules/providers/providerFactory.ts`](ref:path:server/modules/providers/providerFactory.ts))'s
 switch has no `SEERR` case — Seerr is only constructed ad hoc in
-`providers.handler.ts`'s connection-test path (`OVERSEERR`/`SEERR` share one case there, calling
+`providers.procedures.ts`'s ad-hoc `metadata` procedure (`OVERSEERR`/`SEERR` share one case there, calling
 `getRequests()` to prove connectivity). It is absent from `enricherAdapters.ts`, `ProviderSet`, and
 `filterRegistry.ts` entirely — configuring Seerr today gets you a working connection test and nothing
 else; even the `overseerrEnricher` role Overseerr itself plays is not extended to a configured Seerr
@@ -217,7 +217,7 @@ feature, below).
 calls `getStatus(tmdbId)`, contributing a single field (`tmdbStatus`), gated into `filterRegistry.ts`. The
 much larger enriched-details/watch-providers/ratings surface (`getMovieDetailsEnriched`, watch providers,
 `getRatings`) is implemented but consumed only by the separate on-demand
-`ratingsAggregation.ts`/`providers.handler.ts getRatings` route and `TmdbService`'s trending-backdrops
+`ratingsAggregation.ts`/`providers.ratings` procedure and `TmdbService`'s trending-backdrops
 feature ([`server/modules/providers/tmdbService.ts`](ref:path:server/modules/providers/tmdbService.ts),
 unrelated background-image fetching) — none of it flows through `EnrichmentJob` onto a `MediaItem`. Also
 note `filterRegistry.ts`'s `genres`/`year`/`certification` rules already list TMDB as a `sourceProviders`
@@ -240,7 +240,7 @@ rating/votes, Rotten Tomatoes %, Metacritic score, award-winner/Oscar-winner fla
 `Awards` string), director, actors, language, box office.
 
 **Wired into the media-item pipeline?** No — used only by the separate ratings-aggregation feature
-(`server/modules/providers/ratingsAggregation.ts`, `providers.handler.ts`'s `getRatings` route). Not an
+(`server/modules/providers/ratingsAggregation.ts`, the `providers.ratings` procedure in `providers.procedures.ts`). Not an
 enricher, not referenced by `enricherAdapters.ts` or `filterRegistry.ts` for any `MediaItem` field. (The
 `certification`/`imdbRating` rules in `filterRegistry.ts` list `OMDB` as a `sourceProviders` entry, but no
 enricher currently populates either field from OMDB — same "listed but not wired" gap as TMDB's

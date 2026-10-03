@@ -22,7 +22,7 @@ lookup, not field enrichment.
 | `MediaRequest.status` (number, 1=PENDING/2=APPROVED/3=DECLINED) | `overseerrRequestStatus` | `overseerrProvider.ts:16` (`OverseerrRequest.status`) → `mediaFieldProvider.ts:139,144` (`overseerrFieldProvider`) → `enricherAdapters.ts:59` → `filterRegistry.ts:447-458` (filter `key: 'overseerrRequestStatus'`, numeric-equality predicate) → `activeFieldSet.ts:19` |
 | Issue existence (any issue on a title) | `overseerrHasIssue` (boolean, presence-only — collapses count/type) | `overseerrProvider.ts:35` (`OverseerrIssue.status` is fetched but never read) → `mediaFieldProvider.ts:140,145` → same enrichment/filter/activeFieldSet chain as above (`filterRegistry.ts:460-468`, boolean predicate) |
 | `MediaRequest.media.tmdbId` | join key only | `overseerrProvider.ts:19` (`OverseerrMedia.tmdbId`), used as the map key in `overseerrFieldProvider.visit`, never surfaced as its own field |
-| `search` (`GET /api/v1/search`) — `id`, `mediaType`, `title`/`name`, `overview`, `mediaInfo` | not enrichment; used by `media.search.handler.ts` (`searchProvider()`) for interactive search, separate from the field/filter/enrichment pipeline | `overseerrProvider.ts:74-83` |
+| `search` (`GET /api/v1/search`) — `id`, `mediaType`, `title`/`name`, `overview`, `mediaInfo` | not enrichment; used by `media.search.procedures.ts` (`searchProvider()`) for interactive search, separate from the field/filter/enrichment pipeline | `overseerrProvider.ts:74-83` |
 
 No `MediaActuator` implementation exists for Overseerr (confirmed: `tasks()` appears only in
 `radarrProvider.ts`, `sonarrProvider.ts`, `plexProvider.ts`, `jellyfinProvider.ts`,

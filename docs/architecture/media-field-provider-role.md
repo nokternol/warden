@@ -249,12 +249,12 @@ integration exists); `communityRating` (show) is Sonarr-only (Sonarr's `ratings`
 aggregate, no TMDB key configured). `network`'s `TVMAZE` entry is deliberately unchanged — real and
 buildable, just not yet wired to an adapter.
 
-[`media.filterFields.handler.ts`](ref:path:server/modules/media/media.filterFields.handler.ts)'s
+[`media.rules.procedures.ts`](ref:path:server/modules/media/media.rules.procedures.ts)'s
 `gatedDescriptors` reads `activeFieldSetCache.getActiveTypes()` instead of calling
 `providerSettingsService.activeTypes()` per request — one cache read instead of a live per-request DB
-query, invalidated the same way as the active field set above. `GET /api/filter-fields`'s response
-shape (`MediaRuleDescriptor[]`) and the client (`MediaFilterBar`, `useMediaRules`, `useMediaFilters`)
-are unchanged — only the gating computation's internal data source moved.
+query, invalidated the same way as the active field set above. The `media.rules` procedure's
+output (`MediaRuleDescriptor[]`) and the client (`MediaFilterBar`, `useMediaRules`, `useMediaFilters`)
+are unaffected by where the gating computation reads from.
 
 ## What this does not solve
 

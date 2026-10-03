@@ -26,7 +26,7 @@ API exposes:
 - Any gap that would require a *structural* schema change (new column/table, not just a new config
   value in the existing `settings` JSON blob) — flag, don't design.
 
-Known context to start from: Inert toward the pipeline: OmdbProvider implements neither MediaSource, MediaEnricher, nor MediaActuator. Only used by ratingsAggregation.ts/providers.handler.ts's getRatings route. filterRegistry.ts lists OMDB as a sourceProviders entry for certification/imdbRating even though nothing populates those fields from OMDB today — same 'listed but not wired' gap as TMDB's.
+Known context to start from: Inert toward the pipeline: OmdbProvider implements neither MediaSource, MediaEnricher, nor MediaActuator. Only used by ratingsAggregation.ts/providers.procedures.ts's getRatings route. filterRegistry.ts lists OMDB as a sourceProviders entry for certification/imdbRating even though nothing populates those fields from OMDB today — same 'listed but not wired' gap as TMDB's.
 
 Do not decide what to build yet — that's the follow-on decision ticket. This ticket is exhaustive
 enumeration, not curation.
@@ -39,7 +39,7 @@ enumeration, not curation.
 ## Resolution
 
 - Confirmed known state: `OmdbProvider` implements none of `MediaSource`/`MediaEnricher`/
-  `MediaActuator`; only consumed by `ratingsAggregation.ts` and `providers.handler.ts`'s ad hoc
+  `MediaActuator`; only consumed by `ratingsAggregation.ts` and `providers.procedures.ts`'s ad hoc
   `getRatings` route — zero fields reach the media-item pipeline today.
 - Correction to the ticket's framing: `filterRegistry.ts`'s `imdbRating` rule does **not** list
   OMDB as a `sourceProviders` entry (it's Radarr-only) — only `certification` has the "listed but
