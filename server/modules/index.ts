@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import type { Cradle } from '../container';
-import { serveApi } from '../kernel/api';
+import { api, serveApi } from '../kernel/api';
 import { checkUser } from '../kernel/middleware/auth';
-import { createAppSettingsRoutes } from './appSettings';
+import { createAppSettingsProcedures } from './appSettings';
 import { createAuthProcedures } from './auth';
 import { createAutomationProcedures } from './automations';
 import {
@@ -16,14 +16,11 @@ import { createProvidersProcedures } from './providers';
 import { createProviderSettingsProcedures } from './settings';
 import { createSystemProcedures } from './system';
 
-const route = (path: string) => `/${path}`;
-export const routes = {
-  appSettings: route('app-settings'),
-} as const;
-
 /**
- * Creates the API router with all module routes mounted.
- * The cradle provides injected dependencies to every module.
+ * Creates the API router: every procedure of the API contract, implemented by
+ * the modules and served at its contract path. `api.router` checks the
+ * assembly against the contract, so a procedure no module implements fails to
+ * compile.
  *
  * Media procedures are built once so their `invalidateMediaCaches` function
  * can be shared with the provider settings procedures — provider mutations
@@ -36,33 +33,30 @@ export function createApiRouter(cradle: Cradle) {
   // Attach user to all requests (if session exists)
   router.use(checkUser);
 
-  // Build the media procedures once so their cache invalidator can be shared.
   const media = createMediaProcedures(cradle);
   const { invalidateMediaCaches } = media;
 
-  // Contract procedures first; requests they don't match fall through to the
-  // Express routers below.
   router.use(
-    serveApi({
-      auth: createAuthProcedures(cradle),
-      automations: createAutomationProcedures(cradle),
-      media: {
-        ...media.procedures,
-        ...createRulesProcedures(cradle),
-        ...createSearchProcedures(cradle),
-        ...createBackdropsProcedures(cradle),
-      },
-      mediaQueries: createMediaQueryProcedures(cradle),
-      providers: {
-        ...createProvidersProcedures(cradle),
-        ...createProviderSettingsProcedures(cradle, invalidateMediaCaches),
-      },
-      system: createSystemProcedures(cradle),
-    })
+    serveApi(
+      api.router({
+        appSettings: createAppSettingsProcedures(cradle),
+        auth: createAuthProcedures(cradle),
+        automations: createAutomationProcedures(cradle),
+        media: {
+          ...media.procedures,
+          ...createRulesProcedures(cradle),
+          ...createSearchProcedures(cradle),
+          ...createBackdropsProcedures(cradle),
+        },
+        mediaQueries: createMediaQueryProcedures(cradle),
+        providers: {
+          ...createProvidersProcedures(cradle),
+          ...createProviderSettingsProcedures(cradle, invalidateMediaCaches),
+        },
+        system: createSystemProcedures(cradle),
+      })
+    )
   );
-
-  // Mount modules
-  router.use(routes.appSettings, createAppSettingsRoutes(cradle));
 
   return router;
 }

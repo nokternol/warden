@@ -11,8 +11,8 @@
  * per-provider connection config.
  */
 
-// HTTP surface — mounted by the API router.
-export { createAppSettingsRoutes } from './appSettings.routes';
+// HTTP surface — the appSettings procedures of the API contract.
+export { createAppSettingsProcedures } from './appSettings.procedures';
 
 // Container contribution — the app builder composes Cradle from this slice
 // and calls the registration; the class stays module-private unless
