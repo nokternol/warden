@@ -129,6 +129,19 @@ describe('AutomationRunService', () => {
 
       expect(dto.itemCount).toBeNull();
     });
+
+    it('records a source copy targeted twice once', async () => {
+      const { automation, provider } = await seedFixtures();
+      const heat = catalogMovie(provider.id, 1, 'Heat');
+
+      await expect(
+        service.createRun({ automationId: automation.id, status: 'success', targets: [heat, heat] })
+      ).resolves.toMatchObject({ status: 'success' });
+
+      const [run] = await service.listRuns({ automationId: automation.id });
+      const items = await service.listRunItems(run.id);
+      expect(items.data.map((i) => i.title)).toEqual(['Heat']);
+    });
   });
 
   // ─── listRuns ─────────────────────────────────────────────────────────────

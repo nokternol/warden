@@ -65,7 +65,9 @@ export async function ensureSourceCopies(db: DrizzleDb, items: MediaItem[]): Pro
   for (const item of items) {
     const coordinate = coordinateOf(item);
     if (!coordinate) continue;
-    if (recordedKeys.has(rawItemKey(coordinate.providerId, coordinate.externalId))) continue;
+    const key = rawItemKey(coordinate.providerId, coordinate.externalId);
+    if (recordedKeys.has(key)) continue;
+    recordedKeys.add(key);
     const mediaIdentityId = await resolveGroup(db, contentTypeOf(item), groupIdsOf(item));
     const [created] = await db
       .insert(mediaItems)
