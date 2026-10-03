@@ -8,13 +8,14 @@ import { MetadataProviderType } from '@server/database/schema';
  *
  * Run: vitest run --project server
  */
+import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
+import { createAutomationProcedures } from '@server/modules/automations';
 import type { AutomationRunService } from '@server/modules/automations/automationRunService';
 import { AutomationService } from '@server/modules/automations/automationService';
-import { createAutomationRoutes } from '@server/modules/automations/automations.routes';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
@@ -79,7 +80,7 @@ describe('GET /api/automations/runs', () => {
       req.user = { id: 1, email: 'test@example.com' } as unknown as NonNullable<typeof req.user>;
       next();
     });
-    app.use('/api/automations', createAutomationRoutes(container.cradle));
+    app.use(serveApi({ automations: createAutomationProcedures(container.cradle) }));
     app.use(errorHandlerMiddleware);
 
     client = createApiClient(app);

@@ -19,6 +19,16 @@ export const IdSchema = z.union([
     .transform((v) => Number.parseInt(v, 10)),
 ]);
 
+// A non-negative integer query param: callers pass a number, the server
+// receives the query-string value as a string.
+export const QueryIntSchema = z.union([
+  z.number().int().nonnegative(),
+  z
+    .string()
+    .regex(/^\d+$/)
+    .transform((v) => Number.parseInt(v, 10)),
+]);
+
 export const ContentTypeSchema = z.enum(['movie', 'show']);
 
 export const FilterValueSchema = z.union([
@@ -136,19 +146,6 @@ export const MediaQueryValueSchema = z.object({
   filterValues: z.array(FilterValueEntrySchema),
 });
 
-export const CreateAutomationInputSchema = z.object({
-  name: z.string().min(1).max(200),
-  queryId: z.number().int().positive(),
-  providerId: z.number().int().positive(),
-  taskId: z.string().min(1),
-  taskParameter: z.string().optional(),
-  schedule: z.string().min(1),
-});
-
-export const UpdateAutomationStatusInputSchema = z.object({
-  status: z.enum(['active', 'paused']),
-});
-
 export const CreateProviderInputSchema = z.object({
   type: z.string(),
   name: z.string().min(1),
@@ -194,3 +191,6 @@ export const AutomationRunSchema = z
     createdAt: IsoDateSchema,
   })
   .strict();
+
+export type AutomationDto = z.infer<typeof AutomationSchema>;
+export type AutomationRunDto = z.infer<typeof AutomationRunSchema>;

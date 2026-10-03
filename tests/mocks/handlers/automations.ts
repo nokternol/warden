@@ -1,5 +1,7 @@
-import type { AutomationDto } from '@app/hooks/useAutomations';
+import { contract } from '@contract/index';
+import type { AutomationDto } from '@contract/schemas';
 import { http, HttpResponse } from 'msw';
+import { mockProcedure } from '../contract';
 
 export const MOCK_AUTOMATIONS: AutomationDto[] = [
   {
@@ -35,11 +37,9 @@ export const MOCK_AUTOMATIONS: AutomationDto[] = [
 ];
 
 export const automationsHandlers = [
-  http.get('/api/automations', () => {
-    return HttpResponse.json({ status: 'ok', data: MOCK_AUTOMATIONS });
-  }),
+  mockProcedure(contract.automations.list, () => MOCK_AUTOMATIONS),
 
-  http.post('/api/automations', async ({ request }) => {
+  mockProcedure(contract.automations.create, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
     const created: AutomationDto = {
       id: 99,
@@ -54,18 +54,18 @@ export const automationsHandlers = [
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    return HttpResponse.json({ status: 'ok', data: created });
+    return created;
   }),
 
-  http.patch('/api/automations/:id/status', async ({ params, request }) => {
+  mockProcedure(contract.automations.updateStatus, async ({ params, request }) => {
     const body = (await request.json()) as { status: 'active' | 'paused' };
     const base = MOCK_AUTOMATIONS.find((a) => a.id === Number(params.id)) ?? MOCK_AUTOMATIONS[0];
-    return HttpResponse.json({ status: 'ok', data: { ...base, status: body.status } });
+    return { ...base, status: body.status };
   }),
 
-  http.delete('/api/automations/:id', () => {
-    return HttpResponse.json({ status: 'ok', data: null });
-  }),
+  mockProcedure(contract.automations.delete, () => null),
+
+  mockProcedure(contract.automations.run, () => null),
 ];
 
 const MOCK_HEALTH = { status: 'healthy' as const, providerStatus: [], qualificationIssues: [] };

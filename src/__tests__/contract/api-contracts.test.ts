@@ -1,11 +1,5 @@
-import {
-  AutomationSchema,
-  CreateAutomationInputSchema,
-  MediaQueryRecordSchema,
-  MediaQueryValueSchema,
-  UpdateAutomationStatusInputSchema,
-} from '@contract/schemas';
-import { MOCK_AUTOMATIONS, MOCK_MEDIA_QUERIES } from '@tests/mocks/handlers/automations';
+import { MediaQueryRecordSchema, MediaQueryValueSchema } from '@contract/schemas';
+import { MOCK_MEDIA_QUERIES } from '@tests/mocks/handlers/automations';
 import { describe, expect, it } from 'vitest';
 
 // ─── Response shape contracts ─────────────────────────────────────────────────
@@ -15,13 +9,6 @@ describe('API contracts — MSW mock data', () => {
   describe('GET /api/media-queries', () => {
     it.each(MOCK_MEDIA_QUERIES)('item $name parses against MediaQueryRecordSchema', (item) => {
       const result = MediaQueryRecordSchema.safeParse(item);
-      expect(result.success, JSON.stringify(result.error?.format())).toBe(true);
-    });
-  });
-
-  describe('GET /api/automations', () => {
-    it.each(MOCK_AUTOMATIONS)('item $name parses against AutomationSchema', (item) => {
-      const result = AutomationSchema.safeParse(item);
       expect(result.success, JSON.stringify(result.error?.format())).toBe(true);
     });
   });
@@ -39,24 +26,6 @@ describe('API contracts — client request bodies', () => {
       filterValues: [{ key: 'watched', value: false }],
     };
     const result = MediaQueryValueSchema.safeParse(body);
-    expect(result.success, JSON.stringify(result.error?.format())).toBe(true);
-  });
-
-  it('POST /api/automations body is valid', () => {
-    const body: unknown = {
-      name: 'Nightly cleanup',
-      queryId: 1,
-      providerId: 1,
-      taskId: 'radarr.deleteUnmonitored',
-      schedule: '0 2 * * *',
-    };
-    const result = CreateAutomationInputSchema.safeParse(body);
-    expect(result.success, JSON.stringify(result.error?.format())).toBe(true);
-  });
-
-  it('PATCH /api/automations/:id/status body is valid', () => {
-    const body: unknown = { status: 'paused' };
-    const result = UpdateAutomationStatusInputSchema.safeParse(body);
     expect(result.success, JSON.stringify(result.error?.format())).toBe(true);
   });
 });

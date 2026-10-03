@@ -4,7 +4,7 @@ import { serveApi } from '../kernel/api';
 import { checkUser } from '../kernel/middleware/auth';
 import { createAppSettingsRoutes } from './appSettings';
 import { createAuthRoutes } from './auth';
-import { createAutomationProcedures, createAutomationRoutes } from './automations';
+import { createAutomationProcedures } from './automations';
 import {
   createBackdropsRoutes,
   createFilterFieldsRoutes,
@@ -27,7 +27,6 @@ export const routes = {
   providers: route('providers'),
   settings: route('settings'),
   auth: route('auth'),
-  automations: route('automations'),
   search: route('search'),
 } as const;
 
@@ -68,7 +67,6 @@ export function createApiRouter(cradle: Cradle) {
   router.use(routes.search, createSearchRoutes(cradle));
   router.use(routes.filterFields, createFilterFieldsRoutes(cradle));
   router.use(routes.mediaQueries, createMediaQueryRoutes(cradle));
-  router.use(routes.automations, createAutomationRoutes(cradle));
 
   return router;
 }

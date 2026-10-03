@@ -4,11 +4,12 @@ import { automations } from '@server/database/schema';
  * POST /api/automations/:id/run — Phase 3 Run Now
  * Async 202 + background execute; unknown id → 404; kind-agnostic and ignores paused.
  */
+import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
-import { createAutomationRoutes } from '@server/modules/automations/automations.routes';
+import { createAutomationProcedures } from '@server/modules/automations';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient } from '@tests/helpers/api';
 import express, { type Express } from 'express';
@@ -53,7 +54,7 @@ describe('POST /api/automations/:id/run — Phase 3', () => {
       req.user = { id: 1 } as unknown as NonNullable<typeof req.user>;
       next();
     });
-    app.use('/api/automations', createAutomationRoutes(container.cradle));
+    app.use(serveApi({ automations: createAutomationProcedures(container.cradle) }));
     app.use(errorHandlerMiddleware);
 
     client = createApiClient(app);

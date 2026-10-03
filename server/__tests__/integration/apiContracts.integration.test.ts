@@ -1,12 +1,13 @@
 import { AutomationSchema, MediaQueryRecordSchema, ProviderSchema } from '@contract/schemas';
 import { buildContainer } from '@server/container';
 import { MetadataProviderType } from '@server/database/schema';
+import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
+import { createAutomationProcedures } from '@server/modules/automations';
 import { AutomationService } from '@server/modules/automations/automationService';
-import { createAutomationRoutes } from '@server/modules/automations/automations.routes';
 import { createMediaQueryRoutes } from '@server/modules/mediaQueries/mediaQueries.routes';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
@@ -73,7 +74,7 @@ describe('API shape contracts — real server responses', () => {
       next();
     });
     app.use('/api/media-queries', createMediaQueryRoutes(container.cradle));
-    app.use('/api/automations', createAutomationRoutes(container.cradle));
+    app.use(serveApi({ automations: createAutomationProcedures(container.cradle) }));
     app.use('/api/settings', createSettingsRoutes(container.cradle));
     app.use(errorHandlerMiddleware);
 

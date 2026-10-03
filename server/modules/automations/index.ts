@@ -13,8 +13,7 @@
  * deliberately if that changes.
  */
 
-// HTTP surface — mounted by the API router.
-export { createAutomationRoutes } from './automations.routes';
+// HTTP surface — the automations procedures of the API contract.
 export { createAutomationProcedures } from './automations.procedures';
 
 // Container contribution — the app builder composes Cradle from this slice
