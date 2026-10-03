@@ -241,6 +241,24 @@ describe('AutomationExecutor', () => {
       expect(runs[0].itemCount).toBe(5);
     });
 
+    it('records no targeted items for a system run, whatever count its runner reports', async () => {
+      const db = getDb();
+      const automationRunService = new AutomationRunService({ db });
+      const systemExecutor = new AutomationExecutor({
+        automationService,
+        automationRunService,
+        providerSettingsService,
+        mediaQueryService,
+        systemTaskRunner: { run: async () => 5 },
+      });
+      const id = await seedSystemAutomation('system:identity-resolution');
+
+      await systemExecutor.execute(id);
+
+      const [run] = await automationRunService.listRuns({ automationId: id });
+      expect(await automationRunService.listRunItems(run.id)).toEqual({ data: [], total: 0 });
+    });
+
     it('does not start a second run while a run for the same id is in flight', async () => {
       const db = getDb();
       let release!: () => void;
