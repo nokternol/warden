@@ -45,8 +45,7 @@ export default function SystemPage() {
             />
           </div>
           <p className="text-xs text-text-muted mb-4 ml-[28px]">
-            Built-in data jobs. Their task and schedule are fixed; you can pause or run them on
-            demand.
+            Built-in data jobs. Their task and schedule are fixed; you can run them on demand.
           </p>
 
           {!isLoading && automations.length === 0 ? (
