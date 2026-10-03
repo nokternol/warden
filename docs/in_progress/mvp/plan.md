@@ -215,12 +215,16 @@ does not define its own TDD process. Each slice supplies the *input* to that ski
 
 - **Gate:** `yarn verify:fast` and `yarn depcruise:ci` green. UI slices start with a story under
   `yarn ladle` with `playwright-cli`, then get verified under `yarn dev` (root `CLAUDE.md`).
-- **Commits:** stage files by name; `git add .`/`-A` are not allowed (agent working-tree discipline).
-  Commit messages and PR bodies describe the delivered end state (What / Why / Changes / Testing) and
-  never the cycle journey (root `CLAUDE.md`).
-- **The TDD record:** the skill's per-step output goes in a comment on the slice's issue, outside the
-  repo, so it doesn't conflict with the no-journey rule. Each row of its **Design Debt** table becomes
-  a GitHub issue labelled `design-debt`, linked from that comment.
+- **Commits:** one commit per green cycle, staging files by name (`git add .`/`-A` are not allowed,
+  per the agent's working-tree discipline).
+- **Durable writing (root `CLAUDE.md`):** every commit message, code comment and PR description
+  states information that stays true and useful: the behaviour that now exists, the design decision
+  the cycle settled and why. It never records the journey (attempts, mistakes fixed along the way,
+  session context), and comments never narrate the task. A cycle's commit message is the durable
+  part of its record. The PR description summarises the slice's end state (What / Why / Changes /
+  Testing).
+- **Design debt:** each row of the skill's **Design Debt** table becomes a GitHub issue labelled
+  `design-debt`, linked from the slice's PR.
 - **Docs:** `docs-lifecycle` triggers for every moved, renamed or behaviour-changed file. Each heal
   gets a fracture-ledger entry, Open when the slice starts and Healed when it merges. Finish with
   `graphify update .`.
@@ -237,8 +241,8 @@ does not define its own TDD process. Each slice supplies the *input* to that ski
   percentage is the progress bar.
 - **Plan sign-off:** merging the PR that adds this file. Issues are created from the merged version.
 - **Slice sign-off:** reviewing and merging its PR. The issue's checklist must be met: the step
-  list and TDD record posted to the issue, deletes done, gates green, docs updated, and screenshots
-  for UI slices.
+  list posted to the issue, one commit per green cycle, deletes done, gates green, docs updated,
+  design debt filed, and screenshots for UI slices.
 - **MVP sign-off:** ticking G1's checklist (every In-scope feature, offered provider type and offered
   task, verified on the published image on the NAS), then closing the milestone. `docs-lifecycle`
   then folds this plan's lasting content into `docs/architecture/` and deletes it.
