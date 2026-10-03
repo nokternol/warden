@@ -14,6 +14,7 @@ import { AutomationRunService } from '@server/modules/automations/automationRunS
 import { AutomationService } from '@server/modules/automations/automationService';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
+import { IdentityResolutionJob } from '@server/modules/providers/identityResolutionJob';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createRadarrMovie } from '../../../../tests/factories';
@@ -208,6 +209,22 @@ describe('AutomationExecutor writes to automation_runs', () => {
       const items = await automationRunService.listRunItems(run.id);
       expect(items.data.map((i) => [i.title, i.year])).toEqual([['Heat', 1995]]);
       expect(run.itemCount).toBe(1);
+    });
+
+    it("keeps a removed item's title in the run's history, flagged as deleted", async () => {
+      const movie = createRadarrMovie({ id: 3, tmdbId: 103, title: 'Ronin' });
+      serveRadarr([movie]);
+      const { provider, automation } = await seedRadarrAutomation();
+      await executor.execute(automation.id);
+
+      await new IdentityResolutionJob({
+        db: getDb(),
+        movieSources: [{ providerId: provider.id, provider: { getMovies: async () => [] } }],
+      }).runForMovies();
+
+      const [run] = await automationRunService.listRuns({ automationId: automation.id });
+      const items = await automationRunService.listRunItems(run.id);
+      expect(items.data.map((i) => [i.title, i.deleted])).toEqual([['Ronin', true]]);
     });
   });
 });
