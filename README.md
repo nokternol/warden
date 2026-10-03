@@ -178,6 +178,6 @@ MIT
 
 ## Links
 
-- **Repository**: https://github.com/nokternol/maintainarr
+- **Repository**: https://github.com/nokternol/warden
 - **Documentation**: [TESTING.md](TESTING.md)
-- **Issues**: https://github.com/nokternol/maintainarr/issues
+- **Issues**: https://github.com/nokternol/warden/issues

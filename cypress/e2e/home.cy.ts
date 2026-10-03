@@ -9,7 +9,7 @@ describe('Providers Page', () => {
   });
 
   it('displays the application name in the sidebar', () => {
-    cy.contains('Maintainarr').should('be.visible');
+    cy.contains('Warden').should('be.visible');
   });
 
   it('displays all provider panels', () => {

@@ -29,12 +29,12 @@ export class PlexOAuth {
 
     return {
       Accept: 'application/json',
-      'X-Plex-Product': 'Maintainarr',
+      'X-Plex-Product': 'Warden',
       'X-Plex-Version': '1.0',
       'X-Plex-Client-Identifier': clientId,
       'X-Plex-Platform': 'Web',
       'X-Plex-Device': 'Browser',
-      'X-Plex-Device-Name': 'Maintainarr (Web)',
+      'X-Plex-Device-Name': 'Warden (Web)',
     };
   }
 
