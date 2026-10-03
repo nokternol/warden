@@ -16,17 +16,24 @@ export interface ApiContext {
   user?: PublicUser;
   /** The request's session, for the procedures that start and end one. */
   session: Request['session'];
+  /** True when the server runs with `BYPASS_AUTH`: every procedure answers without a user. */
+  authBypassed: boolean;
+}
+
+export interface ServeApiOptions {
+  /** Answer every procedure without a signed-in user (`BYPASS_AUTH`, refused in production). */
+  authBypass?: boolean;
 }
 
 /**
  * The contract implementer every module builds its procedures from. Its root
  * middleware is default-deny: a procedure answers without a signed-in user only
- * when the contract marks it `public`.
+ * when the contract marks it `public`, or when the server runs with the auth bypass.
  */
 export const api = implement(contract)
   .$context<ApiContext>()
   .use(({ context, procedure, next }) => {
-    if (!procedure['~orpc'].meta.public && !context.user) {
+    if (!procedure['~orpc'].meta.public && !context.user && !context.authBypassed) {
       throw new ORPCError('UNAUTHORIZED', { message: 'Authentication required' });
     }
     return next();
@@ -88,7 +95,10 @@ function fieldErrorsOf(issues: InputIssue[]): Record<string, string[]> {
 }
 
 /** Serves a (sub)router of contract procedures over HTTP at their contract paths. */
-export function serveApi(router: Router<AnyContractRouter, ApiContext>): RequestHandler {
+export function serveApi(
+  router: Router<AnyContractRouter, ApiContext>,
+  { authBypass = false }: ServeApiOptions = {}
+): RequestHandler {
   const handler = new OpenAPIHandler(router, {
     clientInterceptors: [({ next, context }) => inSuccessEnvelope(next, context.requestId)],
     customErrorResponseBodyEncoder: (error) => ({
@@ -100,7 +110,12 @@ export function serveApi(router: Router<AnyContractRouter, ApiContext>): Request
   return (req, res, next) => {
     handler
       .handle(req, res, {
-        context: { requestId: req.requestId, user: req.user, session: req.session },
+        context: {
+          requestId: req.requestId,
+          user: req.user,
+          session: req.session,
+          authBypassed: authBypass,
+        },
       })
       .then(({ matched }) => {
         if (!matched) next();

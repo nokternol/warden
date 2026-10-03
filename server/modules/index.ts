@@ -54,7 +54,8 @@ export function createApiRouter(cradle: Cradle) {
           ...createProviderSettingsProcedures(cradle, invalidateMediaCaches),
         },
         system: createSystemProcedures(cradle),
-      })
+      }),
+      { authBypass: cradle.config.BYPASS_AUTH }
     )
   );
 

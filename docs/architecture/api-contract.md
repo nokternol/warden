@@ -46,6 +46,11 @@ The contract uses [oRPC](https://orpc.dev) in contract-first mode, with Zod 4 sc
   procedures (tasks, task options, metadata, ratings). The procedure context carries the user that
   `checkUser` attached from the session, and the session itself, which sign-in starts and sign-out
   destroys.
+- **Auth bypass (development only).** With `BYPASS_AUTH=true`, `serveApi` marks every request's context
+  `authBypassed`, and the root middleware lets non-public procedures answer without a user. This is what
+  lets browser tooling such as `playwright-cli` drive the app without a Plex sign-in; `requireAuth`
+  skips the page redirect under the same variable. Config validation refuses to start with it on in
+  production, and the server logs a warning at startup whenever it is on.
 - **Client.** [`src/lib/api/client.ts`](ref:path:src/lib/api/client.ts) exports `api`, a client typed
   from the contract. Calling a procedure that doesn't exist, or passing input it doesn't accept, doesn't
   compile, and no caller writes a URL. The client unwraps the success envelope, turns the error envelope

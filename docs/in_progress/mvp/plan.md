@@ -320,8 +320,9 @@ names, so nothing is renamed twice.
 - **Deletes:** the `public` marks on contract procedures that must not answer anonymously (C0 kept
   the previously unguarded routes public: provider tasks/task-options/metadata/ratings and the rules).
   The per-route `isAuthenticated()` calls and the "playground stage" comment went with C0's transport.
-- **Note:** under C0, `BYPASS_AUTH=true` no longer bypasses API auth (only `requireAuth`'s page guard
-  still reads it); decide whether Playwright analysis needs a replacement.
+- **Note:** `BYPASS_AUTH=true` (development only, refused in production by config validation) lets
+  every procedure answer without a user, for browser tooling. A1's coverage test keeps it in mind:
+  the default-deny behaviours hold with the bypass off.
 
 **A2 · Owner-only sign-in** *(decision 1)*
 - **Model:** Opus 5.5 (security; ownership semantics).

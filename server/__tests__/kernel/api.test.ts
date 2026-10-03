@@ -16,6 +16,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 describe('serveApi — the contract served over HTTP', () => {
   let app: Express;
   let anonymousApp: Express;
+  let bypassedApp: Express;
 
   beforeAll(async () => {
     const mockConfig = createMockConfig({
@@ -53,7 +54,7 @@ describe('serveApi — the contract served over HTTP', () => {
     });
 
     const router = { automations: createAutomationProcedures(container.cradle) };
-    const buildApp = (signedIn: boolean) => {
+    const buildApp = (signedIn: boolean, options?: Parameters<typeof serveApi>[1]) => {
       const built = express();
       built.use(express.json());
       built.use(requestIdMiddleware);
@@ -63,11 +64,12 @@ describe('serveApi — the contract served over HTTP', () => {
           next();
         });
       }
-      built.use(serveApi(router));
+      built.use(serveApi(router, options));
       return built;
     };
     app = buildApp(true);
     anonymousApp = buildApp(false);
+    bypassedApp = buildApp(false, { authBypass: true });
   });
 
   afterAll(async () => {
@@ -92,6 +94,13 @@ describe('serveApi — the contract served over HTTP', () => {
       status: 'error',
       error: { type: 'UNAUTHORIZED', message: 'Authentication required' },
     });
+  });
+
+  it('answers a procedure that is not public without a signed-in user when auth is bypassed', async () => {
+    const res = await request(bypassedApp).get('/api/automations');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual([expect.objectContaining({ name: 'Nightly unmonitor' })]);
   });
 
   it('answers an application error thrown by a procedure with its status inside the error envelope', async () => {
