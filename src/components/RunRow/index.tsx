@@ -4,6 +4,7 @@ import { type RunItemDto, useRunItems } from '@app/hooks/useRunItems';
 import { cn } from '@app/lib/utils/cn';
 import { ChevronRight } from 'lucide-react';
 import { useState } from 'react';
+import styles from './RunRow.module.css';
 
 /** The run table's columns, in order — the header and every row's cells follow it. */
 const COLUMNS = ['Automation', 'Status', 'Ran At', 'Items', 'Error'] as const;
@@ -32,31 +33,27 @@ function Root({ run, defaultExpanded = false }: RunRowProps) {
 
   return (
     <>
-      <tr className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors">
-        <td className="px-4 py-3 text-sm font-medium text-text-primary">
-          <div className="flex items-center gap-2">
+      <tr className={styles.row}>
+        <td className={styles.nameCell}>
+          <div className={styles.name}>
             {targetedAny ? (
               <ExpandToggle open={open} onToggle={() => setOpen(!open)} />
             ) : (
-              <span className="w-6 -ml-1 shrink-0" aria-hidden />
+              <span className={styles.togglePlaceholder} aria-hidden />
             )}
             {run.automationName}
           </div>
         </td>
-        <td className="px-4 py-3">
+        <td className={styles.badgeCell}>
           <Badge variant={run.status === 'success' ? 'success' : 'error'} size="sm">
             {run.status}
           </Badge>
         </td>
-        <td className="px-4 py-3 text-sm text-[var(--color-text-secondary)]">
-          {formatDate(run.ranAt)}
-        </td>
-        <td className="px-4 py-3 text-sm text-[var(--color-text-secondary)]">
-          {run.itemCount !== null ? run.itemCount : '—'}
-        </td>
-        <td className="px-4 py-3 text-sm text-[var(--color-text-secondary)] max-w-xs truncate">
+        <td className={styles.cell}>{formatDate(run.ranAt)}</td>
+        <td className={styles.cell}>{run.itemCount !== null ? run.itemCount : '—'}</td>
+        <td className={cn(styles.cell, styles.errorCell)}>
           {run.error ? (
-            <span className="text-red-400" title={run.error}>
+            <span className={styles.error} title={run.error}>
               {run.error.length > 60 ? `${run.error.slice(0, 60)}…` : run.error}
             </span>
           ) : (
@@ -78,12 +75,9 @@ function ExpandToggle({ open, onToggle }: { open: boolean; onToggle: () => void 
       aria-label={label}
       title={label}
       onClick={onToggle}
-      className="p-1 -ml-1 shrink-0 rounded text-[var(--color-text-secondary)] hover:text-text-primary hover:bg-white/5 transition-colors"
+      className={styles.toggle}
     >
-      <ChevronRight
-        className={cn('w-4 h-4 transition-transform', open && 'rotate-90')}
-        aria-hidden
-      />
+      <ChevronRight className={cn(styles.chevron, open && styles.chevronOpen)} aria-hidden />
     </button>
   );
 }
@@ -91,8 +85,8 @@ function ExpandToggle({ open, onToggle }: { open: boolean; onToggle: () => void 
 /** The detail row listing a run's targeted titles. */
 function TargetedItems({ runId }: { runId: number }) {
   return (
-    <tr className="border-b border-white/5 bg-white/[0.015]">
-      <td colSpan={COLUMNS.length} className="px-4 pt-1 pb-4 pl-11">
+    <tr className={styles.detailRow}>
+      <td colSpan={COLUMNS.length} className={styles.detailCell}>
         <TargetedItemList runId={runId} />
       </td>
     </tr>
@@ -100,7 +94,7 @@ function TargetedItems({ runId }: { runId: number }) {
 }
 
 function Note({ children }: { children: React.ReactNode }) {
-  return <p className="text-sm text-[var(--color-text-secondary)]">{children}</p>;
+  return <p className={styles.note}>{children}</p>;
 }
 
 function TargetedItemList({ runId }: { runId: number }) {
@@ -111,13 +105,13 @@ function TargetedItemList({ runId }: { runId: number }) {
 
   return (
     <>
-      <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className={styles.itemList}>
         {items.map((item) => (
           <TargetedItem key={item.mediaItemId} item={item} />
         ))}
       </ul>
       {total > items.length && (
-        <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
+        <p className={styles.pageNote}>
           Showing {items.length} of {total} items
         </p>
       )}
@@ -127,18 +121,11 @@ function TargetedItemList({ runId }: { runId: number }) {
 
 function TargetedItem({ item }: { item: RunItemDto }) {
   return (
-    <li
-      className={cn(
-        'flex items-center gap-1.5 text-sm min-w-0',
-        item.deleted ? 'text-[var(--color-text-secondary)]' : 'text-text-primary'
-      )}
-    >
-      <span className={cn('truncate', item.deleted && 'line-through decoration-current')}>
+    <li className={cn(styles.item, item.deleted && styles.itemRemoved)}>
+      <span className={cn(styles.itemTitle, item.deleted && styles.itemTitleRemoved)}>
         {item.title ?? 'Untitled'}
       </span>
-      {item.year !== null && (
-        <span className="text-[var(--color-text-secondary)]">{item.year}</span>
-      )}
+      {item.year !== null && <span className={styles.itemYear}>{item.year}</span>}
       {item.deleted && (
         <Badge variant="default" size="sm" title="This item has since left its source">
           removed
@@ -152,12 +139,9 @@ function TargetedItem({ item }: { item: RunItemDto }) {
 function Head() {
   return (
     <thead>
-      <tr className="border-b border-white/10">
+      <tr className={styles.headRow}>
         {COLUMNS.map((column) => (
-          <th
-            key={column}
-            className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide"
-          >
+          <th key={column} className={styles.columnHeader}>
             {column}
           </th>
         ))}
