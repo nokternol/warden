@@ -1,62 +1,122 @@
 # Warden MVP path
 
 **Status:** approved when this file merges to `main`. Execution is tracked in GitHub Issues (see
-[Tracking and sign-off](#tracking-and-sign-off)). Each slice below is one PR, built test-first (`/tdd` or the
-`plan-and-go:tdd-engineer` persona). It covers a different axis from the provider e2e
-implementation plan (tracked in
-[`provider-e2e-spec/specs/_implementation-map.md`](../provider-e2e-spec/specs/_implementation-map.md)): that plan *widens*
-provider coverage, while this one *finishes the product*. Every provider phase from Tautulli (Phase
-5) onward is sequenced after this MVP (see [Post-MVP](#post-mvp-parked-in-order)).
+[Tracking and sign-off](#tracking-and-sign-off)). Each slice below is one PR, built test-first (`/tdd`
+or the `plan-and-go:tdd-engineer` persona). The provider e2e implementation work (tracked in
+[`provider-e2e-spec/specs/_implementation-map.md`](../provider-e2e-spec/specs/_implementation-map.md))
+widens provider coverage and is sequenced after this MVP (see [Post-MVP](#post-mvp-parked-in-order)).
 
-## Destination
+## Definition of done
 
-Warden's MVP is the core loop from [`warden-core-model.md`](../../architecture/warden-core-model.md),
-delivered as a container image that is safe to expose on a home network:
+The MVP is done when all three of these hold for the deployed container:
+
+1. **Everything exposed works.** Every feature in [In scope](#in-scope) is reachable, works, and is
+   verified in G1. Every offered provider type, filter and task is included.
+2. **Nothing else is exposed.** Everything else has no entry point: no nav item, page, API route,
+   provider type, filter or task. "Hidden" means removed, not disabled behind a flag (decision 7).
+3. **The system is simplified.** Simplified means low cognitive load. Each concept has **one name**
+   and **one mechanism** across UI, API, code and docs, and no two of those contradict each other.
+   The [Glossary](#glossary) is the single list of names, and a guard test enforces it.
+
+Exposure is decided by **one mechanism**: the server's authorities project what is offered (provider
+types, filters, tasks), and the client only derives from those projections. Pages and nav are the
+only client-owned exposure, and they are pinned by test against the scope below.
+
+## In scope
+
+| Feature | What must work |
+|---|---|
+| **Sign-in** | Plex sign-in by the owner only (the first sign-in claims the instance), sign-out, and a session that survives a container restart. |
+| **Providers** | Add, edit, test and delete a provider of an offered type. Radarr/Sonarr allow multiple instances. Enable tasks per instance. |
+| **Media** | Browse movies and series from configured sources. Filter, filter by title, sort and paginate. |
+| **Queries** | Save a filter set as a query, list, preview and delete. |
+| **Automations** | Create from one or more include/exclude queries, a task (with its select parameter, if any) and a schedule. List, Run Now, Disable/Enable and Delete. A destructive task states its blast radius before saving. First-run guidance when setup is incomplete. |
+| **Runs** | History of runs with status, count, error and the items each run targeted, including items since removed from their source. |
+| **System** | System automations (identity resolution, enrichment) listed with Run Now, health status, and media data reset. |
+| **Delivery** | `docker compose up` with a persistent volume, a health check, graceful stop, migrations on boot, and an image published by CI. |
+
+The [Destination scenario](#destination-scenario) exercises the core path through these features.
+
+## Out of scope (removed)
+
+| Surface | Why it goes |
+|---|---|
+| Dashboard page | Duplicates the automations list. It folds into Automations plus first-run guidance (decision 3). |
+| Ratings page, media-page ratings panel, `/api/providers/ratings`, `ratingsAggregation` | A **second mechanism** for ratings beside the `imdbRating`/`communityRating` filters. Its future is `docs/intent/media-ratings-provider.md`. |
+| Search page, `/api/search/metadata` | A **second mechanism** for finding a title beside the title filter. It was built as a graph-discovery tool. |
+| `/api/providers/metadata` | No consumer. |
+| `/api/app-settings`, the `appSettings` module, `settingsAwarePrecedence.ts` | No UI and no server consumer. Precedence settings return with the post-MVP precedence work. |
+| Provider types SEERR and TVMAZE | The API accepts them, then `ProviderFactory` throws, so they are a reachable broken path. |
+| Provider type OMDB | It feeds only the removed ratings path. |
+| Filters with no control or no live producer | For example, `certification` has no lookup today. Stale producer claims go too (TMDB on series `genres`, TVMAZE on `network`). C5's invariant decides the final list. |
+| Unused components `WidgetGrid`, `StatCard`, and boilerplate stories | They use names the product doesn't have ("Collections", "New Task", "Active Tasks"). |
+| `INVENTORY.md` | A June snapshot describing files that no longer exist. |
+
+Which provider types and tasks stay offered is decided by decisions 9 and 10: **offered means
+verified in G1.**
+
+## Glossary
+
+One name per concept, everywhere. Each row is a decision (8a–8g). Names marked *(decided)* are
+already settled.
+
+| Concept | Canonical name | Retired names (guard-tested) | Recommendation rationale |
+|---|---|---|---|
+| A configured external system | **Provider** | service, integration (UI) | PRODUCT.md and the UI already say Provider. `BaseProviderConnection` stays as an internal HTTP class name. |
+| A predicate over media fields | **Filter** *(8a)* | rule, `MediaRule`, `MEDIA_RULES`, `useMediaRules` | PRODUCT.md, the UI, `/api/filter-fields`, `FilterValue` and `MediaFilterBar` already say filter. Code is split between both names today. |
+| A named, persisted set of filters | **Query** *(8b)* | saved query, collection | "Saved" is a state, not a name (`VOCABULARY.md`). The UI still says "Saved queries". |
+| A query used by an automation, with role include/exclude | **Included / excluded query** *(8c)* | query source, `MediaQuerySource`, `automation_query_sources` | "Source" is reserved for one meaning (next row). |
+| A provider that owns media | **Source** *(8d)* | `sourceProviders` on filters (becomes `providers`) | Today "source" means four things. It keeps one. |
+| Movie or series | **movie / series** *(8e)* | show, `MediaKind`, `NormalizedShow` | Users see Sonarr's term, and the UI, routes and `series*` fields already say series. Persisted `'show'` values migrate. |
+| Query + task + schedule | **Automation** (user or system) *(8f)* | "Task" for automations (System page, stories) | The System page currently calls system automations "Tasks". |
+| An action a provider offers | **Task** | — | `ActuatorTask`, unchanged. |
+| One execution of an automation | **Run**, page **Runs** *(8g)* | Activity | The page shows runs, the verb is Run Now, and the API is `/automations/runs`. |
+| Automation controls | **Run Now / Disable / Enable / Delete** *(decided)* | Pause, Resume, Play | Decision 2. |
+| The product | **Warden** *(decided)* | Maintainarr | Decision 6. |
+
+## Destination scenario
 
 > A self-hoster runs `docker compose up` and signs in with Plex. The first account becomes the owner,
-> and every other account is refused. They configure Radarr, Sonarr, and Plex or Tautulli, then
-> build the query *"tagged `list-import`, added more than 90 days ago, unwatched"* and save it. They
-> attach **Unmonitor movie** on a daily schedule and press **Run Now**. Activity then shows *which
-> titles* changed. The container restarts with the schedule, history and session intact.
+> and every other account is refused. They add Radarr, Sonarr, and Plex or Tautulli, then build the
+> query *"tagged `list-import`, added more than 90 days ago, unwatched"* and save it. They attach
+> **Unmonitor movie** on a daily schedule and press **Run Now**. Runs then shows *which titles*
+> changed. The container restarts with the schedule, history and session intact.
 
-Every rule and task in that scenario is already built: `tagIds`, `addedDaysAgo`, `watched` and
-`unmonitorMovie`. So the MVP needs very little new capability. The remaining work is **safety,
-coherence and delivery**.
+Every filter and task in it already exists (`tagIds`, `addedDaysAgo`, `watched`, `unmonitorMovie`).
 
 ## Design constraints
 
-### Primary: simplify (reuse · simplification · efficiency · altitude)
+### Primary: simplify (low cognitive load)
 
-Every slice is judged against these four lenses before it is accepted:
+A reader should never meet two names for one thing, two mechanisms for one job, or a doc that
+contradicts the code. Every slice is judged against these lenses:
 
-- **Reuse.** Prefer extending an existing authority over adding a new one. A slice that adds a map,
-  enum or fetcher beside an existing one is rejected.
-- **Simplification.** Each slice names what it **deletes**. A heal that only adds code has not
-  healed anything.
-- **Efficiency.** Make no new endpoint when an existing projection can be derived from. A
-  first-run state computed from existing hooks beats a `/api/setup-status` endpoint.
+- **One name.** A slice that introduces or keeps a second name for a glossary concept is rejected.
+- **One mechanism.** Prefer extending the existing authority. A slice that adds a map, enum, fetcher,
+  endpoint or control beside an existing one is rejected. The fracture ledger's rule applies: *a
+  translator is a fracture, persisted.* Heal by deleting the second vocabulary, never by bridging it.
+- **Deletion.** Each slice names what it **deletes**. A heal that only adds code hasn't healed
+  anything.
 - **Altitude.** Fix the mechanism, not each call site. Examples: one default-deny auth mount instead
-  of about 40 per-handler guards, and one registry field instead of a client lookup table per
-  provider. The fracture ledger's rule applies too: *a translator is a fracture, persisted.* Heal by
-  deleting the second vocabulary, never by bridging it.
+  of about 40 per-handler guards, and one registry field instead of a client lookup table.
 
 ### UI: impeccable (product register)
 
-[`PRODUCT.md`](../../../PRODUCT.md) and [`DESIGN.md`](../../../DESIGN.md) are binding. Their principles
-become these acceptance checks on every UI slice:
+[`PRODUCT.md`](../../../PRODUCT.md) and [`DESIGN.md`](../../../DESIGN.md) are binding. Their
+principles become these acceptance checks on every UI slice:
 
 - **State clarity over polish.** Every surface has explicit loading, empty, error and success
   states. A destructive action states its blast radius (*"Deletes files for 214 movies"*) before it
   can be committed.
-- **Density over decoration.** Tables and lists, not card grids. Remove the dashboard's metric
-  `StatCard`s, because PRODUCT.md rejects metric-hero cards.
+- **Density over decoration.** Tables and lists, not card grids or metric tiles.
 - **Dark-first, WCAG 2.1 AA.** Body text 4.5:1, interactive elements 3:1, visible focus rings, and a
   reduced-motion alternative for every transition.
 - **Banned:** side-stripe accent borders, gradient text, decorative glass, identical card grids,
-  and an eyebrow above every section. Numbered steps are allowed only where the order is real (the
-  first-run checklist in F1 is a real sequence).
+  and an eyebrow above every section. Numbered steps only where the order is real (F1's first-run
+  checklist).
 - **Process:** story first. Each component change starts in its `.stories.tsx` under `yarn ladle`
-  with `playwright-cli`, then gets verified in context under `yarn dev` (root `CLAUDE.md`).
+  with `playwright-cli`, then gets verified in context under `yarn dev` (root `CLAUDE.md`). Stories
+  use glossary names.
 
 ## Baseline (verified 2026-10-03, `main` @ `2fc775a`)
 
@@ -73,329 +133,468 @@ become these acceptance checks on every UI slice:
 | X1 | **Any Plex account can sign in.** The first sign-in creates a user with no owner or allowlist check. Combined with X2, a stranger could configure providers and run delete tasks. | `server/modules/auth/authService.ts` `authenticateWithPlex` |
 | X2 | **Auth is opt-in per handler, and coverage has gaps.** `/api/providers/*` (tasks, task-options, metadata, ratings) and `/api/filter-fields` have no guard. One route carries the comment *"dev/config-time endpoint — add auth when the feature moves beyond the playground stage."* | `providers.routes.ts`, `providers.handler.ts` (0 guards), `media.filterFields.*` (0 guards) |
 
-### Vocabulary fractures (the ledger says "none open", but these are)
+### Two names or two mechanisms for one concept
 
 | # | Fracture | Evidence |
 |---|---|---|
-| F1 | **Automation verb model, stated three ways.** `VOCABULARY.md` says *Run Now / Disable / Archive, never Play/Pause*. The code says status `'paused'` with Pause/Play icons. `system-vs-user-automations.md` says *Pause/Resume/Delete*. Archive does not exist (it is in `docs/intent/`). | `automationService.ts:50`, `AutomationRow/index.tsx:6,165`, `automations.schemas.ts:72`, `useAutomations.ts:51,82` |
-| F2 | **`ContentType` vs `MediaKind`.** Two names for `'movie' \| 'show'` (`ContentType = MediaKind`, 16 `MediaKind` sites), plus a third spelling at the HTTP boundary: `/api/media/series`, `SERIES_PARAM_TO_KEY`, `seriesSort`. | `providers/roles.ts:101`, `media/filterRegistry.ts:11`, `media.routes.ts:33` |
-| F3 | **Three HTTP homes for "settings/providers."** Provider CRUD lives in a "transport-only" `settings` module at `/api/settings/providers`. Provider tasks and options live at `/api/providers`. System-wide settings live in a ninth module, `appSettings`, at `/api/app-settings`. **`appSettings` is missing from `.dependency-cruiser.cjs`'s `MODULES`, so its boundaries are unenforced.** | `server/modules/index.ts`, `settings/index.ts`, `.dependency-cruiser.cjs:14` |
-| F4 | **Docs describe code that isn't there.** Core model: *"one active provider per type"* contradicts multi-instance sources. *"roles declared by the interfaces it `implements`"* contradicts the adapter-bound roles in the North Star. The `addedBy=list` example rule doesn't exist. `precedence.ts` says `primaryMediaServer` "isn't built yet", but `settingsAwarePrecedence.ts` exists, and **nothing calls `applyPrimaryMediaServer`**. The implementation map says AutomationBuilder has *"no UI for single-select"* parameters, but it does. The ledger cites `src/pages/media/mediaQueryAdapters.ts`, which is really `src/lib/`. Two intent docs link to files that don't exist (`media-actuator-realisation.md`, `plex-added-date.md`). The Dockerfile says `warden.db` while config defaults to `maintainarr.db`. The README says port 5056 while config says 5057. | as cited |
+| F1 | **Automation verb model, stated three ways.** `VOCABULARY.md` says *Run Now / Disable / Archive, never Play/Pause*. The code says status `'paused'` with Pause/Play icons. `system-vs-user-automations.md` says *Pause/Resume/Delete*. | `automationService.ts:50`, `AutomationRow/index.tsx:6,165`, `automations.schemas.ts:72`, `useAutomations.ts:51,82` |
+| F2 | **Movie/series has three spellings.** `ContentType` vs `MediaKind` (16 sites), the value `'show'` vs `/api/media/series`, `seriesSort`, `SERIES_PARAM_TO_KEY`, and UI copy "No series match". | `providers/roles.ts:101`, `filterRegistry.ts:11`, `media.routes.ts:33` |
+| F3 | **Three HTTP homes for providers and settings.** Provider CRUD lives at `/api/settings/providers` in a "transport-only" module, tasks at `/api/providers`, and system settings in an `appSettings` module **missing from `.dependency-cruiser.cjs`, so its boundaries are unenforced**. | `server/modules/index.ts`, `.dependency-cruiser.cjs:14` |
+| F4 | **Docs contradict code.** Core model: *"one active provider per type"* vs multi-instance sources, *"roles declared by the interfaces it `implements`"* vs adapter-bound roles, and an `addedBy=list` rule that doesn't exist. `precedence.ts` says `primaryMediaServer` "isn't built yet" while an unused `applyPrimaryMediaServer` exists. The implementation map says AutomationBuilder has no single-select parameter UI, but it does. The ledger cites the wrong path for `mediaQueryAdapters.ts`. Two intent docs link to missing files. The Dockerfile says `warden.db` vs config `maintainarr.db`. The README says port 5056 vs 5057. `INVENTORY.md` describes deleted files. | as cited |
+| F5 | **Filter vs rule.** `MediaRule`/`MEDIA_RULES`/`useMediaRules` beside `filterRegistry.ts`, `/api/filter-fields`, `FilterValue`, `MediaFilterBar` and the UI's "Add filter". | `filterRegistry.ts`, `useMediaRules.ts` |
+| F6 | **"Saved queries"** in the live UI, a name `VOCABULARY.md` retired. | `pages/automations/index.page.tsx` |
+| F7 | **"Source" means four things:** the `MediaSource` role, an automation's include/exclude `MediaQuerySource`, `MediaQuerySpec.sources`, and a filter's `sourceProviders`. | `mediaQueryEngine.ts:27`, `filterRegistry.ts` |
+| F8 | **System automations are called "Tasks"** on the System page, while "Task" means a provider action everywhere else. Stories add "New Task" and "Active Tasks" for automations, plus "Collections". | `pages/system`, `*.stories.tsx` |
+| F9 | **The client re-declares the provider catalogue.** `PROVIDER_REGISTRY` lists 8 of the 10 types with hand-written labels and `filterCapabilities` strings, while the server's enum, factory and roles are the real authority. | `src/lib/provider-registry.ts` |
+| F10 | **Ratings have two mechanisms**: rating filters via enrichment, and an ad-hoc `/api/providers/ratings` aggregation feeding a separate page and panel. | `ratingsAggregation.ts`, `pages/ratings` |
+| F11 | **Title lookup has two mechanisms**: the title filter, and the Search page's cross-provider metadata search. | `pages/search`, `media.search.*` |
+| F12 | **The client/server bridge is partial, so either side can grow alone.** 48 `defineRoute` routes, but only 21 declare a response schema and 5 server files share the client's schemas. The client hand-writes 43 `/api/...` URL strings, and 1 hook validates a response. MSW mocks are a third hand-kept copy. The dependency runs backwards (`server/` imports `src/lib/api/schemas.ts`), and the client imports server internals (`@server/modules/media/browseRangeKeys`). Nothing fails when a route is added on one side only. | `server/kernel/defineRoute.ts`, `src/lib/api/schemas.ts`, `src/hooks/*`, `tests/mocks/handlers/*`, `src/lib/mediaQueryAdapters.ts:31` |
 
-### DRY violations
+### Duplication (one job, many copies)
 
 | # | Duplication | Evidence |
 |---|---|---|
-| D1 | **13 hand-rolled SWR fetchers.** Each has its own error string, an unchecked `json.data as T` cast, and inconsistent envelopes (`/api/filter-fields` returns a bare array). Server error messages are swallowed. The shared zod schemas in `src/lib/api/schemas.ts` already exist but go unused on the client read path. | `src/hooks/use*.ts` |
-| D2 | **The client re-declares rule vocabulary again.** `BOOLEAN_VALUE_LABELS`, `SEGMENT_LABEL_OVERRIDES` and `ENUM_OPTIONS`, plus the key-switched `csvIdOptions`/`csvStringOptions`. This is the same failure class Phase 4 healed (`FILTER_FIELDS`), regrowing one entry per provider. Every remaining provider phase in the e2e plan edits this file. | `MediaFilterBar/index.tsx:855-1000` |
-| D3 | **The browse path still translates.** `MOVIE_PARAM_TO_KEY`/`SERIES_PARAM_TO_KEY` + `toFilterValues()`, a range "satellite map" plus a zod coverage check guarding the translator, and the client's mirror `toBrowseParams()`. Browse and save encode the same filter state two ways. | `media.handler.ts:169-345`, `src/lib/mediaQueryAdapters.ts:194` |
-| D4 | **Three multi-select controls** in one 1,829-line file: `MultiSelectDropdown`, `StringMultiSelectDropdown`, and `filters/OptionFilter`. | `MediaFilterBar/index.tsx:136,342` |
-| D5 | **`'active' \| 'paused'` declared in four places**, and the `z.enum(['movie','show'])` literal re-declared beside the shared `ContentTypeSchema`. | F1 sites; `mediaQueries.schemas.ts:15` |
-| D6 | **Migrations copied into the image twice.** `build:server` already copies them, then the Dockerfile copies them again. `nodemon` ships in production dependencies. | `package.json` `build:server`, `Dockerfile` |
+| D1 | **13 hand-rolled SWR fetchers.** Each has its own error string, an unchecked `json.data as T` cast, and inconsistent envelopes (`/api/filter-fields` returns a bare array). Server error messages are swallowed. | `src/hooks/use*.ts` |
+| D2 | **The client re-declares filter presentation:** `BOOLEAN_VALUE_LABELS`, `SEGMENT_LABEL_OVERRIDES`, `ENUM_OPTIONS`, and key-switched `csvIdOptions`/`csvStringOptions`. | `MediaFilterBar/index.tsx:855-1000` |
+| D3 | **Browse and save encode filter state two ways.** `MOVIE_PARAM_TO_KEY`/`SERIES_PARAM_TO_KEY` + `toFilterValues()`, a range satellite map and its coverage check, and the client mirror `toBrowseParams()`. | `media.handler.ts:169-345`, `src/lib/mediaQueryAdapters.ts:194` |
+| D4 | **Three multi-select controls** in one 1,829-line file. | `MediaFilterBar/index.tsx:136,342`, `filters/OptionFilter` |
+| D5 | **`'active' \| 'paused'` declared in four places**, and `z.enum(['movie','show'])` re-declared beside `ContentTypeSchema`. | F1 sites, `mediaQueries.schemas.ts:15` |
+| D6 | **Migrations copied into the image twice**, and `nodemon` ships in production dependencies. | `package.json` `build:server`, `Dockerfile` |
 
-## Scope
+### Loose ends (reachable but broken, or unreachable but present)
 
-**In the MVP:** auth safety; the five vocabulary/DRY heals; run legibility ("what changed"); a
-destructive-task guard; first-run path; container image, compose file and CI smoke test; one
-impeccable pass over the four MVP surfaces (Providers, Media + filters, Automations, Activity).
-
-**Frozen, not deleted:** the Ratings page/panel and the Search page. They get no new work until
-after the MVP, and the UI pass only checks they don't regress.
-
-**Out of scope:** everything under [Post-MVP](#post-mvp-parked-in-order).
+| # | Loose end | Evidence |
+|---|---|---|
+| L1 | Creating a SEERR or TVMAZE provider passes validation, then throws in `ProviderFactory`. | `settings.schemas.ts:4` (`nativeEnum`), `providerFactory.ts:72` |
+| L2 | `/api/providers/metadata` and `/api/app-settings` have no consumer. | route grep |
+| L3 | Filters in the API that the UI can never render, such as `certification`. | `ruleRendersControl` |
+| L4 | `WidgetGrid` and `StatCard` are used only by their own stories. | component grep |
 
 ## Slice protocol
 
-Every slice is one branch and one PR:
+TDD here means **`plan-and-go:tdd`**, executed by the **`plan-and-go:tdd-engineer`** agent. This plan
+does not define its own TDD process. Each slice supplies the *input* to that skill, not the cycles.
 
-1. **RED.** Write the named failing test first. For a pure refactor slice, the RED step is the
-   characterization or invariant test that pins today's behavior; it must pass before *and* after.
-2. **GREEN.** Make the minimal change.
-3. **REFACTOR + delete.** Remove everything listed under *Deletes*. A slice isn't done while its
-   deletes remain.
-4. **Gate.** Run `yarn verify:fast` and `yarn depcruise:ci`. UI slices also need a story,
-   `playwright-cli` in Ladle, then `yarn dev`.
-5. **Docs.** Use the `docs-lifecycle` triggers from root `CLAUDE.md` for every moved, renamed or
-   behavior-changed file. Each heal adds a fracture-ledger entry: Open when the slice starts, Healed
-   when it merges. Finish with `graphify update .`.
-6. **Model.** The builder runs on the model named in the slice's **Model** line, passed as the
-   agent's model override. Opus is reserved for slices that set a contract later work depends on,
-   cross a security or module boundary, or need design judgement. Every PR is reviewed with
-   `/code-review` on Opus, whichever model built it.
+**Running a slice:**
+
+1. **Spawn the builder:** `Agent(subagent_type: "plan-and-go:tdd-engineer", model: <slice's Model
+   line>)`, pointed at this file's slice section and its GitHub issue. The agent definition supplies
+   phase discipline, the mismatch protocol and working-tree discipline.
+2. **The agent reads the skill directly with the Read tool:**
+   `~/.claude/skills/plan-and-go/skills/tdd/SKILL.md` and its `references/` (`phases.md`,
+   `extracting-steps.md`, `red-phase.md`, `refactor-phase.md`). It must not invoke
+   `Skill(plan-and-go:tdd)`, because the skill's header says it is executed by the tdd-engineer
+   agent, which would trigger a nested spawn from inside that agent.
+3. **Extract steps first.** The agent turns the slice's **Behaviours** into cycle steps per
+   `extracting-steps.md`: tracer bullet, then domain behaviours, boundaries, rejections, recovery.
+   Pre-flight work (installs, config) is separated out. It posts the step list to the slice's issue
+   before the first RED.
+4. **Cycles follow the skill exactly:** one behaviour, one test, one cycle (the Atomic Cycle Rule).
+   RED is confirmed by an assertion failure, not a compile error. GREEN is naive. REFACTOR is
+   mandatory before the next test.
+5. **Plan state vs code.** Each slice's Findings and Behaviours describe the tree as of `2fc775a`. If
+   the agent finds the code differs, it stops and uses the agent's **mismatch protocol**. It does not
+   adapt the plan on its own.
+
+**What each slice provides as skill input:**
+
+- **Behaviours.** Observable behaviours the steps are extracted from, in domain language. These are
+  not pre-written tests and not a batch.
+- **Expected end state.** The structure the plan expects once the cycles are done. RED is the
+  interface-design instrument, so where cycles reveal a better shape, the slice PR updates this file
+  to match what was built.
+- **Deletes.** Duplication the slice must remove. These are REFACTOR-phase DRY targets, and the
+  slice isn't done while any remain.
+- **Model.** The model override for the builder agent.
+
+**Slices that are not TDD:** B4 (docs, governed by `docs-lifecycle`), F2 (design pass, governed by
+`impeccable`; any behaviour change it needs becomes a TDD step) and G1 (acceptance, governed by
+`playwright-cli`).
+
+**Around the cycles:**
+
+- **Gate:** `yarn verify:fast` and `yarn depcruise:ci` green. UI slices start with a story under
+  `yarn ladle` with `playwright-cli`, then get verified under `yarn dev` (root `CLAUDE.md`).
+- **Commits:** stage files by name; `git add .`/`-A` are not allowed (agent working-tree discipline).
+  Commit messages and PR bodies describe the delivered end state (What / Why / Changes / Testing) and
+  never the cycle journey (root `CLAUDE.md`).
+- **The TDD record:** the skill's per-step output goes in a comment on the slice's issue, outside the
+  repo, so it doesn't conflict with the no-journey rule. Each row of its **Design Debt** table becomes
+  a GitHub issue labelled `design-debt`, linked from that comment.
+- **Docs:** `docs-lifecycle` triggers for every moved, renamed or behaviour-changed file. Each heal
+  gets a fracture-ledger entry, Open when the slice starts and Healed when it merges. Finish with
+  `graphify update .`.
+- **Review:** `/code-review` on Opus for every PR, whichever model built it.
 
 ## Tracking and sign-off
 
 - **Design:** this file. Changes to a slice's scope are edits here, made in the slice's own PR.
-- **Execution:** GitHub Issues on `nokternol/warden`, in an `MVP` milestone. There is one issue
-  per slice plus G1's acceptance issue, labelled `track:A`…`track:G`, `model:sonnet`/`model:opus`,
-  and `blocked` until the slice's prerequisites merge. A parent tracking issue lists every slice
-  as a sub-issue, with the dependency diagram below.
+- **Execution:** GitHub Issues on `nokternol/warden`, in an `MVP` milestone. There is one issue per
+  slice plus G1's acceptance issue, labelled by track (`track:S`, `track:A`…`track:G`), by model
+  (`model:sonnet`/`model:opus`), and `blocked` until prerequisites merge. A parent tracking issue
+  lists every slice as a sub-issue, with the dependency diagram below.
 - **Progress:** each PR says `Closes #n`, so merging closes the slice. The milestone's completion
   percentage is the progress bar.
-- **Plan sign-off:** merging the PR that adds this file. Issues are created from the merged
-  version.
-- **Slice sign-off:** reviewing and merging its PR. The issue's checklist must be met: RED test
-  first, deletes done, gates green, docs updated, and screenshots for UI slices.
-- **MVP sign-off:** ticking G1's acceptance checklist after running the Destination scenario
-  against the published image on the NAS, then closing the milestone. `docs-lifecycle` then folds
-  this plan's lasting content into `docs/architecture/` and deletes it.
+- **Plan sign-off:** merging the PR that adds this file. Issues are created from the merged version.
+- **Slice sign-off:** reviewing and merging its PR. The issue's checklist must be met: the step
+  list and TDD record posted to the issue, deletes done, gates green, docs updated, and screenshots
+  for UI slices.
+- **MVP sign-off:** ticking G1's checklist (every In-scope feature, offered provider type and offered
+  task, verified on the published image on the NAS), then closing the milestone. `docs-lifecycle`
+  then folds this plan's lasting content into `docs/architecture/` and deletes it.
 
 ## Slices
 
 ```mermaid
 flowchart LR
-  A1[A1 default-deny auth] --> A2[A2 owner-only sign-in]
+  S1[S1 remove out-of-scope surfaces] --> C0[C0 one API contract]
+  C0 --> A1[A1 default-deny auth]
+  C0 --> B3[B3 one provider home]
+  A1 --> A2[A2 owner-only sign-in]
   B1[B1 Disable verb] --> F1[F1 first-run path]
-  B5[B5 one product name] --> E1
-  B2[B2 one ContentType] --> C3[C3 browse speaks registry]
-  B3[B3 one provider home] --> C1[C1 one API client]
+  B2[B2 movie/series] --> C3[C3 browse speaks registry]
+  C0 --> C1[C1 one API client]
+  B5[B5 glossary guard + UI names] --> E1
+  B5 --> B6[B6 filter + source names in code]
+  B6 --> C2[C2 filter presentation on registry]
   C1 --> C3
   C1 --> D1[D1 destructive guard]
   C1 --> F1
-  C2[C2 rule presentation on registry] --> C4[C4 one multi-select]
+  C2 --> C4[C4 one multi-select]
+  C2 & B3 --> C5[C5 server decides exposure]
   D2[D2 run lists what changed]
   E1[E1 image correct] --> E2[E2 compose] --> E3[E3 CI smoke + publish]
   A2 --> E3
-  C3 & C4 & D1 & D2 & F1 --> F2[F2 impeccable pass]
+  C3 & C4 & C5 & D1 & D2 & F1 --> F2[F2 impeccable pass]
   F2 & E3 --> G1[G1 acceptance + docs closure]
 ```
 
-Tracks A, B, C2, D2 and E can start in parallel. Do Track B before the C slices that touch the same
+S1 goes first so no later slice spends effort on a surface that's being removed. After it, tracks
+A, B, D2 and E can run in parallel. Track B's renames land before the C slices that touch the same
 names, so nothing is renamed twice.
+
+### Track S — Scope
+
+**S1 · Remove out-of-scope surfaces** *(decision 7)*
+- **Model:** Sonnet 5.5 (deletion against an explicit list, pinned by manifest tests).
+- **Why:** [Out of scope](#out-of-scope-removed), F10, F11, L2, L4.
+- **Behaviours:**
+  - Every removed API route answers 404. Once C0 lands, the contract is the manifest of what
+    exists.
+  - The navigation offers exactly the In-scope pages: Media, Automations, Runs, Providers, System.
+- **Expected end state and deletes:** the Dashboard page and nav item (F1 builds the replacement guidance), the
+  Ratings page, `RatingsPanel`/`RatingsForm`/`RatingsDisplay`/`useRatings`, `/api/providers/ratings`
+  and `ratingsAggregation`, the Search page with `useMetadataSearch` and `/api/search/metadata`,
+  `/api/providers/metadata`, the `appSettings` module and route with `settingsAwarePrecedence.ts`,
+  `WidgetGrid`, `StatCard`, and `INVENTORY.md`. Anything left unreferenced by these removals goes
+  too; git history is the archive.
+- **Docs:** fix every doc that references a removed file (`docs-lifecycle` relocation trigger).
 
 ### Track A — Safe to expose
 
-**A1 · Default-deny API auth**
-- **Model:** Opus 5.5 (security boundary; router-stack introspection test).
-- **Why:** X2. Fixing it at the right altitude means one guard at the `/api` mount with an explicit
-  public allowlist, not per-handler opt-in.
-- **RED:** `server/__tests__/integration/authCoverage.integration.test.ts`. It walks the mounted
-  router stack and asserts every route returns 401 when unauthenticated, except the allowlist
-  (`GET /health`, `POST /auth/plex`, `POST /auth/logout`, `GET /backdrops` for the login page).
-  Because it is table-free, a route added later is covered automatically.
-- **GREEN:** `router.use(requireAuthUnless(PUBLIC_ROUTES))` in `server/modules/index.ts`.
+**A1 · Default-deny API auth** (after C0)
+- **Model:** Opus 5.5 (security boundary; contract-driven coverage test).
+- **Why:** X2. One guard at the root, with an explicit public allowlist, not per-handler opt-in.
+- **Behaviours:**
+  - An unauthenticated call to any contract procedure is refused with 401.
+  - The public allowlist (health, Plex sign-in, sign-out, login-page backdrops) still answers
+    unauthenticated.
+  - A procedure added later is refused unauthenticated without anyone listing it.
+- **Expected end state:** one auth middleware at the contract implementer's root (C0), with the allowlist
+  declared on the contract.
 - **Deletes:** every per-route and per-handler `isAuthenticated()` call (about 40 sites), and the
   "playground stage" comment.
 
 **A2 · Owner-only sign-in** *(decision 1)*
 - **Model:** Opus 5.5 (security; ownership semantics).
 - **Why:** X1.
-- **RED:** `authService` tests. The first Plex sign-in becomes the owner. A second, different Plex
-  account gets `ForbiddenError` and no row is created. The owner signing in again still refreshes
-  their token.
-- **GREEN:** an owner check in `authenticateWithPlex`, either from the existing `users` row count or
-  an `isOwner` column.
+- **Behaviours:**
+  - The first Plex sign-in on a fresh instance becomes the owner.
+  - A different Plex account is refused, and no user is created for it.
+  - The owner signing in again succeeds and refreshes their stored token.
+  - The login page tells a refused account why it was refused.
+- **Expected end state:** an owner check in `authenticateWithPlex`.
 - **Verify:** the login page shows a clear refusal state for a non-owner. Story first.
 
-### Track B — Heal vocabulary fractures
+### Track B — One name per concept
 
 **B1 · Automations are Disabled, not Paused** *(decision 2)*
 - **Model:** Sonnet 5.5 (mechanical schema + migration + rename).
 - **Why:** F1, D5.
-- **RED:** a contract test for `AutomationStatusSchema = z.enum(['active','disabled'])` in
-  `src/lib/api/schemas.ts`. An `AutomationRow` test checks the control reads *Disable*/*Enable* and
-  that no Play/Pause icon renders. A migration test checks existing `'paused'` rows become
-  `'disabled'`.
-- **GREEN:** one shared schema consumed by `automations.schemas.ts`, `automationService.ts` and
+- **Behaviours:**
+  - An automation's status is `active` or `disabled`, and nothing else is accepted.
+  - An active automation's row offers *Disable*, and a disabled one offers *Enable*. No Play or
+    Pause control appears.
+  - An automation stored as `paused` reads back as `disabled` after migration.
+- **Expected end state:** one shared schema consumed by `automations.schemas.ts`, `automationService.ts` and
   `useAutomations.ts`, plus the migration.
 - **Deletes:** the four literal unions and the `Pause`/`Play` imports.
-- **Docs:** set `VOCABULARY.md`'s verb row to *Run Now / Disable / Delete* (Archive stays in
-  `docs/intent/automation-archive.md`), and correct `system-vs-user-automations.md`.
+- **Docs:** `VOCABULARY.md`'s verb row becomes *Run Now / Disable / Enable / Delete* (Archive stays
+  in `docs/intent/automation-archive.md`). Correct `system-vs-user-automations.md`.
 
-**B2 · One name for movie|show**
-- **Model:** Sonnet 5.5 (type rename guarded by typecheck).
+**B2 · One name for movie/series** *(decision 8e)*
+- **Model:** Sonnet 5.5 (type + value rename with a data migration, guarded by typecheck).
 - **Why:** F2, D5.
-- **RED (invariant):** a mediaQueries contract test that `contentType: 'series'` is rejected and the
-  schema is the shared `ContentTypeSchema`. The existing suite stays green (rename slice).
-- **GREEN:** `ContentType` becomes the only TypeScript name, declared once in
-  `providers/roles.ts` and re-exported by media. `SOURCE_OWNER_BY_KIND` becomes
-  `SOURCE_OWNER_BY_CONTENT_TYPE`. The database column `media_identity.kind` stays as-is, since that
-  is storage, not vocabulary.
-- **Deletes:** `MediaKind`, the `ContentType = MediaKind` alias, and the inline `z.enum` in
-  `mediaQueries.schemas.ts`.
-- **Note:** the `series` route spelling is healed in C3, where the browse route is rewritten anyway.
+- **Behaviours:**
+  - A content type is `movie` or `series`. `show` is rejected.
+  - A query or identity stored as `show` reads back as `series` after migration.
+- **Expected end state:** `ContentType` is the only TypeScript name, declared once in `providers/roles.ts` and
+  re-exported by media. `NormalizedShow`/`show.ts` become `NormalizedSeries`/`series.ts`.
+  `SOURCE_OWNER_BY_KIND` becomes `SOURCE_OWNER`.
+- **Deletes:** `MediaKind`, the alias, and the inline `z.enum` in `mediaQueries.schemas.ts`.
 
-**B3 · One home per HTTP concern**
+**B3 · One home for providers** (after S1)
 - **Model:** Opus 5.5 (module move + dependency-direction rules).
 - **Why:** F3.
-- **RED:** integration tests pin provider CRUD at `/api/providers` and assert that
-  `/api/settings/providers` returns 404 (the same pattern used for the retired `/api/saved-queries`).
-  A depcruise **config test** asserts that every directory under `server/modules/` appears in
-  `MODULES`, so a tenth module can never again ship unenforced.
-- **GREEN:** move the CRUD handlers into `modules/providers/`, delete the `settings` module, rename
-  `appSettings` to `settings` (`/api/settings` = system-wide settings), and add it to
-  `MODULES`/`ALLOWED_TARGETS`. Wire `applyPrimaryMediaServer` into the precedence read so the
-  `settings` module has its one real consumer. The alternative is deleting it; don't leave it dead.
-- **Deletes:** `server/modules/settings/` (the old transport module), `appSettings` naming, and
-  `/api/app-settings`.
+- **Behaviours:**
+  - Providers are created, read, updated, tested and deleted under `/api/providers`.
+  - `/api/settings/providers` answers 404.
+  - A module directory under `server/modules/` that the dependency rules don't cover fails the
+    boundary check.
+- **Expected end state:** move the CRUD handlers into `modules/providers/`.
+- **Deletes:** the `settings` module and the `/api/settings` namespace (S1 already removed
+  `appSettings`).
 
-**B4 · Doc fractures** (doc-only, via `docs-lifecycle`)
+**B4 · Docs agree with code** (doc-only, via `docs-lifecycle`)
 - **Model:** Sonnet 5.5 (doc corrections from a fixed list).
-- Fix every F4 item. Rewrite the core model's example as `tagIds` + `addedDaysAgo` + `watched`
-  (the destination scenario). Record F1–F3 and D2–D3 in the fracture ledger as Open entries,
-  pointing at their slices.
+- Fix every F4 item. Rewrite the core model's example as the Destination scenario. Record F1–F11
+  and D2–D3 in the fracture ledger as Open entries pointing at their slices.
 
-**B5 · One product name** *(decision 6)*
-- **Model:** Sonnet 5.5 (mechanical rename behind a guard test).
-- **Why:** the repo is now `nokternol/warden`, but `maintainarr` survives as a second product name
-  in user-visible and operational places. These are the log filenames (`kernel/logger.ts`), the Plex
-  OAuth product and device name (`plexOAuth.ts`, shown on plex.tv's authorized devices), the default
-  `DB_PATH` (`kernel/config.ts`, `drizzle.config.ts`), the Cypress home test, stories, fixtures,
-  `.env.example`, `config/README.md` and the README's repo links.
-- **RED:** a guard test that fails while `git grep -i maintainarr` finds anything outside an
-  explicit history allowlist (migrations, `.impeccable/` critique snapshots). `config.test.ts`
-  expects `./config/db/warden.db`.
-- **GREEN:** rename every hit.
-- **Note:** changing the Plex product name makes the instance show up as a new device on plex.tv.
+**B5 · Glossary guard and user-facing names** *(decisions 6, 8)*
+- **Model:** Sonnet 5.5 (rename behind a guard test).
+- **Why:** F6, F8, and the `maintainarr` residue: log filenames, the Plex OAuth product/device name,
+  default `DB_PATH`, the Cypress home test, fixtures, `.env.example`, `config/README.md` and README
+  links.
+- **Behaviours:**
+  - A retired name from `VOCABULARY.md`'s deprecated table appearing anywhere in `src/`, `server/`,
+    `cypress/`, `tests/`, config or READMEs fails the build. The only exception is an explicit
+    history allowlist (migrations, `.impeccable/` snapshots). The doc is the authority, and one
+    check enforces every glossary row.
+  - With no `DB_PATH` set, the database is `./config/db/warden.db`.
+  - Logs are written as `warden-*.log`, and Plex lists the app as Warden.
+- **Expected end state:** move the [Glossary](#glossary) into `VOCABULARY.md`. Rename UI copy and stories: Query
+  not "Saved query", System automations not "Tasks", page Runs not Activity, no
+  Collections/services.
+- **Note:** the new Plex product name makes the instance show up as a new device on plex.tv.
   Existing sessions keep working.
 
-### Track C — Remove duplication
+**B6 · Filter and source names in code and API** *(decisions 8a, 8c, 8d)*
+- **Model:** Sonnet 5.5 (cross-cutting rename; typecheck and B5's guard prove completeness).
+- **Why:** F5, F7.
+- **Behaviours:**
+  - With the retired code names (`MediaRule`, `MEDIA_RULES`, `useMediaRules`, `MediaQuerySource`,
+    `sourceProviders`) added to the deprecated table, B5's check passes.
+  - An automation's included and excluded queries survive the table rename intact.
+- **Expected end state:** `MediaFilter`/`MEDIA_FILTERS`/`MediaFilterDescriptor`. An automation has included and
+  excluded queries (`AutomationQuery { queryId, role }`). A filter lists its `providers`.
 
-**C1 · One API client**
+### Track C — One mechanism per job
+
+**C0 · One API contract** *(decision 11; after S1, before A1, B3, C1, C3)*
+- **Model:** Opus 5.5 (the contract every client and server change builds on).
+- **Why:** F12. The goal is that adding an API feature to one side only is impossible: one contract
+  declares method, path, input, output and errors, and both sides are derived from it.
+- **Mechanism (oRPC, contract-first):**
+  - `contract/`: a top-level folder that depends only on `zod`. `oc.route({ method, path })
+    .input(…).output(…)` for every In-scope route, served as REST via oRPC's OpenAPI handler, so
+    URLs stay `/api/...`.
+  - **Server:** `implement(contract)`. A contract procedure without a handler is a compile error,
+    and so is a handler returning the wrong shape. Default-deny auth is one middleware at the
+    implementer root (A1).
+  - **Client:** a client typed from the contract, wrapped in one generic SWR hook. A call to a
+    procedure that doesn't exist, or with the wrong input, is a compile error. No hand-written URLs.
+  - **Mocks:** MSW handlers are typed against contract outputs, so mock drift is a compile error.
+  - **Direction:** depcruise rules allow `src/ → contract/` and `server/ → contract/` only, with no
+    `src/ → server/` and no `server/ → src/`.
+- **Behaviours:**
+  - A contract procedure that nothing in `src/` calls fails the build unless it's on the explicit
+    server-only allowlist (`health`). This catches server-only features, which the type system
+    can't.
+  - An import from `src/` into `server/`, or from `server/` into `src/`, fails the boundary check.
+  - Every ported procedure answers the same requests with the same results as the Express route it
+    replaces.
+- **Gate (not a TDD behaviour):** `yarn typecheck` runs a compile-fail fixture
+  (`@ts-expect-error`) proving that a missing handler and an unknown client call both fail to
+  compile. RED needs an assertion failure, so this is checked by typecheck rather than a cycle.
+- **Expected end state:** start with a spike that mounts oRPC beside the Express routers for one module
+  (automations), proves the SWR wrapper, auth middleware and error envelope, then ports the remaining
+  modules. Each module is a commit in this slice; the slice is done when the last Express router is
+  gone.
+- **Deletes:** `defineRoute`, every `*.routes.ts`/`*.handler.ts` transport pair (logic moves into
+  procedures), `src/lib/api/schemas.ts` (moved into `contract/`), and the client's hand-written URLs.
+- **Absorbs:** C1 (the contract client replaces `apiGet`), A1's mechanism (A1 keeps its auth-coverage behaviour and
+  the owner semantics in A2), B3's route move (provider procedures are declared under `providers` in
+  the contract), and C3's route shape (browse is a contract procedure taking the save encoding).
+
+**C1 · One API client** (after B3; *removed if decision 11 adopts C0, which absorbs it*)
 - **Model:** Sonnet 5.5 (contract fixed by tests; hook-by-hook migration).
 - **Why:** D1.
-- **RED:** `src/lib/api/client.test.ts` (MSW). `apiGet(url, schema)` unwraps `{data}` and parses it
-  with the shared zod schema. A non-2xx response throws `ApiError` carrying the server's `message`
-  and status. A shape mismatch throws instead of returning a lie.
-- **GREEN:** `src/lib/api/client.ts` with `apiGet`/`apiSend`, migrating hooks one at a time
-  (green-to-green). Put `/api/filter-fields` on the `{data}` envelope.
+- **Behaviours:**
+  - A successful call returns the parsed payload, not the envelope.
+  - A failed call surfaces the server's message and status to the UI.
+  - A response that doesn't match its schema is an error, not silently wrong data.
+- **Expected end state:** `src/lib/api/client.ts` with `apiGet`/`apiSend`, migrating hooks one at a time. Put
+  `/api/filter-fields` on the `{data}` envelope.
 - **Deletes:** 13 local `fetcher`s and every `json.data as T` cast.
 
-**C2 · Rule presentation lives on the registry**
+**C2 · Filter presentation lives on the registry** (after B6)
 - **Model:** Opus 5.5 (registry contract every future provider builds on).
-- **Why:** D2. This is the highest-leverage DRY slice, because after it a provider phase touches
-  only the server.
-- **RED:** a registry invariant test. Every `boolean` rule declares `valueLabels`. Every enum-shaped
-  `string`/`number` rule declares `options`. Every `csv-*` rule declares a `lookup`. A
-  `MediaFilterBar` test then renders a *synthetic* descriptor's labels, options and lookup with zero
-  client knowledge of its key.
-- **GREEN:** `MediaRule` gains `valueLabels?`, `options?`, `shortLabel?` and `lookup?`, and
-  `MediaRuleDescriptor` projects them.
-- **Deletes:** `BOOLEAN_VALUE_LABELS`, `SEGMENT_LABEL_OVERRIDES`, `ENUM_OPTIONS`, and the key
-  switches in `csvIdOptions`/`csvStringOptions`.
+- **Why:** D2.
+- **Behaviours:**
+  - A boolean filter carries its own value labels (for example *Monitored* / *Unmonitored*).
+  - An enum-shaped filter carries its own options.
+  - A multi-value filter names the lookup its options come from.
+  - The filter bar renders a filter it has never seen, correctly, from its descriptor alone.
+- **Expected end state:** `MediaFilter` gains `valueLabels?`, `options?`, `shortLabel?` and `lookup?`, and the
+  descriptor projects them.
+- **Deletes:** `BOOLEAN_VALUE_LABELS`, `SEGMENT_LABEL_OVERRIDES`, `ENUM_OPTIONS`, the key switches in
+  `csvIdOptions`/`csvStringOptions`, and `ruleRendersControl` (C5 makes renderability a server
+  fact).
 
 **C3 · Browse speaks the registry** (after B2, C1)
 - **Model:** Opus 5.5 (deletes a translator without changing results).
-- **Why:** D3, and the rest of F2.
-- **RED:** a parity integration test. Browsing with `FilterValueEntry[]` *E* returns exactly the ids
-  that previewing a `MediaQueryRecord` saved with *E* returns. One encoding, one engine path.
-- **GREEN:** browse becomes `GET /api/media/:contentType` (`movie|show`) taking the same entries as
+- **Why:** D3.
+- **Behaviours:**
+  - Browsing with a set of filter values returns exactly the items that previewing a query saved
+    with the same values returns.
+  - Browse requests use the same filter encoding as save.
+- **Expected end state:** browse becomes `GET /api/media/:contentType` (`movie|series`) taking the same entries as
   save.
 - **Deletes:** `MOVIE_PARAM_TO_KEY`, `SERIES_PARAM_TO_KEY`, `toFilterValues()`, the range satellite
   map and its coverage check, `toBrowseParams()`, and `/api/media/movies|series`.
-- **Docs:** retire or rewrite `docs/architecture/browse-range-param-enforcement.md`, since what it
-  enforces is gone.
+- **Docs:** retire `docs/architecture/browse-range-param-enforcement.md`, since what it enforces is
+  gone.
 
 **C4 · One multi-select** (after C2; story first)
 - **Model:** Sonnet 5.5 (component consolidation behind characterization tests).
 - **Why:** D4.
-- **RED:** `OptionMultiSelect` tests covering grouped options, instance qualification, keyboard
-  navigation and clear-all. Existing `MediaFilterBar` tests act as characterization.
-- **GREEN:** controls move into `src/components/filters/*`, each with a story. `MediaFilterBar`
-  becomes layout plus `onRuleChange` dispatch.
+- **Behaviours:**
+  - One multi-select serves every multi-value filter, including grouped options.
+  - With several instances, options are qualified by instance.
+  - The multi-select is fully keyboard operable.
+  - Clear-all empties the selection.
+  - Existing filter-bar behaviour is unchanged (pinned as regression guards per the skill).
+- **Expected end state:** controls move into `src/components/filters/*`, each with a story. `MediaFilterBar`
+  becomes layout plus change dispatch.
 - **Deletes:** `MultiSelectDropdown`, `StringMultiSelectDropdown`, and the CSV parse helpers that C3
   makes redundant.
 
-### Track D — Finish the minimal feature set
+**C5 · The server decides exposure** (after C2, B3; decisions 9, 10)
+- **Model:** Opus 5.5 (one exposure mechanism across three authorities).
+- **Why:** F9, L1, L3, and Definition of done item 2.
+- **Behaviours:**
+  - The add-provider list shows exactly the offered types (decision 9), with labels and defaults
+    from the server.
+  - Creating a non-offered type is rejected before any connection is attempted.
+  - A filter is offered only if it has a control and at least one live producer among offered
+    types, so `certification` and the stale TMDB/TVMAZE claims disappear until fixed.
+  - Only the offered tasks (decision 10) are offered for enablement or automation.
+- **Expected end state:** offered types, filters and tasks are each declared once on the server. The client
+  derives the add-provider list from `/api/providers/types`.
+- **Deletes:** `src/lib/provider-registry.ts` (`PROVIDER_REGISTRY`, `filterCapabilities`) and the
+  non-offered branches it leaves unreachable.
+
+### Track D — Finish the in-scope features
 
 **D1 · Destructive tasks state their blast radius** (after C1; story first)
 - **Model:** Sonnet 5.5 (one component behaviour on an existing endpoint).
-- **Why:** state clarity. `ActuatorTaskDescriptor.destructive` exists but the builder doesn't act on
-  it.
-- **RED:** an `AutomationBuilder` test. With a destructive task selected, the builder shows the live
-  match count from the existing preview endpoint, as in *"Deletes files for 214 movies"*. Submit
-  stays disabled until an explicit confirm control is checked. A non-destructive task never shows
-  the confirm control.
+- **Why:** state clarity. `ActuatorTaskDescriptor.destructive` exists but the builder ignores it.
+- **Behaviours:**
+  - With a destructive task selected, the builder states how many items it will affect, as in
+    *"Deletes files for 214 movies"*.
+  - A destructive automation can't be saved until its effect is explicitly confirmed.
+  - A non-destructive task never asks for confirmation.
 
 **D2 · A run says what changed** *(decisions 4, 4a)*
 - **Model:** Opus 5.5 (schema + identity-job behaviour + transaction).
 - **Why:** PRODUCT.md's success criterion, *"no ambiguity about what ran, when, and what changed."*
   `automation_runs` stores only `itemCount` and `error`.
 - **Schema:** `automation_run_items(runId → automation_runs.id ON DELETE CASCADE, mediaItemId →
-  media_item.id)`. The primary key is `(runId, mediaItemId)`, which serves "what did this run
-  touch". A secondary index on `mediaItemId` serves "which runs touched this item". There is no
-  title or payload column; titles resolve by join at read time.
+  media_item.id)`. The primary key `(runId, mediaItemId)` serves "what did this run touch". A
+  secondary index on `mediaItemId` serves "which runs touched this item". No title or payload column;
+  titles resolve by join at read time.
 - **Pruning interaction (decision 4a):** `IdentityResolutionJob.pruneStaleItems` hard-deletes
   `media_item` rows that leave their source, which is exactly what a destructive run causes. So
   `media_item` gains a `deleted` boolean (default `false`), a soft delete within Warden's own
-  database. Pruning sets the flag instead of deleting the row. Identity joins (`resolveGroup`,
+  database. Pruning sets the flag instead of deleting. Identity joins (`resolveGroup`,
   `resolveActuatorIds`, the orphan-group sweep) ignore deleted rows, and an upsert of a re-listed
   item clears the flag. There is no deletion timestamp: when a Warden run performed the delete, its
   `automation_run_items` link carries the datetime via the run's `ranAt`.
-- **RED:**
-  1. An executor test: a user run inserts one mapping row per matched `media_item`, and
-     `itemCount` equals the mapping row count.
-  2. An identity-job test: an item that leaves its source is flagged `deleted`, not removed. Its run
-     history still joins to a title, it no longer resolves for actuation, and re-listing it clears
-     the flag.
-  3. A service test: run items for a run (paged) and runs for an item, both served from the
-     indexes.
-  4. An Activity page test: a run row expands to a paged list of titles, with deleted items marked
-     as removed.
-- **GREEN:** the migration (new table, `media_item.deleted`, index), a batched insert in
+- **Behaviours:**
+  - A run records each item it targeted, and its item count equals the items recorded.
+  - An item that leaves its source is kept and marked deleted. Its run history still shows its
+    title, and it is no longer targeted by tasks.
+  - An item that reappears in its source is no longer marked deleted.
+  - A run's targeted items can be listed page by page, and an item's runs can be listed too.
+  - On the Runs page a run expands to its targeted titles, with deleted ones marked as removed.
+- **Expected end state:** the migration (new table, `media_item.deleted`, index), a batched insert in
   `AutomationExecutor` inside the same transaction as the run row, the soft-deleting prune, and
   `GET /api/automations/runs/:runId/items` (paged).
-- **Note:** `ActuatorTask.run(ids)` is batch-shaped and returns `void`, so a per-item outcome isn't
-  knowable. The mapping records *targeted* items, and the run's status/error covers the batch.
-  Per-item outcomes would need a role-contract change and are post-MVP.
-- **Docs:** pruning behavior changes, so re-read `provider-roles-and-identity.md` and the
-  `media_item`/Identity resolution rows in `VOCABULARY.md`.
+- **Note:** `ActuatorTask.run(ids)` is batch-shaped and returns `void`, so the mapping records
+  *targeted* items, and the run's status/error covers the batch. Per-item outcomes are post-MVP.
+- **Docs:** re-read `provider-roles-and-identity.md` and the `media_item`/Identity resolution rows in
+  `VOCABULARY.md`.
 
 ### Track E — Containerised delivery
 
-**E1 · The image is correct**
+**E1 · The image is correct** (after B5)
 - **Model:** Sonnet 5.5 (container plumbing).
-- **RED:** `scripts/container-smoke.sh`, run in CI because there is no Docker locally. It builds the
-  image and runs it with a temporary `/app/config` volume and `SESSION_SECRET`. It polls
-  `/api/health` until 200 and checks `/` serves the login page. It restarts the container and
-  asserts migrations re-run idempotently with data intact. It runs `docker stop` and asserts exit in
-  under 10 seconds (graceful SIGTERM).
-- **GREEN:** move `nodemon`/`tsx` to devDependencies, copy `next.config.js` into the runner if
+- **Behaviours** (asserted by `scripts/container-smoke.sh` in CI, since Docker isn't available
+  locally):
+  - Started with a config volume and `SESSION_SECRET`, the container reports healthy and serves the
+    login page.
+  - Restarted, it re-runs migrations harmlessly and keeps its data.
+  - Stopped, it exits within 10 seconds.
+- **Expected end state:** move `nodemon`/`tsx` to devDependencies, copy `next.config.js` into the runner if
   `next({dev:false})` needs it (the smoke test decides), add `USER node`, and add a `HEALTHCHECK`
   using busybox `wget` against `/api/health`.
 - **Deletes:** the duplicate migrations `COPY` (D6).
-- **Depends on B5** for the `warden.db` default, so the image and its comments agree.
 
 **E2 · Compose and run docs**
 - **Model:** Sonnet 5.5 (container plumbing).
-- `compose.yaml`: one service, `./config:/app/config`, `SESSION_SECRET: ${SESSION_SECRET:?}`
-  (fails loudly when unset), `TZ` (cron schedules are wall-clock, so verify croner honours it with a
-  scheduler test), `TRUST_PROXY`, port 5057.
-- README leads with *Run with Docker*. The fnm/dev quickstart moves below it.
+- `compose.yaml`: one service, `./config:/app/config`, `SESSION_SECRET: ${SESSION_SECRET:?}` (fails
+  loudly when unset), `TZ` (cron schedules are wall-clock; a scheduler test proves croner honours
+  it), `TRUST_PROXY`, port 5057.
+- README leads with *Run with Docker*. The dev quickstart moves below it.
 - The smoke script gains a compose mode, so CI tests the file users actually run.
 
 **E3 · CI builds, smokes and publishes** *(decision 5)*
 - **Model:** Sonnet 5.5 (CI wiring).
 - A `container` job in `quality-gate.yml` runs the smoke test on every PR. On pushes to `main` or
-  `v*` tags it publishes `ghcr.io/nokternol/warden:{sha,latest,semver}`. **Gated on A2:** no image
-  is published before sign-in is owner-only.
+  `v*` tags it publishes `ghcr.io/nokternol/warden:{sha,latest,semver}`. **Gated on A2:** no image is
+  published before sign-in is owner-only.
 
 ### Track F — UI pass (impeccable)
 
-**F1 · First-run path replaces the dashboard** *(decision 3; story first)*
+**F1 · First-run guidance on Automations** *(decision 3; story first)*
 - **Model:** Sonnet 5.5 (state derivation from existing hooks; story-first).
-- **RED:** component tests for each setup state, derived from existing hooks with no new endpoint
-  (`useProviderSettings` → `useMediaSources` → `useMediaQueries` → `useAutomations`): no providers,
-  no source, no query, no automation, complete. Each incomplete state shows the one next action.
-- **GREEN:** the landing route is Automations. When setup is incomplete, it leads with a three-step
+- **Behaviours:**
+  - With setup incomplete, Automations shows the one next action for the current state: no
+    providers, no source, no query, or no automation.
+  - With setup complete, no guidance is shown.
+  - The state derives from existing data, with no new endpoint.
+- **Expected end state:** the landing route is Automations. When setup is incomplete, it leads with a three-step
   checklist (a real ordered sequence, so numbers are earned).
-- **Deletes:** `pages/dashboard`, `DashboardContent`'s `StatCard` metrics, and the Dashboard nav
-  item. `StatCard` goes too if nothing else uses it.
+- **Deletes:** `DashboardContent`.
 
-**F2 · Critique → polish the four MVP surfaces** (last UI slice)
+**F2 · Critique → polish the in-scope surfaces** (last UI slice)
 - **Model:** Opus 5.5 (design critique judgement).
-- `/impeccable critique` then `/impeccable polish` on Providers, Media + filters, Automations and
-  Activity, against the constraints above: contrast, focus, reduced motion, an explicit state for
-  every async boundary, and density. Run `playwright-cli` screenshots at 1440px and 400px.
+- `/impeccable critique` then `/impeccable polish` on Sign-in, Providers, Media, Automations, Runs and
+  System, against the constraints above: contrast, focus, reduced motion, an explicit state for every
+  async boundary, density, and glossary names. Run `playwright-cli` screenshots at 1440px and 400px.
 - Any fix that changes behavior gets a test. Pure visual fixes are verified by screenshot.
 
 ### Track G — Acceptance
 
 **G1 · MVP acceptance and docs closure**
 - **Model:** Opus 5.5 (end-to-end acceptance and docs closure).
-- Run the [Destination](#destination) scenario against the **published image** on the real NAS
-  stack with `playwright-cli`. Also cover the second Plex account being refused, and System → Run Now
-  for identity and enrichment before the query returns matches.
+- Against the **published image** on the NAS stack, with `playwright-cli`:
+  1. Every [In-scope](#in-scope) feature row.
+  2. Every offered provider type: add, test, edit, delete.
+  3. Every offered task: run once against a sacrificial item.
+  4. The [Destination scenario](#destination-scenario), and a second Plex account being refused.
+  5. No out-of-scope route or page is reachable on the running image (the contract and S1's
+     navigation list are the expected surface).
 - Docs: move every fracture-ledger entry this plan opened to Healed. Update `VOCABULARY.md` and the
   core model. Re-sequence the provider e2e implementation map under Post-MVP. Then run
   `graphify update .` and `link_doc_to_code.py --apply` for touched architecture docs.
@@ -404,21 +603,27 @@ names, so nothing is renamed twice.
 
 | # | Decision | Outcome |
 |---|---|---|
-| 1 | Who may sign in | **Decided: owner-only.** The first Plex sign-in claims the instance, and everyone else is refused. Plex-server-members-as-viewers is post-MVP. |
-| 2 | `paused` vs `disabled` | **Decided: `disabled`**, matching `VOCABULARY.md`. |
-| 3 | Dashboard | **Decided: fold into Automations** plus the first-run checklist. |
-| 4 | Storage for "what changed" (D2) | **Decided: a thin mapping table**, `automation_run_items(runId, mediaItemId)` with composite PK and a `mediaItemId` index. Primary keys only, so inserts stay cheap and both directions are indexed. |
-| 4a | History for items the source removed | **Decided: soft delete.** `media_item.deleted` boolean, set by `pruneStaleItems` instead of deleting the row. No timestamp column; the run link holds the datetime. Maintenance of soft-deleted rows is a separate, post-MVP concern. |
+| 1 | Who may sign in | **Decided: owner-only.** The first Plex sign-in claims the instance, and everyone else is refused. |
+| 2 | `paused` vs `disabled` | **Decided: `disabled`.** |
+| 3 | Dashboard | **Decided: fold into Automations** plus first-run guidance. |
+| 4 | Storage for "what changed" | **Decided: thin mapping table** `automation_run_items(runId, mediaItemId)`, composite PK plus a `mediaItemId` index. |
+| 4a | History for items the source removed | **Decided: soft delete** via a `media_item.deleted` boolean. The run link holds the datetime. Maintenance is post-MVP. |
 | 5 | Image registry | **Decided: GHCR** (`ghcr.io/nokternol/warden`). |
-| 6 | Product and DB name | **Decided: Warden** everywhere (repo renamed to `nokternol/warden`; slice B5). The default DB file becomes `warden.db`; the existing NAS deployment renames its file once or pins `DB_PATH`. No startup fallback (that would be a translator). |
+| 6 | Product and DB name | **Decided: Warden**, with default DB file `warden.db`. The NAS deployment renames its file once or pins `DB_PATH`. |
+| 7 | What "hidden" means | **Open.** Recommendation: remove the entry point *and* every piece of code only it used; git history is the archive. A flag-hidden feature leaves a second mechanism in the codebase. |
+| 8a–8g | Glossary names | **Open.** Recommendations are in the [Glossary](#glossary): Filter, Query, included/excluded query, Source (provider role only), movie/series, Automation vs Task, Runs. |
+| 9 | Offered provider types | **Open.** Offered means verified in G1, so this is the set your NAS stack can verify. Recommendation: Radarr, Sonarr, Plex, Tautulli, plus whichever of Jellyfin, Overseerr and TMDB the NAS runs. |
+| 10 | Offered tasks | **Open.** Recommendation: every task of an offered type that G1 can run against a sacrificial item. Any task that can't be verified safely is not offered. |
+| 11 | Client/server contract mechanism | **Open.** Recommendation: **oRPC contract-first** (C0). Checked on npm 2026-10-03: oRPC 1.15.4 (released 2026-10-01, schema-agnostic, Zod 4 compatible); ts-rest 3.52.1 (last release 2025-06, peer `zod ^3`, incompatible with this repo's Zod 4.3); Zodios 10.9.6 (last release 2023-08, peer `zod ^3`, axios-based, unmaintained). The alternative is tightening the current bridge by hand (add method/path to the shared schemas, write our own typed client), which builds a homegrown second version of what oRPC already is. |
 
 ## Post-MVP (parked, in order)
 
-1. **Source-vs-enrichment precedence.** This unblocks Plex `genres`/`certification` and Radarr
-   `runtime`/`studio` (implementation-map notes).
+1. **Source-vs-enrichment precedence**, including the `primaryMediaServer`/`region` settings S1
+   removes. This unblocks Plex `genres`/`certification` and Radarr `runtime`/`studio`.
 2. Remaining parameterized tasks (`moveMovie`, `moveSeries`, `changeLanguageProfile`) and the
    `text`/`fields` parameter shapes.
 3. Maintenance of soft-deleted `media_item` rows (retention or purge policy).
-4. Provider e2e Phases 5–10 (Tautulli → TVMaze). After C2 these are server-only changes.
+4. Provider e2e Phases 5–10 and any provider type not offered in the MVP. After C2 and C5, adding one
+   is a server-only change.
 5. `docs/intent/`: automation archive, realtime run state, ratings provider, inter-provider
    dependency, editions, per-consumer watchlist.
