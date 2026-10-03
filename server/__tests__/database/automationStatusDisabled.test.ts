@@ -60,8 +60,10 @@ describe('migration 0025 — paused automations become disabled', () => {
     const base = { providerId: provider.id, taskId: 'sync', schedule: '0 * * * *' };
     const [stored] = await db
       .insert(automations)
-      .values({ ...base, name: 'was paused', status: 'paused' })
+      .values({ ...base, name: 'was paused' })
       .returning();
+    // `paused` is outside AutomationStatus, so the legacy row is written in raw SQL.
+    await db.run(sql`UPDATE automations SET status = 'paused' WHERE id = ${stored.id}`);
     const [running] = await db
       .insert(automations)
       .values({ ...base, name: 'running', status: 'active' })

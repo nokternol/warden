@@ -23,14 +23,6 @@ const mockAutomation: AutomationDto = {
   updatedAt: '2024-01-01T00:00:00Z',
 };
 
-describe('StatusDot', () => {
-  it('renders with bg-danger class for error status', () => {
-    render(<StatusDot status="error" />);
-    const dot = document.querySelector('[aria-hidden="true"]') as HTMLElement;
-    expect(dot.className).toMatch(/bg-danger/);
-  });
-});
-
 describe('AutomationRow', () => {
   it('renders the automation name', () => {
     render(<AutomationRow automation={mockAutomation} onToggle={vi.fn()} onDelete={vi.fn()} />);

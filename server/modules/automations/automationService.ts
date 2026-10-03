@@ -104,7 +104,7 @@ function rowToDto(
     taskId: row.taskId,
     taskParameter: row.taskParameter ?? undefined,
     schedule: row.schedule,
-    status: row.status as AutomationStatus,
+    status: row.status,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
