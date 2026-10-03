@@ -8,12 +8,11 @@ calls fails the test suite.
 
 ## Why it exists
 
-Before this, the bridge between client and server was partial. Express routes were built with a
-`defineRoute` helper, but fewer than half declared a response schema and the schemas they shared lived
-in `src/`, so `server/` imported client code. The client wrote every `/api/...` URL by hand in a dozen
-local SWR fetchers, each casting `json.data` to whatever type it expected. MSW mocks were a third
-hand-kept copy of every response. Nothing failed when one side changed alone, and the
-`/api/filter-fields` route even answered without the envelope every other route used.
+A client and server that each declare the API for themselves drift apart: a route gains a field the
+client never reads, a hand-written URL points at a path that moved, a mock keeps answering a shape the
+server stopped sending, and nothing fails. The contract makes the API one declaration that both sides
+and the mocks are derived from, so a change made on one side only fails to compile, and an import
+across the client/server boundary fails the dependency check.
 
 ## The mechanism
 
@@ -37,13 +36,14 @@ The contract uses [oRPC](https://orpc.dev) in contract-first mode, with Zod 4 sc
   assembles every module's procedures with `api.router(…)`, which checks the assembly against the
   contract, so a procedure no module implements doesn't compile either. `serveApi` mounts a router in
   Express. It wraps validated output in the success envelope and translates errors into the error
-  envelope: an `AppError` keeps its status and type, input that fails the contract's schema is a 400
-  `VALIDATION_ERROR` with field errors, and anything unexpected is a logged 500 `INTERNAL_ERROR`.
+  envelope: an `AppError` keeps its status and type (logged as an error at 5xx, a warning below),
+  input that fails the contract's schema is a 400 `VALIDATION_ERROR` with field errors (an issue with
+  the input as a whole goes in the message), and anything unexpected, including a handler result
+  that breaks the contract's output, is a logged 500 `INTERNAL_ERROR`.
   Requests the contract doesn't match fall through to the next Express handler.
 - **Authentication.** The implementer's root middleware is default-deny: a procedure answers without a
-  signed-in user only when its contract meta says `public: true`. Today the public procedures are
-  health, sign-in, sign-out, login backdrops, the rule descriptors and the provider capability
-  procedures (tasks, task options, metadata, ratings). The procedure context carries the user that
+  signed-in user only when its contract meta says `public: true` (grep `contract/` for
+  `public: true` for the current set). The procedure context carries the user that
   `checkUser` attached from the session, and the session itself, which sign-in starts and sign-out
   destroys.
 - **Auth bypass (development only).** With `BYPASS_AUTH=true`, `serveApi` marks every request's context
@@ -54,7 +54,7 @@ The contract uses [oRPC](https://orpc.dev) in contract-first mode, with Zod 4 sc
 - **Client.** [`src/lib/api/client.ts`](ref:path:src/lib/api/client.ts) exports `api`, a client typed
   from the contract. Calling a procedure that doesn't exist, or passing input it doesn't accept, doesn't
   compile, and no caller writes a URL. The client unwraps the success envelope, turns the error envelope
-  into an `ORPCError` that carries the server's type, message and status, and validates every payload
+  into an `ORPCError` that carries the server's type, message, status and any field errors (`data.errors`), and validates every payload
   against the procedure's output schema, so drifted data is an error rather than silently wrong.
   `createApiClient({ url, headers })` builds the same client for another origin; server-side rendering
   uses it with the caller's cookie. Each procedure is bound once to a stable function, so

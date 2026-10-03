@@ -32,8 +32,8 @@ export function usePaginatedMedia<TInput, T>(
     if (pageIndex > 0 && !prev) return null;
     if (prev && prev.items.length === 0) return null;
 
-    // Browse params are the legacy content-prefixed encoding; the browse
-    // procedure's input schema parses them server-side.
+    // Browse params use the content-prefixed browse encoding, which the browse
+    // procedure's input schema parses server-side.
     const input = { ...filters, page: pageIndex + 1, pageSize: PAGE_SIZE } as TInput;
     return apiKey(browse, input);
   };

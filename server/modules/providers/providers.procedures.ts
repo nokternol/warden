@@ -49,8 +49,8 @@ interface TaskOption {
  * control. `undefined` means this provider type has nothing to say about
  * `route` — omitted from the response, not surfaced as an empty list.
  * `collections`/`language-profiles` return `[]` for their owning provider
- * type: the route exists so the client can wire against it now, but no
- * provider fetches real collections/language-profiles yet.
+ * type: the procedure gives the client a stable shape to call, and the empty
+ * list is the answer while no provider fetches collections or language profiles.
  */
 async function resolveTaskOptions(
   provider: MetadataProvider,

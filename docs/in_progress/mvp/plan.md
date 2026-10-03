@@ -468,8 +468,9 @@ names, so nothing is renamed twice.
 - **Absorbs:** C1 (the contract client and `useApi` replace the 13 local fetchers and `json.data as T`
   casts, a failed call surfaces the server's message and status, a response that doesn't match its
   schema is an error, and `/api/filter-fields` is on the `{data}` envelope), A1's mechanism (A1 keeps its auth-coverage behaviour and
-  the owner semantics in A2), B3's route move (provider procedures are declared under `providers` in
-  the contract), and C3's route shape (browse is a contract procedure taking the save encoding).
+  the owner semantics in A2), B3's contract grouping (provider procedures, CRUD included, are declared
+  under `providers` in the contract; B3 still moves their URL and implementation), and C3's transport
+  (browse is a contract procedure; C3 still changes its input to the save encoding).
 
 **C2 · Rule presentation lives on the registry** (after B6)
 - **Model:** Opus 5.5 (registry contract every future provider builds on).
