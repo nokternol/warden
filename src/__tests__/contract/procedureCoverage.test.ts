@@ -14,7 +14,6 @@ const UNCALLED_BY_CLIENT: Record<string, string> = {
   'appSettings.get': 'deferred, no client consumer yet (plan L2)',
   'appSettings.update': 'deferred, no client consumer yet (plan L2)',
   'providers.metadata': 'deferred, no client consumer yet (plan L2)',
-  'automations.runItems': 'no client consumer yet: the Runs page expansion (plan D2)',
 };
 
 const SRC_ROOT = path.resolve(__dirname, '../..');

@@ -1,11 +1,10 @@
 import AppLayout from '@app/components/AppLayout';
-import Badge from '@app/components/Badge';
 import Button from '@app/components/Button';
 import Card from '@app/components/Card';
 import EmptyState from '@app/components/EmptyState';
+import RunRow from '@app/components/RunRow';
 import SidebarNav from '@app/components/SidebarNav';
 import TopBar from '@app/components/TopBar';
-import type { AutomationRunDto } from '@app/hooks/useAutomationRuns';
 import { useAutomationRuns } from '@app/hooks/useAutomationRuns';
 import { requireAuth } from '@app/lib/utils/requireAuth';
 import { History } from 'lucide-react';
@@ -18,45 +17,6 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 };
 
 const RunsIcon = () => <History className="w-12 h-12" strokeWidth={1.5} />;
-
-function formatDate(dateStr: string): string {
-  try {
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    }).format(new Date(dateStr));
-  } catch {
-    return dateStr;
-  }
-}
-
-function RunRow({ run }: { run: AutomationRunDto }) {
-  return (
-    <tr className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors">
-      <td className="px-4 py-3 text-sm font-medium text-white">{run.automationName}</td>
-      <td className="px-4 py-3">
-        <Badge variant={run.status === 'success' ? 'success' : 'error'} size="sm">
-          {run.status}
-        </Badge>
-      </td>
-      <td className="px-4 py-3 text-sm text-[var(--color-text-secondary)]">
-        {formatDate(run.ranAt)}
-      </td>
-      <td className="px-4 py-3 text-sm text-[var(--color-text-secondary)]">
-        {run.itemCount !== null ? run.itemCount : '—'}
-      </td>
-      <td className="px-4 py-3 text-sm text-[var(--color-text-secondary)] max-w-xs truncate">
-        {run.error ? (
-          <span className="text-red-400" title={run.error}>
-            {run.error.length > 60 ? `${run.error.slice(0, 60)}…` : run.error}
-          </span>
-        ) : (
-          '—'
-        )}
-      </td>
-    </tr>
-  );
-}
 
 export default function RunsPage() {
   const { runs, isLoading, page, nextPage, prevPage } = useAutomationRuns();
