@@ -194,8 +194,19 @@ export const AutomationRunSchema = z
   })
   .strict();
 
+/** One source copy a run targeted, titled through its group; `deleted` once it left its source. */
+export const RunItemSchema = z
+  .object({
+    mediaItemId: z.number(),
+    title: z.string().nullable(),
+    year: z.number().nullable(),
+    deleted: z.boolean(),
+  })
+  .strict();
+
 export type AutomationStatus = z.infer<typeof AutomationStatusSchema>;
 export type AutomationDto = z.infer<typeof AutomationSchema>;
 export type AutomationRunDto = z.infer<typeof AutomationRunSchema>;
+export type RunItemDto = z.infer<typeof RunItemSchema>;
 export type MediaQueryRecord = z.infer<typeof MediaQueryRecordSchema>;
 export type ProviderSummary = z.infer<typeof ProviderSchema>;

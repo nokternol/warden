@@ -1,3 +1,4 @@
+import type { RunItemDto } from '@contract/schemas';
 import { asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import {
   automationRunItems,
@@ -18,14 +19,6 @@ export interface AutomationRunDto {
   itemCount: number | null;
   error: string | null;
   createdAt: Date;
-}
-
-/** One source copy a run targeted, titled through its group. */
-export interface RunItemDto {
-  mediaItemId: number;
-  title: string | null;
-  year: number | null;
-  deleted: boolean;
 }
 
 export interface RunItemPage {

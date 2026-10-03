@@ -6,6 +6,7 @@ import {
   AutomationStatusSchema,
   IdSchema,
   QueryIntSchema,
+  RunItemSchema,
   emptyToUndefined,
 } from './schemas';
 
@@ -83,4 +84,16 @@ export const automations = {
       })
     )
     .output(z.object({ data: z.array(AutomationRunSchema), total: z.number() })),
+
+  /** The items one run targeted, by title; `limit` is capped at 100. */
+  runItems: base
+    .route({ method: 'GET', path: '/api/automations/runs/{runId}/items' })
+    .input(
+      z.object({
+        runId: IdSchema,
+        limit: emptyToUndefined(QueryIntSchema.transform((v) => Math.min(v, 100))),
+        offset: emptyToUndefined(QueryIntSchema),
+      })
+    )
+    .output(z.object({ data: z.array(RunItemSchema), total: z.number() })),
 };

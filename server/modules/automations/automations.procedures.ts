@@ -65,5 +65,9 @@ export function createAutomationProcedures(cradle: Cradle) {
       const data = await automationRunService.listRuns(input);
       return { data, total: data.length };
     }),
+
+    runItems: api.automations.runItems.handler(async ({ input }) =>
+      automationRunService.listRunItems(input.runId, input)
+    ),
   });
 }

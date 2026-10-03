@@ -28,6 +28,7 @@ describe('GET /api/automations/runs', () => {
   let client: ReturnType<typeof createApiClient>;
   let runService: AutomationRunService;
   let automationId: number;
+  let providerId: number;
 
   beforeAll(async () => {
     const mockConfig = createMockConfig({
@@ -70,6 +71,7 @@ describe('GET /api/automations/runs', () => {
       schedule: '0 2 * * *',
     });
     automationId = automation.id;
+    providerId = provider.id;
     runService = container.cradle.automationRunService;
 
     app = express();
@@ -128,5 +130,26 @@ describe('GET /api/automations/runs', () => {
     const res = await client.get('/api/automations/runs?limit=1');
     expect(res.status).toBe(200);
     expect(res.body.data.data).toHaveLength(1);
+  });
+
+  it("serves a run's targeted items page by page", async () => {
+    const run = await runService.createRun({
+      automationId,
+      status: 'success',
+      targets: ['Heat', 'Alien', 'Ronin'].map((title, i) => ({
+        _sourceIds: { radarr: 900 + i, providerId, tmdb: 9000 + i },
+        title,
+        year: 1990 + i,
+      })),
+    });
+
+    const res = await client.get(`/api/automations/runs/${run.id}/items?limit=2&offset=1`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.total).toBe(3);
+    expect(res.body.data.data).toEqual([
+      { mediaItemId: expect.any(Number), title: 'Heat', year: 1990, deleted: false },
+      { mediaItemId: expect.any(Number), title: 'Ronin', year: 1992, deleted: false },
+    ]);
   });
 });
