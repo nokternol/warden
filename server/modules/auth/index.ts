@@ -7,8 +7,8 @@
  * growing export list is a design smell to challenge.
  */
 
-// HTTP surface — mounted by the API router.
-export { createAuthRoutes } from './auth.routes';
+// HTTP surface — the auth procedures of the API contract.
+export { createAuthProcedures } from './auth.procedures';
 
 // The session store — constructed directly by server/index.ts at startup,
 // before the container exists, so it's a value export rather than

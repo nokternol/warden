@@ -29,13 +29,6 @@ function errorFromEnvelope(body: unknown, response: StandardLazyResponse) {
   return new ORPCError(error.type, { status: response.status, message: error.message });
 }
 
-const link = new OpenAPILink(contract, {
-  url: () => window.location.origin,
-  clientInterceptors: [unwrapSuccessEnvelope],
-  customErrorResponseBodyDecoder: errorFromEnvelope,
-  plugins: [new ResponseValidationPlugin(contract)],
-});
-
 /**
  * Binds each contract procedure to one function created once, so a procedure
  * has a stable identity callers can use as a cache key.
@@ -52,9 +45,22 @@ function bind(node: object, client: Record<string, unknown>): Record<string, unk
   );
 }
 
-const client: ApiClient = createORPCClient(link);
+/**
+ * A contract client for one origin. The browser's default is its own origin;
+ * server-side rendering passes the API's own address and the caller's cookie.
+ */
+export function createApiClient(
+  options: { url?: string; headers?: Record<string, string> } = {}
+): ApiClient {
+  const link = new OpenAPILink(contract, {
+    url: () => options.url ?? window.location.origin,
+    headers: options.headers,
+    clientInterceptors: [unwrapSuccessEnvelope],
+    customErrorResponseBodyDecoder: errorFromEnvelope,
+    plugins: [new ResponseValidationPlugin(contract)],
+  });
+  const client: ApiClient = createORPCClient(link);
+  return bind(contract, client as unknown as Record<string, unknown>) as unknown as ApiClient;
+}
 
-export const api = bind(
-  contract,
-  client as unknown as Record<string, unknown>
-) as unknown as ApiClient;
+export const api = createApiClient();

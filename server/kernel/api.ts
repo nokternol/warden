@@ -3,7 +3,7 @@ import type { AnyContractRouter } from '@orpc/contract';
 import { OpenAPIHandler } from '@orpc/openapi/node';
 import { ORPCError, implement } from '@orpc/server';
 import type { Router } from '@orpc/server';
-import type { RequestHandler } from 'express';
+import type { Request, RequestHandler } from 'express';
 import type { PublicUser } from '../database/schema';
 import { AppError, ValidationError } from './errors';
 import { getChildLogger } from './logger';
@@ -14,6 +14,8 @@ const log = getChildLogger('Api');
 export interface ApiContext {
   requestId: string;
   user?: PublicUser;
+  /** The request's session, for the procedures that start and end one. */
+  session: Request['session'];
 }
 
 /**
@@ -97,7 +99,9 @@ export function serveApi(router: Router<AnyContractRouter, ApiContext>): Request
 
   return (req, res, next) => {
     handler
-      .handle(req, res, { context: { requestId: req.requestId, user: req.user } })
+      .handle(req, res, {
+        context: { requestId: req.requestId, user: req.user, session: req.session },
+      })
       .then(({ matched }) => {
         if (!matched) next();
       })

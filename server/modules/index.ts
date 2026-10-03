@@ -3,7 +3,7 @@ import type { Cradle } from '../container';
 import { serveApi } from '../kernel/api';
 import { checkUser } from '../kernel/middleware/auth';
 import { createAppSettingsRoutes } from './appSettings';
-import { createAuthRoutes } from './auth';
+import { createAuthProcedures } from './auth';
 import { createAutomationProcedures } from './automations';
 import {
   createBackdropsProcedures,
@@ -19,7 +19,6 @@ import { createSystemProcedures } from './system';
 const route = (path: string) => `/${path}`;
 export const routes = {
   appSettings: route('app-settings'),
-  auth: route('auth'),
 } as const;
 
 /**
@@ -45,6 +44,7 @@ export function createApiRouter(cradle: Cradle) {
   // Express routers below.
   router.use(
     serveApi({
+      auth: createAuthProcedures(cradle),
       automations: createAutomationProcedures(cradle),
       media: {
         ...media.procedures,
@@ -63,7 +63,6 @@ export function createApiRouter(cradle: Cradle) {
 
   // Mount modules
   router.use(routes.appSettings, createAppSettingsRoutes(cradle));
-  router.use(routes.auth, createAuthRoutes(cradle));
 
   return router;
 }
