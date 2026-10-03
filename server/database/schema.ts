@@ -1,6 +1,13 @@
 import type { AutomationStatus } from '@contract/schemas';
 import { sql } from 'drizzle-orm';
-import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import {
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
 import { createdAt, updatedAt } from './columns/datetime';
 export { createdAt, updatedAt };
 
@@ -293,6 +300,9 @@ export const mediaItems = sqliteTable(
       .notNull()
       .references(() => mediaIdentity.id, { onDelete: 'cascade' }),
     resolvedAt: integer('resolvedAt'),
+    /** Soft delete: the copy left its source. Kept so run history still resolves
+     *  its title; cleared when the source lists the item again. */
+    deleted: integer('deleted', { mode: 'boolean' }).notNull().default(false),
   },
   (table) => [
     uniqueIndex('ux_media_item_provider_external').on(table.providerId, table.externalId),
@@ -302,6 +312,28 @@ export const mediaItems = sqliteTable(
 
 export type MediaItem = typeof mediaItems.$inferSelect;
 export type NewMediaItem = typeof mediaItems.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// automationRunItems — the source copies a run targeted. Titles resolve by join
+// through media_item → media_identity at read time; the run's ranAt dates it.
+// ---------------------------------------------------------------------------
+export const automationRunItems = sqliteTable(
+  'automation_run_items',
+  {
+    runId: integer('runId')
+      .notNull()
+      .references(() => automationRuns.id, { onDelete: 'cascade' }),
+    mediaItemId: integer('mediaItemId')
+      .notNull()
+      .references(() => mediaItems.id, { onDelete: 'cascade' }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.runId, table.mediaItemId] }),
+    index('idx_automation_run_items_media_item').on(table.mediaItemId),
+  ]
+);
+
+export type AutomationRunItem = typeof automationRunItems.$inferSelect;
 
 // ---------------------------------------------------------------------------
 // enrichmentField — storage identity for a field key. {id, key} only: which
