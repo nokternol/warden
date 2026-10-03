@@ -67,8 +67,8 @@ One name per concept, everywhere. Every row is decided (8a–8g and decisions 2,
 | Concept | Canonical name | Retired names (guard-tested) | Rationale |
 |---|---|---|---|
 | A configured external system | **Provider** | service, integration (UI) | PRODUCT.md and the UI already say Provider. `BaseProviderConnection` stays as an internal HTTP class name. |
-| The definition of what can be filtered on (key, type, predicate), owned by the engine | **Rule** *(8a)* | `filterRegistry`, `filterFields`, `/api/filter-fields` | `MediaRule`/`MEDIA_RULES`/`MediaRuleDescriptor` keep their names. Files and endpoints that hold or serve rules stop calling them filters. |
-| A rule with a chosen value, as set in the UI and stored by a query | **Filter** *(8a)* | `FilterValueEntry` | The UI's "Add filter" adds one. `FilterValue` stays the name of the value itself. |
+| The engine's definition of something that can be filtered on: key, type, predicate, the field it reads, the providers producing that field, and their precedence when several do | **Rule** *(8a)* | `filterRegistry`, `filterFields`, `/api/filter-fields` | `MediaRule`/`MEDIA_RULES` keep their names. Engine-only: the client receives a `MediaRuleDescriptor` that carries presentation and never the predicate, field mapping, producers or precedence (C2). |
+| A key/value pair: a rule's key and a chosen value, as set in the UI and stored by a query | **Filter** *(8a)* | `FilterValueEntry` | Knows nothing about which provider supplies the data; the rule resolves that. `FilterValue` stays the name of the value itself. |
 | A named, persisted set of filters | **MediaQuery**, shown as "Query" *(8b)* | saved query, `SavedQuery`, collection | "Saved" is a state, not a name (`VOCABULARY.md`). The UI still says "Saved queries". |
 | A query used by an automation, with role include/exclude | **Included / excluded query** *(8c)* | query source, `MediaQuerySource`, `automation_query_sources` | "Source" is reserved for one meaning (next row). |
 | A provider that owns media | **Source** *(8d)* | `sourceProviders` on rules (becomes `providers`) | Today "source" means four things. It keeps one. |
@@ -154,6 +154,7 @@ principles become these acceptance checks on every UI slice:
 | F9 | **The client re-declares the provider catalogue.** `PROVIDER_REGISTRY` lists 8 of the 10 types with hand-written labels and `filterCapabilities` strings, while the server's enum, factory and roles are the real authority. | `src/lib/provider-registry.ts` |
 | F10 | **Ratings have two mechanisms**: rating filters via enrichment, and an ad-hoc `/api/providers/ratings` aggregation feeding a separate page and panel. | `ratingsAggregation.ts`, `pages/ratings` |
 | F11 | **Title lookup has two mechanisms**: the title filter, and the Search page's cross-provider metadata search. | `pages/search`, `media.search.*` |
+| F13 | **The rule descriptor leaks engine concerns to the client.** It is `Omit<MediaRule, 'predicate'>`, so `sourceField` and `sourceProviders` cross the wire, and the client's `groupsFor` derives section headings from providers. The client also re-declares `MediaRuleDescriptor` itself. The rule/filter split is load-bearing: precedence and production are engine concerns. | `filterRegistry.ts:57`, `MediaFilterBar/index.tsx:830`, `src/hooks/useMediaRules.ts:7` |
 | F12 | **The client/server bridge is partial, so either side can grow alone.** 48 `defineRoute` routes, but only 21 declare a response schema and 5 server files share the client's schemas. The client hand-writes 43 `/api/...` URL strings, and 1 hook validates a response. MSW mocks are a third hand-kept copy. The dependency runs backwards (`server/` imports `src/lib/api/schemas.ts`), and the client imports server internals (`@server/modules/media/browseRangeKeys`). Nothing fails when a route is added on one side only. | `server/kernel/defineRoute.ts`, `src/lib/api/schemas.ts`, `src/hooks/*`, `tests/mocks/handlers/*`, `src/lib/mediaQueryAdapters.ts:31` |
 
 ### Duplication (one job, many copies)
@@ -404,9 +405,14 @@ names, so nothing is renamed twice.
     `MediaQuerySource`, `querySources`, `sourceProviders`) added to the deprecated table, B5's check
     passes.
   - An automation's included and excluded queries survive the table rename intact.
+  - A filter is exactly a rule key and a value. An instance-scoped value (tags, quality and language
+    profiles) names the configured instance its ids belong to inside the value itself.
+  - Stored instance-scoped filters read back with the same meaning after migration.
 - **Expected end state:** rules live in `ruleRegistry.ts` (`MEDIA_RULES`, `MediaRule`,
   `MediaRuleDescriptor` unchanged) and are served by the contract's `rules` procedure. A filter is
-  `Filter { ruleKey, value, providerId? }`. An automation has included and excluded queries
+  `Filter { ruleKey, value }`, and an instance-scoped value is `{ providerId, ids }` (`providerId`
+  being the codebase's existing name for a configured instance). The migration folds
+  `media_query_filter_values.providerId` into the value. An automation has included and excluded queries
   (`AutomationQuery { queryId, role }`, table `automation_queries`). A rule lists its `providers`.
 
 ### Track C — One mechanism per job
@@ -462,16 +468,20 @@ names, so nothing is renamed twice.
 
 **C2 · Rule presentation lives on the registry** (after B6)
 - **Model:** Opus 5.5 (registry contract every future provider builds on).
-- **Why:** D2.
+- **Why:** D2, F13.
 - **Behaviours:**
   - A boolean rule carries its own value labels (for example *Monitored* / *Unmonitored*).
   - An enum-shaped rule carries its own options.
   - A multi-value rule names the lookup its options come from.
   - The filter bar renders a rule it has never seen, correctly, from its descriptor alone.
-- **Expected end state:** `MediaRule` gains `valueLabels?`, `options?`, `shortLabel?` and `lookup?`, and the
-  descriptor projects them.
-- **Deletes:** `BOOLEAN_VALUE_LABELS`, `SEGMENT_LABEL_OVERRIDES`, `ENUM_OPTIONS`, the key switches in
-  `csvIdOptions`/`csvStringOptions`, and `ruleRendersControl` (C5 makes renderability a server
+  - A rule's section heading comes from the descriptor, not from the client reading providers.
+  - The descriptor exposes no engine concern: no predicate, field mapping, producer list or
+    precedence.
+- **Expected end state:** `MediaRule` gains `valueLabels?`, `options?`, `shortLabel?`, `lookup?` and
+  `group`. The descriptor is an explicit allowlist of presentation fields (key, label, content
+  types, data type, instance scoping, and those five), built by `toDescriptor`, not `Omit`.
+- **Deletes:** `BOOLEAN_VALUE_LABELS`, `SEGMENT_LABEL_OVERRIDES`, `ENUM_OPTIONS`, `groupsFor`, the key
+  switches in `csvIdOptions`/`csvStringOptions`, the client's own `MediaRuleDescriptor` declaration, and `ruleRendersControl` (C5 makes renderability a server
   fact).
 
 **C3 · Browse speaks the registry** (after B2, C1)
