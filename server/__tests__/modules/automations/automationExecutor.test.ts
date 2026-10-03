@@ -1,3 +1,4 @@
+import type { ContentType } from '@contract/schemas';
 import {
   MetadataProviderType,
   automationRuns,
@@ -133,7 +134,7 @@ async function seedSonarrProvider(providerSettingsService: ProviderSettingsServi
 async function seedMediaQuery(
   mediaQueryService: MediaQueryService,
   filterValues: FilterValueEntry[] = [],
-  contentType: 'movie' | 'series' = 'movie'
+  contentType: ContentType = 'movie'
 ) {
   return mediaQueryService.create({ name: 'Test Query', contentType, filterValues });
 }
