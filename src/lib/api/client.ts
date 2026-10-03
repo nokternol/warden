@@ -17,9 +17,14 @@ const unwrapSuccessEnvelope = async ({ next }: { next: () => Promise<StandardLaz
   };
 };
 
-/** Every failed answer is `{status:'error', error:{type, message}}`; callers receive it as an ORPCError. */
+/**
+ * A failed answer from the API is `{status:'error', error:{type, message}}`;
+ * callers receive it as an ORPCError. Anything else (a proxy's error page, say)
+ * falls back to oRPC's error for the HTTP status.
+ */
 function errorFromEnvelope(body: unknown, response: StandardLazyResponse) {
-  const { error } = body as { error: { type: string; message: string } };
+  const { error } = (body ?? {}) as { error?: { type: string; message: string } };
+  if (!error) return null;
   return new ORPCError(error.type, { status: response.status, message: error.message });
 }
 

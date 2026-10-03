@@ -20,4 +20,14 @@ describe('api client', () => {
       message: 'Automation 9 not found',
     });
   });
+
+  it('rejects a failure that carries no error envelope with its HTTP status', async () => {
+    server.use(
+      http.post('/api/automations/:id/run', () =>
+        HttpResponse.text('<html>Bad Gateway</html>', { status: 502 })
+      )
+    );
+
+    await expect(api.automations.run({ id: 9 })).rejects.toMatchObject({ status: 502 });
+  });
 });
