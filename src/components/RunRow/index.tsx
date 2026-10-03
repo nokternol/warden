@@ -83,29 +83,38 @@ function ExpandToggle({ open, onToggle }: { open: boolean; onToggle: () => void 
 
 /** The detail row listing a run's targeted titles. */
 function TargetedItems({ runId }: { runId: number }) {
-  const { items, total, isLoading } = useRunItems(runId);
-
   return (
     <tr className="border-b border-white/5 bg-white/[0.015]">
       <td colSpan={COLUMN_COUNT} className="px-4 pt-1 pb-4 pl-11">
-        {isLoading ? (
-          <p className="text-sm text-[var(--color-text-secondary)]">Loading items…</p>
-        ) : (
-          <>
-            <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
-              {items.map((item) => (
-                <TargetedItem key={item.mediaItemId} item={item} />
-              ))}
-            </ul>
-            {total > items.length && (
-              <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
-                Showing {items.length} of {total} items
-              </p>
-            )}
-          </>
-        )}
+        <TargetedItemList runId={runId} />
       </td>
     </tr>
+  );
+}
+
+function Note({ children }: { children: React.ReactNode }) {
+  return <p className="text-sm text-[var(--color-text-secondary)]">{children}</p>;
+}
+
+function TargetedItemList({ runId }: { runId: number }) {
+  const { items, total, isLoading } = useRunItems(runId);
+
+  if (isLoading) return <Note>Loading items…</Note>;
+  if (items.length === 0) return <Note>No items recorded for this run.</Note>;
+
+  return (
+    <>
+      <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((item) => (
+          <TargetedItem key={item.mediaItemId} item={item} />
+        ))}
+      </ul>
+      {total > items.length && (
+        <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
+          Showing {items.length} of {total} items
+        </p>
+      )}
+    </>
   );
 }
 

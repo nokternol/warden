@@ -53,4 +53,13 @@ describe('RunRow', () => {
 
     expect(screen.queryByRole('button', { name: /show items/i })).not.toBeInTheDocument();
   });
+
+  it('says so when an expanded run recorded no items', async () => {
+    const user = userEvent.setup();
+    renderRow({ ...run, id: 2, automationName: 'system:identity-resolution', itemCount: 3 });
+
+    await user.click(screen.getByRole('button', { name: /show items/i }));
+
+    expect(await screen.findByText(/no items recorded/i)).toBeInTheDocument();
+  });
 });
