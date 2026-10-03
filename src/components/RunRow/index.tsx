@@ -26,7 +26,7 @@ export default function RunRow({ run }: { run: AutomationRunDto }) {
   return (
     <>
       <tr className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors">
-        <td className="px-4 py-3 text-sm font-medium text-white">
+        <td className="px-4 py-3 text-sm font-medium text-text-primary">
           <div className="flex items-center gap-2">
             {targetedAny ? (
               <ExpandToggle open={open} onToggle={() => setOpen(!open)} />
@@ -71,7 +71,7 @@ function ExpandToggle({ open, onToggle }: { open: boolean; onToggle: () => void 
       aria-label={label}
       title={label}
       onClick={onToggle}
-      className="p-1 -ml-1 shrink-0 rounded text-[var(--color-text-secondary)] hover:text-white hover:bg-white/5 transition-colors"
+      className="p-1 -ml-1 shrink-0 rounded text-[var(--color-text-secondary)] hover:text-text-primary hover:bg-white/5 transition-colors"
     >
       <ChevronRight
         className={cn('w-4 h-4 transition-transform', open && 'rotate-90')}
@@ -123,10 +123,10 @@ function TargetedItem({ item }: { item: RunItemDto }) {
     <li
       className={cn(
         'flex items-center gap-1.5 text-sm min-w-0',
-        item.deleted ? 'text-[var(--color-text-secondary)]' : 'text-white'
+        item.deleted ? 'text-[var(--color-text-secondary)]' : 'text-text-primary'
       )}
     >
-      <span className={cn('truncate', item.deleted && 'line-through decoration-white/30')}>
+      <span className={cn('truncate', item.deleted && 'line-through decoration-current')}>
         {item.title ?? 'Untitled'}
       </span>
       {item.year !== null && (
