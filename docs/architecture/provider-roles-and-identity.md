@@ -132,7 +132,9 @@ after its targets were known. A target is resolved to its copy by `ensureSourceC
 ([`server/modules/media/sourceCopies.ts`](ref:path:server/modules/media/sourceCopies.ts)). When the
 hourly identity job has not seen the item yet, it hands the copy to `recordSourceCopy`
 ([`server/modules/providers/sourceCopy.ts`](ref:path:server/modules/providers/sourceCopy.ts)), which
-places it through `resolveGroup` exactly as the job would, so every target is recorded. The providers
+places it through `resolveGroup` exactly as the job would, so every target is recorded. The insert is
+idempotent on `(providerId, externalId)`: a copy the job records in the meantime, or a coordinate a run
+targets twice, resolves to the existing row rather than failing the run's recording. The providers
 module owns every write to `media_identity`/`media_item`; media only translates a catalog item into the
 copy's coordinate and group ids. `createRun` writes the run row and its links in one `db.batch`, a single SQLite transaction on
 one connection; the link insert reads the new run's id inside that transaction. An interactive
