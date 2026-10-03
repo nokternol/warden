@@ -11,17 +11,17 @@ widens provider coverage and is sequenced after this MVP (see [Post-MVP](#post-m
 The MVP is done when all three of these hold for the deployed container:
 
 1. **Everything exposed works.** Every feature in [In scope](#in-scope) is reachable, works, and is
-   verified in G1. Every offered provider type, filter and task is included.
+   verified in G1. Every offered provider type, rule and task is included.
 2. **Nothing else is exposed.** Every path to a deferred feature is blocked: no nav item, reachable
-   page, API route, provider type, filter or task leads to it. Deferred code stays in the codebase,
+   page, API route, provider type, rule or task leads to it. Deferred code stays in the codebase,
    compiled, typechecked and covered by its existing tests, ready to be un-deferred (decision 7).
 3. **The system is simplified.** Simplified means low cognitive load. Each concept has **one name**
    and **one mechanism** across UI, API, code and docs, and no two of those contradict each other.
    The [Glossary](#glossary) is the single list of names, and a guard test enforces it.
 
 Exposure is decided by **one mechanism**: a single **scope declaration** (`contract/scope.ts`,
-created in S1) lists every deferred page, API procedure, provider type, filter and task. The server
-refuses deferred procedures and leaves deferred types, filters and tasks out of its projections.
+created in S1) lists every deferred page, API procedure, provider type, rule and task. The server
+refuses deferred procedures and leaves deferred types, rules and tasks out of its projections.
 The client hides deferred nav items and page sections, and a deferred page URL answers 404. Nothing
 else decides exposure, and un-deferring a feature is one line removed from that file.
 
@@ -55,29 +55,29 @@ code. Every path to them is blocked by the scope declaration.
 | Provider type TVMAZE | Not buildable through `ProviderFactory` yet (its API key is lost), so offering it is a reachable broken path (L1). |
 | Provider type OMDB | It feeds only the deferred ratings path. |
 | Provider type TMDB | Not in the verification stack (decision 9). Login-page backdrops keep using the `TMDB_API_KEY` environment setting, which is separate from the provider type. |
-| Filters with no control or no live producer | For example, `certification` has no lookup today. C5's invariant lists them in the declaration. |
+| Rules with no control or no live producer | For example, `certification` has no lookup today. C5's invariant lists them in the declaration. |
 
 Which provider types and tasks are offered is decided by decisions 9 and 10: **offered means
 verified in G1**, and everything else of those kinds is declared deferred.
 
 ## Glossary
 
-One name per concept, everywhere. Each row is a decision (8a–8g). Names marked *(decided)* are
-already settled.
+One name per concept, everywhere. Every row is decided (8a–8g and decisions 2, 6, 9a).
 
-| Concept | Canonical name | Retired names (guard-tested) | Recommendation rationale |
+| Concept | Canonical name | Retired names (guard-tested) | Rationale |
 |---|---|---|---|
 | A configured external system | **Provider** | service, integration (UI) | PRODUCT.md and the UI already say Provider. `BaseProviderConnection` stays as an internal HTTP class name. |
-| A predicate over media fields | **Filter** *(8a)* | rule, `MediaRule`, `MEDIA_RULES`, `useMediaRules` | PRODUCT.md, the UI, `/api/filter-fields`, `FilterValue` and `MediaFilterBar` already say filter. Code is split between both names today. |
-| A named, persisted set of filters | **Query** *(8b)* | saved query, collection | "Saved" is a state, not a name (`VOCABULARY.md`). The UI still says "Saved queries". |
+| The definition of what can be filtered on (key, type, predicate), owned by the engine | **Rule** *(8a)* | `filterRegistry`, `filterFields`, `/api/filter-fields` | `MediaRule`/`MEDIA_RULES`/`MediaRuleDescriptor` keep their names. Files and endpoints that hold or serve rules stop calling them filters. |
+| A rule with a chosen value, as set in the UI and stored by a query | **Filter** *(8a)* | `FilterValueEntry` | The UI's "Add filter" adds one. `FilterValue` stays the name of the value itself. |
+| A named, persisted set of filters | **MediaQuery**, shown as "Query" *(8b)* | saved query, `SavedQuery`, collection | "Saved" is a state, not a name (`VOCABULARY.md`). The UI still says "Saved queries". |
 | A query used by an automation, with role include/exclude | **Included / excluded query** *(8c)* | query source, `MediaQuerySource`, `automation_query_sources` | "Source" is reserved for one meaning (next row). |
-| A provider that owns media | **Source** *(8d)* | `sourceProviders` on filters (becomes `providers`) | Today "source" means four things. It keeps one. |
+| A provider that owns media | **Source** *(8d)* | `sourceProviders` on rules (becomes `providers`) | Today "source" means four things. It keeps one. |
 | Movie or series | **movie / series** *(8e)* | show, `MediaKind`, `NormalizedShow` | Users see Sonarr's term, and the UI, routes and `series*` fields already say series. Persisted `'show'` values migrate. |
 | Query + task + schedule | **Automation** (user or system) *(8f)* | "Task" for automations (System page, stories) | The System page currently calls system automations "Tasks". |
 | An action a provider offers | **Task** | — | `ActuatorTask`, unchanged. |
 | One execution of an automation | **Run**, page **Runs** *(8g)* | Activity | The page shows runs, the verb is Run Now, and the API is `/automations/runs`. |
 | Automation controls | **Run Now / Disable / Enable / Delete** *(decided)* | Pause, Resume, Play | Decision 2. |
-| The request-manager provider | **Seerr** *(decided)* | Overseerr, `OVERSEERR`, `OverseerrProvider`, `overseerr*` filter keys | Decision 9a. Seerr is Overseerr's API-compatible successor, so one type serves both servers. |
+| The request-manager provider | **Seerr** *(decided)* | Overseerr, `OVERSEERR`, `OverseerrProvider`, `overseerr*` rule keys | Decision 9a. Seerr is Overseerr's API-compatible successor, so one type serves both servers. |
 | The product | **Warden** *(decided)* | Maintainarr | Decision 6. |
 
 ## Destination scenario
@@ -88,7 +88,7 @@ already settled.
 > **Unmonitor movie** on a daily schedule and press **Run Now**. Runs then shows *which titles*
 > changed. The container restarts with the schedule, history and session intact.
 
-Every filter and task in it already exists (`tagIds`, `addedDaysAgo`, `watched`, `unmonitorMovie`).
+Every rule and task in it already exists (`tagIds`, `addedDaysAgo`, `watched`, `unmonitorMovie`).
 
 ## Design constraints
 
@@ -147,9 +147,9 @@ principles become these acceptance checks on every UI slice:
 | F2 | **Movie/series has three spellings.** `ContentType` vs `MediaKind` (16 sites), the value `'show'` vs `/api/media/series`, `seriesSort`, `SERIES_PARAM_TO_KEY`, and UI copy "No series match". | `providers/roles.ts:101`, `filterRegistry.ts:11`, `media.routes.ts:33` |
 | F3 | **Three HTTP homes for providers and settings.** Provider CRUD lives at `/api/settings/providers` in a "transport-only" module, tasks at `/api/providers`, and system settings in an `appSettings` module **missing from `.dependency-cruiser.cjs`, so its boundaries are unenforced**. | `server/modules/index.ts`, `.dependency-cruiser.cjs:14` |
 | F4 | **Docs contradict code.** Core model: *"one active provider per type"* vs multi-instance sources, *"roles declared by the interfaces it `implements`"* vs adapter-bound roles, and an `addedBy=list` rule that doesn't exist. `precedence.ts` says `primaryMediaServer` "isn't built yet" while an unused `applyPrimaryMediaServer` exists. The implementation map says AutomationBuilder has no single-select parameter UI, but it does. The ledger cites the wrong path for `mediaQueryAdapters.ts`. Two intent docs link to missing files. The Dockerfile says `warden.db` vs config `maintainarr.db`. The README says port 5056 vs 5057. `INVENTORY.md` describes deleted files. | as cited |
-| F5 | **Filter vs rule.** `MediaRule`/`MEDIA_RULES`/`useMediaRules` beside `filterRegistry.ts`, `/api/filter-fields`, `FilterValue`, `MediaFilterBar` and the UI's "Add filter". | `filterRegistry.ts`, `useMediaRules.ts` |
+| F5 | **Rule vs filter used interchangeably.** `MediaRule`/`MEDIA_RULES`/`useMediaRules` beside `filterRegistry.ts`, `/api/filter-fields`, `FilterValue`, `MediaFilterBar` and the UI's "Add filter". | `filterRegistry.ts`, `useMediaRules.ts` |
 | F6 | **"Saved queries"** in the live UI, a name `VOCABULARY.md` retired. | `pages/automations/index.page.tsx` |
-| F7 | **"Source" means four things:** the `MediaSource` role, an automation's include/exclude `MediaQuerySource`, `MediaQuerySpec.sources`, and a filter's `sourceProviders`. | `mediaQueryEngine.ts:27`, `filterRegistry.ts` |
+| F7 | **"Source" means four things:** the `MediaSource` role, an automation's include/exclude `MediaQuerySource`, `MediaQuerySpec.sources`, and a rule's `sourceProviders`. | `mediaQueryEngine.ts:27`, `filterRegistry.ts` |
 | F8 | **System automations are called "Tasks"** on the System page, while "Task" means a provider action everywhere else. Stories add "New Task" and "Active Tasks" for automations, plus "Collections". | `pages/system`, `*.stories.tsx` |
 | F9 | **The client re-declares the provider catalogue.** `PROVIDER_REGISTRY` lists 8 of the 10 types with hand-written labels and `filterCapabilities` strings, while the server's enum, factory and roles are the real authority. | `src/lib/provider-registry.ts` |
 | F10 | **Ratings have two mechanisms**: rating filters via enrichment, and an ad-hoc `/api/providers/ratings` aggregation feeding a separate page and panel. | `ratingsAggregation.ts`, `pages/ratings` |
@@ -161,7 +161,7 @@ principles become these acceptance checks on every UI slice:
 | # | Duplication | Evidence |
 |---|---|---|
 | D1 | **13 hand-rolled SWR fetchers.** Each has its own error string, an unchecked `json.data as T` cast, and inconsistent envelopes (`/api/filter-fields` returns a bare array). Server error messages are swallowed. | `src/hooks/use*.ts` |
-| D2 | **The client re-declares filter presentation:** `BOOLEAN_VALUE_LABELS`, `SEGMENT_LABEL_OVERRIDES`, `ENUM_OPTIONS`, and key-switched `csvIdOptions`/`csvStringOptions`. | `MediaFilterBar/index.tsx:855-1000` |
+| D2 | **The client re-declares rule presentation:** `BOOLEAN_VALUE_LABELS`, `SEGMENT_LABEL_OVERRIDES`, `ENUM_OPTIONS`, and key-switched `csvIdOptions`/`csvStringOptions`. | `MediaFilterBar/index.tsx:855-1000` |
 | D3 | **Browse and save encode filter state two ways.** `MOVIE_PARAM_TO_KEY`/`SERIES_PARAM_TO_KEY` + `toFilterValues()`, a range satellite map and its coverage check, and the client mirror `toBrowseParams()`. | `media.handler.ts:169-345`, `src/lib/mediaQueryAdapters.ts:194` |
 | D4 | **Three multi-select controls** in one 1,829-line file. | `MediaFilterBar/index.tsx:136,342`, `filters/OptionFilter` |
 | D5 | **`'active' \| 'paused'` declared in four places**, and `z.enum(['movie','show'])` re-declared beside `ContentTypeSchema`. | F1 sites, `mediaQueries.schemas.ts:15` |
@@ -173,7 +173,7 @@ principles become these acceptance checks on every UI slice:
 |---|---|---|
 | L1 | Creating a SEERR or TVMAZE provider passes validation, then throws in `ProviderFactory`. | `settings.schemas.ts:4` (`nativeEnum`), `providerFactory.ts:72` |
 | L2 | `/api/providers/metadata` and `/api/app-settings` have no consumer. | route grep |
-| L3 | Filters in the API that the UI can never render, such as `certification`. | `ruleRendersControl` |
+| L3 | Rules in the API that the UI can never render, such as `certification`. | `ruleRendersControl` |
 
 ## Slice protocol
 
@@ -266,8 +266,8 @@ flowchart LR
   B2[B2 movie/series] --> C3[C3 browse speaks registry]
   C0 --> C1[C1 one API client]
   B5[B5 glossary guard + UI names] --> E1
-  B5 --> B6[B6 filter + source names in code]
-  B6 --> C2[C2 filter presentation on registry]
+  B5 --> B6[B6 rule, filter, query, source names]
+  B6 --> C2[C2 rule presentation on registry]
   C1 --> C3
   C1 --> D1[D1 destructive guard]
   C1 --> F1
@@ -299,7 +299,7 @@ names, so nothing is renamed twice.
     build.
   - Un-deferring is removing one entry: the surface is then reachable with no other change.
 - **Expected end state:** `contract/scope.ts`, the single declaration, read by the contract
-  implementer (refuses deferred procedures), by C5's projections (provider types, filters, tasks),
+  implementer (refuses deferred procedures), by C5's projections (provider types, rules, tasks),
   and by the client's nav, page guard and section guard. Deferred code and its tests stay as they
   are.
 - **Docs:** `docs/architecture/` gains the scope mechanism; architecture docs describing deferred
@@ -396,15 +396,18 @@ names, so nothing is renamed twice.
 - **Note:** the new Plex product name makes the instance show up as a new device on plex.tv.
   Existing sessions keep working.
 
-**B6 · Filter and source names in code and API** *(decisions 8a, 8c, 8d)*
+**B6 · Rule, filter, query and source names in code and API** *(decisions 8a, 8c, 8d)*
 - **Model:** Sonnet 5.5 (cross-cutting rename; typecheck and B5's guard prove completeness).
 - **Why:** F5, F7.
 - **Behaviours:**
-  - With the retired code names (`MediaRule`, `MEDIA_RULES`, `useMediaRules`, `MediaQuerySource`,
-    `sourceProviders`) added to the deprecated table, B5's check passes.
+  - With the retired code names (`filterRegistry`, `filterFields`, `FilterValueEntry`,
+    `MediaQuerySource`, `querySources`, `sourceProviders`) added to the deprecated table, B5's check
+    passes.
   - An automation's included and excluded queries survive the table rename intact.
-- **Expected end state:** `MediaFilter`/`MEDIA_FILTERS`/`MediaFilterDescriptor`. An automation has included and
-  excluded queries (`AutomationQuery { queryId, role }`). A filter lists its `providers`.
+- **Expected end state:** rules live in `ruleRegistry.ts` (`MEDIA_RULES`, `MediaRule`,
+  `MediaRuleDescriptor` unchanged) and are served by the contract's `rules` procedure. A filter is
+  `Filter { ruleKey, value, providerId? }`. An automation has included and excluded queries
+  (`AutomationQuery { queryId, role }`, table `automation_queries`). A rule lists its `providers`.
 
 ### Track C — One mechanism per job
 
@@ -457,15 +460,15 @@ names, so nothing is renamed twice.
   `/api/filter-fields` on the `{data}` envelope.
 - **Deletes:** 13 local `fetcher`s and every `json.data as T` cast.
 
-**C2 · Filter presentation lives on the registry** (after B6)
+**C2 · Rule presentation lives on the registry** (after B6)
 - **Model:** Opus 5.5 (registry contract every future provider builds on).
 - **Why:** D2.
 - **Behaviours:**
-  - A boolean filter carries its own value labels (for example *Monitored* / *Unmonitored*).
-  - An enum-shaped filter carries its own options.
-  - A multi-value filter names the lookup its options come from.
-  - The filter bar renders a filter it has never seen, correctly, from its descriptor alone.
-- **Expected end state:** `MediaFilter` gains `valueLabels?`, `options?`, `shortLabel?` and `lookup?`, and the
+  - A boolean rule carries its own value labels (for example *Monitored* / *Unmonitored*).
+  - An enum-shaped rule carries its own options.
+  - A multi-value rule names the lookup its options come from.
+  - The filter bar renders a rule it has never seen, correctly, from its descriptor alone.
+- **Expected end state:** `MediaRule` gains `valueLabels?`, `options?`, `shortLabel?` and `lookup?`, and the
   descriptor projects them.
 - **Deletes:** `BOOLEAN_VALUE_LABELS`, `SEGMENT_LABEL_OVERRIDES`, `ENUM_OPTIONS`, the key switches in
   `csvIdOptions`/`csvStringOptions`, and `ruleRendersControl` (C5 makes renderability a server
@@ -489,7 +492,7 @@ names, so nothing is renamed twice.
 - **Model:** Sonnet 5.5 (component consolidation behind characterization tests).
 - **Why:** D4.
 - **Behaviours:**
-  - One multi-select serves every multi-value filter, including grouped options.
+  - One multi-select serves every multi-value rule, including grouped options.
   - With several instances, options are qualified by instance.
   - The multi-select is fully keyboard operable.
   - Clear-all empties the selection.
@@ -506,10 +509,10 @@ names, so nothing is renamed twice.
   - The add-provider list shows exactly the offered types (decision 9), with labels and defaults
     from the server.
   - Creating a non-offered type is rejected before any connection is attempted.
-  - A filter is offered only if it has a control and at least one live producer among offered
+  - A rule is offered only if it has a control and at least one live producer among offered
     types, so `certification` and the stale TMDB/TVMAZE claims disappear until fixed.
   - Only the offered tasks (decision 10) are offered for enablement or automation.
-- **Expected end state:** offered types, filters and tasks are each declared once on the server. The client
+- **Expected end state:** offered types, rules and tasks are each declared once on the server. The client
   derives the add-provider list from `/api/providers/types`.
 - **Deletes:** `src/lib/provider-registry.ts` as a client-side catalogue. Its labels, defaults and
   capability text move to the server projection, so nothing is lost.
@@ -568,7 +571,7 @@ names, so nothing is renamed twice.
     after migration with no loss.
   - The add-provider list offers Seerr and no Overseerr type.
 - **Expected end state:** `MetadataProviderType.SEERR` is the only request-manager type, built by
-  `ProviderFactory`. The connection class is `SeerrProvider`. Filter keys become `seerrRequestStatus`
+  `ProviderFactory`. The connection class is `SeerrProvider`. Rule keys become `seerrRequestStatus`
   and `seerrHasIssue`. The migration rewrites provider rows, `media_query_filter_values` keys and
   enrichment rows. The `OVERSEERR` names join `VOCABULARY.md`'s retired names, so B5's check enforces
   them.
@@ -653,7 +656,7 @@ names, so nothing is renamed twice.
 | 5 | Image registry | **Decided: GHCR** (`ghcr.io/nokternol/warden`). |
 | 6 | Product and DB name | **Decided: Warden**, with default DB file `warden.db`. The NAS deployment renames its file once or pins `DB_PATH`. |
 | 7 | What "hidden" means | **Decided: blocked, not removed.** Deferred code stays compiled, typechecked and tested. Every path to it (page, nav, section, API procedure, provider type, filter, task) is blocked by the one scope declaration (S1). |
-| 8a–8g | Glossary names | **Open.** Recommendations are in the [Glossary](#glossary): Filter, Query, included/excluded query, Source (provider role only), movie/series, Automation vs Task, Runs. |
+| 8a–8g | Glossary names | **Decided:** Rule (definition) and Filter (a rule with a chosen value); MediaQuery, shown as Query; included/excluded queries; Source only for the owning provider; series; System automations, with task meaning a provider action; Runs. See the [Glossary](#glossary). |
 | 9 | Offered provider types | **Decided: Radarr, Sonarr, Seerr, Plex, Jellyfin, Tautulli**, the stack running on the NAS where G1 verifies them. TMDB, OMDB and TVMAZE are deferred. Plex and Jellyfin both active exercises the contested-field precedence (`playCount`, `lastWatchedAt`) in G1. |
 | 9a | Overseerr vs Seerr | **Decided: one provider type, Seerr** (D3). Development continues against the NAS's current Overseerr, since the APIs match. The NAS upgrades to Seerr before G1, so acceptance verifies the offered type against the real target; the Seerr spec flagged its live compatibility as unverified. |
 | 10 | Offered tasks | **Decided: all 32 offered**, each run once in G1 against a sacrificial item, so destructive ones are proven on throwaway media. The offered types declare 32 tasks, all wired, with parameterized ones backed by options routes. (D) marks destructive. **Radarr:** unmonitorMovie, triggerSearch, deleteMovieWithFiles (D), deleteMovieKeepFiles (D), refreshMovie, rescanMovie, renameMovies, refreshCollection, changeQualityProfile, addTag, removeTag. **Sonarr:** unmonitorSeries, triggerSearch, deleteSeriesWithFiles (D), deleteSeriesKeepFiles (D), refreshSeries, rescanSeries, renameSeries, changeQualityProfile, addTag, removeTag. **Plex:** deleteFromLibrary (D), refreshMetadata, markPlayed, markUnplayed. **Jellyfin:** deleteItem (D), refreshMetadata, markPlayed, markUnplayed, addToCollection, removeFromCollection. **Tautulli:** deleteWatchHistory (D). **Seerr:** none (enrichment only). |
