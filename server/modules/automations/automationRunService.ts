@@ -163,6 +163,8 @@ export class AutomationRunService {
   /**
    * Links source copies to the run row inserted earlier in the same batch.
    * Inside that write transaction the newest run id is that row's id.
+   * `last_insert_rowid()` cannot name it: this INSERT … SELECT re-reads it per
+   * row, and each link row it inserts moves it to that row's own rowid.
    */
   private linkToLatestRun(mediaItemIds: number[]) {
     return this.db.insert(automationRunItems).select(
