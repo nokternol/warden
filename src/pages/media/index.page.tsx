@@ -33,6 +33,7 @@ import { NAV_ITEMS } from '@app/lib/navigation';
 import { PROVIDER_REGISTRY } from '@app/lib/provider-registry';
 import { cn } from '@app/lib/utils/cn';
 import { requireAuth } from '@app/lib/utils/requireAuth';
+import type { ContentType } from '@contract/schemas';
 import {
   ArrowDown,
   ArrowUp,
@@ -368,7 +369,7 @@ function isFilterValueActive(value: FilterValue | undefined): boolean {
 
 /** Counts every active condition affecting this tab's results: shared values plus the tab's own scope. */
 function countActiveFilters(values: FilterState, tab: ActiveTab): number {
-  const scope: ContentScope = tab === 'movies' ? 'movie' : 'show';
+  const scope: ContentScope = tab === 'movies' ? 'movie' : 'series';
   const countBucket = (bucket: Record<string, FilterValue>) =>
     Object.values(bucket).filter(isFilterValueActive).length;
   return countBucket(values.shared) + countBucket(values[scope]);
@@ -455,7 +456,7 @@ export interface MediaContentProps {
   series: MediaSlice<ManagedSeries>;
   lookups: Lookups;
   configuredTypes: Set<string>;
-  sources: Record<'movie' | 'show', MediaSourceDescriptor> | undefined;
+  sources: Record<ContentType, MediaSourceDescriptor> | undefined;
   // card density
   density: CardDensity;
   onDensityChange: (d: CardDensity) => void;
@@ -618,24 +619,24 @@ export function MediaContent({
             isLoading={series.isLoading}
             isFetchingMore={series.isFetchingMore}
             density={density}
-            renderItem={(show: ManagedSeries) => (
+            renderItem={(item: ManagedSeries) => (
               <MediaCard
-                key={`series-${show.id}`}
-                id={`series-${show.id}`}
-                data-testid={`media-card-series-${show.id}`}
+                key={`series-${item.id}`}
+                id={`series-${item.id}`}
+                data-testid={`media-card-series-${item.id}`}
                 className={
-                  selectedId === `series-${show.id}` ? 'ring-2 ring-primary rounded-lg' : undefined
+                  selectedId === `series-${item.id}` ? 'ring-2 ring-primary rounded-lg' : undefined
                 }
                 onClick={(id) => {
-                  setSelected({ title: show.title, year: show.year });
+                  setSelected({ title: item.title, year: item.year });
                   setSelectedId(id);
                 }}
               >
-                <MediaCard.Poster src={getPosterUrl(show.images)} alt={show.title} />
+                <MediaCard.Poster src={getPosterUrl(item.images)} alt={item.title} />
                 <MediaCard.Content>
-                  <MediaCard.Title>{show.title}</MediaCard.Title>
-                  <MediaCard.Year>{show.year}</MediaCard.Year>
-                  <MediaCard.StatusBadge status={show.monitored ? 'monitored' : undefined} />
+                  <MediaCard.Title>{item.title}</MediaCard.Title>
+                  <MediaCard.Year>{item.year}</MediaCard.Year>
+                  <MediaCard.StatusBadge status={item.monitored ? 'monitored' : undefined} />
                 </MediaCard.Content>
               </MediaCard>
             )}
@@ -646,15 +647,15 @@ export function MediaContent({
           {!series.isLoading &&
             series.items.length === 0 &&
             sources &&
-            (!sources.show.configured ? (
+            (!sources.series.configured ? (
               <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
                 <ServerOff size={32} strokeWidth={1.25} className="text-text-muted" />
                 <p className="text-sm font-medium text-text-secondary">
-                  No {providerLabel(sources.show.ownerType)} connection configured.
+                  No {providerLabel(sources.series.ownerType)} connection configured.
                 </p>
                 <p className="text-xs text-text-muted">
-                  Add a {providerLabel(sources.show.ownerType)} provider in Settings to manage your
-                  series library.
+                  Add a {providerLabel(sources.series.ownerType)} provider in Settings to manage
+                  your series library.
                 </p>
                 <a
                   href="/settings"
@@ -680,7 +681,7 @@ export function MediaContent({
                 <Tv2 size={32} strokeWidth={1.25} className="text-text-muted" />
                 <p className="text-sm text-text-secondary">Your series library is empty.</p>
                 <p className="text-xs text-text-muted">
-                  Series synced from {providerLabel(sources.show.ownerType)} will appear here.
+                  Series synced from {providerLabel(sources.series.ownerType)} will appear here.
                 </p>
               </div>
             ))}
@@ -728,7 +729,7 @@ export default function MediaPage() {
     sort: values.movieSort,
   });
   const series = useSeries({
-    ...toBrowseParams(debouncedFilters, 'show'),
+    ...toBrowseParams(debouncedFilters, 'series'),
     sort: values.seriesSort,
   });
   const lookups = useMediaLookups();
@@ -847,7 +848,7 @@ export default function MediaPage() {
         open={saveDialogOpen}
         onClose={() => setSaveDialogOpen(false)}
         onSave={(name) => {
-          const contentType = activeTab === 'movies' ? 'movie' : 'show';
+          const contentType = activeTab === 'movies' ? 'movie' : 'series';
           return saveQuery(name, contentType, toSaveValues(values, contentType));
         }}
       />

@@ -5,7 +5,7 @@ import type { EnrichmentFields } from './mediaFieldProvider';
 /**
  * The single declared source of truth for which `EnrichmentFields` keys each
  * provider type's `MediaFieldProvider`/`MediaFieldSource` adapter(s) produce.
- * Hand-authored, mirroring `roles.ts`'s `SOURCE_OWNER_BY_KIND` — an adapter's
+ * Hand-authored, mirroring `roles.ts`'s `SOURCE_OWNER` — an adapter's
  * field coverage lives in its generic type parameters, not something a
  * runtime scan of `mediaFieldProvider.ts`'s exports could discover, so this
  * is the compiled-in declaration every consumer (gating, `sourceProviders`)

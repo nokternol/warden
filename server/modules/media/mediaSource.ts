@@ -5,7 +5,7 @@ import type { MediaItem, MediaItemSet } from './mediaItem';
  * advertises normalized "media items" — not movies or series — carrying their own
  * provenance (`_sourceIds.providerId`), and projects each item back to its
  * provider-native id. `RadarrProvider` serves movies and `SonarrProvider` serves
- * shows, but the engine consumes only this role and never sees that distinction.
+ * series, but the engine consumes only this role and never sees that distinction.
  */
 export interface MediaSource {
   getMediaItems(): Promise<MediaItemSet>;

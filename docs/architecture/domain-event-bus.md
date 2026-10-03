@@ -44,7 +44,7 @@ payload independently.
 
 The payload is **intentionally empty**. The event drives cache invalidation, and the enrichment cache
 it will feed (Phase 3) is whole-scope — so the event need only say *that* media changed, not which
-slice. A within-scope discriminator (e.g. `movie`/`show`) is added only if and when a consumer
+slice. A within-scope discriminator (e.g. `movie`/`series`) is added only if and when a consumer
 segments its cache and proves it needs one, expressed in that consumer's own vocabulary. An earlier
 iteration carried a provider `sourceType` discriminator; it was removed before shipping because it
 conflated *provider* with *media kind* — the wrong axis for a consumer that would actually segment on

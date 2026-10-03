@@ -74,7 +74,6 @@ decided but not yet built; each slice moves its row into `VOCABULARY.md` when it
 | A key/value pair: a rule's key and a chosen value, as set in the UI and stored by a query | **Filter** *(8a)* | `FilterValueEntry` | Knows nothing about which provider supplies the data; the rule resolves that. `FilterValue` stays the name of the value itself. | B6 |
 | A query used by an automation, with role include/exclude | **Included / excluded query** *(8c)* | query source, `MediaQuerySource`, `automation_query_sources` | "Source" is reserved for one meaning (next row). | B6 |
 | A provider that owns media | **Source** *(8d)* | `sourceProviders` on rules (becomes `providers`) | Today "source" means four things. It keeps one. | B6 |
-| Movie or series | **movie / series** *(8e)* | show, `MediaKind`, `NormalizedShow` | Users see Sonarr's term, and the UI, routes and `series*` fields already say series. Persisted `'show'` values migrate. | B2 |
 | The request-manager provider | **Seerr** *(decided)* | Overseerr, `OVERSEERR`, `OverseerrProvider`, `overseerr*` rule keys | Decision 9a. Seerr is Overseerr's API-compatible successor, so one type serves both servers. | D3 |
 
 ## Destination scenario
@@ -354,10 +353,13 @@ names, so nothing is renamed twice.
 - **Behaviours:**
   - A content type is `movie` or `series`. `show` is rejected.
   - A query or identity stored as `show` reads back as `series` after migration.
-- **Expected end state:** `ContentType` is the only TypeScript name, declared once in `providers/roles.ts` and
-  re-exported by media. `NormalizedShow`/`show.ts` become `NormalizedSeries`/`series.ts`.
-  `SOURCE_OWNER_BY_KIND` becomes `SOURCE_OWNER`.
-- **Deletes:** `MediaKind`, the alias, and the inline `z.enum` in `mediaQueries.schemas.ts`.
+- **Expected end state:** `ContentType` is the only TypeScript name, declared once as `ContentTypeSchema` in
+  `contract/schemas.ts` (the contract owns wire types since C0) and imported by media, providers and the
+  client. `NormalizedShow`/`show.ts` become `NormalizedSeries`/`series.ts`.
+  `SOURCE_OWNER_BY_KIND` becomes `SOURCE_OWNER`. Migration 0026 rewrites stored `show` queries and
+  identities to `series`.
+- **Deletes:** `MediaKind`, the `ContentType` alias in `filterRegistry.ts`, the client's duplicate
+  `ContentType` declaration and the inline `'movie' | 'show'` unions.
 
 **B3 · One home for providers** (after C0)
 - **Model:** Opus 5.5 (module move + dependency-direction rules).

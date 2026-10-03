@@ -26,7 +26,7 @@ lines 10–39). Normalization: `server/modules/media/normalizeMedia.ts:12-27`
 | `title` | wired | `radarrProvider.ts:12` → `NormalizedMovie.title`, filter rule `title` (`filterRegistry.ts:123`) |
 | `year` | wired | `radarrProvider.ts:13` → filter rule `year` (`filterRegistry.ts:136`) |
 | `hasFile` | wired | `radarrProvider.ts:14` → filter rule `hasFile` (`filterRegistry.ts:222`) |
-| `monitored` | **not-wired for movies** | `radarrProvider.ts:15` field exists on `RadarrMovie` and is copied in `normalizeMedia.ts:18` onto `NormalizedMovie.monitored`, but the `monitored` filter rule (`filterRegistry.ts:296`) is **show-only** (`contentTypes: ['show']`, `sourceProviders: [SONARR]`) — Radarr populates the same-named domain field with no movie-side filter rule reading it. Layer: UI filter, query engine (movie-scoped rule needed) |
+| `monitored` | **not-wired for movies** | `radarrProvider.ts:15` field exists on `RadarrMovie` and is copied in `normalizeMedia.ts:18` onto `NormalizedMovie.monitored`, but the `monitored` filter rule (`filterRegistry.ts:296`) is **series-only** (`contentTypes: ['series']`, `sourceProviders: [SONARR]`) — Radarr populates the same-named domain field with no movie-side filter rule reading it. Layer: UI filter, query engine (movie-scoped rule needed) |
 | `tmdbId` | wired | `radarrProvider.ts:16` → `_sourceIds.tmdb` (`normalizeMedia.ts:14`), identity matching |
 | `imdbId` | wired | `radarrProvider.ts:17` → `_sourceIds.imdb` (`normalizeMedia.ts:14`) |
 | `profileId` | not-wired | present on `RadarrMovie` (`radarrProvider.ts:18`) but never read anywhere else in the codebase — appears to be a legacy/duplicate of `qualityProfileId`. Layer: none needed if truly dead; flag for decision ticket |
@@ -57,7 +57,7 @@ All of these are **fully not-wired** — no provider-field typing exists at all,
   `titleSlug` — title variants/sort helpers
 - `overview` — plot synopsis
 - `status` (Radarr's own lifecycle enum: `tba`/`announced`/`inCinemas`/`released`/`deleted`) —
-  **naming-collision risk**: `NormalizedShow` already has a `status` field sourced from Sonarr
+  **naming-collision risk**: `NormalizedSeries` already has a `status` field sourced from Sonarr
   with different semantics (series status: continuing/ended, not per-episode release lifecycle) —
   flag for precedence ticket if a movie `status` field is ever added
 - `inCinemas`, `physicalRelease`, `digitalRelease` — release-date milestones, distinct from `added`

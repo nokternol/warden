@@ -34,7 +34,7 @@ resolve, don't resolve it here.
   an actuator + identity bridge with zero enrichment fields. Prerequisite groundwork: adding
   `_sourceIds.jellyfin` (schema-shaped, not structural — same class as Sonarr's `_sourceIds.tvmaze`
   addition last session), without which nothing else in the spec can join back to a
-  `NormalizedMovie`/`NormalizedShow`.
+  `NormalizedMovie`/`NormalizedSeries`.
 - **Same shared-field strategy as Plex**: `genres`, `certification`, `studio`, `runtime`
   (ticks-converted), file-technical-metadata, and `playCount`/`lastWatchedAt` (Jellyfin as a third
   producer alongside Tautulli/Plex) all join existing multi-producer fields.

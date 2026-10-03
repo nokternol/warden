@@ -1,12 +1,12 @@
 import { and, eq, isNull, notInArray } from 'drizzle-orm';
 
 const defaultDelay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+import type { ContentType } from '@contract/schemas';
 import { mediaIdentity, mediaItems } from '@server/database/schema';
 import type { DrizzleDb } from '@server/kernel/db';
 import type { RadarrProvider } from './connections/radarrProvider';
 import type { SonarrProvider } from './connections/sonarrProvider';
 import { resolveGroup } from './groupResolver';
-import type { MediaKind } from './roles';
 
 interface PlexBridgeProvider {
   getAllItems(): Promise<Array<{ ratingKey: string; type?: string; guids?: { id: string }[] }>>;
@@ -22,8 +22,8 @@ interface TVMazeLookupProvider {
   lookupByTvdbId(tvdbId: number): Promise<{ id: number } | null>;
 }
 
-const PLEX_KIND: Record<string, MediaKind> = { movie: 'movie', show: 'show' };
-const JELLYFIN_KIND: Record<string, MediaKind> = { Movie: 'movie', Series: 'show' };
+const PLEX_KIND: Record<string, ContentType> = { movie: 'movie', show: 'series' };
+const JELLYFIN_KIND: Record<string, ContentType> = { Movie: 'movie', Series: 'series' };
 
 interface Deps {
   db: DrizzleDb;
@@ -80,7 +80,7 @@ export class IdentityResolutionJob {
     set: { plexRatingKey: string } | { jellyfinItemId: string },
     column: typeof mediaIdentity.tmdbId | typeof mediaIdentity.tvdbId,
     id: number,
-    kind: MediaKind | undefined
+    kind: ContentType | undefined
   ): Promise<number> {
     const result = await this.deps.db
       .update(mediaIdentity)
@@ -128,7 +128,7 @@ export class IdentityResolutionJob {
       const now = Math.floor(Date.now() / 1000);
       const fetchedExternalIds: number[] = [];
       for (const s of series) {
-        const identityId = await resolveGroup(this.deps.db, 'show', {
+        const identityId = await resolveGroup(this.deps.db, 'series', {
           tvdbId: s.tvdbId,
           tmdbId: s.tmdbId,
           imdbId: s.imdbId,

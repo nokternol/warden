@@ -4,7 +4,7 @@ import type { EnrichmentFields } from './mediaFieldProvider';
  * Every `EnrichmentFields` key, not a hand-picked subset — see the identical note on
  * `NormalizedMovie` (`movie.ts`) for why.
  */
-export interface NormalizedShow extends Partial<EnrichmentFields> {
+export interface NormalizedSeries extends Partial<EnrichmentFields> {
   _sourceIds: {
     sonarr?: number;
     plex?: string;

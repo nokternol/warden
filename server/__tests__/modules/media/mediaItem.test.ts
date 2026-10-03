@@ -1,6 +1,6 @@
 import { externalIdOf, itemKey } from '@server/modules/media/mediaItem';
 import type { NormalizedMovie } from '@server/modules/media/movie';
-import type { NormalizedShow } from '@server/modules/media/show';
+import type { NormalizedSeries } from '@server/modules/media/series';
 import { describe, expect, it } from 'vitest';
 
 describe('externalIdOf', () => {
@@ -10,7 +10,7 @@ describe('externalIdOf', () => {
   });
 
   it('reads the provider-native id off a Sonarr-sourced item', () => {
-    const item: NormalizedShow = { _sourceIds: { sonarr: 7, providerId: 1 }, title: 'S' };
+    const item: NormalizedSeries = { _sourceIds: { sonarr: 7, providerId: 1 }, title: 'S' };
     expect(externalIdOf(item)).toBe(7);
   });
 

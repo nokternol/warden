@@ -107,7 +107,7 @@ describe('GET /api/media-queries/:id/preview', () => {
   it('returns { count: 0, instances: [] } when no instance is active', async () => {
     const noInstanceQuery = await mediaQueryService.create({
       name: 'No Instance',
-      contentType: 'show',
+      contentType: 'series',
       filterValues: [],
     });
 

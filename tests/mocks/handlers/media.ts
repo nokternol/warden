@@ -104,7 +104,7 @@ export const mediaHandlers = [
       configured: true,
       instances: [{ id: 1, name: 'Radarr' }],
     },
-    { contentType: 'show', ownerType: 'SONARR', configured: false, instances: [] },
+    { contentType: 'series', ownerType: 'SONARR', configured: false, instances: [] },
   ]),
 
   mockProcedure(contract.media.reset, () => ({ deletedIdentities: 0 })),
@@ -116,7 +116,7 @@ export const mediaHandlers = [
     {
       key: 'title',
       label: 'Title',
-      contentTypes: ['movie', 'show'],
+      contentTypes: ['movie', 'series'],
       dataType: 'string',
       sourceProviders: ['RADARR', 'SONARR', 'PLEX'],
       required: false,
@@ -124,7 +124,7 @@ export const mediaHandlers = [
     {
       key: 'year',
       label: 'Year',
-      contentTypes: ['movie', 'show'],
+      contentTypes: ['movie', 'series'],
       dataType: 'range',
       sourceProviders: ['RADARR', 'SONARR', 'PLEX', 'TMDB'],
       required: false,
@@ -132,7 +132,7 @@ export const mediaHandlers = [
     {
       key: 'watched',
       label: 'Watched',
-      contentTypes: ['movie', 'show'],
+      contentTypes: ['movie', 'series'],
       dataType: 'boolean',
       sourceProviders: ['TAUTULLI', 'PLEX'],
       required: false,
@@ -140,7 +140,7 @@ export const mediaHandlers = [
     {
       key: 'addedDaysAgo',
       label: 'Added (days ago)',
-      contentTypes: ['movie', 'show'],
+      contentTypes: ['movie', 'series'],
       dataType: 'range',
       sourceProviders: ['RADARR', 'SONARR', 'PLEX'],
       required: false,
@@ -148,7 +148,7 @@ export const mediaHandlers = [
     {
       key: 'sizeOnDiskGb',
       label: 'Size on disk (GB)',
-      contentTypes: ['movie', 'show'],
+      contentTypes: ['movie', 'series'],
       dataType: 'range',
       sourceProviders: ['RADARR', 'SONARR'],
       required: false,
@@ -156,7 +156,7 @@ export const mediaHandlers = [
     {
       key: 'certification',
       label: 'Certification',
-      contentTypes: ['movie', 'show'],
+      contentTypes: ['movie', 'series'],
       dataType: 'csv-strings',
       sourceProviders: ['RADARR', 'SONARR', 'TMDB', 'OMDB'],
       required: false,
@@ -164,7 +164,7 @@ export const mediaHandlers = [
     {
       key: 'hasFile',
       label: 'Has file',
-      contentTypes: ['movie', 'show'],
+      contentTypes: ['movie', 'series'],
       dataType: 'boolean',
       sourceProviders: ['RADARR', 'SONARR', 'PLEX'],
       required: false,
@@ -204,7 +204,7 @@ export const mediaHandlers = [
     {
       key: 'monitored',
       label: 'Monitored',
-      contentTypes: ['show'],
+      contentTypes: ['series'],
       dataType: 'boolean',
       sourceProviders: ['SONARR'],
       required: false,
@@ -212,7 +212,7 @@ export const mediaHandlers = [
     {
       key: 'seriesStatus',
       label: 'Series status',
-      contentTypes: ['show'],
+      contentTypes: ['series'],
       dataType: 'string',
       sourceProviders: ['SONARR'],
       required: false,
@@ -220,7 +220,7 @@ export const mediaHandlers = [
     {
       key: 'tagIds',
       label: 'Tags',
-      contentTypes: ['show'],
+      contentTypes: ['series'],
       dataType: 'csv-ids',
       sourceProviders: ['SONARR'],
       required: false,
@@ -228,7 +228,7 @@ export const mediaHandlers = [
     {
       key: 'qualityProfileIds',
       label: 'Quality profile',
-      contentTypes: ['show'],
+      contentTypes: ['series'],
       dataType: 'csv-ids',
       sourceProviders: ['SONARR'],
       required: false,
@@ -236,7 +236,7 @@ export const mediaHandlers = [
     {
       key: 'genres',
       label: 'Genres',
-      contentTypes: ['show'],
+      contentTypes: ['series'],
       dataType: 'csv-strings',
       sourceProviders: ['SONARR', 'TMDB'],
       required: false,
@@ -244,7 +244,7 @@ export const mediaHandlers = [
     {
       key: 'seriesType',
       label: 'Series type',
-      contentTypes: ['show'],
+      contentTypes: ['series'],
       dataType: 'string',
       sourceProviders: ['SONARR'],
       required: false,
@@ -252,7 +252,7 @@ export const mediaHandlers = [
     {
       key: 'network',
       label: 'Network',
-      contentTypes: ['show'],
+      contentTypes: ['series'],
       dataType: 'csv-strings',
       sourceProviders: ['SONARR', 'TVMAZE'],
       required: false,
@@ -260,7 +260,7 @@ export const mediaHandlers = [
     {
       key: 'communityRating',
       label: 'Community rating',
-      contentTypes: ['show'],
+      contentTypes: ['series'],
       dataType: 'range',
       sourceProviders: ['SONARR', 'TMDB'],
       required: false,
@@ -268,7 +268,7 @@ export const mediaHandlers = [
     {
       key: 'ended',
       label: 'Ended',
-      contentTypes: ['show'],
+      contentTypes: ['series'],
       dataType: 'boolean',
       sourceProviders: ['SONARR'],
       required: false,
@@ -276,7 +276,7 @@ export const mediaHandlers = [
     {
       key: 'lastAiredDaysAgo',
       label: 'Last aired (days ago)',
-      contentTypes: ['show'],
+      contentTypes: ['series'],
       dataType: 'range',
       sourceProviders: ['SONARR'],
       required: false,
@@ -284,7 +284,7 @@ export const mediaHandlers = [
     {
       key: 'episodePercentage',
       label: 'Episode completion (%)',
-      contentTypes: ['show'],
+      contentTypes: ['series'],
       dataType: 'range',
       sourceProviders: ['SONARR'],
       required: false,
@@ -292,7 +292,7 @@ export const mediaHandlers = [
     {
       key: 'tmdbStatus',
       label: 'TMDB status',
-      contentTypes: ['movie', 'show'],
+      contentTypes: ['movie', 'series'],
       dataType: 'string',
       sourceProviders: ['TMDB'],
       required: false,
@@ -300,7 +300,7 @@ export const mediaHandlers = [
     {
       key: 'overseerrRequestStatus',
       label: 'Overseerr request status',
-      contentTypes: ['movie', 'show'],
+      contentTypes: ['movie', 'series'],
       dataType: 'number',
       sourceProviders: ['OVERSEERR'],
       required: false,
@@ -308,7 +308,7 @@ export const mediaHandlers = [
     {
       key: 'overseerrHasIssue',
       label: 'Overseerr has issue',
-      contentTypes: ['movie', 'show'],
+      contentTypes: ['movie', 'series'],
       dataType: 'boolean',
       sourceProviders: ['OVERSEERR'],
       required: false,
@@ -316,7 +316,7 @@ export const mediaHandlers = [
     {
       key: 'lastWatchedDaysAgo',
       label: 'Last watched (days ago)',
-      contentTypes: ['movie', 'show'],
+      contentTypes: ['movie', 'series'],
       dataType: 'range',
       sourceProviders: ['TAUTULLI', 'PLEX'],
       required: false,

@@ -18,7 +18,7 @@ describe('useMediaRules', () => {
         {
           key: 'year',
           label: 'Year',
-          contentTypes: ['movie', 'show'],
+          contentTypes: ['movie', 'series'],
           dataType: 'range',
           sourceProviders: ['RADARR', 'SONARR'],
           required: false,

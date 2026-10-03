@@ -21,7 +21,7 @@ describe('useMediaSources', () => {
           configured: true,
           instances: [{ id: 1, name: 'Radarr' }],
         },
-        { contentType: 'show', ownerType: 'SONARR', configured: false, instances: [] },
+        { contentType: 'series', ownerType: 'SONARR', configured: false, instances: [] },
       ])
     );
 
@@ -35,7 +35,7 @@ describe('useMediaSources', () => {
         configured: true,
         instances: [{ id: 1, name: 'Radarr' }],
       },
-      show: { contentType: 'show', ownerType: 'SONARR', configured: false, instances: [] },
+      series: { contentType: 'series', ownerType: 'SONARR', configured: false, instances: [] },
     });
   });
 });

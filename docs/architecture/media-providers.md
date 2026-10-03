@@ -21,7 +21,7 @@ none.
 
 **What it is:** movie library manager/downloader — the movie catalog owner.
 
-**Role:** `MediaSource` (movie) + `MediaActuator`. Per `SOURCE_OWNER_BY_KIND`
+**Role:** `MediaSource` (movie) + `MediaActuator`. Per `SOURCE_OWNER`
 ([`server/modules/providers/roles.ts`](ref:path:server/modules/providers/roles.ts)), Radarr is the sole
 owner of the movie catalog; any number of active instances may run at once.
 
@@ -44,9 +44,9 @@ once). None are modelled-only.
 
 ## Sonarr
 
-**What it is:** TV series library manager/downloader — the show catalog owner.
+**What it is:** TV series library manager/downloader — the series catalog owner.
 
-**Role:** `MediaSource` (show) + `MediaActuator`, symmetric to Radarr.
+**Role:** `MediaSource` (series) + `MediaActuator`, symmetric to Radarr.
 
 **Auth:** API key (`?apikey=` query param).
 
@@ -63,7 +63,7 @@ same precedent as Radarr's `moveMovie`.
 **Wired into the media-item pipeline?** Yes — as `MediaSource`. Sonarr's fields (`genres`, `network`,
 `seriesType`, `communityRating`, `episodePercentage`, `lastAiredAt`, `hasFile` (derived from
 `statistics.episodeFileCount > 0`), `path`, `images`, `nextAiring`, `seasonCount`, `episodeFileCount`,
-`episodeCount`/`totalEpisodeCount`, `languageProfileId`, etc.) normalize onto `NormalizedShow`
+`episodeCount`/`totalEpisodeCount`, `languageProfileId`, etc.) normalize onto `NormalizedSeries`
 ([`normalizeMedia.ts`](ref:path:server/modules/media/normalizeMedia.ts)) and are gated directly into
 `filterRegistry.ts`. `_sourceIds.imdb`/`_sourceIds.tvmaze` are also populated (identity fields, not
 enrichment data), closing the asymmetry with `NormalizedMovie._sourceIds.imdb`. Language profiles are a
@@ -274,7 +274,7 @@ returns per-show `network` data) that simply has no enricher built yet — unlik
 | Provider | Role(s) | Wired into media-item pipeline? |
 |---|---|---|
 | Radarr | MediaSource (movie), MediaActuator | Yes — source fields direct to `filterRegistry` |
-| Sonarr | MediaSource (show), MediaActuator | Yes — source fields direct to `filterRegistry` |
+| Sonarr | MediaSource (series), MediaActuator | Yes — source fields direct to `filterRegistry` |
 | Tautulli | MediaEnricher, MediaActuator | Yes — `tautulliEnricher` |
 | Plex | MediaEnricher, MediaActuator | Yes — `plexEnricher` + identity stamping |
 | Jellyfin | MediaEnricher, MediaActuator | Yes — `jellyfinEnricher` |

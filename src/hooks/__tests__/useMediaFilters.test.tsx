@@ -1,9 +1,9 @@
 /**
  * useMediaFilters — derives its field vocabulary from the server rule
  * registry (`useMediaRules`) instead of a static client-side catalogue.
- * FilterState is scoped `{ shared, movie, show }` so the registry's
+ * FilterState is scoped `{ shared, movie, series }` so the registry's
  * intentionally-reused keys (tagIds, qualityProfileIds, genres) can hold
- * independent movie/show values without collision.
+ * independent movie/series values without collision.
  *
  * Run: vitest run --project client
  */
@@ -41,7 +41,7 @@ const RULES: MediaRuleDescriptor[] = [
   {
     key: 'title',
     label: 'Title',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'string',
     sourceProviders: ['RADARR'],
     required: false,
@@ -49,7 +49,7 @@ const RULES: MediaRuleDescriptor[] = [
   {
     key: 'year',
     label: 'Year',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'range',
     sourceProviders: ['RADARR'],
     required: false,
@@ -57,7 +57,7 @@ const RULES: MediaRuleDescriptor[] = [
   {
     key: 'hasFile',
     label: 'Has file',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     sourceProviders: ['RADARR'],
     required: false,
@@ -73,7 +73,7 @@ const RULES: MediaRuleDescriptor[] = [
   {
     key: 'tagIds',
     label: 'Tags',
-    contentTypes: ['show'],
+    contentTypes: ['series'],
     dataType: 'csv-ids',
     sourceProviders: ['SONARR'],
     required: false,
@@ -112,7 +112,7 @@ describe('useMediaFilters — initial state', () => {
     const { result } = await renderReady();
     expect(result.current.filterState.shared.title).toBe('');
     expect(result.current.filterState.movie.tagIds).toBeUndefined();
-    expect(result.current.filterState.show.tagIds).toBeUndefined();
+    expect(result.current.filterState.series.tagIds).toBeUndefined();
   });
 
   it('parses a shared scalar field from the URL', async () => {
@@ -130,10 +130,10 @@ describe('useMediaFilters — initial state', () => {
   });
 
   it('keeps movie.tagIds and show.tagIds independent for the colliding registry key', async () => {
-    mockRouterQuery = { movieTagIds: '1,2', showTagIds: '3,4' };
+    mockRouterQuery = { movieTagIds: '1,2', seriesTagIds: '3,4' };
     const { result } = await renderReady();
     expect(result.current.filterState.movie.tagIds).toBe('1,2');
-    expect(result.current.filterState.show.tagIds).toBe('3,4');
+    expect(result.current.filterState.series.tagIds).toBe('3,4');
   });
 });
 
@@ -144,11 +144,11 @@ describe('useMediaFilters — setValue', () => {
     expect(result.current.filterState.shared.title).toBe('matrix');
   });
 
-  it('scopes a movie-only value without touching show', async () => {
+  it('scopes a movie-only value without touching series', async () => {
     const { result } = await renderReady();
     act(() => result.current.setValue('movie', 'tagIds', '1,2'));
     expect(result.current.filterState.movie.tagIds).toBe('1,2');
-    expect(result.current.filterState.show.tagIds).toBeUndefined();
+    expect(result.current.filterState.series.tagIds).toBeUndefined();
   });
 
   it('setValue(undefined) clears the field', async () => {
@@ -254,14 +254,14 @@ describe('useMediaFilters — instance qualifiers', () => {
   it('starts with no qualifiers', async () => {
     const { result } = await renderReady();
     expect(result.current.filterState.movieQualifiers).toEqual({});
-    expect(result.current.filterState.showQualifiers).toEqual({});
+    expect(result.current.filterState.seriesQualifiers).toEqual({});
   });
 
-  it('setQualifier scopes to movie/show independently', async () => {
+  it('setQualifier scopes to movie/series independently', async () => {
     const { result } = await renderReady();
     act(() => result.current.setQualifier('movie', 'tagIds', 5));
     expect(result.current.filterState.movieQualifiers.tagIds).toBe(5);
-    expect(result.current.filterState.showQualifiers.tagIds).toBeUndefined();
+    expect(result.current.filterState.seriesQualifiers.tagIds).toBeUndefined();
   });
 
   it('setQualifier(undefined) clears the qualifier', async () => {
@@ -308,9 +308,9 @@ describe('useMediaFilters — isActive', () => {
     expect(result.current.isActive).toBe(true);
   });
 
-  it('is true when only a show-scoped value is set', async () => {
+  it('is true when only a series-scoped value is set', async () => {
     const { result } = await renderReady();
-    act(() => result.current.setValue('show', 'tagIds', '3,4'));
+    act(() => result.current.setValue('series', 'tagIds', '3,4'));
     expect(result.current.isActive).toBe(true);
   });
 

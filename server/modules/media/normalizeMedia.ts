@@ -1,7 +1,7 @@
 import type { RadarrMovie, SonarrSeries } from '../providers';
 import { radarrTagsFieldSource, sonarrTagsFieldSource } from './mediaFieldProvider';
 import type { NormalizedMovie } from './movie';
-import type { NormalizedShow } from './show';
+import type { NormalizedSeries } from './series';
 
 /**
  * Translate provider DTOs into the canonical Normalized* domain shapes the
@@ -49,7 +49,7 @@ export function normalizeRadarrMovie(m: RadarrMovie, providerId: number): Normal
   };
 }
 
-export function normalizeSonarrSeries(s: SonarrSeries, providerId: number): NormalizedShow {
+export function normalizeSonarrSeries(s: SonarrSeries, providerId: number): NormalizedSeries {
   return {
     _sourceIds: {
       sonarr: s.id,
@@ -69,9 +69,9 @@ export function normalizeSonarrSeries(s: SonarrSeries, providerId: number): Norm
     addedDate: s.added,
     sizeOnDiskBytes: s.statistics?.sizeOnDisk,
     certification: s.certification,
-    seriesType: s.seriesType as NormalizedShow['seriesType'],
+    seriesType: s.seriesType as NormalizedSeries['seriesType'],
     network: s.network,
-    seriesStatus: s.status as NormalizedShow['seriesStatus'],
+    seriesStatus: s.status as NormalizedSeries['seriesStatus'],
     ended: s.ended,
     episodePercentage: s.statistics?.percentOfEpisodes,
     lastAiredAt: s.previousAiring,

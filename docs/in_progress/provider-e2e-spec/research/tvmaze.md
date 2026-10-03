@@ -20,19 +20,19 @@ directly. Rate limit per docs: ~20 calls/10s per IP; responses cacheable up to 6
 {
   key: 'network',
   label: 'Network',
-  contentTypes: ['show'],
+  contentTypes: ['series'],
   dataType: 'csv-strings',
   sourceProviders: [MetadataProviderType.SONARR, MetadataProviderType.TVMAZE],
   ...
   predicate: (item, value) => {
-    const show = item as NormalizedShow;
+    const show = item as NormalizedSeries;
     if (!show.network) return false;
     return parseCsvStrings(value).includes(show.network);
   },
 },
 ```
 
-`NormalizedShow.network?: string` (`server/modules/media/show.ts:29`) already exists as a field —
+`NormalizedSeries.network?: string` (`server/modules/media/series.ts:29`) already exists as a field —
 this is not a schema gap, just a missing writer. `TvMazeProvider.getShow()`
 (`server/modules/providers/connections/tvmazeProvider.ts:47`) genuinely returns per-show network
 data today:
@@ -58,7 +58,7 @@ registration + a way to resolve `_sourceIds.tvmaze` (or a TVDB→TVMaze lookup, 
 missing.
 
 **Naming collision, not yet resolved:** `network` is already a `sourceProviders` entry for Sonarr
-too, and the rule's predicate does a plain string match against a single `NormalizedShow.network`
+too, and the rule's predicate does a plain string match against a single `NormalizedSeries.network`
 slot. If a TVMaze enricher and Sonarr both populate `network` for the same show with differing
 strings/casing (e.g. Sonarr's network name vs. TVMaze's `network.name` — TVMaze also has a
 separate `webChannel` object for streaming-only shows, see below), one will silently overwrite the
@@ -80,8 +80,8 @@ other depending on enrichment ordering — precedence ticket territory, flagged 
 - **Identity resolution / TVDB crosswalk** (`server/modules/providers/identityJobFactory.ts:54`):
   `tvMazeLookup: this.providerFactory.createTvMaze(log)` is passed into `IdentityResolutionJob`,
   which uses `TvMazeProvider.lookupByTvdbId(tvdbId)` (`tvmazeProvider.ts:52`, hits
-  `/lookup/shows?thetvdb=`) to resolve a TVMaze show id from a Sonarr/TVDB id. `NormalizedShow`
-  already carries `_sourceIds.tvmaze?: number` (`show.ts:13`) as a target slot for this — confirmed
+  `/lookup/shows?thetvdb=`) to resolve a TVMaze show id from a Sonarr/TVDB id. `NormalizedSeries`
+  already carries `_sourceIds.tvmaze?: number` (`series.ts:13`) as a target slot for this — confirmed
   wired, not a gap.
 - **`ProviderFactory.createTvMaze()`** (`providerFactory.ts:94-100`): bespoke factory method,
   separate from the `create()`/`createMany()`/`createInstances()` paths every other provider type
@@ -122,16 +122,16 @@ Confirmed via live fetch of `https://api.tvmaze.com/shows/1`:
 | `id` | Yes | `TvMazeShow.id`, used as `tvMazeId` in ratings + `_sourceIds.tvmaze` |
 | `url` | No | web page link, not fetched into `TvMazeShow` type at all |
 | `name` | Yes (search/match only) | used to identify best match in `getRatings()`/`lookupByTvdbId`, not persisted as a title override |
-| `type` (Scripted/Animation/Reality/...) | **No** | not in `TvMazeShow` type; no `NormalizedShow` equivalent field exists today — closest is `seriesType` (`standard`/`daily`/`anime`, Sonarr-sourced, different vocabulary) — **naming/semantic collision risk**: TVMaze's `type` and `NormalizedShow.seriesType` are conceptually adjacent but not the same enum, would need explicit mapping, not blind aliasing |
-| `language` | Yes, typed | `TvMazeShow.language` exists on the type but not read/used by `getRatings()`; not in `NormalizedShow` |
-| `genres` | Yes, typed | `TvMazeShow.genres` exists on the type but unused; `NormalizedShow.genres?: string[]` already exists (Sonarr/TMDB-sourced today per `filterRegistry.ts`'s `genres` rule) — wiring TVMaze here is additive to an existing multi-source field, not a schema change, but is a second **collision candidate** (genre taxonomies differ across providers) |
-| `status` (Ended/Running/To Be Determined) | Partially | `TvMazeShow.status` typed but unused; `NormalizedShow.status?: 'continuing'\|'ended'\|'upcoming'` already exists (Sonarr-sourced) — different string vocabulary than TVMaze's (`Ended`/`Running`/`To Be Determined`), would need mapping — **collision risk** |
-| `runtime` | **No** | not in `TvMazeShow` type at all; no direct `NormalizedShow` equivalent (Sonarr likely owns runtime today, unverified in this audit — flagging as unconfirmed rather than asserting) |
+| `type` (Scripted/Animation/Reality/...) | **No** | not in `TvMazeShow` type; no `NormalizedSeries` equivalent field exists today — closest is `seriesType` (`standard`/`daily`/`anime`, Sonarr-sourced, different vocabulary) — **naming/semantic collision risk**: TVMaze's `type` and `NormalizedSeries.seriesType` are conceptually adjacent but not the same enum, would need explicit mapping, not blind aliasing |
+| `language` | Yes, typed | `TvMazeShow.language` exists on the type but not read/used by `getRatings()`; not in `NormalizedSeries` |
+| `genres` | Yes, typed | `TvMazeShow.genres` exists on the type but unused; `NormalizedSeries.genres?: string[]` already exists (Sonarr/TMDB-sourced today per `filterRegistry.ts`'s `genres` rule) — wiring TVMaze here is additive to an existing multi-source field, not a schema change, but is a second **collision candidate** (genre taxonomies differ across providers) |
+| `status` (Ended/Running/To Be Determined) | Partially | `TvMazeShow.status` typed but unused; `NormalizedSeries.status?: 'continuing'\|'ended'\|'upcoming'` already exists (Sonarr-sourced) — different string vocabulary than TVMaze's (`Ended`/`Running`/`To Be Determined`), would need mapping — **collision risk** |
+| `runtime` | **No** | not in `TvMazeShow` type at all; no direct `NormalizedSeries` equivalent (Sonarr likely owns runtime today, unverified in this audit — flagging as unconfirmed rather than asserting) |
 | `averageRuntime` | **No** | not in `TvMazeShow` type; distinct from `runtime` (average across episodes when runtime varies) |
-| `premiered` | Yes | `TvMazeShow` has no explicit `premiered` field in the current type — wait, it does (`premiered: string`) — used only inside `getRatings()`'s year-disambiguation logic (`new Date(premiered).getFullYear()`), not persisted to `NormalizedShow` |
-| `ended` | **No** | live API returns this (date string) but `TvMazeShow` type doesn't declare it; `NormalizedShow.ended?: boolean` exists but is Sonarr-sourced and a different shape (boolean vs. date) |
+| `premiered` | Yes | `TvMazeShow` has no explicit `premiered` field in the current type — wait, it does (`premiered: string`) — used only inside `getRatings()`'s year-disambiguation logic (`new Date(premiered).getFullYear()`), not persisted to `NormalizedSeries` |
+| `ended` | **No** | live API returns this (date string) but `TvMazeShow` type doesn't declare it; `NormalizedSeries.ended?: boolean` exists but is Sonarr-sourced and a different shape (boolean vs. date) |
 | `officialSite` | **No** | not in `TvMazeShow` type |
-| `schedule` (`{ time, days[] }`) | **No** | not in `TvMazeShow` type; no `NormalizedShow` equivalent — **structural schema gap** if ever wanted (no existing field shape to reuse) |
+| `schedule` (`{ time, days[] }`) | **No** | not in `TvMazeShow` type; no `NormalizedSeries` equivalent — **structural schema gap** if ever wanted (no existing field shape to reuse) |
 | `rating.average` | Yes | `TvMazeShow.rating.average`, consumed by `getRatings()` into `TvMazeRating.rating` — this is the one rating field fully wired end-to-end |
 | `weight` (TVmaze's internal popularity score) | **No** | not in `TvMazeShow` type, no codebase equivalent concept |
 | `network` (`{ id, name, country: { name, code, timezone }, officialSite }`) | Partially — see highest-confidence finding above | `TvMazeShow.network` typed (subset: only `name`/`country.name`, not `id`/`country.code`/`country.timezone`/`officialSite`), read by nothing yet — the confirmed enricher gap |
@@ -140,7 +140,7 @@ Confirmed via live fetch of `https://api.tvmaze.com/shows/1`:
 | `externals.tvrage` | Yes, typed | `TvMazeShow.externals.tvrage`, not currently read anywhere (`getRatings()` reads `thetvdb`/`imdb` only) |
 | `externals.thetvdb` | Yes | read into `TvMazeRating.tvdbId`, and separately via the dedicated `lookup/shows?thetvdb=` endpoint for identity resolution |
 | `externals.imdb` | Yes | read into `TvMazeRating.imdbId` |
-| `image.medium`/`image.original` | **No** | not in `TvMazeShow` type; no `NormalizedShow` image/poster field exists at all today (unconfirmed whether any other provider owns show artwork — out of scope for this audit) |
+| `image.medium`/`image.original` | **No** | not in `TvMazeShow` type; no `NormalizedSeries` image/poster field exists at all today (unconfirmed whether any other provider owns show artwork — out of scope for this audit) |
 | `summary` (HTML-formatted synopsis) | **No** | not in type, no codebase equivalent |
 | `updated` (unix timestamp) | **No** | not in type |
 | `_links` (HATEOAS self/previousepisode/nextepisode) | **No** | not in type, not needed given this codebase makes direct id-based calls |
@@ -154,7 +154,7 @@ none of these paths appear anywhere under `server/`:
 |---|---|---|
 | `GET /shows/:id/episodes` | Array of episode objects: `id, url, name, season, number, type, airdate, airtime, airstamp, runtime, rating.average, image, summary, _links`. Excludes specials by default (`?specials=1` includes them, unconfirmed if ever needed). | **No** — no episode-list concept exists for TVMaze anywhere in this codebase |
 | `GET /shows/:id/episodebynumber?season=&number=` | Single episode, same shape as above. | **No** |
-| `GET /shows/:id/cast` | Array of `{ person: { id, url, name, country, birthday, deathday, gender, image, updated, _links }, character: { id, url, name, image, _links }, self, voice }`. | **No** — no cast/crew concept exists anywhere in `NormalizedShow`/`NormalizedMovie` for any provider, not just TVMaze; if ever wanted this is a **structural schema gap**, not an existing-field extension |
+| `GET /shows/:id/cast` | Array of `{ person: { id, url, name, country, birthday, deathday, gender, image, updated, _links }, character: { id, url, name, image, _links }, self, voice }`. | **No** — no cast/crew concept exists anywhere in `NormalizedSeries`/`NormalizedMovie` for any provider, not just TVMaze; if ever wanted this is a **structural schema gap**, not an existing-field extension |
 | `GET /shows/:id/crew` | Array of `{ type (e.g. "Creator"), person: {...same shape as cast's person...} }`. | **No** — same structural gap as cast |
 | `GET /shows/:id/akas` | Array of `{ name, country: { name, code, timezone } }` — alternate/regional titles. | **No** — no akas/alternate-title concept anywhere in this codebase for any provider; **structural schema gap** if wanted |
 | `GET /shows/:id/seasons` | Array of `{ id, url, number, name, episodeOrder, premiereDate, endDate, network, webChannel, image, summary, _links }` — note: season-level `network`/`webChannel` can differ from the show-level ones (a show can change networks between seasons) — **second-order collision/precedence question** beyond the top-level `network` field flagged above, if season-level granularity is ever wanted | **No** |
@@ -175,19 +175,19 @@ Noting this explicitly as empty-by-design rather than an unflagged gap, per tick
 ## Naming-collision risks (flagged, not resolved)
 
 - **`network`**: TVMaze's `network.name` vs. Sonarr's `network` (both feed the same
-  `NormalizedShow.network` slot per `filterRegistry.ts`'s rule) — the headline finding above.
+  `NormalizedSeries.network` slot per `filterRegistry.ts`'s rule) — the headline finding above.
 - **`webChannel`**: no direct collision today since it's entirely unwired, but if a `network`
   enricher is built without also handling `webChannel`, streaming-exclusive shows will silently
   read as network-less — not a naming collision so much as a completeness gap adjacent to the same
   field.
 - **`type`**: TVMaze's `type` (Scripted/Animation/Reality/Talk Show/...) vs.
-  `NormalizedShow.seriesType` (`standard`/`daily`/`anime`, Sonarr-sourced) — same concept, disjoint
+  `NormalizedSeries.seriesType` (`standard`/`daily`/`anime`, Sonarr-sourced) — same concept, disjoint
   vocabularies, not a safe direct map.
 - **`status`**: TVMaze's `status` (`Ended`/`Running`/`To Be Determined`) vs.
-  `NormalizedShow.status` (`continuing`/`ended`/`upcoming`, Sonarr-sourced) — same concept, disjoint
+  `NormalizedSeries.status` (`continuing`/`ended`/`upcoming`, Sonarr-sourced) — same concept, disjoint
   string vocabularies again.
 - **`genres`**: TVMaze vs. Sonarr vs. TMDB, three potential genre-taxonomy sources for the same
-  `NormalizedShow.genres` array — TVMaze would be a third contributor, not a first collision, but
+  `NormalizedSeries.genres` array — TVMaze would be a third contributor, not a first collision, but
   worth listing since precedence isn't defined for even the current two.
 - **`rating`**: TVMaze's `rating.average` (0–10 float) participates in `ratingsAggregation.ts`'s
   blended average alongside TMDB/OMDB ratings that may use different scales — already handled by
@@ -199,10 +199,10 @@ Noting this explicitly as empty-by-design rather than an unflagged gap, per tick
 - **Episodes**: no episode-level table/EAV concept exists anywhere in this codebase for any
   provider (confirmed by absence, not deeply audited beyond grep) — wiring `/shows/:id/episodes` or
   `/episodebynumber` would be a new structural concept, not a field addition.
-- **Cast/crew**: no person/credit concept exists in `NormalizedShow`/`NormalizedMovie` — structural.
+- **Cast/crew**: no person/credit concept exists in `NormalizedSeries`/`NormalizedMovie` — structural.
 - **Akas/alternate titles**: no alternate-title concept exists — structural.
 - **Schedule** (`time`/`days[]`): no broadcast-schedule concept exists — structural.
-- **Images/artwork**: no poster/image field exists on `NormalizedShow`/`NormalizedMovie` — structural
+- **Images/artwork**: no poster/image field exists on `NormalizedSeries`/`NormalizedMovie` — structural
   (unconfirmed whether any other provider owns this either; flagging as TVMaze-relevant regardless).
 - Everything else newly flagged in the show-resource table above (`type`, `runtime`,
   `averageRuntime`, `officialSite`, `weight`, `dvdCountry`, `updated`, full `network`/`webChannel`

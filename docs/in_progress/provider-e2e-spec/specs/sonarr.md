@@ -16,7 +16,7 @@ permanent `added`/`plexAddedAt` split). This file covers Sonarr-specific field/t
 
 ## Bug fix (in scope, not new capability)
 
-The `hasFile` filter rule lists Sonarr as a `sourceProvider`, but `NormalizedShow` has no `hasFile`
+The `hasFile` filter rule lists Sonarr as a `sourceProvider`, but `NormalizedSeries` has no `hasFile`
 field — the predicate always reads `undefined`, so the filter silently never matches a show. Fixed by
 deriving a real per-series equivalent instead of just excluding Sonarr from the rule:
 
@@ -29,14 +29,14 @@ deriving a real per-series equivalent instead of just excluding Sonarr from the 
 ### Identity fields (not enrichment)
 
 Per domain framing: external system IDs are the identity-matching job, not enrichment data. These add
-to `NormalizedShow._sourceIds` (`show.ts`), not `EnrichmentFields`.
+to `NormalizedSeries._sourceIds` (`series.ts`), not `EnrichmentFields`.
 
 | Field | Source | Notes |
 |---|---|---|
-| `_sourceIds.imdb` | `imdbId` | `NormalizedMovie._sourceIds` already has `imdb`; `NormalizedShow._sourceIds` doesn't — adding this closes that asymmetry. Schema-shaped (new optional field on an existing interface), not a table/column change. |
+| `_sourceIds.imdb` | `imdbId` | `NormalizedMovie._sourceIds` already has `imdb`; `NormalizedSeries._sourceIds` doesn't — adding this closes that asymmetry. Schema-shaped (new optional field on an existing interface), not a table/column change. |
 | `_sourceIds.tvmaze` | `tvMazeId` | Already typed on `SonarrSeries` (`sonarrProvider.ts:24`) but never read. New identity slot, same non-structural shape as `imdb` above. |
 
-### Series fields (source-owned, flow: `sonarrProvider.ts` → `normalizeMedia.ts` → `NormalizedShow` → `filterRegistry.ts`)
+### Series fields (source-owned, flow: `sonarrProvider.ts` → `normalizeMedia.ts` → `NormalizedSeries` → `filterRegistry.ts`)
 
 | Domain field | Source | Notes |
 |---|---|---|

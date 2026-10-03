@@ -30,7 +30,7 @@ interface Deps {
  * A stable identity for a hydrated item — matches `resolvePrecedence`'s grouping key.
  * Collision-free by construction: `hydrate` always sets `_sourceIds.identity` to the
  * group's own surrogate id, so two kind-scoped groups that happen to share a numeric
- * `tmdbId` (a movie and a tv show with the same TMDB id) never hydrate to identical
+ * `tmdbId` (a movie and a series with the same TMDB id) never hydrate to identical
  * keys and collide here.
  */
 function identityKey(item: MediaItem): string {

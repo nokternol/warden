@@ -38,7 +38,7 @@ enumeration, not curation.
 ## Resolution
 
 - **Confirmed-buildable headline gap**: `filterRegistry.ts`'s `network` rule already lists TVMaze
-  as a `sourceProviders` entry and `NormalizedShow.network` already exists as a field, but no
+  as a `sourceProviders` entry and `NormalizedSeries.network` already exists as a field, but no
   `tvmazeEnricher` exists in `enricherAdapters.ts` and `enrichmentJobFactory.ts` never requests a
   TVMaze provider instance at all — the enricher is the only missing piece. A naive fix must also
   read `webChannel` (unwired, undeclared in the `TvMazeShow` type), not just `network`, or every
@@ -51,11 +51,11 @@ enumeration, not curation.
 - **Tasks/automation is genuinely empty**, not a gap — TVMaze implements no `MediaActuator` and none
   is plausible for a read-only public metadata API.
 - **Naming collisions flagged, not resolved**: `network` (vs. Sonarr), `type` (vs.
-  `NormalizedShow.seriesType`, disjoint vocabulary), `status` (vs. `NormalizedShow.status`, disjoint
+  `NormalizedSeries.seriesType`, disjoint vocabulary), `status` (vs. `NormalizedSeries.status`, disjoint
   vocabulary), `genres` (third contributor alongside Sonarr/TMDB), and `rating` (already handled by
   `ratingsAggregation.ts`'s blended average).
 - **Structural schema gaps** (new column/table, not a settings-blob value): episodes, cast/crew,
   akas/alternate titles, broadcast schedule, and images/artwork have zero existing concept anywhere
-  in `NormalizedShow`/`NormalizedMovie` for any provider. A duplicated inline `TvMazeProvider`
+  in `NormalizedSeries`/`NormalizedMovie` for any provider. A duplicated inline `TvMazeProvider`
   construction in `providers.procedures.ts` (bypassing `ProviderFactory.createTvMaze()`) was also
   found and flagged as a process oddity, not a field gap.

@@ -36,7 +36,7 @@ site. This flips several of the research doc's tentative conclusions:
 ## Headline field gap: `network`, merged with `webChannel`
 
 `filterRegistry.ts`'s `network` rule already lists TVMaze in `sourceProviders` alongside Sonarr;
-`NormalizedShow.network` already exists as a field; `TvMazeProvider.getShow()` genuinely returns
+`NormalizedSeries.network` already exists as a field; `TvMazeProvider.getShow()` genuinely returns
 per-show network data. The only missing piece is the enricher. **Must read both `network` and
 `webChannel`** — streaming-exclusive shows (Netflix/Hulu/etc. originals) populate `webChannel`
 instead of `network`; a naive `network`-only read would silently show these titles as network-less.
@@ -49,7 +49,7 @@ precedence order flagged for the final ticket.
 |---|---|---|
 | `network` | `network` merged with `webChannel` | Sonarr |
 | `genres` | `genres` (typed, unused) | Sonarr, TMDB, Plex, Jellyfin |
-| `status` | `status` (`Ended`/`Running`/`To Be Determined`), **mapped** onto the existing vocabulary (`ended`/`continuing`/`upcoming`) — same concept as `NormalizedShow.status`, just different words, unlike `type` below | Sonarr |
+| `status` | `status` (`Ended`/`Running`/`To Be Determined`), **mapped** onto the existing vocabulary (`ended`/`continuing`/`upcoming`) — same concept as `NormalizedSeries.status`, just different words, unlike `type` below | Sonarr |
 | `releaseDate` | `premiered` (currently used only for search-disambiguation, not persisted) | Plex's `originallyAvailableAt`, Jellyfin's `PremiereDate` |
 | `runtime` | `averageRuntime` (not the more volatile per-episode `runtime`) | Radarr, Plex, Jellyfin — **first show-level producer**, closing the movies-only gap those three left open |
 
@@ -58,7 +58,7 @@ precedence order flagged for the final ticket.
 | Domain field | Source | Why not merged |
 |---|---|---|
 | `tvmazeType` | `type` (Scripted/Animation/Reality/Talk Show/...) | Genuinely different concept from `seriesType` (standard/daily/anime) — TVMaze's `type` is a content-format/genre-adjacent classification, `seriesType` describes release cadence. Not the same axis, so not mapped even lossily. |
-| `tvmazeEndedAt` | `ended` (date string, finale air date) | Different shape from `NormalizedShow.ended` (boolean, Sonarr-sourced) — same underlying concept, incompatible types, kept separate rather than force-converted. |
+| `tvmazeEndedAt` | `ended` (date string, finale air date) | Different shape from `NormalizedSeries.ended` (boolean, Sonarr-sourced) — same underlying concept, incompatible types, kept separate rather than force-converted. |
 | `weight` | `weight` (TVMaze's internal popularity score) | No existing analog anywhere — new filterable "popularity" concept. |
 | `language` | `language` (single string, typed but unused) | Distinct shape from TMDB's `spokenLanguages` (array) — kept as its own field, not merged. |
 
@@ -89,14 +89,14 @@ read sites.
 - **Episodes** (`/shows/:id/episodes`, `/episodebynumber`) — no episode-level table/EAV concept
   exists anywhere in this codebase for any provider.
 - **Cast/crew** (`/shows/:id/cast`, `/crew`) — no person/credit concept exists in
-  `NormalizedShow`/`NormalizedMovie`, same structural class as TMDB's deferred `credits`.
+  `NormalizedSeries`/`NormalizedMovie`, same structural class as TMDB's deferred `credits`.
 - **Akas/alternate titles** (`/shows/:id/akas`) — no alternate-title concept exists anywhere.
 - **Schedule** (`{ time, days[] }`) — no broadcast-schedule concept exists.
 - **Seasons endpoint** (`/shows/:id/seasons`) — season-level `network`/`webChannel` can differ from
   the show-level ones (a show can change networks between seasons); a second-order precedence
   question beyond the show-level `network` field, not designed here.
 - **Images/artwork** (`/shows/:id/images`, `image.medium`/`image.original`) — no poster/image field
-  exists on `NormalizedShow`/`NormalizedMovie` for any provider today.
+  exists on `NormalizedSeries`/`NormalizedMovie` for any provider today.
 
 ## On-demand item-detail metadata (not enrichment)
 
@@ -132,7 +132,7 @@ plausible — a read-only public metadata API with no request/download/library-m
 | `genres` | `genres` | `csv-strings` | Joins the existing show-only `genres` rule — TVMaze becomes a third producer alongside Sonarr/TMDB; no new rule needed. |
 | `status` | `seriesStatus` | `string` | Mapped onto the existing vocabulary (`Ended`→`ended`, `Running`→`continuing`, `To Be Determined`→`upcoming`) and joins the existing `seriesStatus` rule — TVMaze becomes an additional producer; no new rule needed. |
 | `releaseDate` | `releaseDaysAgo` | `range` | **Reconciled**: joins the same `releaseDaysAgo` rule Plex/Jellyfin independently minted for their own `releaseDate` fields (see `specs/plex.md`/`specs/jellyfin.md`) — release date is a general concept, not content-type-specific, so this is a third producer rather than a separate show-only rule. `premiered` is a past date, fits the "days ago" convention. |
-| `runtime` | `runtimeMinutes` | `range` | **Reconciled key name** — Radarr's/Plex's/Jellyfin's/OMDB's independently-made mappings converged on `runtimeMinutes`. **Flagged for the precedence ticket** (same flag as `specs/plex.md`): whether this should be the *same* rule as the movie-side `runtimeMinutes` (`contentTypes: ['movie','show']`, like `year`/`title`) now that TVMaze is the first show-level producer, rather than two separately-scoped rules — not resolved here. |
+| `runtime` | `runtimeMinutes` | `range` | **Reconciled key name** — Radarr's/Plex's/Jellyfin's/OMDB's independently-made mappings converged on `runtimeMinutes`. **Flagged for the precedence ticket** (same flag as `specs/plex.md`): whether this should be the *same* rule as the movie-side `runtimeMinutes` (`contentTypes: ['movie','series']`, like `year`/`title`) now that TVMaze is the first show-level producer, rather than two separately-scoped rules — not resolved here. |
 | `tvmazeType` | `tvmazeType` | `string` | Free-form provider classification (Scripted/Animation/Reality/Talk Show/...), no closed enum enforced client-side. Kept separate per spec — not the same axis as `seriesType`, so it needs its own rule rather than joining it. |
 | `tvmazeEndedAt` | `tvmazeEndedDaysAgo` | `range` | Finale air date is a past date, so "days ago" fits the same convention as `releaseDate` above. Kept separate from the boolean `ended` rule per spec (incompatible shapes) — new rule. |
 | `weight` | new — `weight` | `range` | Numeric popularity score, no existing analog to join — new rule. |

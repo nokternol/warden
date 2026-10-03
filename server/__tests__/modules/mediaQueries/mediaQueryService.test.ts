@@ -40,7 +40,7 @@ describe('MediaQueryService', () => {
 
   it('returns all queries ordered by createdAt', async () => {
     await service.create({ name: 'First', contentType: 'movie', filterValues: [] });
-    await service.create({ name: 'Second', contentType: 'show', filterValues: [] });
+    await service.create({ name: 'Second', contentType: 'series', filterValues: [] });
 
     const result = await service.list();
     expect(result).toHaveLength(2);
@@ -77,11 +77,11 @@ describe('MediaQueryService', () => {
 
   it('returns contentType on each dto', async () => {
     await service.create({ name: 'Movies', contentType: 'movie', filterValues: [] });
-    await service.create({ name: 'Shows', contentType: 'show', filterValues: [] });
+    await service.create({ name: 'Shows', contentType: 'series', filterValues: [] });
 
     const result = await service.list();
     expect(result[0].contentType).toBe('movie');
-    expect(result[1].contentType).toBe('show');
+    expect(result[1].contentType).toBe('series');
   });
 
   it('returns health: healthy when query has no filter values', async () => {

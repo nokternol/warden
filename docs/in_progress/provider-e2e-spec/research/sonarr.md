@@ -17,13 +17,13 @@ are cross-checked across three independent client-library sources).
 | Field | Status | Notes |
 |---|---|---|
 | `id` | wired | `sonarrProvider.ts:16`, used as `_sourceIds.sonarr` (`normalizeMedia.ts:31`) |
-| `title` | wired | `normalizeMedia.ts:33` → `NormalizedShow.title`, filter rule `title` (`filterRegistry.ts:123`) |
+| `title` | wired | `normalizeMedia.ts:33` → `NormalizedSeries.title`, filter rule `title` (`filterRegistry.ts:123`) |
 | `year` | wired | `normalizeMedia.ts:34` → filter rule `year` (`filterRegistry.ts:136`) |
 | `status` | wired | `normalizeMedia.ts:43` → filter rule `seriesStatus` (`filterRegistry.ts:305`) |
 | `monitored` | wired | `normalizeMedia.ts:34` → filter rule `monitored` (`filterRegistry.ts:296`) |
-| `tvdbId` | wired | `_sourceIds.tvdb` (`normalizeMedia.ts:31`, `show.ts:13`) — not itself filterable |
+| `tvdbId` | wired | `_sourceIds.tvdb` (`normalizeMedia.ts:31`, `series.ts:13`) — not itself filterable |
 | `tmdbId` | wired | `_sourceIds.tmdb` (`normalizeMedia.ts:31`) — cross-provider join key |
-| `imdbId` | **not wired** | `SonarrSeries` has no `imdbId` field at all — not read from the API response, not carried anywhere. Touches: provider field (add to `SonarrSeries`/`normalizeSonarrSeries`), possibly `_sourceIds.imdb` (schema already has `imdb` on `NormalizedMovie`'s `_sourceIds`, absent from `NormalizedShow`'s) |
+| `imdbId` | **not wired** | `SonarrSeries` has no `imdbId` field at all — not read from the API response, not carried anywhere. Touches: provider field (add to `SonarrSeries`/`normalizeSonarrSeries`), possibly `_sourceIds.imdb` (schema already has `imdb` on `NormalizedMovie`'s `_sourceIds`, absent from `NormalizedSeries`'s) |
 | `tvMazeId` | **not wired** | Present on `SonarrSeries` type (`sonarrProvider.ts:24`) but never read in `normalizeSonarrSeries`. Touches: provider field mapping only (type already declares it) |
 | `profileId` | **not wired** | Declared on `SonarrSeries` (`sonarrProvider.ts:25`, legacy v2 field, superseded by `qualityProfileId`) but unused. Low value — likely dead field from the Sonarr API itself. |
 | `qualityProfileId` | wired | `normalizeMedia.ts:35` → filter rule `qualityProfileIds` (`filterRegistry.ts:333`), instance-scoped |
@@ -34,20 +34,20 @@ are cross-checked across three independent client-library sources).
 | `images` | **not wired** | Declared (`sonarrProvider.ts:31`, `SonarrImage`: `coverType`, `remoteUrl`) but never read. Touches: provider field, UI (poster/fanart display) — not a filter/query concern |
 | `genres` | wired | `normalizeMedia.ts:37` → filter rule `genres` (`filterRegistry.ts:346`), shared with TMDB as a producer |
 | `network` | wired | `normalizeMedia.ts:42` → filter rule `network` (`filterRegistry.ts:370`), shared with TVMaze as a producer. **Naming collision candidate** — see below |
-| `seriesType` | wired | `normalizeMedia.ts:41` → filter rule `seriesType` (`filterRegistry.ts:358`), enum `'standard' \| 'daily' \| 'anime'` (`show.ts:28`) |
-| `added` | wired | `normalizeMedia.ts:38` → `NormalizedShow.addedDate` → filter rule `addedDaysAgo` (`filterRegistry.ts:163`). **Naming collision — flagged explicitly below** |
+| `seriesType` | wired | `normalizeMedia.ts:41` → filter rule `seriesType` (`filterRegistry.ts:358`), enum `'standard' \| 'daily' \| 'anime'` (`series.ts:28`) |
+| `added` | wired | `normalizeMedia.ts:38` → `NormalizedSeries.addedDate` → filter rule `addedDaysAgo` (`filterRegistry.ts:163`). **Naming collision — flagged explicitly below** |
 | `ended` | wired | `normalizeMedia.ts:44` → filter rule `ended` (`filterRegistry.ts:396`) |
-| `previousAiring` | wired | `normalizeMedia.ts:46` → `NormalizedShow.lastAiredAt` → filter rule `lastAiredDaysAgo` (`filterRegistry.ts:408`) |
+| `previousAiring` | wired | `normalizeMedia.ts:46` → `NormalizedSeries.lastAiredAt` → filter rule `lastAiredDaysAgo` (`filterRegistry.ts:408`) |
 | `nextAiring` | **not wired** | Sonarr's API exposes `nextAiring` alongside `previousAiring`; this codebase only reads `previousAiring`. Touches: provider field, UI filter ("next episode in N days"), query engine |
 | `certification` | wired | `normalizeMedia.ts:40` → filter rule `certification` (`filterRegistry.ts:204`), shared across Radarr/Sonarr/TMDB/OMDB |
-| `ratings` (`votes`, `value`) | partially wired | `.value` → `normalizeMedia.ts:47` → `NormalizedShow.communityRating` → filter rule `communityRating` (`filterRegistry.ts:383`). `.votes` **not wired** — no vote-count filter/field exists. Touches (votes): provider field, UI filter, query engine |
-| `statistics.seasonCount` | **not wired** | Declared on `SonarrSeries.statistics` (`sonarrProvider.ts:41`) but not read into `NormalizedShow`. Touches: provider field, UI filter, query engine |
+| `ratings` (`votes`, `value`) | partially wired | `.value` → `normalizeMedia.ts:47` → `NormalizedSeries.communityRating` → filter rule `communityRating` (`filterRegistry.ts:383`). `.votes` **not wired** — no vote-count filter/field exists. Touches (votes): provider field, UI filter, query engine |
+| `statistics.seasonCount` | **not wired** | Declared on `SonarrSeries.statistics` (`sonarrProvider.ts:41`) but not read into `NormalizedSeries`. Touches: provider field, UI filter, query engine |
 | `statistics.episodeFileCount` | **not wired** | Same as above |
 | `statistics.episodeCount` | **not wired** | Same as above |
 | `statistics.totalEpisodeCount` | **not wired** | Same as above |
 | `statistics.sizeOnDisk` | wired | `normalizeMedia.ts:39` → `sizeOnDiskBytes` → filter rule `sizeOnDiskGb` (`filterRegistry.ts:192`), shared with Radarr |
 | `statistics.percentOfEpisodes` | wired | `normalizeMedia.ts:45` → `episodePercentage` → filter rule `episodePercentage` (`filterRegistry.ts:421`) |
-| `hasFile` (derived) | wired-but-source-mismatch | Filter rule `hasFile` (`filterRegistry.ts:222`) lists Sonarr as a `sourceProviders` entry, but Sonarr's `SonarrSeries`/`NormalizedShow` has no `hasFile` field at all (Radarr's `hasFile` is a direct API field; Sonarr has no per-series equivalent — only per-episode file presence). **This looks like a latent bug**: the rule's predicate reads `item.hasFile`, which is always `undefined` for Sonarr-sourced shows, so the `hasFile` filter silently never matches a show. Flagging per the ticket's "flag, don't design" scope; not fixing here. |
+| `hasFile` (derived) | wired-but-source-mismatch | Filter rule `hasFile` (`filterRegistry.ts:222`) lists Sonarr as a `sourceProviders` entry, but Sonarr's `SonarrSeries`/`NormalizedSeries` has no `hasFile` field at all (Radarr's `hasFile` is a direct API field; Sonarr has no per-series equivalent — only per-episode file presence). **This looks like a latent bug**: the rule's predicate reads `item.hasFile`, which is always `undefined` for Sonarr-sourced shows, so the `hasFile` filter silently never matches a show. Flagging per the ticket's "flag, don't design" scope; not fixing here. |
 
 ## Sonarr-owned Profile/Tag/RootFolder lookups (used for filter option population, not series fields)
 
@@ -64,7 +64,7 @@ are cross-checked across three independent client-library sources).
 Compared against `RadarrProvider.tasks()` (`radarrProvider.ts:65-127`) and `PlexProvider.tasks()`
 (`plexProvider.ts:30-61`). Sonarr's task list is structurally parallel to Radarr's (both are
 `MediaSource`-owning actuators with the same six-task shape), which is the expected pattern per
-`roles.ts`'s `SOURCE_OWNER_BY_KIND`.
+`roles.ts`'s `SOURCE_OWNER`.
 
 | Task | Status | Notes |
 |---|---|---|
@@ -143,10 +143,10 @@ Compared against `RadarrProvider.tasks()` (`radarrProvider.ts:65-127`) and `Plex
   "no ids" convention or a new non-item task kind.
 - **Queue and history surfaces** — no existing db/config, provider-field, or query-engine concept
   represents an in-progress download or a historical grab/import/failure event; this is a different
-  data shape (event stream / progress state) than the flat `NormalizedShow` row the rest of the spec
+  data shape (event stream / progress state) than the flat `NormalizedSeries` row the rest of the spec
   assumes. Likely needs its own structural design, not a field addition.
 - **`imdbId` / `_sourceIds.imdb` on shows** — `NormalizedMovie._sourceIds` already has `imdb`, but
-  `NormalizedShow._sourceIds` (`show.ts:8-18`) does not, even though Sonarr's API does expose
+  `NormalizedSeries._sourceIds` (`series.ts:8-18`) does not, even though Sonarr's API does expose
   `imdbId`. Adding it is schema-shaped (new optional field on an existing interface) rather than a
   new table/column — flagging as the smaller sibling of the structural gaps above, not equivalent
   severity.

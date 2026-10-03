@@ -1,3 +1,4 @@
+import type { ContentType } from '@contract/schemas';
 import {
   MetadataProviderType,
   automationRuns,
@@ -133,7 +134,7 @@ async function seedSonarrProvider(providerSettingsService: ProviderSettingsServi
 async function seedMediaQuery(
   mediaQueryService: MediaQueryService,
   filterValues: FilterValueEntry[] = [],
-  contentType: 'movie' | 'show' = 'movie'
+  contentType: ContentType = 'movie'
 ) {
   return mediaQueryService.create({ name: 'Test Query', contentType, filterValues });
 }
@@ -518,7 +519,7 @@ describe('AutomationExecutor', () => {
       );
 
       const provider = await seedSonarrProvider(providerSettingsService);
-      const query = await seedMediaQuery(mediaQueryService, [], 'show');
+      const query = await seedMediaQuery(mediaQueryService, [], 'series');
       const automation = await seedAutomation(automationService, {
         queryId: query.id,
         providerId: provider.id,
@@ -550,7 +551,7 @@ describe('AutomationExecutor', () => {
       const query = await seedMediaQuery(
         mediaQueryService,
         [{ key: 'seriesStatus', value: 'ended' }],
-        'show'
+        'series'
       );
       const automation = await seedAutomation(automationService, {
         queryId: query.id,
@@ -582,7 +583,7 @@ describe('AutomationExecutor', () => {
       const query = await seedMediaQuery(
         mediaQueryService,
         [{ key: 'monitored', value: false }],
-        'show'
+        'series'
       );
       const automation = await seedAutomation(automationService, {
         queryId: query.id,
@@ -608,7 +609,7 @@ describe('AutomationExecutor', () => {
       );
 
       const provider = await seedSonarrProvider(providerSettingsService);
-      const query = await seedMediaQuery(mediaQueryService, [], 'show');
+      const query = await seedMediaQuery(mediaQueryService, [], 'series');
       const automation = await seedAutomation(automationService, {
         queryId: query.id,
         providerId: provider.id,
@@ -642,7 +643,7 @@ describe('AutomationExecutor', () => {
       );
 
       const provider = await seedSonarrProvider(providerSettingsService);
-      const query = await seedMediaQuery(mediaQueryService, [], 'show');
+      const query = await seedMediaQuery(mediaQueryService, [], 'series');
       const automation = await seedAutomation(automationService, {
         queryId: query.id,
         providerId: provider.id,
@@ -671,7 +672,7 @@ describe('AutomationExecutor', () => {
       );
 
       const provider = await seedSonarrProvider(providerSettingsService);
-      const query = await seedMediaQuery(mediaQueryService, [], 'show');
+      const query = await seedMediaQuery(mediaQueryService, [], 'series');
       const automation = await seedAutomation(automationService, {
         queryId: query.id,
         providerId: provider.id,
@@ -737,7 +738,7 @@ describe('AutomationExecutor', () => {
       const mockFactory: IProviderFactory = { create: () => mockSonarr };
 
       const provider = await seedSonarrProvider(providerSettingsService);
-      const query = await seedMediaQuery(mediaQueryService, [], 'show');
+      const query = await seedMediaQuery(mediaQueryService, [], 'series');
       const automation = await seedAutomation(automationService, {
         queryId: query.id,
         providerId: provider.id,
@@ -1030,7 +1031,7 @@ describe('AutomationExecutor', () => {
       const provider = await seedSonarrProvider(providerSettingsService);
 
       // Seed media_identity + a media_item copy for series 1 + enrichment (playCount=5)
-      const [identity] = await db.insert(mediaIdentity).values({ kind: 'show' }).returning();
+      const [identity] = await db.insert(mediaIdentity).values({ kind: 'series' }).returning();
       await db
         .insert(mediaItems)
         .values({ providerId: provider.id, externalId: 1, mediaIdentityId: identity.id });
@@ -1047,7 +1048,7 @@ describe('AutomationExecutor', () => {
       const query = await seedMediaQuery(
         mediaQueryService,
         [{ key: 'watched', value: true }],
-        'show'
+        'series'
       );
       const automation = await seedAutomation(automationService, {
         queryId: query.id,

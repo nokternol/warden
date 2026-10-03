@@ -9,14 +9,14 @@ The set of media a query defines is not a stored entity — it is the *result* o
 specification against live source data.
 
 - **`MediaQuery`** — the specification: a **bound provider instance**, a `contentType`
-  (`'movie' | 'show'`), and one-or-more **sources**, each `{ filterValues, role: 'include' | 'exclude' }`.
+  (`'movie' | 'series'`), and one-or-more **sources**, each `{ filterValues, role: 'include' | 'exclude' }`.
   A query is a single-source include `MediaQuery`; the browse view is the same with URL-derived
   `filterValues`.
 - **`MediaQueryEngine.evaluate(query): Promise<MediaItemSet>`** — the owner. Fetches the bound provider's
   items, normalizes them, merges DB enrichment, applies the predicate registry per source (`matchItems`),
   and combines include/exclude across sources (`evaluateCombination`).
 - **`MediaItemSet`** — the transient result: the matched normalized items (`NormalizedMovie |
-  NormalizedShow`). Callers project ids to act, or paginate/sort to display. No table.
+  NormalizedSeries`). Callers project ids to act, or paginate/sort to display. No table.
 
 ## Why a bound provider *instance*, not provider settings
 
@@ -28,7 +28,7 @@ builds the provider once, hands the instance to `evaluate`, and reuses the *same
 | Caller | Builds the provider via | Uses the result for |
 |---|---|---|
 | `AutomationExecutor.executeWithSources` | `providerFactory.create(providerSettings)` | project ids → `task.run` |
-| `GET /media-queries/:id/preview` | one active instance per `MediaSourceFactory.sourcesFor(contentType)` entry — no longer single-active for `movie`/`show` | `{ count, instances: [{ providerId, name, count }] }`, summed across instances |
+| `GET /media-queries/:id/preview` | one active instance per `MediaSourceFactory.sourcesFor(contentType)` entry — no longer single-active for `movie`/`series` | `{ count, instances: [{ providerId, name, count }] }`, summed across instances |
 | `media.handler` browse (`listMovies`/`listSeries`) | a thin adapter over the cached per-instance sublists (`{ getMediaItems: async () => sublists.flatMap(...) }`, each item self-describing its `providerId`) | id set → live display-grouping → sort/paginate |
 
 The browse adapter lets the handler keep its cached multi-instance fetch (and per-instance `yearRange`/
@@ -63,7 +63,7 @@ returns the engine's real count. All three sites now resolve through `evaluate` 
 ## Current invariant
 
 `MediaItemSet`'s element is the provider's normalized item, self-describing its provenance via
-`_sourceIds.providerId`. The single-active-provider invariant no longer holds for `movie`/`show`
+`_sourceIds.providerId`. The single-active-provider invariant no longer holds for `movie`/`series`
 (`RADARR`/`SONARR` — the `MediaSource` role, `isMediaSourceType`): any number of instances may be active,
 and `evaluate` is called once per instance by each caller that fans out (preview, per-instance browse
 sublists). Every other provider type (TMDB, Overseerr, Tautulli, Plex-as-enricher, Jellyfin) keeps the

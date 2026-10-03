@@ -63,7 +63,7 @@ describe('GET /api/filter-fields', () => {
     // Radarr-sourced rule present
     expect(keys).toContain('title');
     expect(keys).toContain('tagIds');
-    // monitored is also Radarr-sourced now (movie+show rule) — present with only Radarr active
+    // monitored is also Radarr-sourced now (movie+series rule) — present with only Radarr active
     expect(keys).toContain('monitored');
   });
 
@@ -105,11 +105,11 @@ describe('GET /api/filter-fields', () => {
     expect(keys).toContain('imdbRating');
     // monitored now applies to movies too (bug fix — NormalizedMovie.monitored is populated)
     expect(keys).toContain('monitored');
-    // show-only absent
+    // series-only absent
     expect(keys).not.toContain('seriesStatus');
   });
 
-  it('returns only show-compatible fields when contentType=show', async () => {
+  it('returns only series-compatible fields when contentType=series', async () => {
     await providerSettingsService.create({
       type: MetadataProviderType.RADARR,
       name: 'Test Radarr',
@@ -123,13 +123,13 @@ describe('GET /api/filter-fields', () => {
       apiKey: 'test-api-key',
     });
 
-    const res = await supertest(app).get('/api/filter-fields?contentType=show');
+    const res = await supertest(app).get('/api/filter-fields?contentType=series');
     expect(res.status).toBe(200);
     const keys: string[] = res.body.data.map((f: { key: string }) => f.key);
     // shared fields present
     expect(keys).toContain('title');
     expect(keys).toContain('hasFile');
-    // show-only present
+    // series-only present
     expect(keys).toContain('monitored');
     expect(keys).toContain('seriesStatus');
     // movie-only absent

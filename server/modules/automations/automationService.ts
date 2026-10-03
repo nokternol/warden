@@ -1,4 +1,5 @@
 import type { AutomationStatus } from '@contract/schemas';
+import type { ContentType } from '@contract/schemas';
 import { Cron } from 'croner';
 import { type SQL, eq, inArray } from 'drizzle-orm';
 import {
@@ -12,7 +13,6 @@ import {
 } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
 import { ForbiddenError, NotFoundError, ValidationError } from '../../kernel/errors';
-import type { ContentType } from '../media';
 import { readEnabledTaskIds } from '../providers';
 
 export interface QuerySourceDraft {
@@ -78,7 +78,7 @@ const CONTENT_TYPE_PROVIDERS: Record<ContentType, MetadataProviderType[]> = {
     MetadataProviderType.JELLYFIN,
     MetadataProviderType.TAUTULLI,
   ],
-  show: [
+  series: [
     MetadataProviderType.SONARR,
     MetadataProviderType.PLEX,
     MetadataProviderType.JELLYFIN,

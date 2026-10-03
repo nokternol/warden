@@ -4,7 +4,7 @@ import type { DrizzleDb } from '../../kernel/db';
 import type { EnrichmentQueries } from './enrichment/enrichment.queries';
 import { externalIdOf, itemKey } from './mediaItem';
 import type { NormalizedMovie } from './movie';
-import type { NormalizedShow } from './show';
+import type { NormalizedSeries } from './series';
 
 /**
  * Maps `media_enrichment` rows onto Normalized* items, joined through each item's
@@ -16,7 +16,7 @@ import type { NormalizedShow } from './show';
  * to the same group correctly read the same group-level enrichment — that is the
  * model, not a bug: watched-ness is a fact about the title, not the copy.
  */
-export async function mergeEnrichment<T extends NormalizedMovie | NormalizedShow>(
+export async function mergeEnrichment<T extends NormalizedMovie | NormalizedSeries>(
   db: DrizzleDb,
   enrichmentQueries: EnrichmentQueries,
   items: T[]

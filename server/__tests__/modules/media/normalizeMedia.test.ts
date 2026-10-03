@@ -152,7 +152,7 @@ describe('normalizeSonarrSeries', () => {
     expect(noStatistics.hasFile).toBe(false);
   });
 
-  it('wires the series display/range fields onto NormalizedShow', () => {
+  it('wires the series display/range fields onto NormalizedSeries', () => {
     const item = normalizeSonarrSeries(
       {
         ...baseSeries,

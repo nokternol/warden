@@ -61,5 +61,5 @@ enumeration, not curation.
   hand-lists Plex alongside Radarr/Sonarr with no code path showing Plex ever populating that field,
   which looks like a stale/incorrect listing worth the decision ticket's attention. A second latent
   collision flagged: Radarr's (unwired) `status` field (movie release-lifecycle enum) vs the existing
-  `NormalizedShow.status` (series continuing/ended) — different meanings, same field name, only a risk
+  `NormalizedSeries.status` (series continuing/ended) — different meanings, same field name, only a risk
   if movie `status` is ever wired.

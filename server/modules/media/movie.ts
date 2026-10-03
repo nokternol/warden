@@ -2,8 +2,8 @@ import type { EnrichmentFields } from './mediaFieldProvider';
 
 /**
  * Every `EnrichmentFields` key, not a hand-picked subset — no field is movie-only or
- * show-only within `EnrichmentFields` itself (that distinction lives in
- * `sourceProviders`/`contentTypes` instead), so `NormalizedShow` extends the identical
+ * series-only within `EnrichmentFields` itself (that distinction lives in
+ * `sourceProviders`/`contentTypes` instead), so `NormalizedSeries` extends the identical
  * `Partial<EnrichmentFields>`. A new `EnrichmentFields` key is carried here
  * automatically; there is no separate list to remember to update, unlike the previous
  * hand-typed `Pick<EnrichmentFields, 'tags' | 'playCount' | ...>` union, which
@@ -45,7 +45,7 @@ export interface NormalizedMovie extends Partial<EnrichmentFields> {
   collectionTmdbId?: number;
   isAvailable?: boolean;
   /** Radarr's own release-lifecycle enum (`tba`/`announced`/`inCinemas`/`released`/`deleted`) —
-   *  prefixed to avoid colliding with NormalizedShow.status (series continuing/ended, different enum). */
+   *  prefixed to avoid colliding with NormalizedSeries.status (series continuing/ended, different enum). */
   radarrStatus?: string;
   /** Plot synopsis — display only, on-demand item detail, not a filter target. */
   overview?: string;

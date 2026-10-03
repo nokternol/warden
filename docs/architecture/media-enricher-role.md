@@ -44,7 +44,7 @@ it touched**, decorated with **only its fields**, tagged with its provider. The 
 `RADARR`/`SONARR` or `contentType`; the only outward type it imports is `MediaItem`.
 
 The reason there is no separate enrichment transport type is that the canonical `MediaItem`
-(`NormalizedMovie`/`NormalizedShow`) already carries **both halves** enrichment needs: the match keys
+(`NormalizedMovie`/`NormalizedSeries`) already carries **both halves** enrichment needs: the match keys
 (`_sourceIds: { radarr?, plex?, tmdb?, imdb?, providerId?, identity? }` — `providerId` on
 source-produced items identifies the instance; `identity` on job-hydrated items is the group's own
 surrogate id, set only by `hydrate` below, never by a source) and the fill slots (`playCount`,

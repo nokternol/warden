@@ -1,7 +1,7 @@
 import { api } from '@app/lib/api/client';
 import { useApi } from '@app/lib/api/useApi';
 import type {
-  ContentTypeSchema,
+  ContentType,
   FilterValueEntrySchema,
   FilterValueSchema,
   MediaQueryRecord,
@@ -9,7 +9,6 @@ import type {
 } from '@contract/schemas';
 import type { z } from 'zod';
 
-export type ContentType = z.infer<typeof ContentTypeSchema>;
 export type FilterValue = z.infer<typeof FilterValueSchema>;
 export type FilterValueEntry = z.infer<typeof FilterValueEntrySchema>;
 export type QueryHealth = z.infer<typeof QueryHealthSchema>;
