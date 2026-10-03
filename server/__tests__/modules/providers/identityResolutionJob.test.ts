@@ -397,6 +397,28 @@ describe('IdentityResolutionJob', () => {
     expect(await db.select().from(mediaIdentity)).toHaveLength(0);
   });
 
+  it("stamps a series identity from a Plex item of type 'show'", async () => {
+    const db = getDb();
+    const [seriesGroup] = await db
+      .insert(mediaIdentity)
+      .values({ kind: 'series', tvdbId: 81189 })
+      .returning();
+
+    const plexProvider = {
+      getAllItems: vi
+        .fn()
+        .mockResolvedValue([
+          { ratingKey: 'plex-series', type: 'show' as const, guids: [{ id: 'thetvdb://81189' }] },
+        ]),
+    };
+
+    const job = new IdentityResolutionJob({ db, plexProvider });
+    await job.runForPlex();
+
+    const [row] = await db.select().from(mediaIdentity).where(eq(mediaIdentity.id, seriesGroup.id));
+    expect(row.plexRatingKey).toBe('plex-series');
+  });
+
   it('scopes the Plex stamp by kind — a movie tmdbId match never stamps a show group with the same numeric id', async () => {
     const db = getDb();
     const [movieGroup] = await db
