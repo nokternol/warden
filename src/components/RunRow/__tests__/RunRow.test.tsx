@@ -47,4 +47,10 @@ describe('RunRow', () => {
     const alien = screen.getByText('Alien').closest('li') as HTMLElement;
     expect(within(alien).queryByText(/removed/i)).not.toBeInTheDocument();
   });
+
+  it('offers no expansion for a run that targeted nothing', () => {
+    renderRow({ ...run, id: 2, status: 'error', itemCount: 0, error: 'Connection refused' });
+
+    expect(screen.queryByRole('button', { name: /show items/i })).not.toBeInTheDocument();
+  });
 });

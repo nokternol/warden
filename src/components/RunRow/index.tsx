@@ -21,25 +21,18 @@ function formatDate(dateStr: string): string {
 /** One run in the Runs table; expands to the titles the run targeted. */
 export default function RunRow({ run }: { run: AutomationRunDto }) {
   const [open, setOpen] = useState(false);
+  const targetedAny = (run.itemCount ?? 0) > 0;
 
   return (
     <>
       <tr className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors">
         <td className="px-4 py-3 text-sm font-medium text-white">
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              aria-expanded={open}
-              aria-label={open ? 'Hide items' : 'Show items'}
-              title={open ? 'Hide items' : 'Show items'}
-              onClick={() => setOpen(!open)}
-              className="p-1 -ml-1 rounded text-[var(--color-text-secondary)] hover:text-white hover:bg-white/5 transition-colors"
-            >
-              <ChevronRight
-                className={cn('w-4 h-4 transition-transform', open && 'rotate-90')}
-                aria-hidden
-              />
-            </button>
+            {targetedAny ? (
+              <ExpandToggle open={open} onToggle={() => setOpen(!open)} />
+            ) : (
+              <span className="w-6 -ml-1 shrink-0" aria-hidden />
+            )}
             {run.automationName}
           </div>
         </td>
@@ -66,6 +59,25 @@ export default function RunRow({ run }: { run: AutomationRunDto }) {
       </tr>
       {open && <TargetedItems runId={run.id} />}
     </>
+  );
+}
+
+function ExpandToggle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  const label = open ? 'Hide items' : 'Show items';
+  return (
+    <button
+      type="button"
+      aria-expanded={open}
+      aria-label={label}
+      title={label}
+      onClick={onToggle}
+      className="p-1 -ml-1 shrink-0 rounded text-[var(--color-text-secondary)] hover:text-white hover:bg-white/5 transition-colors"
+    >
+      <ChevronRight
+        className={cn('w-4 h-4 transition-transform', open && 'rotate-90')}
+        aria-hidden
+      />
+    </button>
   );
 }
 
