@@ -16,8 +16,8 @@ config/
   db/             # SQLite database files
     warden.db
   logs/           # Winston log files (JSON + human-readable)
-    maintainarr-YYYY-MM-DD.log
-    maintainarr-YYYY-MM-DD.json.log
+    warden-YYYY-MM-DD.log
+    warden-YYYY-MM-DD.json.log
 ```
 
 ## Database
@@ -38,8 +38,8 @@ DB_PATH=:memory:
 ## Logs
 
 Winston logs are written to `config/logs/` with daily rotation:
-- Human-readable: `maintainarr-YYYY-MM-DD.log`
-- JSON (machine-readable): `maintainarr-YYYY-MM-DD.json.log`
+- Human-readable: `warden-YYYY-MM-DD.log`
+- JSON (machine-readable): `warden-YYYY-MM-DD.json.log`
 - Retention: 14 days
 - Max size: 20MB per file
 

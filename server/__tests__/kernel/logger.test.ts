@@ -101,3 +101,16 @@ describe('getChildLogger', () => {
     expect(api).not.toBe(db);
   });
 });
+
+describe('log files', () => {
+  it('rotates human-readable and JSON logs under the warden- prefix', () => {
+    const files = logger.transports
+      .map((transport) => (transport as { filename?: string }).filename)
+      .filter((filename): filename is string => Boolean(filename));
+
+    expect(files.map((file) => file.split('/').pop())).toEqual([
+      'warden-%DATE%.log',
+      'warden-%DATE%.json.log',
+    ]);
+  });
+});
