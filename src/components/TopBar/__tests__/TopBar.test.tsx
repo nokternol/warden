@@ -40,8 +40,8 @@ describe('TopBar', () => {
     expect(homeLink.tagName).toBe('A');
     expect(homeLink).toHaveAttribute('href', '/');
 
-    const tasksText = screen.getByText('Automations');
-    expect(tasksText.tagName).toBe('SPAN');
+    const automationsText = screen.getByText('Automations');
+    expect(automationsText.tagName).toBe('SPAN');
   });
 
   it('renders breadcrumb separators', () => {

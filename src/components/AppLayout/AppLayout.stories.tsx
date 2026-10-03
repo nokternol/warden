@@ -19,7 +19,7 @@ const DashboardIcon = () => (
   </svg>
 );
 
-const TaskIcon = () => (
+const AutomationIcon = () => (
   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path
       strokeLinecap="round"
@@ -66,8 +66,14 @@ const sampleItems: SidebarItem[] = [
     href: '/dashboard',
     active: true,
   },
-  { id: 'automations', label: 'Automations', icon: <TaskIcon />, href: '/automations', badge: 5 },
-  { id: 'collections', label: 'Queries', icon: <FolderIcon />, href: '/queries' },
+  {
+    id: 'automations',
+    label: 'Automations',
+    icon: <AutomationIcon />,
+    href: '/automations',
+    badge: 5,
+  },
+  { id: 'queries', label: 'Queries', icon: <FolderIcon />, href: '/queries' },
 ];
 
 const bottomItems: SidebarItem[] = [
@@ -160,7 +166,7 @@ export const CompleteLayout: Story = () => (
         <StatCard
           value={142}
           label="Active automations"
-          icon={<TaskIcon />}
+          icon={<AutomationIcon />}
           trend={{ value: 12, direction: 'up' }}
         />
         <StatCard value={28} label="Queries" icon={<FolderIcon />} />

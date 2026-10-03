@@ -14,7 +14,7 @@ const DashboardIcon = () => (
   </svg>
 );
 
-const TaskIcon = () => (
+const AutomationIcon = () => (
   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path
       strokeLinecap="round"
@@ -94,8 +94,14 @@ const sampleItems: SidebarItem[] = [
     href: '/dashboard',
     active: true,
   },
-  { id: 'automations', label: 'Automations', icon: <TaskIcon />, href: '/automations', badge: 5 },
-  { id: 'collections', label: 'Queries', icon: <FolderIcon />, href: '/queries' },
+  {
+    id: 'automations',
+    label: 'Automations',
+    icon: <AutomationIcon />,
+    href: '/automations',
+    badge: 5,
+  },
+  { id: 'queries', label: 'Queries', icon: <FolderIcon />, href: '/queries' },
   { id: 'calendar', label: 'Calendar', icon: <CalendarIcon />, href: '/calendar' },
   { id: 'runs', label: 'Runs', icon: <RunsIcon />, href: '/runs' },
 ];
@@ -149,12 +155,12 @@ export const WithBadges: Story = () => (
           {
             id: 'automations',
             label: 'Automations',
-            icon: <TaskIcon />,
+            icon: <AutomationIcon />,
             href: '/automations',
             badge: 12,
           },
           {
-            id: 'collections',
+            id: 'queries',
             label: 'Queries',
             icon: <FolderIcon />,
             href: '/queries',

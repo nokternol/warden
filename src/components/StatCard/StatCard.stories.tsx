@@ -1,7 +1,7 @@
 import type { Story } from '@ladle/react';
 import StatCard from './index';
 
-const TaskIcon = () => (
+const AutomationIcon = () => (
   <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path
       strokeLinecap="round"
@@ -42,7 +42,7 @@ export const BasicNumber: Story = () => (
 
 export const WithIcon: Story = () => (
   <div className="bg-surface-bg p-8">
-    <StatCard value={142} label="Active automations" icon={<TaskIcon />} />
+    <StatCard value={142} label="Active automations" icon={<AutomationIcon />} />
   </div>
 );
 
@@ -51,7 +51,7 @@ export const WithTrendUp: Story = () => (
     <StatCard
       value={142}
       label="Active automations"
-      icon={<TaskIcon />}
+      icon={<AutomationIcon />}
       trend={{ value: 12, direction: 'up' }}
     />
   </div>
@@ -104,7 +104,7 @@ export const GridExample: Story = () => (
       <StatCard
         value={142}
         label="Active automations"
-        icon={<TaskIcon />}
+        icon={<AutomationIcon />}
         trend={{ value: 12, direction: 'up' }}
       />
       <StatCard value={28} label="Queries" icon={<FolderIcon />} />

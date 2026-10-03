@@ -255,7 +255,7 @@ export class MediaQueryService {
 
   async getById(id: number): Promise<MediaQueryRecord> {
     const [row] = await this.db.select().from(mediaQueries).where(eq(mediaQueries.id, id));
-    if (!row) throw new NotFoundError(`Saved query ${id} not found`);
+    if (!row) throw new NotFoundError(`Query ${id} not found`);
 
     const fvRows = await this.db
       .select()
@@ -312,6 +312,6 @@ export class MediaQueryService {
 
   async delete(id: number): Promise<void> {
     const [row] = await this.db.delete(mediaQueries).where(eq(mediaQueries.id, id)).returning();
-    if (!row) throw new NotFoundError(`Saved query ${id} not found`);
+    if (!row) throw new NotFoundError(`Query ${id} not found`);
   }
 }
