@@ -1,6 +1,13 @@
-import { desc, eq } from 'drizzle-orm';
-import { automationRuns, automations } from '../../database/schema';
+import { desc, eq, inArray, sql } from 'drizzle-orm';
+import {
+  automationRunItems,
+  automationRuns,
+  automations,
+  mediaIdentity,
+  mediaItems,
+} from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
+import { type MediaItem, sourceCopyIds } from '../media';
 
 export interface AutomationRunDto {
   id: number;
@@ -13,12 +20,26 @@ export interface AutomationRunDto {
   createdAt: Date;
 }
 
+/** One source copy a run targeted, titled through its group. */
+export interface RunItemDto {
+  mediaItemId: number;
+  title: string | null;
+  year: number | null;
+  deleted: boolean;
+}
+
+export interface RunItemPage {
+  data: RunItemDto[];
+  total: number;
+}
+
 export interface CreateRunData {
   automationId: number;
   status: 'success' | 'error';
   itemCount?: number;
   error?: string;
   kind?: 'user' | 'system';
+  targets?: MediaItem[];
 }
 
 export interface ListRunsOptions {
@@ -60,8 +81,13 @@ export class AutomationRunService {
     this.db = db;
   }
 
+  /**
+   * Writes the run row and its targeted source copies in one batch — a single
+   * SQLite transaction, so a run is never recorded without its items.
+   */
   async createRun(data: CreateRunData): Promise<AutomationRunDto> {
-    const [row] = await this.db
+    const mediaItemIds = await sourceCopyIds(this.db, data.targets ?? []);
+    const insertRun = this.db
       .insert(automationRuns)
       .values({
         automationId: data.automationId,
@@ -72,6 +98,10 @@ export class AutomationRunService {
         kind: data.kind ?? 'user',
       })
       .returning();
+    const [[row]] =
+      mediaItemIds.length > 0
+        ? await this.db.batch([insertRun, this.linkToLatestRun(mediaItemIds)])
+        : [await insertRun];
 
     const [automationRow] = await this.db
       .select({ name: automations.name })
@@ -118,5 +148,36 @@ export class AutomationRunService {
 
     const rows = await query;
     return rows.map(rowToDto);
+  }
+
+  /**
+   * Links source copies to the run row inserted earlier in the same batch.
+   * Inside that write transaction the newest run id is that row's id.
+   */
+  private linkToLatestRun(mediaItemIds: number[]) {
+    return this.db.insert(automationRunItems).select(
+      this.db
+        .select({
+          runId: sql<number>`(SELECT max(${automationRuns.id}) FROM ${automationRuns})`.as('runId'),
+          mediaItemId: mediaItems.id,
+        })
+        .from(mediaItems)
+        .where(inArray(mediaItems.id, mediaItemIds))
+    );
+  }
+
+  async listRunItems(runId: number): Promise<RunItemPage> {
+    const data = await this.db
+      .select({
+        mediaItemId: mediaItems.id,
+        title: mediaIdentity.title,
+        year: mediaIdentity.year,
+        deleted: mediaItems.deleted,
+      })
+      .from(automationRunItems)
+      .innerJoin(mediaItems, eq(automationRunItems.mediaItemId, mediaItems.id))
+      .innerJoin(mediaIdentity, eq(mediaItems.mediaIdentityId, mediaIdentity.id))
+      .where(eq(automationRunItems.runId, runId));
+    return { data, total: data.length };
   }
 }

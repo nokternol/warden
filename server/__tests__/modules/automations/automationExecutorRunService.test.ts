@@ -1,4 +1,4 @@
-import { MetadataProviderType } from '@server/database/schema';
+import { MetadataProviderType, mediaIdentity, mediaItems } from '@server/database/schema';
 /**
  * AutomationExecutor + AutomationRunService integration test.
  *
@@ -131,5 +131,71 @@ describe('AutomationExecutor writes to automation_runs', () => {
     expect(runs).toHaveLength(1);
     expect(runs[0].status).toBe('error');
     expect(runs[0].error).toBeTruthy();
+  });
+
+  describe('what a run targeted', () => {
+    async function seedRadarrAutomation() {
+      const provider = await providerSettingsService.create({
+        type: MetadataProviderType.RADARR,
+        name: 'Test Radarr',
+        url: `${RADARR_URL}/api/v3`,
+        apiKey: 'test-key',
+        settings: { enabledTasks: ['unmonitorMovie'] },
+      });
+      const query = await mediaQueryService.create({
+        name: 'Q',
+        contentType: 'movie',
+        filterValues: [],
+      });
+      const automation = await automationService.create({
+        name: 'Nightly',
+        querySources: [{ queryId: query.id, role: 'include' as const }],
+        providerId: provider.id,
+        taskId: 'unmonitorMovie',
+        schedule: '0 2 * * *',
+      });
+      return { provider, automation };
+    }
+
+    /** A source copy as the identity job leaves it: one group, one media_item row. */
+    async function seedSourceCopy(
+      providerId: number,
+      movie: { id: number; tmdbId: number; title: string }
+    ) {
+      const db = getDb();
+      const [{ id: identityId }] = await db
+        .insert(mediaIdentity)
+        .values({ kind: 'movie', tmdbId: movie.tmdbId, title: movie.title })
+        .returning({ id: mediaIdentity.id });
+      const [{ id }] = await db
+        .insert(mediaItems)
+        .values({ providerId, externalId: movie.id, mediaIdentityId: identityId })
+        .returning({ id: mediaItems.id });
+      return id;
+    }
+
+    function serveRadarr(movies: ReturnType<typeof createRadarrMovie>[]) {
+      server.use(
+        http.get(`${RADARR_URL}/api/v3/movie`, () => HttpResponse.json(movies)),
+        http.put(`${RADARR_URL}/api/v3/movie/:id`, () => HttpResponse.json({}))
+      );
+    }
+
+    it('records each item a source-actuator run targeted, and counts exactly those', async () => {
+      const movies = [
+        createRadarrMovie({ id: 1, tmdbId: 101, title: 'The Matrix' }),
+        createRadarrMovie({ id: 2, tmdbId: 102, title: 'Heat' }),
+      ];
+      serveRadarr(movies);
+      const { provider, automation } = await seedRadarrAutomation();
+      for (const movie of movies) await seedSourceCopy(provider.id, movie);
+
+      await executor.execute(automation.id);
+
+      const [run] = await automationRunService.listRuns({ automationId: automation.id });
+      const items = await automationRunService.listRunItems(run.id);
+      expect(items.data.map((i) => i.title).sort()).toEqual(['Heat', 'The Matrix']);
+      expect(run.itemCount).toBe(items.data.length);
+    });
   });
 });

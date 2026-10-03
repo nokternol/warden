@@ -3,7 +3,7 @@ import type { DrizzleDb } from '../../kernel/db';
 import type { DomainEventBus } from '../../kernel/eventBus';
 import { getChildLogger } from '../../kernel/logger';
 import { EnrichmentQueries, MediaQueryEngine, mediaSourceFor, resolveActuatorIds } from '../media';
-import type { MediaSource, MediaSourceFactory } from '../media';
+import type { MediaItem, MediaSource, MediaSourceFactory } from '../media';
 import type { MediaQueryService } from '../mediaQueries';
 import {
   type IProviderFactory,
@@ -128,7 +128,12 @@ export class AutomationExecutor {
         automation.taskParameter
       );
       itemCount = outcome.itemCount;
-      await this.recordResult(automationId, taskId, { itemCount, status: 'success', kind });
+      await this.recordResult(automationId, taskId, {
+        itemCount,
+        status: 'success',
+        kind,
+        targets: outcome.targets,
+      });
 
       this.emitDataChange(outcome.affects, itemCount);
 
@@ -151,7 +156,7 @@ export class AutomationExecutor {
     providerSettings: MetadataProvider,
     sources: AutomationQuerySourceDto[],
     taskParameter?: string
-  ): Promise<{ itemCount: number; affects: 'media' | undefined }> {
+  ): Promise<{ itemCount: number; affects: 'media' | undefined; targets?: MediaItem[] }> {
     const queryDtos = await Promise.all(
       sources.map((s) => this.mediaQueryService.getById(s.queryId))
     );
@@ -189,7 +194,7 @@ export class AutomationExecutor {
       const finalIds = matched.map((item) => mediaSource.idOf(item)!);
 
       await task.run(finalIds, taskParameter);
-      return { itemCount: finalIds.length, affects: task.affects };
+      return { itemCount: finalIds.length, affects: task.affects, targets: matched };
     }
 
     // Non-source actuator: it owns no catalog, so the query evaluates against
@@ -238,6 +243,7 @@ export class AutomationExecutor {
       status: 'success' | 'error';
       error?: string;
       kind: 'user' | 'system';
+      targets?: MediaItem[];
     }
   ): Promise<void> {
     const [, run] = await Promise.all([
@@ -248,6 +254,7 @@ export class AutomationExecutor {
         itemCount: result.itemCount,
         error: result.error,
         kind: result.kind,
+        targets: result.targets,
       }),
     ]);
 
