@@ -17,7 +17,7 @@ const configSchema = z
     LOG_DIR: z.string().default('./config/logs'),
 
     // Database
-    DB_PATH: z.string().default('./config/db/maintainarr.db'),
+    DB_PATH: z.string().default('./config/db/warden.db'),
     DB_LOGGING: z
       .string()
       .default('false')
