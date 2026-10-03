@@ -1742,6 +1742,132 @@
   resolved "https://registry.npmjs.org/@open-draft/until/-/until-2.1.0.tgz"
   integrity sha512-U69T3ItWHvLwGg5eJ0n3I62nWuE6ilHlmz7zM0npLBRvPRd7e6NYmg54vvRtP5mZG7kZqZCFVdsTWo7BPtBujg==
 
+"@orpc/client@1.15.4", "@orpc/client@~1.15.4":
+  version "1.15.4"
+  resolved "https://registry.yarnpkg.com/@orpc/client/-/client-1.15.4.tgz#6d95f2790667dcfff3bcad6bdf6399a2bccf70af"
+  integrity sha512-8Iv2K8Rj8hf6xHCTxmQ+gxgiY6EATDossQk4gdt3oSbGVV0x2RSeLtRK9Zry+KVsmOqPJfnLahfRp7H2rQ/Vgg==
+  dependencies:
+    "@orpc/shared" "1.15.4"
+    "@orpc/standard-server" "1.15.4"
+    "@orpc/standard-server-fetch" "1.15.4"
+    "@orpc/standard-server-peer" "1.15.4"
+
+"@orpc/contract@1.15.4", "@orpc/contract@~1.15.4":
+  version "1.15.4"
+  resolved "https://registry.yarnpkg.com/@orpc/contract/-/contract-1.15.4.tgz#1c5c4807c80391f8d22812fa3f4ac816638c7fe0"
+  integrity sha512-mxH+kuIsKz7BGsoqDHShnMjKG7GvCMGpvxTtJnkpbowIp2iBz8XiWosiWBybZcUl1Dy9W77TyOk6pNqG5I4D6w==
+  dependencies:
+    "@orpc/client" "1.15.4"
+    "@orpc/shared" "1.15.4"
+    "@standard-schema/spec" "^1.1.0"
+    openapi-types "^12.1.3"
+
+"@orpc/interop@1.15.4":
+  version "1.15.4"
+  resolved "https://registry.yarnpkg.com/@orpc/interop/-/interop-1.15.4.tgz#11c408108cdb3b73fc0390554ae8509b8f923b2a"
+  integrity sha512-ZCTNPenr1clZ2RBCJxsCsvS3eS8MJIDSx/LH1AIAKj9RjvfOXI/BnjHmgD4jUEIa6FcG+c2LV/1IXVJpC6NoTw==
+
+"@orpc/openapi-client@1.15.4", "@orpc/openapi-client@~1.15.4":
+  version "1.15.4"
+  resolved "https://registry.yarnpkg.com/@orpc/openapi-client/-/openapi-client-1.15.4.tgz#585a09232bff5334aeff3d926a535a94dd4dc702"
+  integrity sha512-z+8gRUp9bhVuA2tFlzJDCaUbLV/whZec25fmYb0VtP2N6iPfY0d7hYZvX47F/WrcuwaLCTqkbVAzK8Xb2cKF/w==
+  dependencies:
+    "@orpc/client" "1.15.4"
+    "@orpc/contract" "1.15.4"
+    "@orpc/shared" "1.15.4"
+    "@orpc/standard-server" "1.15.4"
+
+"@orpc/openapi@~1.15.4":
+  version "1.15.4"
+  resolved "https://registry.yarnpkg.com/@orpc/openapi/-/openapi-1.15.4.tgz#7c043cb2a1a57ed06019d004fab21850f306d768"
+  integrity sha512-+J2skkYlqcB7O9nUJ9rhV1IvisimIwxyn21nAWP/jvSg5PN/klqSO2r6XkxiAaCukw/QE5BFMbN8c0ZdLrMEnw==
+  dependencies:
+    "@orpc/client" "1.15.4"
+    "@orpc/contract" "1.15.4"
+    "@orpc/interop" "1.15.4"
+    "@orpc/openapi-client" "1.15.4"
+    "@orpc/server" "1.15.4"
+    "@orpc/shared" "1.15.4"
+    "@orpc/standard-server" "1.15.4"
+    json-schema-typed "^8.0.2"
+    rou3 "^0.7.12"
+
+"@orpc/server@1.15.4", "@orpc/server@~1.15.4":
+  version "1.15.4"
+  resolved "https://registry.yarnpkg.com/@orpc/server/-/server-1.15.4.tgz#484061894e81e39f189d93d018e3a840a7517e88"
+  integrity sha512-Ccs2Pdwql2XRtk7bzkiZohoYuUVNcffydbswhz75rdepCQt0HmKosfVhsqjAqCKDDB7c84ct7Q7c5Z/xQak7pQ==
+  dependencies:
+    "@orpc/client" "1.15.4"
+    "@orpc/contract" "1.15.4"
+    "@orpc/interop" "1.15.4"
+    "@orpc/shared" "1.15.4"
+    "@orpc/standard-server" "1.15.4"
+    "@orpc/standard-server-aws-lambda" "1.15.4"
+    "@orpc/standard-server-fastify" "1.15.4"
+    "@orpc/standard-server-fetch" "1.15.4"
+    "@orpc/standard-server-node" "1.15.4"
+    "@orpc/standard-server-peer" "1.15.4"
+    cookie "^1.1.1"
+
+"@orpc/shared@1.15.4":
+  version "1.15.4"
+  resolved "https://registry.yarnpkg.com/@orpc/shared/-/shared-1.15.4.tgz#73646d0e7d622ec94af636bdb59babafc1ea580c"
+  integrity sha512-syNylxXmv1WnroSDUvtYjuvu0YMAYzkLTjFPa0CggnaF3DH2YmAnRS5GGGzSPRAbhMtRAXArIoM7GVrRNKHxng==
+  dependencies:
+    radash "^12.1.1"
+    type-fest "^5.4.4"
+
+"@orpc/standard-server-aws-lambda@1.15.4":
+  version "1.15.4"
+  resolved "https://registry.yarnpkg.com/@orpc/standard-server-aws-lambda/-/standard-server-aws-lambda-1.15.4.tgz#09799b55e7ab9371f7d408b9c8c92530953c1dda"
+  integrity sha512-Vq5nNhq/XSM3DPsI1MLEbMraP+++hb0btsS8IfdAj5eXTYvDzpTA5rZ+gMhhgnVuZvZcQbmBojTgtu41X8t4sA==
+  dependencies:
+    "@orpc/shared" "1.15.4"
+    "@orpc/standard-server" "1.15.4"
+    "@orpc/standard-server-fetch" "1.15.4"
+    "@orpc/standard-server-node" "1.15.4"
+
+"@orpc/standard-server-fastify@1.15.4":
+  version "1.15.4"
+  resolved "https://registry.yarnpkg.com/@orpc/standard-server-fastify/-/standard-server-fastify-1.15.4.tgz#1c245865cb63117a2ad1e64f3a143816f9706fcb"
+  integrity sha512-OkBWAUQhtssTrfaV3FF8X/gdJL7otS1MvfTBuxKoRKpf6u7CQB9QpdY76OSg407N/hvN8wzSW2lSbhlKljOxkQ==
+  dependencies:
+    "@orpc/shared" "1.15.4"
+    "@orpc/standard-server" "1.15.4"
+    "@orpc/standard-server-node" "1.15.4"
+
+"@orpc/standard-server-fetch@1.15.4":
+  version "1.15.4"
+  resolved "https://registry.yarnpkg.com/@orpc/standard-server-fetch/-/standard-server-fetch-1.15.4.tgz#b53dfe78a17c78ec882116caad17b63408660f43"
+  integrity sha512-u6zQDx/tUgNUWDQstJMbWkCKsecp9j+4WHWoPmNNuk2PyRdD6FEmvJJs23CAKa5njKu2V8aMzuuL9AW3jechuw==
+  dependencies:
+    "@orpc/shared" "1.15.4"
+    "@orpc/standard-server" "1.15.4"
+
+"@orpc/standard-server-node@1.15.4":
+  version "1.15.4"
+  resolved "https://registry.yarnpkg.com/@orpc/standard-server-node/-/standard-server-node-1.15.4.tgz#db6c56b617802f0eeefa1a2ef1af3afe5e06a438"
+  integrity sha512-is6T03n1y6nx+g9ve0ip+F1BXbnR104r3NEGVUcGmkuLCqtxqbXCCjyzJTXWwGArTdEcxDOT4cW/zx/EORGN0g==
+  dependencies:
+    "@orpc/shared" "1.15.4"
+    "@orpc/standard-server" "1.15.4"
+    "@orpc/standard-server-fetch" "1.15.4"
+
+"@orpc/standard-server-peer@1.15.4":
+  version "1.15.4"
+  resolved "https://registry.yarnpkg.com/@orpc/standard-server-peer/-/standard-server-peer-1.15.4.tgz#21496e1debe0e2ec802c040b5ce99ea0d9c4fe74"
+  integrity sha512-qWH7gf+8Iv2oXVIQZIQIvAyk2LYUHcj0CXF+AKF5WzHU22vJInD4FKbl8+UesVU+nT8O+BrVmOXzrQ40TqngpQ==
+  dependencies:
+    "@orpc/shared" "1.15.4"
+    "@orpc/standard-server" "1.15.4"
+
+"@orpc/standard-server@1.15.4":
+  version "1.15.4"
+  resolved "https://registry.yarnpkg.com/@orpc/standard-server/-/standard-server-1.15.4.tgz#0bb1d150658f3e9c64347150cda11fb5ed9daace"
+  integrity sha512-woaFpUJavYPiqRQ0Eh716jOHRZ7o84mPpmEPS79bBUJNDilGEj2OBSjbHV2ez4FYdVnEnlbg+rYy7sX3PwwENA==
+  dependencies:
+    "@orpc/shared" "1.15.4"
+
 "@paralleldrive/cuid2@^2.2.2":
   version "2.3.1"
   resolved "https://registry.npmjs.org/@paralleldrive/cuid2/-/cuid2-2.3.1.tgz"
@@ -1897,7 +2023,7 @@
     color "^5.0.2"
     text-hex "1.0.x"
 
-"@standard-schema/spec@^1.0.0":
+"@standard-schema/spec@^1.0.0", "@standard-schema/spec@^1.1.0":
   version "1.1.0"
   resolved "https://registry.npmjs.org/@standard-schema/spec/-/spec-1.1.0.tgz"
   integrity sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==
@@ -3365,7 +3491,7 @@ cookie@0.7.2, cookie@~0.7.1, cookie@~0.7.2:
   resolved "https://registry.npmjs.org/cookie/-/cookie-0.7.2.tgz"
   integrity sha512-yki5XnKuf750l50uGTllt6kKILY4nQ1eNIQatoXEByZ5dWgnKqbnqmTrBE5B4N7lrMJKQ2ytWMiTO2o0v6Ew/w==
 
-cookie@^1.0.2:
+cookie@^1.0.2, cookie@^1.1.1:
   version "1.1.1"
   resolved "https://registry.npmjs.org/cookie/-/cookie-1.1.1.tgz"
   integrity sha512-ei8Aos7ja0weRpFzJnEA9UHJ/7XQmqglbRwnf2ATjcB9Wq874VKH9kfjjirM6UhU2/E5fFYadylyhFldcqSidQ==
@@ -5226,6 +5352,11 @@ json-parse-even-better-errors@^2.3.0:
   resolved "https://registry.npmjs.org/json-parse-even-better-errors/-/json-parse-even-better-errors-2.3.1.tgz"
   integrity sha512-xyFwyhro/JEof6Ghe2iz2NcXoj2sloNsWr/XsERDK/oiPCfaNhl5ONfp+jQdAZRQQ0IJWNzH9zIZF7li91kh2w==
 
+json-schema-typed@^8.0.2:
+  version "8.0.2"
+  resolved "https://registry.yarnpkg.com/json-schema-typed/-/json-schema-typed-8.0.2.tgz#e98ee7b1899ff4a184534d1f167c288c66bbeff4"
+  integrity sha512-fQhoXdcvc3V28x7C7BMs4P5+kNlgUURe2jmUT1T//oBRMDrqy1QPelJimwZGo7Hg9VPV3EQV5Bnq4hbFy2vetA==
+
 json-schema@0.4.0:
   version "0.4.0"
   resolved "https://registry.npmjs.org/json-schema/-/json-schema-0.4.0.tgz"
@@ -6436,6 +6567,11 @@ open@^10.1.0:
     is-inside-container "^1.0.0"
     wsl-utils "^0.1.0"
 
+openapi-types@^12.1.3:
+  version "12.1.3"
+  resolved "https://registry.yarnpkg.com/openapi-types/-/openapi-types-12.1.3.tgz#471995eb26c4b97b7bd356aacf7b91b73e777dd3"
+  integrity sha512-N4YtSYJqghVu4iek2ZUvcN/0aqH1kRDuNqzcycDxhOUpg7GdvLa2F3DgS6yBNhInhv2r/6I0Flkn7CqL8+nIcw==
+
 ospath@^1.2.2:
   version "1.2.2"
   resolved "https://registry.npmjs.org/ospath/-/ospath-1.2.2.tgz"
@@ -6794,6 +6930,11 @@ queue-microtask@^1.2.2:
   version "1.2.3"
   resolved "https://registry.npmjs.org/queue-microtask/-/queue-microtask-1.2.3.tgz"
   integrity sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==
+
+radash@^12.1.1:
+  version "12.1.1"
+  resolved "https://registry.yarnpkg.com/radash/-/radash-12.1.1.tgz#4858a08a04318a07d6d92d17d11b7528938edd93"
+  integrity sha512-h36JMxKRqrAxVD8201FrCpyeNuUY9Y5zZwujr20fFO77tpUtGa6EZzfKw/3WaiBX95fq7+MpsuMLNdSnORAwSA==
 
 random-bytes@~1.0.0:
   version "1.0.0"
@@ -7157,6 +7298,11 @@ rollup@4.59.0, rollup@^4.20.0, rollup@^4.43.0:
     "@rollup/rollup-win32-x64-gnu" "4.59.0"
     "@rollup/rollup-win32-x64-msvc" "4.59.0"
     fsevents "~2.3.2"
+
+rou3@^0.7.12:
+  version "0.7.12"
+  resolved "https://registry.yarnpkg.com/rou3/-/rou3-0.7.12.tgz#cac17425c04abddba854a42385cabfe0b971a179"
+  integrity sha512-iFE4hLDuloSWcD7mjdCDhx2bKcIsYbtOTpfH5MHHLSKMOUyjqQXTeZVa289uuwEGEKFoE/BAPbhaU4B774nceg==
 
 rrweb-cssom@^0.7.1:
   version "0.7.1"
@@ -8077,6 +8223,13 @@ type-fest@^5.2.0:
   version "5.4.4"
   resolved "https://registry.npmjs.org/type-fest/-/type-fest-5.4.4.tgz"
   integrity sha512-JnTrzGu+zPV3aXIUhnyWJj4z/wigMsdYajGLIYakqyOW1nPllzXEJee0QQbHj+CTIQtXGlAjuK0UY+2xTyjVAw==
+  dependencies:
+    tagged-tag "^1.0.0"
+
+type-fest@^5.4.4:
+  version "5.10.0"
+  resolved "https://registry.yarnpkg.com/type-fest/-/type-fest-5.10.0.tgz#bf0131fdf662889c94c409d37402e364fb2016f7"
+  integrity sha512-NoSdpq/WEiAg5sjmBkmV/hfxv6HJH4NqPNrqjtSO5CwRmpsDfaf4begxW34KdJykH/l1yHtwBWQkCRdoXO8mPA==
   dependencies:
     tagged-tag "^1.0.0"
 

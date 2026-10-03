@@ -6,9 +6,9 @@
  * are deny-by-default — a module omitted from another's allow-list is
  * forbidden as a target, not enumerated as a violation to avoid.
  *
- * Scope is server/ only, matching the North Star's own scope; server/__tests__/
- * is excluded because tests legitimately reach into a module's own internals
- * to unit-test them.
+ * Scope is server/, src/ and contract/. Test folders and stories are excluded
+ * because tests legitimately reach into a module's own internals to unit-test
+ * them.
  */
 
 const MODULES = [
@@ -90,8 +90,8 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: '^server/__tests__/' },
-    includeOnly: { path: '^server/' },
+    exclude: { path: '(^|/)__tests__/|\\.stories\\.tsx$' },
+    includeOnly: { path: '^(server|src|contract)/' },
     tsPreCompilationDeps: true,
     tsConfig: { fileName: require('path').join(__dirname, 'server/tsconfig.json') },
     enhancedResolveOptions: {
