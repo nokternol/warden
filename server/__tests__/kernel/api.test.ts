@@ -15,6 +15,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 describe('serveApi — the contract served over HTTP', () => {
   let app: Express;
+  let anonymousApp: Express;
 
   beforeAll(async () => {
     const mockConfig = createMockConfig({
@@ -51,14 +52,22 @@ describe('serveApi — the contract served over HTTP', () => {
       schedule: '0 2 * * *',
     });
 
-    app = express();
-    app.use(express.json());
-    app.use(requestIdMiddleware);
-    app.use((req, _res, next) => {
-      req.user = { id: 1 } as unknown as NonNullable<typeof req.user>;
-      next();
-    });
-    app.use(serveApi({ automations: createAutomationProcedures(container.cradle) }));
+    const router = { automations: createAutomationProcedures(container.cradle) };
+    const buildApp = (signedIn: boolean) => {
+      const built = express();
+      built.use(express.json());
+      built.use(requestIdMiddleware);
+      if (signedIn) {
+        built.use((req, _res, next) => {
+          req.user = { id: 1 } as unknown as NonNullable<typeof req.user>;
+          next();
+        });
+      }
+      built.use(serveApi(router));
+      return built;
+    };
+    app = buildApp(true);
+    anonymousApp = buildApp(false);
   });
 
   afterAll(async () => {
@@ -72,6 +81,16 @@ describe('serveApi — the contract served over HTTP', () => {
     expect(res.body).toEqual({
       status: 'ok',
       data: [expect.objectContaining({ name: 'Nightly unmonitor', taskId: 'unmonitorMovie' })],
+    });
+  });
+
+  it('refuses a procedure that is not public when no user is signed in', async () => {
+    const res = await request(anonymousApp).get('/api/automations');
+
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({
+      status: 'error',
+      error: { type: 'UNAUTHORIZED', message: 'Authentication required' },
     });
   });
 });
