@@ -197,7 +197,7 @@ export class AutomationExecutor {
 
     if (isMediaSourceType(providerSettings.type)) {
       // Catalog-owning actuator: the query evaluates against its own catalog
-      // and its native ids feed the task directly.
+      // and its native ids feed the task directly, one target per native id.
       const mediaSource = mediaSourceFor(
         provider as RadarrProvider | SonarrProvider,
         providerSettings.id
@@ -207,10 +207,11 @@ export class AutomationExecutor {
         contentType,
         sources: querySpecs,
       });
+      const targetById = new Map(matched.map((item) => [mediaSource.idOf(item)!, item]));
       return {
         task,
-        targets: matched,
-        actuatorIds: matched.map((item) => mediaSource.idOf(item)!),
+        targets: [...targetById.values()],
+        actuatorIds: [...targetById.keys()],
       };
     }
 

@@ -211,6 +211,19 @@ describe('AutomationExecutor writes to automation_runs', () => {
       expect(run.itemCount).toBe(1);
     });
 
+    it('counts a source copy its catalog lists twice once', async () => {
+      const movie = createRadarrMovie({ id: 8, tmdbId: 108, title: 'Thief' });
+      serveRadarr([movie, movie]);
+      const { automation } = await seedRadarrAutomation();
+
+      await executor.execute(automation.id);
+
+      const [run] = await automationRunService.listRuns({ automationId: automation.id });
+      const items = await automationRunService.listRunItems(run.id);
+      expect(items.data.map((i) => i.title)).toEqual(['Thief']);
+      expect(run.itemCount).toBe(items.data.length);
+    });
+
     it("keeps a removed item's title in the run's history, flagged as deleted", async () => {
       const movie = createRadarrMovie({ id: 3, tmdbId: 103, title: 'Ronin' });
       serveRadarr([movie]);
