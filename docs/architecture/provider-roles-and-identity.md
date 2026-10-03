@@ -92,13 +92,50 @@ loop every active instance per type — never collapsed to one:
 - `IdentityJobFactory.create()` builds `movieSources`/`seriesSources` arrays via `createInstances`, one
   `{ providerId, provider }` per active Radarr/Sonarr row.
 - `runForMovies`/`runForSeries` resolve each fetched item's group via `resolveGroup`, upsert its
-  `media_item` row on `(providerId, externalId)`, then **prune** that instance's `media_item` rows whose
-  `externalId` is no longer in its fetched set (an item removed from one instance's library stops being a
-  copy there without touching any other instance's copies), and finally **sweep** every group left with
-  zero `media_item` rows.
+  `media_item` row on `(providerId, externalId)` (clearing any `deleted` mark, since the instance lists
+  it again), then **mark deleted** that instance's `media_item` rows whose `externalId` is no longer in
+  its fetched set (an item removed from one instance's library stops being a live copy there without
+  touching any other instance's copies), and finally **sweep** every group left with zero `media_item`
+  rows. A deleted copy still counts for the sweep, so a removed title keeps its group and its name; a
+  group empties only when its copies' provider is deleted (the `metadata_provider` cascade).
 - `runForPlex` never inserts a group — it only *stamps* `plexRatingKey` onto groups matching by
   `kind` + `tmdbId`/`tvdbId`, closing a bug where an unscoped `tmdbId` match could cross the movie/tv id
   namespaces.
+
+## Soft-deleted copies and run history
+
+`media_item.deleted` ([`server/database/schema.ts`](ref:path:server/database/schema.ts)) is a soft delete
+inside Warden's own database. A copy that leaves its source is usually the result of a destructive run,
+which is exactly the item that run's history must still name. Hard-deleting the row would cascade away
+the history link and the title with it, so the identity job keeps the row and marks it instead. There is
+no deletion timestamp: when a Warden run removed the item, the run's own `ranAt` dates it. Retained
+copies and groups are never pruned yet; their maintenance is future work.
+
+Readers treat a deleted copy exactly as a missing one wherever an item must be live:
+`resolveActuatorTargets` ([`server/modules/media/actuatorIdResolver.ts`](ref:path:server/modules/media/actuatorIdResolver.ts))
+never addresses it, so no task receives an id for media that has gone. `resolveGroup` reads only
+`media_identity`, so a title that returns reuses its retained group, and the upsert clears the mark on the
+same row.
+
+`automation_run_items(runId, mediaItemId)` links a run to every source copy it targeted. The composite
+primary key answers "what did this run touch", and the `mediaItemId` index answers "which runs touched this
+item" (`AutomationRunService.listRunItems` / `listItemRuns`,
+[`server/modules/automations/automationRunService.ts`](ref:path:server/modules/automations/automationRunService.ts)).
+There is no title or payload column: titles and years resolve at read time through `media_item` →
+`media_identity`. Both keys cascade, so deleting a run, a provider (and with it its copies) or the derived
+media data (`resetMediaData`) removes the links rather than blocking. In those cases the run row and its
+`itemCount` remain and its item list shrinks.
+
+The executor records **targeted** items, because `ActuatorTask.run(ids)` is batch-shaped and returns
+nothing per item; the run's status and error cover the whole batch, including a run whose task threw
+after its targets were known. A target is resolved to its copy by `ensureSourceCopies`
+([`server/modules/media/sourceCopies.ts`](ref:path:server/modules/media/sourceCopies.ts)), which creates
+the copy through `resolveGroup` when the hourly identity job has not seen the item yet, so every target is
+recorded. `createRun` writes the run row and its links in one `db.batch`, a single SQLite transaction on
+one connection; the link insert reads the new run's id inside that transaction. An interactive
+transaction is not used because `@libsql/client` opens a fresh connection for one, which loses a
+`:memory:` database. A user run's `itemCount` equals the number of items it recorded. System automations
+target no catalog items and keep their runner-reported count.
 
 ## Enrichment: two distinct paths through the group/item split
 
