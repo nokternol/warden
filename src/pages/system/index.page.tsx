@@ -23,10 +23,7 @@ export default function SystemPage() {
   const { reset } = useMediaReset();
 
   return (
-    <AppLayout
-      sidebar={<SidebarNav />}
-      topBar={<TopBar title="System" breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }]} />}
-    >
+    <AppLayout sidebar={<SidebarNav />} topBar={<TopBar title="System" />}>
       <div className="p-6 max-w-4xl">
         <section aria-labelledby="system-automations-heading">
           <div className="flex items-center justify-between gap-3 mb-1">

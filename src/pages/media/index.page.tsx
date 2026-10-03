@@ -775,7 +775,6 @@ export default function MediaPage() {
           <TopBar
             sticky
             title="Managed Media"
-            breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }]}
             actions={
               <>
                 <Tabs

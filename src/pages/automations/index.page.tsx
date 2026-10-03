@@ -54,7 +54,6 @@ export default function AutomationsPage() {
       topBar={
         <TopBar
           title="Automations"
-          breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }]}
           actions={
             <button
               type="button"

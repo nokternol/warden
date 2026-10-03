@@ -80,15 +80,7 @@ export default function SearchPage() {
   };
 
   return (
-    <AppLayout
-      sidebar={<SidebarNav />}
-      topBar={
-        <TopBar
-          title="Metadata Search"
-          breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Search' }]}
-        />
-      }
-    >
+    <AppLayout sidebar={<SidebarNav />} topBar={<TopBar title="Metadata Search" />}>
       <div className="p-6 space-y-6">
         <form onSubmit={handleSubmit} className="flex gap-3">
           <input

@@ -152,7 +152,6 @@ export const CompleteLayout: Story = () => (
     topBar={
       <TopBar
         title="Dashboard"
-        breadcrumbs={[{ label: 'Home', href: '/' }, { label: 'Dashboard' }]}
         actions={
           <button className="px-4 py-2 bg-primary hover:bg-primary-hover text-text-primary rounded-lg transition-colors">
             New automation

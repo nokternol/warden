@@ -65,10 +65,7 @@ export default function RunsPage() {
   const hasPrev = page > 0;
 
   return (
-    <AppLayout
-      sidebar={<SidebarNav />}
-      topBar={<TopBar title="Runs" breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }]} />}
-    >
+    <AppLayout sidebar={<SidebarNav />} topBar={<TopBar title="Runs" />}>
       <div className="p-6">
         <Card variant="outlined" padding="none">
           {isLoading ? (
