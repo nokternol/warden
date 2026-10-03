@@ -12,7 +12,7 @@ import {
   createMediaRoutes,
   createSearchRoutes,
 } from './media';
-import { createMediaQueryRoutes } from './mediaQueries';
+import { createMediaQueryProcedures } from './mediaQueries';
 import { createProvidersRoutes } from './providers';
 import { createSettingsRoutes } from './settings';
 import { createSystemProcedures } from './system';
@@ -23,7 +23,6 @@ export const routes = {
   backdrops: route('backdrops'),
   filterFields: route('filter-fields'),
   media: route('media'),
-  mediaQueries: route('media-queries'),
   providers: route('providers'),
   settings: route('settings'),
   auth: route('auth'),
@@ -53,6 +52,7 @@ export function createApiRouter(cradle: Cradle) {
   router.use(
     serveApi({
       automations: createAutomationProcedures(cradle),
+      mediaQueries: createMediaQueryProcedures(cradle),
       system: createSystemProcedures(cradle),
     })
   );
@@ -66,7 +66,6 @@ export function createApiRouter(cradle: Cradle) {
   router.use(routes.media, createMediaRoutes(cradle, mediaHandlers));
   router.use(routes.search, createSearchRoutes(cradle));
   router.use(routes.filterFields, createFilterFieldsRoutes(cradle));
-  router.use(routes.mediaQueries, createMediaQueryRoutes(cradle));
 
   return router;
 }

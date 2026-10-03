@@ -8,7 +8,7 @@ import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createAutomationProcedures } from '@server/modules/automations';
 import { AutomationService } from '@server/modules/automations/automationService';
-import { createMediaQueryRoutes } from '@server/modules/mediaQueries/mediaQueries.routes';
+import { createMediaQueryProcedures } from '@server/modules/mediaQueries';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
 import { createSettingsRoutes } from '@server/modules/settings/settings.routes';
@@ -73,7 +73,7 @@ describe('API shape contracts — real server responses', () => {
       req.user = { id: 1 } as unknown as NonNullable<typeof req.user>;
       next();
     });
-    app.use('/api/media-queries', createMediaQueryRoutes(container.cradle));
+    app.use(serveApi({ mediaQueries: createMediaQueryProcedures(container.cradle) }));
     app.use(serveApi({ automations: createAutomationProcedures(container.cradle) }));
     app.use('/api/settings', createSettingsRoutes(container.cradle));
     app.use(errorHandlerMiddleware);

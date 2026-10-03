@@ -194,3 +194,4 @@ export const AutomationRunSchema = z
 
 export type AutomationDto = z.infer<typeof AutomationSchema>;
 export type AutomationRunDto = z.infer<typeof AutomationRunSchema>;
+export type MediaQueryRecord = z.infer<typeof MediaQueryRecordSchema>;

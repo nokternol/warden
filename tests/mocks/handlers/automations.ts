@@ -1,6 +1,5 @@
 import { contract } from '@contract/index';
-import type { AutomationDto } from '@contract/schemas';
-import { http, HttpResponse } from 'msw';
+import type { AutomationDto, MediaQueryRecord } from '@contract/schemas';
 import { mockProcedure } from '../contract';
 
 export const MOCK_AUTOMATIONS: AutomationDto[] = [
@@ -70,7 +69,7 @@ export const automationsHandlers = [
 
 const MOCK_HEALTH = { status: 'healthy' as const, providerStatus: [], qualificationIssues: [] };
 
-export const MOCK_MEDIA_QUERIES = [
+export const MOCK_MEDIA_QUERIES: MediaQueryRecord[] = [
   {
     id: 1,
     name: 'Unwatched movies',
@@ -90,31 +89,27 @@ export const MOCK_MEDIA_QUERIES = [
 ];
 
 export const mediaQueriesHandlers = [
-  http.get('/api/media-queries', () => {
-    return HttpResponse.json({ status: 'ok', data: MOCK_MEDIA_QUERIES });
+  mockProcedure(contract.mediaQueries.list, () => MOCK_MEDIA_QUERIES),
+
+  mockProcedure(contract.mediaQueries.create, async ({ request }) => {
+    const body = (await request.json()) as Pick<
+      MediaQueryRecord,
+      'name' | 'contentType' | 'filterValues'
+    >;
+    return {
+      id: 99,
+      name: body.name,
+      contentType: body.contentType,
+      filterValues: body.filterValues ?? [],
+      health: MOCK_HEALTH,
+      createdAt: new Date().toISOString(),
+    };
   }),
 
-  http.post('/api/media-queries', async ({ request }) => {
-    const body = (await request.json()) as Record<string, unknown>;
-    return HttpResponse.json({
-      status: 'ok',
-      data: {
-        id: 99,
-        name: body.name,
-        contentType: body.contentType,
-        filterValues: body.filterValues ?? [],
-        health: MOCK_HEALTH,
-        createdAt: new Date().toISOString(),
-      },
-    });
-  }),
+  mockProcedure(contract.mediaQueries.delete, () => null),
 
-  http.delete('/api/media-queries/:id', () => {
-    return HttpResponse.json({ status: 'ok', data: null });
-  }),
-
-  http.get('/api/media-queries/:id/preview', ({ params }) => {
-    const id = Number(params.id);
-    return HttpResponse.json({ status: 'ok', data: { count: id === 1 ? 42 : 14 } });
+  mockProcedure(contract.mediaQueries.preview, ({ params }) => {
+    const count = Number(params.id) === 1 ? 42 : 14;
+    return { count, instances: [{ providerId: 1, name: 'Radarr Main', count }] };
   }),
 ];
