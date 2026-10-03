@@ -85,6 +85,19 @@ module.exports = {
       to: { path: '^(src|server)/' },
     },
     {
+      name: 'contract-imports-only-zod-and-orpc',
+      severity: 'error',
+      comment:
+        'The API contract is declarations only: the one package it may import besides ' +
+        'zod is @orpc/contract, so no runtime, framework or Node code reaches the client ' +
+        'through it.',
+      from: { path: '^contract/' },
+      to: {
+        dependencyTypes: ['npm', 'npm-dev', 'npm-peer', 'npm-optional', 'npm-no-pkg', 'npm-unknown', 'core'],
+        pathNot: 'node_modules/(zod|@orpc/contract)/',
+      },
+    },
+    {
       name: 'no-module-internal-reach-in',
       severity: 'error',
       comment:
@@ -118,7 +131,8 @@ module.exports = {
   options: {
     doNotFollow: { path: 'node_modules' },
     exclude: { path: '(^|/)__tests__/|\\.stories\\.tsx$' },
-    includeOnly: { path: '^(server|src|contract)/' },
+    // node_modules is included (but not followed) so package imports can be checked.
+    includeOnly: { path: '^(server|src|contract)/|node_modules/' },
     tsPreCompilationDeps: true,
     tsConfig: { fileName: require('path').join(__dirname, 'server/tsconfig.json') },
     enhancedResolveOptions: {

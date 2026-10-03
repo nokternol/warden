@@ -30,4 +30,16 @@ describe('client/server boundary', () => {
       ])
     );
   });
+
+  it('fails a contract import of any package other than zod and @orpc/contract', async () => {
+    const violations = await violationsIn(fixtureRoot);
+
+    expect(violations).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(
+          /^contract-imports-only-zod-and-orpc: contract\/importsExpress\.ts → .*express/
+        ),
+      ])
+    );
+  });
 });
