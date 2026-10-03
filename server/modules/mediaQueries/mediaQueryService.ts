@@ -10,7 +10,7 @@ import type { DrizzleDb } from '../../kernel/db';
 import { NotFoundError, ValidationError } from '../../kernel/errors';
 import { type FilterValue, type FilterValueEntry, getRule } from '../media';
 
-export type { ContentType, FilterValue, FilterValueEntry };
+export type { FilterValue, FilterValueEntry };
 
 export interface MediaQueryValue {
   name: string;
