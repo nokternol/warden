@@ -188,7 +188,10 @@ export class IdentityResolutionJob {
     return total;
   }
 
-  /** Upsert a `media_item` row for one instance's copy, keyed `(providerId, externalId)`. */
+  /**
+   * Upsert a `media_item` row for one instance's copy, keyed `(providerId, externalId)`.
+   * The instance lists the item, so any deleted mark from an earlier absence clears.
+   */
   private async upsertMediaItem(
     providerId: number,
     externalId: number,
@@ -200,7 +203,7 @@ export class IdentityResolutionJob {
       .values({ providerId, externalId, mediaIdentityId, resolvedAt })
       .onConflictDoUpdate({
         target: [mediaItems.providerId, mediaItems.externalId],
-        set: { mediaIdentityId, resolvedAt },
+        set: { mediaIdentityId, resolvedAt, deleted: false },
       });
   }
 

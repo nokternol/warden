@@ -269,6 +269,23 @@ describe('IdentityResolutionJob', () => {
     expect(groups.map((g) => g.title)).toEqual(['Heat']);
   });
 
+  it('clears the deleted mark when the source lists the item again', async () => {
+    const db = getDb();
+    const radarr = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 1, tmdbId: 100 })]) };
+    const job = new IdentityResolutionJob({
+      db,
+      movieSources: [{ providerId: radarrProviderId, provider: radarr }],
+    });
+    await job.runForMovies();
+    radarr.getMovies.mockResolvedValueOnce([]);
+    await job.runForMovies();
+
+    await job.runForMovies();
+
+    const items = await db.select().from(mediaItems);
+    expect(items.map((i) => [i.externalId, i.deleted])).toEqual([[1, false]]);
+  });
+
   it('marks a media_item row no longer reported by its instance deleted without touching other instances', async () => {
     const db = getDb();
     const radarrA = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 1, tmdbId: 100 })]) };
