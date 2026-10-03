@@ -259,6 +259,12 @@ export const media = {
     .route({ method: 'GET', path: '/api/media/sources' })
     .output(z.array(MediaSourceDescriptorSchema)),
 
+  /** TMDB's trending backdrop image URLs, shown behind the sign-in page. */
+  backdrops: base
+    .meta({ public: true })
+    .route({ method: 'GET', path: '/api/backdrops' })
+    .output(z.array(z.string())),
+
   /** Searches every active searchable provider for a title. */
   search: base
     .route({ method: 'GET', path: '/api/search/metadata' })

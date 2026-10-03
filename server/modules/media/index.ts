@@ -11,7 +11,7 @@
 // filterFields, backdrops, and search route-drawn modules; each keeps its own URL.
 export { createMediaProcedures } from './media.procedures';
 export { createRulesProcedures } from './media.rules.procedures';
-export { createBackdropsRoutes } from './media.backdrops.routes';
+export { createBackdropsProcedures } from './media.backdrops.procedures';
 export { createSearchProcedures } from './media.search.procedures';
 
 // Container contribution — the app builder composes Cradle from this slice

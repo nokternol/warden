@@ -6,7 +6,7 @@ import { createAppSettingsRoutes } from './appSettings';
 import { createAuthRoutes } from './auth';
 import { createAutomationProcedures } from './automations';
 import {
-  createBackdropsRoutes,
+  createBackdropsProcedures,
   createMediaProcedures,
   createRulesProcedures,
   createSearchProcedures,
@@ -19,7 +19,6 @@ import { createSystemProcedures } from './system';
 const route = (path: string) => `/${path}`;
 export const routes = {
   appSettings: route('app-settings'),
-  backdrops: route('backdrops'),
   auth: route('auth'),
 } as const;
 
@@ -51,6 +50,7 @@ export function createApiRouter(cradle: Cradle) {
         ...media.procedures,
         ...createRulesProcedures(cradle),
         ...createSearchProcedures(cradle),
+        ...createBackdropsProcedures(cradle),
       },
       mediaQueries: createMediaQueryProcedures(cradle),
       providers: {
@@ -63,7 +63,6 @@ export function createApiRouter(cradle: Cradle) {
 
   // Mount modules
   router.use(routes.appSettings, createAppSettingsRoutes(cradle));
-  router.use(routes.backdrops, createBackdropsRoutes(cradle));
   router.use(routes.auth, createAuthRoutes(cradle));
 
   return router;
