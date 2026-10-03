@@ -92,4 +92,14 @@ describe('migration 0026 — stored show content types become series', () => {
     expect(after.kind).toBe('series');
     expect(untouched.kind).toBe('movie');
   });
+
+  it('keeps one series identity per tvdbId once migrated', async () => {
+    const db = getDb();
+    await replayMigration(db);
+    await db.insert(mediaIdentity).values({ kind: 'series', tvdbId: 81189 });
+
+    await expect(
+      db.insert(mediaIdentity).values({ kind: 'series', tvdbId: 81189 })
+    ).rejects.toThrow();
+  });
 });

@@ -128,7 +128,7 @@ export type NewAppSettingsRow = typeof appSettings.$inferInsert;
 export const mediaQueries = sqliteTable('media_queries', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
-  contentType: text('contentType').notNull().default('movie'), // 'movie' | 'show'
+  contentType: text('contentType').notNull().default('movie'), // 'movie' | 'series'
   createdAt: createdAt('createdAt'),
 });
 
@@ -243,7 +243,7 @@ export const mediaIdentity = sqliteTable(
   'media_identity',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
-    /** MediaKind — 'movie' | 'show'. Scopes the primary-id namespace: a TMDB
+    /** ContentType — 'movie' | 'series'. Scopes the primary-id namespace: a TMDB
      *  movie id and a TMDB tv id with the same number are different titles. */
     kind: text('kind').notNull(),
     tmdbId: integer('tmdbId'),
@@ -265,9 +265,9 @@ export const mediaIdentity = sqliteTable(
     uniqueIndex('ux_media_identity_movie_tmdb')
       .on(table.tmdbId)
       .where(sql`kind = 'movie' AND tmdbId IS NOT NULL`),
-    uniqueIndex('ux_media_identity_show_tvdb')
+    uniqueIndex('ux_media_identity_series_tvdb')
       .on(table.tvdbId)
-      .where(sql`kind = 'show' AND tvdbId IS NOT NULL`),
+      .where(sql`kind = 'series' AND tvdbId IS NOT NULL`),
     index('idx_media_identity_tmdb').on(table.tmdbId),
     index('idx_media_identity_tvdb').on(table.tvdbId),
     index('idx_media_identity_imdb').on(table.imdbId),
