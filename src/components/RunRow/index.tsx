@@ -99,10 +99,22 @@ function TargetedItems({ runId }: { runId: number }) {
 
 function TargetedItem({ item }: { item: RunItemDto }) {
   return (
-    <li className="text-sm text-white truncate">
-      {item.title ?? 'Untitled'}
+    <li
+      className={cn(
+        'flex items-center gap-1.5 text-sm min-w-0',
+        item.deleted ? 'text-[var(--color-text-secondary)]' : 'text-white'
+      )}
+    >
+      <span className={cn('truncate', item.deleted && 'line-through decoration-white/30')}>
+        {item.title ?? 'Untitled'}
+      </span>
       {item.year !== null && (
-        <span className="ml-1.5 text-[var(--color-text-secondary)]">{item.year}</span>
+        <span className="text-[var(--color-text-secondary)]">{item.year}</span>
+      )}
+      {item.deleted && (
+        <Badge variant="default" size="sm" title="This item has since left its source">
+          removed
+        </Badge>
       )}
     </li>
   );

@@ -1,5 +1,5 @@
 import type { AutomationRunDto } from '@app/hooks/useAutomationRuns';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import RunRow from '../index';
@@ -34,5 +34,17 @@ describe('RunRow', () => {
 
     expect(await screen.findByText('Alien')).toBeInTheDocument();
     expect(screen.getByText('Ronin')).toBeInTheDocument();
+  });
+
+  it('marks a title that has since left its source as removed', async () => {
+    const user = userEvent.setup();
+    renderRow(run);
+
+    await user.click(screen.getByRole('button', { name: /show items/i }));
+
+    const heat = (await screen.findByText('Heat')).closest('li') as HTMLElement;
+    expect(within(heat).getByText(/removed/i)).toBeInTheDocument();
+    const alien = screen.getByText('Alien').closest('li') as HTMLElement;
+    expect(within(alien).queryByText(/removed/i)).not.toBeInTheDocument();
   });
 });

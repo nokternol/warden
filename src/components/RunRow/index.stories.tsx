@@ -1,5 +1,6 @@
 import type { AutomationRunDto } from '@app/hooks/useAutomationRuns';
 import type { Story } from '@ladle/react';
+import { useEffect, useRef } from 'react';
 import RunRow from './index';
 
 const succeeded: AutomationRunDto = {
@@ -32,6 +33,15 @@ function RunsTable({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Opens the row on mount so the story shows the expanded titles. */
+function Expanded({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    ref.current?.querySelector<HTMLButtonElement>('[aria-label="Show items"]')?.click();
+  }, []);
+  return <div ref={ref}>{children}</div>;
+}
+
 export const WithTargetedItems: Story = () => (
   <RunsTable>
     <RunRow run={succeeded} />
@@ -45,3 +55,12 @@ export const WithoutTargetedItems: Story = () => (
   </RunsTable>
 );
 WithoutTargetedItems.storyName = 'Run that targeted nothing';
+
+export const ExpandedWithRemovedItem: Story = () => (
+  <Expanded>
+    <RunsTable>
+      <RunRow run={succeeded} />
+    </RunsTable>
+  </Expanded>
+);
+ExpandedWithRemovedItem.storyName = 'Expanded (one title since removed)';
