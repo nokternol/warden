@@ -2,7 +2,7 @@ import type { ContentType } from '@contract/schemas';
 import { mediaItems } from '@server/database/schema';
 import type { DrizzleDb } from '@server/kernel/db';
 import { type SQL, and, eq, inArray, or } from 'drizzle-orm';
-import { type GroupIds, resolveGroup } from '../providers';
+import { type SourceCopy, recordSourceCopy } from '../providers';
 import { externalIdOf, rawItemKey } from './mediaItem';
 import type { MediaItem } from './mediaItem';
 
@@ -43,10 +43,10 @@ export function sourceCopyMatch(items: MediaItem[]): SQL | null {
 }
 
 /**
- * The `media_item` ids of catalog items' source copies, creating any copy the
- * identity job has not recorded yet (an item added to its source since the
- * last resolution) through the same find-or-create group resolution the job
- * uses. It writes `media_identity`/`media_item` rows.
+ * The `media_item` ids of catalog items' source copies. A copy the identity
+ * job has not recorded yet (an item added to its source since the last
+ * resolution) is recorded through the providers module, which owns the
+ * identity graph's writes.
  */
 export async function ensureSourceCopies(db: DrizzleDb, items: MediaItem[]): Promise<number[]> {
   const match = sourceCopyMatch(items);
@@ -68,12 +68,13 @@ export async function ensureSourceCopies(db: DrizzleDb, items: MediaItem[]): Pro
     const key = rawItemKey(coordinate.providerId, coordinate.externalId);
     if (recordedKeys.has(key)) continue;
     recordedKeys.add(key);
-    const mediaIdentityId = await resolveGroup(db, contentTypeOf(item), groupIdsOf(item));
-    const [created] = await db
-      .insert(mediaItems)
-      .values({ ...coordinate, mediaIdentityId })
-      .returning({ id: mediaItems.id });
-    ids.push(created.id);
+    ids.push(
+      await recordSourceCopy(db, {
+        kind: contentTypeOf(item),
+        ...coordinate,
+        ids: groupIdsOf(item),
+      })
+    );
   }
   return ids;
 }
@@ -88,7 +89,7 @@ function contentTypeOf(item: MediaItem): ContentType {
   return (item._sourceIds as SourceIds).radarr !== undefined ? 'movie' : 'series';
 }
 
-function groupIdsOf(item: MediaItem): GroupIds {
+function groupIdsOf(item: MediaItem): SourceCopy['ids'] {
   const ids = item._sourceIds as SourceIds;
   return {
     tmdbId: ids.tmdb,

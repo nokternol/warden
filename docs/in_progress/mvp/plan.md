@@ -571,8 +571,9 @@ names, so nothing is renamed twice.
   target items and actuator ids before the task runs, so failed runs record targets too; a user run's
   `itemCount` is its recorded targets. `AutomationRunService.createRun` writes the run row and its
   links in one `db.batch` (a single SQLite transaction; libsql's interactive transactions lose a
-  `:memory:` database). `ensureSourceCopies` (media module) finds or creates each target's
-  `media_item`, so items newer than the last identity run are still recorded. The soft-deleting
+  `:memory:` database). `ensureSourceCopies` (media module) finds each target's `media_item` and
+  hands any copy the identity job has not seen to `recordSourceCopy` (providers module, which owns the
+  identity graph's writes), so items newer than the last identity run are still recorded. The soft-deleting
   identity job, `listRunItems` (paged, by title) and `listItemRuns` (service-level, no consumer yet),
   the `runItems` contract procedure at `GET /api/automations/runs/{runId}/items`, and the Runs page's
   expandable `RunRow`.

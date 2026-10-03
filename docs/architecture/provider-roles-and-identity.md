@@ -129,9 +129,12 @@ media data (`resetMediaData`) removes the links rather than blocking. In those c
 The executor records **targeted** items, because `ActuatorTask.run(ids)` is batch-shaped and returns
 nothing per item; the run's status and error cover the whole batch, including a run whose task threw
 after its targets were known. A target is resolved to its copy by `ensureSourceCopies`
-([`server/modules/media/sourceCopies.ts`](ref:path:server/modules/media/sourceCopies.ts)), which creates
-the copy through `resolveGroup` when the hourly identity job has not seen the item yet, so every target is
-recorded. `createRun` writes the run row and its links in one `db.batch`, a single SQLite transaction on
+([`server/modules/media/sourceCopies.ts`](ref:path:server/modules/media/sourceCopies.ts)). When the
+hourly identity job has not seen the item yet, it hands the copy to `recordSourceCopy`
+([`server/modules/providers/sourceCopy.ts`](ref:path:server/modules/providers/sourceCopy.ts)), which
+places it through `resolveGroup` exactly as the job would, so every target is recorded. The providers
+module owns every write to `media_identity`/`media_item`; media only translates a catalog item into the
+copy's coordinate and group ids. `createRun` writes the run row and its links in one `db.batch`, a single SQLite transaction on
 one connection; the link insert reads the new run's id inside that transaction. An interactive
 transaction is not used because `@libsql/client` opens a fresh connection for one, which loses a
 `:memory:` database. A user run's `itemCount` equals the number of items it recorded. System automations
