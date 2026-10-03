@@ -153,7 +153,7 @@ export class IdentityResolutionJob {
           }
         }
       }
-      await this.pruneStaleItems(providerId, fetchedExternalIds);
+      await this.markItemsLeftSource(providerId, fetchedExternalIds);
       total += series.length;
     }
 
@@ -180,7 +180,7 @@ export class IdentityResolutionJob {
         await this.upsertMediaItem(providerId, movie.id, identityId, now);
         fetchedExternalIds.push(movie.id);
       }
-      await this.pruneStaleItems(providerId, fetchedExternalIds);
+      await this.markItemsLeftSource(providerId, fetchedExternalIds);
       total += movies.length;
     }
 
@@ -204,10 +204,17 @@ export class IdentityResolutionJob {
       });
   }
 
-  /** Delete this instance's `media_item` rows whose externalId is no longer in its fetched set. */
-  private async pruneStaleItems(providerId: number, fetchedExternalIds: number[]): Promise<void> {
+  /**
+   * Soft-deletes this instance's `media_item` rows whose externalId is no longer
+   * in its fetched set. The row stays so run history still resolves its title.
+   */
+  private async markItemsLeftSource(
+    providerId: number,
+    fetchedExternalIds: number[]
+  ): Promise<void> {
     await this.deps.db
-      .delete(mediaItems)
+      .update(mediaItems)
+      .set({ deleted: true })
       .where(
         fetchedExternalIds.length > 0
           ? and(
@@ -218,7 +225,11 @@ export class IdentityResolutionJob {
       );
   }
 
-  /** Delete groups left with zero `media_item` rows — enrichment cascades. */
+  /**
+   * Delete groups left with zero `media_item` rows — enrichment cascades. A
+   * deleted copy still holds its group, so a removed title keeps its name in
+   * run history; a group empties only when its copies' provider is deleted.
+   */
   private async sweepOrphanGroups(): Promise<void> {
     const remaining = await this.deps.db
       .selectDistinct({ id: mediaItems.mediaIdentityId })
