@@ -40,6 +40,22 @@ export const AutomationRowIdle: Story = () => (
   </div>
 );
 
+AutomationRowIdle.storyName = 'Active (row offers Disable)';
+
+const disabledAutomation: AutomationDto = { ...automation, status: 'disabled' };
+
+export const AutomationRowDisabled: Story = () => (
+  <div className="p-6 max-w-3xl border border-border rounded-lg overflow-hidden bg-surface-panel">
+    <AutomationRow
+      automation={disabledAutomation}
+      onToggle={noop}
+      onDelete={noop}
+      onRun={resolves}
+    />
+  </div>
+);
+AutomationRowDisabled.storyName = 'Disabled (row offers Enable)';
+
 export const AutomationRowRunTriggering: Story = () => (
   <div className="p-6 max-w-3xl border border-border rounded-lg overflow-hidden bg-surface-panel">
     <Triggered>

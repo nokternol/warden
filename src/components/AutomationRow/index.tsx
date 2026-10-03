@@ -3,7 +3,7 @@ import StatusDot from '@app/components/StatusDot';
 import type { AutomationDto } from '@app/hooks/useAutomations';
 import { cn } from '@app/lib/utils/cn';
 import { relativeTime, safeHumanSchedule } from '@app/lib/utils/time';
-import { Pause, Play, Trash2, Zap } from 'lucide-react';
+import { Power, PowerOff, Trash2, Zap } from 'lucide-react';
 import { useState } from 'react';
 
 const RUN_FEEDBACK_DISMISS_MS = 2000;
@@ -162,13 +162,13 @@ export default function AutomationRow({
                 <button
                   type="button"
                   onClick={onToggle}
-                  title={automation.status === 'active' ? 'Pause' : 'Resume'}
+                  title={automation.status === 'active' ? 'Disable' : 'Enable'}
                   className="w-6 h-6 flex items-center justify-center rounded text-text-muted hover:text-text-primary hover:bg-surface-elevated transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
                 >
                   {automation.status === 'active' ? (
-                    <Pause size={12} strokeWidth={2} aria-hidden="true" />
+                    <PowerOff size={12} strokeWidth={2} aria-hidden="true" />
                   ) : (
-                    <Play size={12} strokeWidth={2} aria-hidden="true" />
+                    <Power size={12} strokeWidth={2} aria-hidden="true" />
                   )}
                 </button>
                 <button

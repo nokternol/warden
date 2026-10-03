@@ -37,12 +37,39 @@ describe('AutomationRow', () => {
     expect(screen.getByText('Archive old movies')).toBeInTheDocument();
   });
 
-  it('calls onToggle when the pause/resume button is clicked', async () => {
+  it('offers Disable on an active automation and calls onToggle when clicked', async () => {
     const user = userEvent.setup();
     const onToggle = vi.fn();
     render(<AutomationRow automation={mockAutomation} onToggle={onToggle} onDelete={vi.fn()} />);
-    await user.click(screen.getByTitle('Pause'));
+    await user.click(screen.getByTitle('Disable'));
     expect(onToggle).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTitle('Enable')).not.toBeInTheDocument();
+  });
+
+  it('offers Enable on a disabled automation and calls onToggle when clicked', async () => {
+    const user = userEvent.setup();
+    const onToggle = vi.fn();
+    const disabled: AutomationDto = { ...mockAutomation, status: 'disabled' };
+    render(<AutomationRow automation={disabled} onToggle={onToggle} onDelete={vi.fn()} />);
+    await user.click(screen.getByTitle('Enable'));
+    expect(onToggle).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTitle('Disable')).not.toBeInTheDocument();
+  });
+
+  it('shows no Play, Pause or Resume control in either state', () => {
+    for (const status of ['active', 'disabled'] as const) {
+      const { unmount } = render(
+        <AutomationRow
+          automation={{ ...mockAutomation, status }}
+          onToggle={vi.fn()}
+          onDelete={vi.fn()}
+        />
+      );
+      for (const title of ['Play', 'Pause', 'Resume']) {
+        expect(screen.queryByTitle(title)).not.toBeInTheDocument();
+      }
+      unmount();
+    }
   });
 
   it('calls onRun when the run-now button is clicked', async () => {
@@ -102,7 +129,7 @@ describe('AutomationRow', () => {
       />
     );
     expect(screen.getByTitle('Run now')).toBeInTheDocument();
-    expect(screen.queryByTitle('Pause')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Disable')).not.toBeInTheDocument();
     expect(screen.queryByTitle('Delete automation')).not.toBeInTheDocument();
   });
 
