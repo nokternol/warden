@@ -17,7 +17,7 @@ Radarr is a `MediaSource` (movie) + `MediaActuator` — its own fields normalize
 
 | Bug | Fix |
 |---|---|
-| `monitored` filter rule is show-only (`contentTypes: ['show']`), so it never matches movies even though `NormalizedMovie.monitored` is already populated from Radarr. | Extend the rule's `contentTypes`/`sourceProviders` to include movies. |
+| `monitored` filter rule is series-only (`contentTypes: ['series']`), so it never matches movies even though `NormalizedMovie.monitored` is already populated from Radarr. | Extend the rule's `contentTypes`/`sourceProviders` to include movies. |
 | `addedDaysAgo`'s `sourceProviders` lists `PLEX` alongside `RADARR`/`SONARR`, but nothing populates `NormalizedMovie.addedDate` from Plex — stale listing. | Remove `PLEX` from `addedDaysAgo`'s `sourceProviders`. Radarr's `added` (addedAt-to-source) and Plex's `plexAddedAt` (addedAt-to-library/import) are permanently distinct concepts, not one field with competing producers — they must never be merged under one precedence rule, in this ticket or the final precedence ticket. |
 
 ## Fields to wire
@@ -39,7 +39,7 @@ collision below). Flow: `radarrProvider.ts` (`RadarrMovie`) → `normalizeMedia.
 | `collectionName` / `collectionTmdbId` | `collection.{name,tmdbId}` | Flattened scalar pair (not a relational join) — fits the existing `media_enrichment` EAV shape with no schema change. Supports "filter by collection name," not an efficient "list all movies in collection X" query. |
 | `runtime` | `runtime` | Minutes — "runtime under 90 min" filter. |
 | `isAvailable` | `isAvailable` | Computed availability flag. |
-| `radarrStatus` | `status` (`tba`/`announced`/`inCinemas`/`released`/`deleted`) | **Radarr-prefixed to avoid collision** with `NormalizedShow.status` (series continuing/ended — different enum, different meaning). Flag for precedence ticket. |
+| `radarrStatus` | `status` (`tba`/`announced`/`inCinemas`/`released`/`deleted`) | **Radarr-prefixed to avoid collision** with `NormalizedSeries.status` (series continuing/ended — different enum, different meaning). Flag for precedence ticket. |
 | `minimumAvailability` / `rootFolderPath` | `minimumAvailability`, `rootFolderPath` | Config-surface — expose as read-only detail, not a filter widget. |
 | `website` / `youTubeTrailerId` | `website`, `youTubeTrailerId` | External links, display only. |
 
@@ -87,7 +87,7 @@ fit the per-item `ActuatorTask.run(ids)` shape) — flagged as future work needi
   `plexAddedAt` (addedAt-to-library/import). Already separate filter rules (`addedDaysAgo` vs
   `plexAddedDaysAgo`) — this spec's bug fix (removing the stale Plex listing from `addedDaysAgo`)
   reinforces that separation; the precedence ticket should treat this as settled, not open.
-- **`radarrStatus`** vs `NormalizedShow.status` — different enums (movie release lifecycle vs series
+- **`radarrStatus`** vs `NormalizedSeries.status` — different enums (movie release lifecycle vs series
   continuing/ended), disambiguated by the `radarr`-prefix.
 - **`certification`** — shared verbatim across Radarr/Sonarr/TMDB/OMDB; different providers may format
   strings differently (`"PG-13"` vs country-prefixed). Value-format risk, not a name collision — flag

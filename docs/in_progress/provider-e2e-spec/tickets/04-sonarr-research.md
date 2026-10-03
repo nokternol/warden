@@ -38,13 +38,13 @@ enumeration, not curation.
 
 ## Resolution
 
-- Sonarr is wired as both a `MediaSource` (series → `NormalizedShow`, most core fields flow through
+- Sonarr is wired as both a `MediaSource` (series → `NormalizedSeries`, most core fields flow through
   `normalizeSonarrSeries`) and a `MediaActuator` (6 tasks), but has no dedicated `MediaEnricher` —
   its only `EnrichmentFields` contribution is `tags`.
 - Sonarr has the **same `modelledRun` gap as Radarr**: `deleteSeriesKeepFiles` is declared but
   rejects on invocation, mirroring `deleteMovieKeepFiles`. Not Sonarr-specific — a shared gap class.
 - Found a likely **latent bug**: the `hasFile` filter rule lists Sonarr as a `sourceProviders`
-  entry, but `SonarrSeries`/`NormalizedShow` has no `hasFile` field at all, so the filter silently
+  entry, but `SonarrSeries`/`NormalizedSeries` has no `hasFile` field at all, so the filter silently
   never matches a show. Flagged, not fixed (out of scope for a research ticket).
 - Sonarr's v3 API exposes several command families with no representation at all in this codebase's
   task model: episode/season-level search & rename (needs sub-item addressing this codebase's

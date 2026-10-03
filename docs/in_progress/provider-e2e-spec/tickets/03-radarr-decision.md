@@ -36,7 +36,7 @@ resolve, don't resolve it here.
   concepts, never to be merged under one precedence rule.
 - **Broad field wiring accepted**: all already-typed-but-unread rating/statistics/path fields, plus
   overview, release-date milestones, title variants, studio, runtime, isAvailable, `radarrStatus`
-  (prefixed to avoid the `NormalizedShow.status` collision), and config-surface fields
+  (prefixed to avoid the `NormalizedSeries.status` collision), and config-surface fields
   (minimumAvailability/rootFolderPath/website/trailer).
 - **`collection` flattens to a scalar pair** (`collectionName`/`collectionTmdbId`) rather than
   relational modeling — fits the existing `media_enrichment` EAV shape with no schema change.
@@ -47,7 +47,7 @@ resolve, don't resolve it here.
 - **Queue/history endpoints raised as structural blockers**, deferred: 1:N per movie, doesn't fit the
   `media_enrichment` EAV shape, would need its own table.
 - **Naming collisions flagged for the precedence ticket**: `radarrStatus` vs
-  `NormalizedShow.status`, `certification` value-format risk across four providers. The
+  `NormalizedSeries.status`, `certification` value-format risk across four providers. The
   `added`/`plexAddedAt` split is treated as settled, not open, per the user's explicit direction.
 
 ## Addendum (full ratings pass)

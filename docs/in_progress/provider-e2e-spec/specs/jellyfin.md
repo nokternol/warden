@@ -18,7 +18,7 @@ alternate media server, not a proxy of anything already wired) is valuable, not 
 ## Prerequisite: identity join key
 
 **Nothing below can work without this first.** `mediaIdentity.jellyfinItemId` exists as a column, but
-the runtime `_sourceIds` type (`movie.ts`, `show.ts`, `normalizeMedia.ts`) has no `jellyfin` key, so no
+the runtime `_sourceIds` type (`movie.ts`, `series.ts`, `normalizeMedia.ts`) has no `jellyfin` key, so no
 `MediaFieldProvider` can key a Jellyfin-sourced field map by it today. Adding `_sourceIds.jellyfin` is
 schema-shaped (new optional field on an existing interface, same non-structural class as adding
 `_sourceIds.tvmaze` for Sonarr last session) — not a new table/column, but every field below is

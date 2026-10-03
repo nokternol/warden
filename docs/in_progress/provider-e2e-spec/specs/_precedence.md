@@ -39,7 +39,7 @@ a parameter) consumes it.
 | `genres` (shows) | Sonarr > TMDB > TVMaze > Plex > Jellyfin | |
 | `studio` | Radarr/Sonarr > TMDB > Plex > Jellyfin | OMDB has no studio field. |
 | `certification` | TMDB > Radarr/Sonarr > OMDB > Plex > Jellyfin | **Overrides the general default.** TMDB is the only region-aware producer (via the `region` setting) — richness, not source type, decides this one. Value-format risk (exact case-insensitive string match across differently-formatted sources) is accepted as residual: TMDB winning whenever present means the risk rarely surfaces. No normalization pass added. |
-| `runtimeMinutes` (unified across `contentTypes: ['movie','show']`) | Movies: Radarr > OMDB > Plex > Jellyfin. Shows: TVMaze > Plex > Jellyfin. | No TMDB producer, no Sonarr producer. Each content type resolves independently within one rule (a given item is only ever one content type, so the two producer sets never actually contest each other). |
+| `runtimeMinutes` (unified across `contentTypes: ['movie','series']`) | Movies: Radarr > OMDB > Plex > Jellyfin. Shows: TVMaze > Plex > Jellyfin. | No TMDB producer, no Sonarr producer. Each content type resolves independently within one rule (a given item is only ever one content type, so the two producer sets never actually contest each other). |
 | File-tech fields (`fileContainer`/`videoCodec`/`audioCodec`/`fileResolution`/`fileSizeBytes`/`fileBitrate`) | Plex/Jellyfin (primaryMediaServer-ordered) > Tautulli | Tautulli proxies Plex, always last. |
 | `playCount` / `lastWatchedAt` | Tautulli > Plex/Jellyfin (primaryMediaServer-ordered) | Tautulli wins outright (tracks completed plays, not "opens") — already settled before this ticket; Jellyfin's rank (behind Tautulli, ordered against Plex by `primaryMediaServer`) is the new part. |
 | `network` | Sonarr > TVMaze | Arr-stack default holds. `webChannel` (TVMaze-only, no Sonarr equivalent) stays a fully separate, uncontested field — no precedence entry. |
@@ -48,7 +48,7 @@ a parameter) consumes it.
 
 ## Naming disambiguation (not a precedence merge — distinct concepts, distinct names)
 
-- **`seriesStatus`** — renamed from bare `status` (`NormalizedShow.status`, series continuing/ended).
+- **`seriesStatus`** — renamed from bare `status` (`NormalizedSeries.status`, series continuing/ended).
   The only unprefixed "status" field; now sits alongside `overseerrRequestStatus`,
   `overseerrIssueStatus`, `radarrStatus`, and `tmdbStatus` — none of which it merges with, each a
   distinct concept. TVMaze's status also maps onto this field's vocabulary (`Ended`→`ended`,

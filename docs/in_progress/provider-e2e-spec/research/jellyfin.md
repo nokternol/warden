@@ -32,10 +32,10 @@ Jellyfin is wired only as:
   `enricherAdapters.ts` is Jellyfin-sourced. Zero hits for "jellyfin" in all three files.
 - Jellyfin is **not** a `MediaSource` (`roles.ts:91-93` — only Radarr/Sonarr own catalogs), **not**
   in `ProviderFactory.ProviderSet` (`providerFactory.ts:34-39` — only plex/tautulli/overseerr/tmdb
-  get named slots), and **not** in any item's `_sourceIds` (`movie.ts`, `show.ts`,
+  get named slots), and **not** in any item's `_sourceIds` (`movie.ts`, `series.ts`,
   `normalizeMedia.ts`) — so even though `JellyfinProvider.getAllItems()` fetches full library
   items, nothing downstream can join a Jellyfin-native field back onto a `NormalizedMovie`/
-  `NormalizedShow` today; there's no `sourceIds.jellyfin` key to key a `MediaFieldProvider` map by.
+  `NormalizedSeries` today; there's no `sourceIds.jellyfin` key to key a `MediaFieldProvider` map by.
 
 ## Fields — `BaseItemDto` (library item metadata)
 
@@ -46,7 +46,7 @@ entry), enrichment (decorate/join), task/actuator, automation option.
 
 | Field | Wired? | Notes / layers touched if not |
 |---|---|---|
-| `Id` | wired (identity bridge only) | Used only to stamp `jellyfinItemId`. Not exposed as a joinable `_sourceIds.jellyfin` key for enrichment — **structural gap**: adding one is cheap (already have the column) but the join-key plumbing (`_sourceIds` type + `movie.ts`/`show.ts` population) doesn't exist. |
+| `Id` | wired (identity bridge only) | Used only to stamp `jellyfinItemId`. Not exposed as a joinable `_sourceIds.jellyfin` key for enrichment — **structural gap**: adding one is cheap (already have the column) but the join-key plumbing (`_sourceIds` type + `movie.ts`/`series.ts` population) doesn't exist. |
 | `ProviderIds` (Tmdb/Tvdb/Imdb) | wired | Consumed in `identityResolutionJob.ts` for identity resolution only. |
 | `Name` | not wired | provider field, query engine (would duplicate `title` rule, which already lists Plex — naming-collision-adjacent, see below) |
 | `Type` (Movie/Series) | wired (partially) | Used only to filter `JELLYFIN_KIND` mapping in identity job; not exposed as a normalized-item field. |
@@ -147,7 +147,7 @@ Not wired beyond reading a single configured `userId` out of `provider.settings.
 ## Structural schema-change gaps flagged (new column/table, not a settings-blob tweak)
 
 1. **No `_sourceIds.jellyfin` join key** — `mediaIdentity.jellyfinItemId` exists as a column, but
-   the runtime `_sourceIds` type (`movie.ts`, `show.ts`, `normalizeMedia.ts`) has no `jellyfin` key,
+   the runtime `_sourceIds` type (`movie.ts`, `series.ts`, `normalizeMedia.ts`) has no `jellyfin` key,
    so no `MediaFieldProvider` can key a Jellyfin-sourced field map by it today. This blocks *every*
    not-wired `BaseItemDto`/`UserItemDataDto` field above, not just one.
 2. **Cast/crew (`People`)** — no relational shape exists for it anywhere in the schema; a one-item-

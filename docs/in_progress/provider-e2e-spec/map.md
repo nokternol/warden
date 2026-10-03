@@ -95,7 +95,7 @@ against it is a separate, later effort (`/tdd` or `/plan-and-go`).
   parallel wiring; `SEERR` is the go-forward type but doesn't replace `OVERSEERR` in the enum; live
   compatibility verification deferred to the user's eventual upgrade.
 - [TVMaze — research](tickets/10-tvmaze-research.md) — confirmed a buildable headline gap (`network`
-  already in `filterRegistry.ts`/`NormalizedShow`) but no enricher exists yet to populate it.
+  already in `filterRegistry.ts`/`NormalizedSeries`) but no enricher exists yet to populate it.
 - [TVMaze — decision](tickets/10-tvmaze-decision.md) — corrected the "keyless" premise (TVMaze needs a
   real API key, currently lost); `network`/`webChannel` merged; ratings deferred pending the new
   `media-ratings-provider` intent doc, which consolidates every provider's ratings fields.
@@ -170,7 +170,7 @@ against it is a separate, later effort (`/tdd` or `/plan-and-go`).
   `network`: Sonarr still leads over TVMaze). New `primaryMediaServer` setting (default Plex) joins
   `region` in the system-wide settings table to break every Plex-vs-Jellyfin tie. `releaseDate`
   merges Plex/Jellyfin as one field, stays separate from Radarr's milestone dates. `status`
-  (`NormalizedShow`) renamed `seriesStatus` to finish disambiguating the four-way "status" overload
+  (`NormalizedSeries`) renamed `seriesStatus` to finish disambiguating the four-way "status" overload
   alongside `overseerrRequestStatus`/`overseerrIssueStatus`/`radarrStatus`/`tmdbStatus`. Written as
   `specs/_precedence.md` — last ticket on the map, destination reached.
 

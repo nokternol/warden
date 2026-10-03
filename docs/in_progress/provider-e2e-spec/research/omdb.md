@@ -26,7 +26,7 @@ Official docs: https://www.omdbapi.com/ (fetched 2026-07-19).
 alternative primary lookup key and is the documented reliable path when an IMDb ID is already
 known.
 
-**Relevant existing data:** `NormalizedMovie`/`NormalizedShow`'s `_sourceIds` already carries an
+**Relevant existing data:** `NormalizedMovie`/`NormalizedSeries`'s `_sourceIds` already carries an
 `imdb` id (`server/modules/media/normalizeMedia.ts:14`, sourced from Radarr's `imdbId` field) even
 though `OmdbProvider` doesn't currently consume it. If OMDB were to become a real enricher, ID-based
 lookup (`i=<_sourceIds.imdb>`) is available today without any new schema — Radarr already surfaces
@@ -96,8 +96,8 @@ For each item: what layer it would touch if ever wired.
   (parallel to or replacing the current `t=` title-search) to become ID-reliable. Also unparsed
   fields available for the taking with no new API call: `Rated`, `Writer`, `Country`, `Genre`,
   `Runtime`, `Plot`, `Poster`, raw `Awards` text (currently discarded after regex).
-- **Structural schema change**: `NormalizedMovie`/`NormalizedShow` (`server/modules/media/movie.ts`,
-  `show.ts`) has no column for Rotten Tomatoes %, Metacritic score, box office, director, actors,
+- **Structural schema change**: `NormalizedMovie`/`NormalizedSeries` (`server/modules/media/movie.ts`,
+  `series.ts`) has no column for Rotten Tomatoes %, Metacritic score, box office, director, actors,
   writer, or award flags — all would be *new fields*, not reuse of an existing `settings` JSON
   blob slot. Per the EAV persistence shape adopted in `media_enrichment` (per commit 855d514), these
   would likely land as new EAV field keys rather than wide-table columns, but that's a decision for
@@ -162,7 +162,7 @@ lookups:
 
 - Every OMDB field beyond `imdbRating`/`imdbVotes`/`imdbId` (i.e. RT%, Metacritic, box office,
   director, actors, writer, country, genre, runtime, plot, poster, raw awards text, MPAA rating)
-  has no existing column/EAV-key on `NormalizedMovie`/`NormalizedShow` or the `media_enrichment`
+  has no existing column/EAV-key on `NormalizedMovie`/`NormalizedSeries` or the `media_enrichment`
   EAV store — any of these being wired for real is a structural addition, not a config change.
 
 ## Summary counts
