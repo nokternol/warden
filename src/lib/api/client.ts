@@ -1,5 +1,5 @@
 import { contract } from '@contract/index';
-import { createORPCClient } from '@orpc/client';
+import { ORPCError, createORPCClient } from '@orpc/client';
 import { type ContractRouterClient, isContractProcedure } from '@orpc/contract';
 import { OpenAPILink } from '@orpc/openapi-client/fetch';
 import type { StandardLazyResponse } from '@orpc/standard-server';
@@ -17,9 +17,16 @@ const unwrapSuccessEnvelope = async ({ next }: { next: () => Promise<StandardLaz
   };
 };
 
+/** Every failed answer is `{status:'error', error:{type, message}}`; callers receive it as an ORPCError. */
+function errorFromEnvelope(body: unknown, response: StandardLazyResponse) {
+  const { error } = body as { error: { type: string; message: string } };
+  return new ORPCError(error.type, { status: response.status, message: error.message });
+}
+
 const link = new OpenAPILink(contract, {
   url: () => window.location.origin,
   clientInterceptors: [unwrapSuccessEnvelope],
+  customErrorResponseBodyDecoder: errorFromEnvelope,
 });
 
 /**
