@@ -18,9 +18,15 @@ function formatDate(dateStr: string): string {
   }
 }
 
+export interface RunRowProps {
+  run: AutomationRunDto;
+  /** Whether the row starts with its targeted titles shown; the toggle still works. */
+  defaultExpanded?: boolean;
+}
+
 /** One run in the Runs table; expands to the titles the run targeted. */
-export default function RunRow({ run }: { run: AutomationRunDto }) {
-  const [open, setOpen] = useState(false);
+export default function RunRow({ run, defaultExpanded = false }: RunRowProps) {
+  const [open, setOpen] = useState(defaultExpanded);
   const targetedAny = (run.itemCount ?? 0) > 0;
 
   return (

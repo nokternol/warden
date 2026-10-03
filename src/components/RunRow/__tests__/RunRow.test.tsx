@@ -14,11 +14,11 @@ const run: AutomationRunDto = {
   createdAt: '2026-06-04T02:00:00.000Z',
 };
 
-function renderRow(row: AutomationRunDto) {
+function renderRow(row: AutomationRunDto, props: { defaultExpanded?: boolean } = {}) {
   return render(
     <table>
       <tbody>
-        <RunRow run={row} />
+        <RunRow run={row} {...props} />
       </tbody>
     </table>
   );
@@ -45,6 +45,13 @@ describe('RunRow', () => {
     expect(within(heat).getByText(/removed/i)).toBeInTheDocument();
     const alien = screen.getByText('Alien').closest('li') as HTMLElement;
     expect(within(alien).queryByText(/removed/i)).not.toBeInTheDocument();
+  });
+
+  it('can start expanded', async () => {
+    renderRow(run, { defaultExpanded: true });
+
+    expect(screen.queryByRole('button', { name: /hide items/i })).toBeInTheDocument();
+    expect(await screen.findByText('Alien')).toBeInTheDocument();
   });
 
   it('offers no expansion for a run that targeted nothing', () => {
