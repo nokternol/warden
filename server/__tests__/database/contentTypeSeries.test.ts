@@ -71,4 +71,25 @@ describe('migration 0026 — stored show content types become series', () => {
     expect(after.contentType).toBe('series');
     expect(untouched.contentType).toBe('movie');
   });
+
+  it('reads a stored show identity back as series and leaves movie identities alone', async () => {
+    const db = getDb();
+    const [legacy] = await db
+      .insert(mediaIdentity)
+      .values({ kind: 'series', tvdbId: 81189 })
+      .returning();
+    // `show` is outside ContentType, so the legacy row is written in raw SQL.
+    await db.run(sql`UPDATE media_identity SET kind = 'show' WHERE id = ${legacy.id}`);
+    const [movie] = await db
+      .insert(mediaIdentity)
+      .values({ kind: 'movie', tmdbId: 603 })
+      .returning();
+
+    await replayMigration(db);
+
+    const [after] = await db.select().from(mediaIdentity).where(eq(mediaIdentity.id, legacy.id));
+    const [untouched] = await db.select().from(mediaIdentity).where(eq(mediaIdentity.id, movie.id));
+    expect(after.kind).toBe('series');
+    expect(untouched.kind).toBe('movie');
+  });
 });
