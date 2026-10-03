@@ -9,8 +9,12 @@ import { MetadataProviderType } from '@server/database/schema';
  */
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
-import { AutomationRunService } from '@server/modules/automations/automationRunService';
+import {
+  AutomationRunService,
+  type RunTargets,
+} from '@server/modules/automations/automationRunService';
 import { AutomationService } from '@server/modules/automations/automationService';
+import type { NormalizedMovie } from '@server/modules/media';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -59,7 +63,17 @@ async function seedFixtures() {
     schedule: '0 2 * * *',
   });
 
-  return { automation };
+  return { automation, provider };
+}
+
+/** A Radarr catalog item as the executor targets it. */
+function catalogMovie(providerId: number, radarrId: number, title: string): NormalizedMovie {
+  return { _sourceIds: { radarr: radarrId, providerId, tmdb: radarrId * 100 }, title };
+}
+
+/** A movie query's run targets. */
+function movies(...items: NormalizedMovie[]): RunTargets {
+  return { contentType: 'movie', items };
 }
 
 // ---------------------------------------------------------------------------
@@ -122,6 +136,23 @@ describe('AutomationRunService', () => {
       });
 
       expect(dto.itemCount).toBeNull();
+    });
+
+    it('records a source copy targeted twice once', async () => {
+      const { automation, provider } = await seedFixtures();
+      const heat = catalogMovie(provider.id, 1, 'Heat');
+
+      await expect(
+        service.createRun({
+          automationId: automation.id,
+          status: 'success',
+          targets: movies(heat, heat),
+        })
+      ).resolves.toMatchObject({ status: 'success' });
+
+      const [run] = await service.listRuns({ automationId: automation.id });
+      const items = await service.listRunItems(run.id);
+      expect(items.data.map((i) => i.title)).toEqual(['Heat']);
     });
   });
 
@@ -202,6 +233,58 @@ describe('AutomationRunService', () => {
 
       expect(page1).toHaveLength(2);
       expect(page2).toHaveLength(1);
+    });
+  });
+
+  // ─── listItemRuns ─────────────────────────────────────────────────────────
+
+  describe('listItemRuns', () => {
+    it('lists the runs that targeted an item, newest first', async () => {
+      const { automation, provider } = await seedFixtures();
+      const heat = catalogMovie(provider.id, 1, 'Heat');
+      const ronin = catalogMovie(provider.id, 2, 'Ronin');
+
+      const first = await service.createRun({
+        automationId: automation.id,
+        status: 'success',
+        targets: movies(heat),
+      });
+      await service.createRun({
+        automationId: automation.id,
+        status: 'success',
+        targets: movies(ronin),
+      });
+      const third = await service.createRun({
+        automationId: automation.id,
+        status: 'error',
+        targets: movies(heat, ronin),
+      });
+      const [heatCopy] = (await service.listRunItems(first.id)).data;
+
+      const runs = await service.listItemRuns(heatCopy.mediaItemId);
+
+      expect(runs.map((r) => r.id)).toEqual([third.id, first.id]);
+    });
+  });
+
+  // ─── listRunItems ─────────────────────────────────────────────────────────
+
+  describe('listRunItems', () => {
+    it("pages a run's items by title, with the total across all pages", async () => {
+      const { automation, provider } = await seedFixtures();
+      const titles = ['Heat', 'Alien', 'Ronin', 'Brazil', 'Collateral'];
+      const run = await service.createRun({
+        automationId: automation.id,
+        status: 'success',
+        targets: movies(...titles.map((title, i) => catalogMovie(provider.id, i + 1, title))),
+      });
+
+      const page1 = await service.listRunItems(run.id, { limit: 2, offset: 0 });
+      const page2 = await service.listRunItems(run.id, { limit: 2, offset: 2 });
+
+      expect(page1.data.map((i) => i.title)).toEqual(['Alien', 'Brazil']);
+      expect(page2.data.map((i) => i.title)).toEqual(['Collateral', 'Heat']);
+      expect(page1.total).toBe(5);
     });
   });
 });

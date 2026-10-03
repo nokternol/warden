@@ -40,7 +40,10 @@ export type { MediaSourceDescriptor, MediaSourceFactory } from './mediaSourceFac
 
 // Non-source actuator addressing: query-matched items translated into the
 // actuator's own id space through the identity graph.
-export { resolveActuatorIds } from './actuatorIdResolver';
+export { resolveActuatorTargets } from './actuatorIdResolver';
+
+// Run history: the source copies a run's targeted items resolve to.
+export { ensureSourceCopies } from './sourceCopies';
 
 // Enrichment roles and the adapters that bind providers' native connections
 // to them.

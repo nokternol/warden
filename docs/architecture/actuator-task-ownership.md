@@ -130,16 +130,19 @@ the executor branches on `isMediaSourceType(providerSettings.type)`
 ([`server/modules/automations/automationExecutor.ts`](ref:path:server/modules/automations/automationExecutor.ts)).
 
 - **Source actuator (Radarr/Sonarr):** unchanged — the query evaluates against the instance's own
-  catalog and its native ids (`mediaSource.idOf`) feed the task directly.
+  catalog and its native ids (`mediaSource.idOf`) feed the task directly, one target per native id (an
+  item its catalog lists twice is targeted once).
 - **Non-source actuator (Plex/Jellyfin/Tautulli):** it owns no catalog, so the query evaluates against
   the content type's owning source instances (pooled via `MediaSourceFactory.sourcesFor`), and matched
-  items are translated into the actuator's addressing space by `resolveActuatorIds`
+  items are translated into the actuator's addressing space by `resolveActuatorTargets`
   ([`server/modules/media/actuatorIdResolver.ts`](ref:path:server/modules/media/actuatorIdResolver.ts)):
   each item's `(providerId, externalId)` coordinate joins through `media_item` to its `media_identity`
   group, whose `plexRatingKey`/`jellyfinItemId` column carries the actuator-native id. Identities the
   resolution job has not stamped drop out (there is no id to address), and multiple instance copies of
-  one identity collapse to a single id — the recorded `itemCount` is the number of ids actually acted
-  on, not the number matched.
+  one identity collapse to a single id. The resolver also returns the matched items that reached an id;
+  those are the run's targets, recorded as its run items, and the run's `itemCount` counts them. Two
+  instance copies of one title therefore count as two targeted items even though the task receives one
+  id.
 
 Translation is keyed by **addressing space, not provider**: Tautulli has no id space of its own — it
 reports entirely against Plex rating keys — so it shares Plex's `plexRatingKey` column. The spaces are

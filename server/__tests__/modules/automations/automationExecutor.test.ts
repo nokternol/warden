@@ -241,6 +241,24 @@ describe('AutomationExecutor', () => {
       expect(runs[0].itemCount).toBe(5);
     });
 
+    it('records no targeted items for a system run, whatever count its runner reports', async () => {
+      const db = getDb();
+      const automationRunService = new AutomationRunService({ db });
+      const systemExecutor = new AutomationExecutor({
+        automationService,
+        automationRunService,
+        providerSettingsService,
+        mediaQueryService,
+        systemTaskRunner: { run: async () => 5 },
+      });
+      const id = await seedSystemAutomation('system:identity-resolution');
+
+      await systemExecutor.execute(id);
+
+      const [run] = await automationRunService.listRuns({ automationId: id });
+      expect(await automationRunService.listRunItems(run.id)).toEqual({ data: [], total: 0 });
+    });
+
     it('does not start a second run while a run for the same id is in flight', async () => {
       const db = getDb();
       let release!: () => void;
@@ -1530,7 +1548,12 @@ describe('non-source actuators — id translation through the identity graph', (
     ] as Array<[number, string | null]>) {
       const [{ id: identityId }] = await db
         .insert(mediaIdentity)
-        .values({ kind: 'movie', tmdbId: externalId * 100, plexRatingKey })
+        .values({
+          kind: 'movie',
+          tmdbId: externalId * 100,
+          title: `Movie ${externalId}`,
+          plexRatingKey,
+        })
         .returning({ id: mediaIdentity.id });
       await db
         .insert(mediaItems)
@@ -1587,6 +1610,102 @@ describe('non-source actuators — id translation through the identity graph', (
     expect(runs).toHaveLength(1);
     expect(runs[0].status).toBe('success');
     expect(runs[0].itemCount).toBe(2); // only the identities stamped with a Plex key
+  });
+
+  it('records the catalog items it addressed, not the ones with no Plex id', async () => {
+    const db = getDb();
+    const radarrProv = await seedRadarrProvider(providerSettingsService);
+    const plexProv = await seedPlexProvider();
+    await seedIdentityGraph(radarrProv.id);
+
+    const plexInstance = new PlexProvider(
+      { name: 'Test Plex', url: 'http://localhost:32400', apiKey: 'plex-token', settings: {} },
+      mockConnectionLogger
+    );
+    vi.spyOn(plexInstance, 'deleteFromLibrary').mockResolvedValue(undefined);
+    const automationRunService = new AutomationRunService({ db });
+    const executor = new AutomationExecutor({
+      automationService,
+      automationRunService,
+      providerSettingsService,
+      mediaQueryService,
+      providerFactory: { create: () => plexInstance },
+      mediaSourceFactory: fakeMovieSources(radarrProv.id),
+      db,
+    });
+    const query = await seedMediaQuery(mediaQueryService);
+    const automation = await seedAutomation(automationService, {
+      queryId: query.id,
+      providerId: plexProv.id,
+      taskId: 'deleteFromLibrary',
+    });
+
+    await executor.execute(automation.id);
+
+    const [run] = await automationRunService.listRuns({ automationId: automation.id });
+    const items = await automationRunService.listRunItems(run.id);
+    expect(items.data.map((i) => i.title).sort()).toEqual(['Movie 1', 'Movie 2']);
+    expect(run.itemCount).toBe(items.data.length);
+  });
+
+  it('counts every source copy it recorded when two instances hold one Plex title', async () => {
+    const db = getDb();
+    const radarrProv = await seedRadarrProvider(providerSettingsService);
+    const radarr4kProv = await seedRadarrProvider(providerSettingsService);
+    const plexProv = await seedPlexProvider();
+    const [{ id: identityId }] = await db
+      .insert(mediaIdentity)
+      .values({ kind: 'movie', tmdbId: 500, title: 'Heat', plexRatingKey: 'rk-5' })
+      .returning({ id: mediaIdentity.id });
+    for (const providerId of [radarrProv.id, radarr4kProv.id]) {
+      await db
+        .insert(mediaItems)
+        .values({ providerId, externalId: 5, mediaIdentityId: identityId });
+    }
+    const copies = [radarrProv.id, radarr4kProv.id].map((providerId) => ({
+      _sourceIds: { radarr: 5, providerId, tmdb: 500 },
+      title: 'Heat',
+    }));
+
+    const plexInstance = new PlexProvider(
+      { name: 'Test Plex', url: 'http://localhost:32400', apiKey: 'plex-token', settings: {} },
+      mockConnectionLogger
+    );
+    const deleteFromLibrary = vi
+      .spyOn(plexInstance, 'deleteFromLibrary')
+      .mockResolvedValue(undefined);
+    const automationRunService = new AutomationRunService({ db });
+    const executor = new AutomationExecutor({
+      automationService,
+      automationRunService,
+      providerSettingsService,
+      mediaQueryService,
+      providerFactory: { create: () => plexInstance },
+      mediaSourceFactory: {
+        sourcesFor: async () => [
+          {
+            providerId: radarrProv.id,
+            name: 'Radarr',
+            source: { getMediaItems: async () => copies, idOf: () => undefined },
+          },
+        ],
+      },
+      db,
+    });
+    const query = await seedMediaQuery(mediaQueryService);
+    const automation = await seedAutomation(automationService, {
+      queryId: query.id,
+      providerId: plexProv.id,
+      taskId: 'deleteFromLibrary',
+    });
+
+    await executor.execute(automation.id);
+
+    expect(deleteFromLibrary.mock.calls[0][0]).toEqual(['rk-5']);
+    const [run] = await automationRunService.listRuns({ automationId: automation.id });
+    const items = await automationRunService.listRunItems(run.id);
+    expect(items.data).toHaveLength(2);
+    expect(run.itemCount).toBe(2);
   });
 
   it('Tautulli rides the Plex addressing space end to end', async () => {

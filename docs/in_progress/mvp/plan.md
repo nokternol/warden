@@ -552,9 +552,11 @@ names, so nothing is renamed twice.
 - **Pruning interaction (decision 4a):** `IdentityResolutionJob.pruneStaleItems` hard-deletes
   `media_item` rows that leave their source, which is exactly what a destructive run causes. So
   `media_item` gains a `deleted` boolean (default `false`), a soft delete within Warden's own
-  database. Pruning sets the flag instead of deleting. Identity joins (`resolveGroup`,
-  `resolveActuatorIds`, the orphan-group sweep) ignore deleted rows, and an upsert of a re-listed
-  item clears the flag. There is no deletion timestamp: when a Warden run performed the delete, its
+  database. Pruning sets the flag instead of deleting. `resolveActuatorTargets` ignores deleted
+  rows, so no task addresses a removed copy. The orphan-group sweep **counts** deleted rows: ignoring
+  them would delete a group whose copies are all deleted, and `media_item.mediaIdentityId`'s cascade
+  would then erase the history this decision keeps. `resolveGroup` reads only `media_identity`, so a
+  re-listed title reuses its retained group, and an upsert of a re-listed item clears the flag. There is no deletion timestamp: when a Warden run performed the delete, its
   `automation_run_items` link carries the datetime via the run's `ranAt`.
 - **Behaviours:**
   - A run records each item it targeted, and its item count equals the items recorded.
@@ -563,9 +565,18 @@ names, so nothing is renamed twice.
   - An item that reappears in its source is no longer marked deleted.
   - A run's targeted items can be listed page by page, and an item's runs can be listed too.
   - On the Runs page a run expands to its targeted titles, with deleted ones marked as removed.
-- **Expected end state:** the migration (new table, `media_item.deleted`, index), a batched insert in
-  `AutomationExecutor` inside the same transaction as the run row, the soft-deleting prune, and
-  `GET /api/automations/runs/:runId/items` (paged).
+- **Expected end state (as built):** migration 0027 (new table with `runId` and `mediaItemId` both
+  `ON DELETE CASCADE`, so provider deletion and the media reset drop links instead of failing;
+  `media_item.deleted`; the `mediaItemId` index). `AutomationExecutor.planRun` decides the task, its
+  target items and actuator ids before the task runs, so failed runs record targets too; a user run's
+  `itemCount` is its recorded targets. `AutomationRunService.createRun` writes the run row and its
+  links in one `db.batch` (a single SQLite transaction; libsql's interactive transactions lose a
+  `:memory:` database). `ensureSourceCopies` (media module) finds each target's `media_item` and
+  hands any copy the identity job has not seen to `recordSourceCopy` (providers module, which owns the
+  identity graph's writes), so items newer than the last identity run are still recorded. The soft-deleting
+  identity job, `listRunItems` (paged, by title) and `listItemRuns` (service-level, no consumer yet),
+  the `runItems` contract procedure at `GET /api/automations/runs/{runId}/items`, and the Runs page's
+  expandable `RunRow` (which owns the run table's columns via `RunRow.Head`).
 - **Note:** `ActuatorTask.run(ids)` is batch-shaped and returns `void`, so the mapping records
   *targeted* items, and the run's status/error covers the batch. Per-item outcomes are post-MVP.
 - **Docs:** re-read `provider-roles-and-identity.md` and the `media_item`/Identity resolution rows in

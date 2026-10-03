@@ -50,8 +50,11 @@ export { readEnabledTaskIds } from './taskEnablement';
 export type { PlexService } from './plexService';
 export type { TmdbService } from './tmdbService';
 
-// Identity resolution — the system job that stitches source identities.
+// Identity resolution — the system job that stitches source identities, and
+// the write that records a copy the job has not seen yet.
 export type { IdentityJobFactory } from './identityJobFactory';
+export { recordSourceCopy } from './sourceCopy';
+export type { SourceCopy } from './sourceCopy';
 
 // Connection classes + payload types still consumed outside the module
 // (search handler, media handler, enrichment mappers) until Phase 4.
