@@ -9,7 +9,10 @@ import { MetadataProviderType } from '@server/database/schema';
  */
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
-import { AutomationRunService } from '@server/modules/automations/automationRunService';
+import {
+  AutomationRunService,
+  type RunTargets,
+} from '@server/modules/automations/automationRunService';
 import { AutomationService } from '@server/modules/automations/automationService';
 import type { NormalizedMovie } from '@server/modules/media';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
@@ -66,6 +69,11 @@ async function seedFixtures() {
 /** A Radarr catalog item as the executor targets it. */
 function catalogMovie(providerId: number, radarrId: number, title: string): NormalizedMovie {
   return { _sourceIds: { radarr: radarrId, providerId, tmdb: radarrId * 100 }, title };
+}
+
+/** A movie query's run targets. */
+function movies(...items: NormalizedMovie[]): RunTargets {
+  return { contentType: 'movie', items };
 }
 
 // ---------------------------------------------------------------------------
@@ -135,7 +143,11 @@ describe('AutomationRunService', () => {
       const heat = catalogMovie(provider.id, 1, 'Heat');
 
       await expect(
-        service.createRun({ automationId: automation.id, status: 'success', targets: [heat, heat] })
+        service.createRun({
+          automationId: automation.id,
+          status: 'success',
+          targets: movies(heat, heat),
+        })
       ).resolves.toMatchObject({ status: 'success' });
 
       const [run] = await service.listRuns({ automationId: automation.id });
@@ -235,13 +247,17 @@ describe('AutomationRunService', () => {
       const first = await service.createRun({
         automationId: automation.id,
         status: 'success',
-        targets: [heat],
+        targets: movies(heat),
       });
-      await service.createRun({ automationId: automation.id, status: 'success', targets: [ronin] });
+      await service.createRun({
+        automationId: automation.id,
+        status: 'success',
+        targets: movies(ronin),
+      });
       const third = await service.createRun({
         automationId: automation.id,
         status: 'error',
-        targets: [heat, ronin],
+        targets: movies(heat, ronin),
       });
       const [heatCopy] = (await service.listRunItems(first.id)).data;
 
@@ -260,7 +276,7 @@ describe('AutomationRunService', () => {
       const run = await service.createRun({
         automationId: automation.id,
         status: 'success',
-        targets: titles.map((title, i) => catalogMovie(provider.id, i + 1, title)),
+        targets: movies(...titles.map((title, i) => catalogMovie(provider.id, i + 1, title))),
       });
 
       const page1 = await service.listRunItems(run.id, { limit: 2, offset: 0 });

@@ -136,11 +136,14 @@ describe('GET /api/automations/runs', () => {
     const run = await runService.createRun({
       automationId,
       status: 'success',
-      targets: ['Heat', 'Alien', 'Ronin'].map((title, i) => ({
-        _sourceIds: { radarr: 900 + i, providerId, tmdb: 9000 + i },
-        title,
-        year: 1990 + i,
-      })),
+      targets: {
+        contentType: 'movie',
+        items: ['Heat', 'Alien', 'Ronin'].map((title, i) => ({
+          _sourceIds: { radarr: 900 + i, providerId, tmdb: 9000 + i },
+          title,
+          year: 1990 + i,
+        })),
+      },
     });
 
     const res = await client.get(`/api/automations/runs/${run.id}/items?limit=2&offset=1`);

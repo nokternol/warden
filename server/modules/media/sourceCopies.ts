@@ -46,9 +46,14 @@ export function sourceCopyMatch(items: MediaItem[]): SQL | null {
  * The `media_item` ids of catalog items' source copies. A copy the identity
  * job has not recorded yet (an item added to its source since the last
  * resolution) is recorded through the providers module, which owns the
- * identity graph's writes.
+ * identity graph's writes. Every item is of `contentType`, which scopes the
+ * group its copy joins.
  */
-export async function ensureSourceCopies(db: DrizzleDb, items: MediaItem[]): Promise<number[]> {
+export async function ensureSourceCopies(
+  db: DrizzleDb,
+  contentType: ContentType,
+  items: MediaItem[]
+): Promise<number[]> {
   const match = sourceCopyMatch(items);
   if (!match) return [];
   const recorded = await db
@@ -70,7 +75,7 @@ export async function ensureSourceCopies(db: DrizzleDb, items: MediaItem[]): Pro
     recordedKeys.add(key);
     ids.push(
       await recordSourceCopy(db, {
-        kind: contentTypeOf(item),
+        kind: contentType,
         ...coordinate,
         ids: groupIdsOf(item),
       })
@@ -79,23 +84,13 @@ export async function ensureSourceCopies(db: DrizzleDb, items: MediaItem[]): Pro
   return ids;
 }
 
-type SourceIds = MediaItem['_sourceIds'] & {
-  radarr?: number;
-  tvdb?: number;
-  tvmaze?: number;
-};
-
-function contentTypeOf(item: MediaItem): ContentType {
-  return (item._sourceIds as SourceIds).radarr !== undefined ? 'movie' : 'series';
-}
-
 function groupIdsOf(item: MediaItem): SourceCopy['ids'] {
-  const ids = item._sourceIds as SourceIds;
+  const ids = item._sourceIds;
   return {
     tmdbId: ids.tmdb,
-    tvdbId: ids.tvdb,
+    tvdbId: 'tvdb' in ids ? ids.tvdb : undefined,
     imdbId: ids.imdb,
-    tvMazeId: ids.tvmaze,
+    tvMazeId: 'tvmaze' in ids ? ids.tvmaze : undefined,
     title: item.title,
     year: item.year,
   };

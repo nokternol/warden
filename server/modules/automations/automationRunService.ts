@@ -1,4 +1,4 @@
-import type { RunItemDto } from '@contract/schemas';
+import type { ContentType, RunItemDto } from '@contract/schemas';
 import { asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import {
   automationRunItems,
@@ -26,13 +26,19 @@ export interface RunItemPage {
   total: number;
 }
 
+/** The catalog items a user run acted on, all of its query's content type. */
+export interface RunTargets {
+  contentType: ContentType;
+  items: MediaItem[];
+}
+
 export interface CreateRunData {
   automationId: number;
   status: 'success' | 'error';
   itemCount?: number;
   error?: string;
   kind?: 'user' | 'system';
-  targets?: MediaItem[];
+  targets?: RunTargets;
 }
 
 /** A window onto a listing; unset fields fall back to the first page. */
@@ -97,7 +103,9 @@ export class AutomationRunService {
    * SQLite transaction, so a run is never recorded without its items.
    */
   async createRun(data: CreateRunData): Promise<AutomationRunDto> {
-    const mediaItemIds = await ensureSourceCopies(this.db, data.targets ?? []);
+    const mediaItemIds = data.targets
+      ? await ensureSourceCopies(this.db, data.targets.contentType, data.targets.items)
+      : [];
     const insertRun = this.db
       .insert(automationRuns)
       .values({

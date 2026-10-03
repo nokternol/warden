@@ -8,7 +8,7 @@ import {
   mediaSourceFor,
   resolveActuatorTargets,
 } from '../media';
-import type { MediaItem, MediaSource, MediaSourceFactory } from '../media';
+import type { MediaSource, MediaSourceFactory } from '../media';
 import type { MediaQueryService } from '../mediaQueries';
 import {
   type ActuatorTask,
@@ -21,7 +21,7 @@ import {
   isMediaSourceType,
   readEnabledTaskIds,
 } from '../providers';
-import type { AutomationRunService } from './automationRunService';
+import type { AutomationRunService, RunTargets } from './automationRunService';
 import type { AutomationQuerySourceDto, AutomationService } from './automationService';
 
 const log = getChildLogger('AutomationExecutor');
@@ -48,7 +48,7 @@ interface ExecutorDeps {
 /** What a user run acts on: the task, its target items, and their actuator ids. */
 interface RunPlan {
   task: ActuatorTask;
-  targets: MediaItem[];
+  targets: RunTargets;
   actuatorIds: Parameters<ActuatorTask['run']>[0];
 }
 
@@ -93,7 +93,7 @@ export class AutomationExecutor {
     let itemCount = 0;
     let kind: 'user' | 'system' = 'user';
     let taskId = '';
-    let targets: MediaItem[] = [];
+    let targets: RunTargets | undefined;
 
     try {
       const automation = await this.automationService.getById(automationId);
@@ -137,7 +137,7 @@ export class AutomationExecutor {
       const providerSettings = await this.providerSettingsService.findById(automation.provider.id);
       const plan = await this.planRun(automation.taskId, providerSettings, sources);
       targets = plan.targets;
-      itemCount = targets.length;
+      itemCount = targets.items.length;
       await plan.task.run(plan.actuatorIds, automation.taskParameter);
       await this.recordResult(automationId, taskId, {
         itemCount,
@@ -210,7 +210,7 @@ export class AutomationExecutor {
       const targetById = new Map(matched.map((item) => [mediaSource.idOf(item)!, item]));
       return {
         task,
-        targets: [...targetById.values()],
+        targets: { contentType, items: [...targetById.values()] },
         actuatorIds: [...targetById.keys()],
       };
     }
@@ -241,7 +241,7 @@ export class AutomationExecutor {
       providerSettings.type,
       matched
     );
-    return { task, targets: addressed, actuatorIds };
+    return { task, targets: { contentType, items: addressed }, actuatorIds };
   }
 
   /**
@@ -263,7 +263,7 @@ export class AutomationExecutor {
       status: 'success' | 'error';
       error?: string;
       kind: 'user' | 'system';
-      targets?: MediaItem[];
+      targets?: RunTargets;
     }
   ): Promise<void> {
     const [, run] = await Promise.all([
