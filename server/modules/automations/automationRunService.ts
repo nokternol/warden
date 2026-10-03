@@ -74,6 +74,18 @@ function rowToDto(row: {
   };
 }
 
+/** A run row with its automation's name — the columns every run listing reads. */
+const RUN_COLUMNS = {
+  id: automationRuns.id,
+  automationId: automationRuns.automationId,
+  automationName: automations.name,
+  ranAt: automationRuns.ranAt,
+  status: automationRuns.status,
+  itemCount: automationRuns.itemCount,
+  error: automationRuns.error,
+  createdAt: automationRuns.createdAt,
+};
+
 export class AutomationRunService {
   private readonly db: DrizzleDb;
 
@@ -125,16 +137,7 @@ export class AutomationRunService {
     const offset = opts.offset ?? 0;
 
     let query = this.db
-      .select({
-        id: automationRuns.id,
-        automationId: automationRuns.automationId,
-        automationName: automations.name,
-        ranAt: automationRuns.ranAt,
-        status: automationRuns.status,
-        itemCount: automationRuns.itemCount,
-        error: automationRuns.error,
-        createdAt: automationRuns.createdAt,
-      })
+      .select(RUN_COLUMNS)
       .from(automationRuns)
       .innerJoin(automations, eq(automationRuns.automationId, automations.id))
       .orderBy(desc(automationRuns.ranAt), desc(automationRuns.id))
@@ -179,5 +182,16 @@ export class AutomationRunService {
       .innerJoin(mediaIdentity, eq(mediaItems.mediaIdentityId, mediaIdentity.id))
       .where(eq(automationRunItems.runId, runId));
     return { data, total: data.length };
+  }
+
+  async listItemRuns(mediaItemId: number): Promise<AutomationRunDto[]> {
+    const rows = await this.db
+      .select(RUN_COLUMNS)
+      .from(automationRunItems)
+      .innerJoin(automationRuns, eq(automationRunItems.runId, automationRuns.id))
+      .innerJoin(automations, eq(automationRuns.automationId, automations.id))
+      .where(eq(automationRunItems.mediaItemId, mediaItemId))
+      .orderBy(desc(automationRuns.ranAt), desc(automationRuns.id));
+    return rows.map(rowToDto);
   }
 }

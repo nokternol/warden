@@ -11,6 +11,7 @@ import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { AutomationRunService } from '@server/modules/automations/automationRunService';
 import { AutomationService } from '@server/modules/automations/automationService';
+import type { NormalizedMovie } from '@server/modules/media';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -59,7 +60,12 @@ async function seedFixtures() {
     schedule: '0 2 * * *',
   });
 
-  return { automation };
+  return { automation, provider };
+}
+
+/** A Radarr catalog item as the executor targets it. */
+function catalogMovie(providerId: number, radarrId: number, title: string): NormalizedMovie {
+  return { _sourceIds: { radarr: radarrId, providerId, tmdb: radarrId * 100 }, title };
 }
 
 // ---------------------------------------------------------------------------
@@ -202,6 +208,33 @@ describe('AutomationRunService', () => {
 
       expect(page1).toHaveLength(2);
       expect(page2).toHaveLength(1);
+    });
+  });
+
+  // ─── listItemRuns ─────────────────────────────────────────────────────────
+
+  describe('listItemRuns', () => {
+    it('lists the runs that targeted an item, newest first', async () => {
+      const { automation, provider } = await seedFixtures();
+      const heat = catalogMovie(provider.id, 1, 'Heat');
+      const ronin = catalogMovie(provider.id, 2, 'Ronin');
+
+      const first = await service.createRun({
+        automationId: automation.id,
+        status: 'success',
+        targets: [heat],
+      });
+      await service.createRun({ automationId: automation.id, status: 'success', targets: [ronin] });
+      const third = await service.createRun({
+        automationId: automation.id,
+        status: 'error',
+        targets: [heat, ronin],
+      });
+      const [heatCopy] = (await service.listRunItems(first.id)).data;
+
+      const runs = await service.listItemRuns(heatCopy.mediaItemId);
+
+      expect(runs.map((r) => r.id)).toEqual([third.id, first.id]);
     });
   });
 });
