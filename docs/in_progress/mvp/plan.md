@@ -12,15 +12,18 @@ The MVP is done when all three of these hold for the deployed container:
 
 1. **Everything exposed works.** Every feature in [In scope](#in-scope) is reachable, works, and is
    verified in G1. Every offered provider type, filter and task is included.
-2. **Nothing else is exposed.** Everything else has no entry point: no nav item, page, API route,
-   provider type, filter or task. "Hidden" means removed, not disabled behind a flag (decision 7).
+2. **Nothing else is exposed.** Every path to a deferred feature is blocked: no nav item, reachable
+   page, API route, provider type, filter or task leads to it. Deferred code stays in the codebase,
+   compiled, typechecked and covered by its existing tests, ready to be un-deferred (decision 7).
 3. **The system is simplified.** Simplified means low cognitive load. Each concept has **one name**
    and **one mechanism** across UI, API, code and docs, and no two of those contradict each other.
    The [Glossary](#glossary) is the single list of names, and a guard test enforces it.
 
-Exposure is decided by **one mechanism**: the server's authorities project what is offered (provider
-types, filters, tasks), and the client only derives from those projections. Pages and nav are the
-only client-owned exposure, and they are pinned by test against the scope below.
+Exposure is decided by **one mechanism**: a single **scope declaration** (`contract/scope.ts`,
+created in S1) lists every deferred page, API procedure, provider type, filter and task. The server
+refuses deferred procedures and leaves deferred types, filters and tasks out of its projections.
+The client hides deferred nav items and page sections, and a deferred page URL answers 404. Nothing
+else decides exposure, and un-deferring a feature is one line removed from that file.
 
 ## In scope
 
@@ -37,23 +40,25 @@ only client-owned exposure, and they are pinned by test against the scope below.
 
 The [Destination scenario](#destination-scenario) exercises the core path through these features.
 
-## Out of scope (removed)
+## Out of scope (deferred and blocked)
 
-| Surface | Why it goes |
+These stay in the codebase untouched apart from glossary renames, which typecheck forces on all
+code. Every path to them is blocked by the scope declaration.
+
+| Surface | Why it's deferred |
 |---|---|
-| Dashboard page | Duplicates the automations list. It folds into Automations plus first-run guidance (decision 3). |
-| Ratings page, media-page ratings panel, `/api/providers/ratings`, `ratingsAggregation` | A **second mechanism** for ratings beside the `imdbRating`/`communityRating` filters. Its future is `docs/intent/media-ratings-provider.md`. |
-| Search page, `/api/search/metadata` | A **second mechanism** for finding a title beside the title filter. It was built as a graph-discovery tool. |
-| `/api/providers/metadata` | No consumer. |
-| `/api/app-settings`, the `appSettings` module, `settingsAwarePrecedence.ts` | No UI and no server consumer. Precedence settings return with the post-MVP precedence work. |
-| Provider types SEERR and TVMAZE | The API accepts them, then `ProviderFactory` throws, so they are a reachable broken path. |
-| Provider type OMDB | It feeds only the removed ratings path. |
-| Filters with no control or no live producer | For example, `certification` has no lookup today. Stale producer claims go too (TMDB on series `genres`, TVMAZE on `network`). C5's invariant decides the final list. |
-| Unused components `WidgetGrid`, `StatCard`, and boilerplate stories | They use names the product doesn't have ("Collections", "New Task", "Active Tasks"). |
-| `INVENTORY.md` | A June snapshot describing files that no longer exist. |
+| Dashboard page | Automations plus first-run guidance is the MVP landing page (decision 3). |
+| Ratings page, media-page ratings panel, `/api/providers/ratings` | Ratings currently have two mechanisms (F10). Unifying them is `docs/intent/media-ratings-provider.md`'s work. |
+| Search page, `/api/search/metadata` | A second way to find a title beside the title filter (F11). Its role is decided when un-deferred. |
+| `/api/providers/metadata` | No MVP consumer. |
+| `/api/app-settings` (the `appSettings` module, `settingsAwarePrecedence.ts`) | No UI and no consumer yet. It is the input to the post-MVP precedence work. |
+| Provider types SEERR and TVMAZE | Not buildable through `ProviderFactory` yet, so offering them is a reachable broken path (L1). |
+| Provider type OMDB | It feeds only the deferred ratings path. |
+| Provider type TMDB | Not in the verification stack (decision 9). Login-page backdrops keep using the `TMDB_API_KEY` environment setting, which is separate from the provider type. |
+| Filters with no control or no live producer | For example, `certification` has no lookup today. C5's invariant lists them in the declaration. |
 
-Which provider types and tasks stay offered is decided by decisions 9 and 10: **offered means
-verified in G1.**
+Which provider types and tasks are offered is decided by decisions 9 and 10: **offered means
+verified in G1**, and everything else of those kinds is declared deferred.
 
 ## Glossary
 
@@ -168,7 +173,6 @@ principles become these acceptance checks on every UI slice:
 | L1 | Creating a SEERR or TVMAZE provider passes validation, then throws in `ProviderFactory`. | `settings.schemas.ts:4` (`nativeEnum`), `providerFactory.ts:72` |
 | L2 | `/api/providers/metadata` and `/api/app-settings` have no consumer. | route grep |
 | L3 | Filters in the API that the UI can never render, such as `certification`. | `ruleRendersControl` |
-| L4 | `WidgetGrid` and `StatCard` are used only by their own stories. | component grep |
 
 ## Slice protocol
 
@@ -203,8 +207,10 @@ does not define its own TDD process. Each slice supplies the *input* to that ski
 - **Expected end state.** The structure the plan expects once the cycles are done. RED is the
   interface-design instrument, so where cycles reveal a better shape, the slice PR updates this file
   to match what was built.
-- **Deletes.** Duplication the slice must remove. These are REFACTOR-phase DRY targets, and the
-  slice isn't done while any remain.
+- **Deletes.** Duplicates the slice replaces with the one canonical mechanism, such as a second
+  fetcher, a translator or a client-side copy of a server catalogue. These are REFACTOR-phase DRY
+  targets, and the slice isn't done while any remain. A *Deletes* line never names a feature;
+  features out of MVP scope are deferred and blocked by S1, never removed.
 - **Model.** The model override for the builder agent.
 
 **Slices that are not TDD:** B4 (docs, governed by `docs-lifecycle`), F2 (design pass, governed by
@@ -251,7 +257,7 @@ does not define its own TDD process. Each slice supplies the *input* to that ski
 
 ```mermaid
 flowchart LR
-  S1[S1 remove out-of-scope surfaces] --> C0[C0 one API contract]
+  C0[C0 one API contract] --> S1[S1 block deferred surfaces]
   C0 --> A1[A1 default-deny auth]
   C0 --> B3[B3 one provider home]
   A1 --> A2[A2 owner-only sign-in]
@@ -273,26 +279,29 @@ flowchart LR
   F2 & E3 --> G1[G1 acceptance + docs closure]
 ```
 
-S1 goes first so no later slice spends effort on a surface that's being removed. After it, tracks
+C0 goes first because S1, A1 and C5 all enforce through the contract. After it, tracks
 A, B, D2 and E can run in parallel. Track B's renames land before the C slices that touch the same
 names, so nothing is renamed twice.
 
 ### Track S — Scope
 
-**S1 · Remove out-of-scope surfaces** *(decision 7)*
-- **Model:** Sonnet 5.5 (deletion against an explicit list, pinned by manifest tests).
-- **Why:** [Out of scope](#out-of-scope-removed), F10, F11, L2, L4.
+**S1 · Block deferred surfaces** *(decision 7; after C0)*
+- **Model:** Opus 5.5 (the single exposure mechanism every surface consults).
+- **Why:** [Out of scope](#out-of-scope-deferred-and-blocked), L1, L2.
 - **Behaviours:**
-  - Every removed API route answers 404. Once C0 lands, the contract is the manifest of what
-    exists.
-  - The navigation offers exactly the In-scope pages: Media, Automations, Runs, Providers, System.
-- **Expected end state and deletes:** the Dashboard page and nav item (F1 builds the replacement guidance), the
-  Ratings page, `RatingsPanel`/`RatingsForm`/`RatingsDisplay`/`useRatings`, `/api/providers/ratings`
-  and `ratingsAggregation`, the Search page with `useMetadataSearch` and `/api/search/metadata`,
-  `/api/providers/metadata`, the `appSettings` module and route with `settingsAwarePrecedence.ts`,
-  `WidgetGrid`, `StatCard`, and `INVENTORY.md`. Anything left unreferenced by these removals goes
-  too; git history is the archive.
-- **Docs:** fix every doc that references a removed file (`docs-lifecycle` relocation trigger).
+  - A deferred API procedure answers 404, and its handler is never invoked.
+  - A deferred page URL answers 404, and the navigation offers exactly the In-scope pages: Media,
+    Automations, Runs, Providers, System.
+  - A deferred section inside an in-scope page (the media-page ratings panel) does not render.
+  - Every entry in the scope declaration names something that exists, so a stale entry fails the
+    build.
+  - Un-deferring is removing one entry: the surface is then reachable with no other change.
+- **Expected end state:** `contract/scope.ts`, the single declaration, read by the contract
+  implementer (refuses deferred procedures), by C5's projections (provider types, filters, tasks),
+  and by the client's nav, page guard and section guard. Deferred code and its tests stay as they
+  are.
+- **Docs:** `docs/architecture/` gains the scope mechanism; architecture docs describing deferred
+  surfaces note that they're deferred.
 
 ### Track A — Safe to expose
 
@@ -347,7 +356,7 @@ names, so nothing is renamed twice.
   `SOURCE_OWNER_BY_KIND` becomes `SOURCE_OWNER`.
 - **Deletes:** `MediaKind`, the alias, and the inline `z.enum` in `mediaQueries.schemas.ts`.
 
-**B3 · One home for providers** (after S1)
+**B3 · One home for providers** (after C0)
 - **Model:** Opus 5.5 (module move + dependency-direction rules).
 - **Why:** F3.
 - **Behaviours:**
@@ -356,12 +365,15 @@ names, so nothing is renamed twice.
   - A module directory under `server/modules/` that the dependency rules don't cover fails the
     boundary check.
 - **Expected end state:** move the CRUD handlers into `modules/providers/`.
-- **Deletes:** the `settings` module and the `/api/settings` namespace (S1 already removed
-  `appSettings`).
+- **Expected end state (boundaries):** `appSettings` joins `MODULES`/`ALLOWED_TARGETS` with its
+  existing behaviour unchanged. Its route stays deferred by S1.
+- **Deletes:** the transport-only `settings` module and the `/api/settings/providers` paths, whose
+  handlers now live in `providers`.
 
 **B4 · Docs agree with code** (doc-only, via `docs-lifecycle`)
 - **Model:** Sonnet 5.5 (doc corrections from a fixed list).
-- Fix every F4 item. Rewrite the core model's example as the Destination scenario. Record F1–F11
+- Fix every F4 item. Rewrite the core model's example as the Destination scenario. `INVENTORY.md`
+  stays, with a header marking it a dated snapshot rather than current fact. Record F1–F11
   and D2–D3 in the fracture ledger as Open entries pointing at their slices.
 
 **B5 · Glossary guard and user-facing names** *(decisions 6, 8)*
@@ -394,7 +406,7 @@ names, so nothing is renamed twice.
 
 ### Track C — One mechanism per job
 
-**C0 · One API contract** *(decision 11; after S1, before A1, B3, C1, C3)*
+**C0 · One API contract** *(decision 11; first slice; before S1, A1, B3, C1, C3)*
 - **Model:** Opus 5.5 (the contract every client and server change builds on).
 - **Why:** F12. The goal is that adding an API feature to one side only is impossible: one contract
   declares method, path, input, output and errors, and both sides are derived from it.
@@ -420,6 +432,8 @@ names, so nothing is renamed twice.
 - **Gate (not a TDD behaviour):** `yarn typecheck` runs a compile-fail fixture
   (`@ts-expect-error`) proving that a missing handler and an unknown client call both fail to
   compile. RED needs an assertion failure, so this is checked by typecheck rather than a cycle.
+- **Deferred routes are ported too:** they become contract procedures like everything else, so S1
+  can block them and nothing stays on the retired `defineRoute` mechanism.
 - **Expected end state:** start with a spike that mounts oRPC beside the Express routers for one module
   (automations), proves the SWR wrapper, auth middleware and error envelope, then ports the remaining
   modules. Each module is a commit in this slice; the slice is done when the last Express router is
@@ -495,8 +509,8 @@ names, so nothing is renamed twice.
   - Only the offered tasks (decision 10) are offered for enablement or automation.
 - **Expected end state:** offered types, filters and tasks are each declared once on the server. The client
   derives the add-provider list from `/api/providers/types`.
-- **Deletes:** `src/lib/provider-registry.ts` (`PROVIDER_REGISTRY`, `filterCapabilities`) and the
-  non-offered branches it leaves unreachable.
+- **Deletes:** `src/lib/provider-registry.ts` as a client-side catalogue. Its labels, defaults and
+  capability text move to the server projection, so nothing is lost.
 
 ### Track D — Finish the in-scope features
 
@@ -579,7 +593,7 @@ names, so nothing is renamed twice.
   - The state derives from existing data, with no new endpoint.
 - **Expected end state:** the landing route is Automations. When setup is incomplete, it leads with a three-step
   checklist (a real ordered sequence, so numbers are earned).
-- **Deletes:** `DashboardContent`.
+- **Note:** the Dashboard page is deferred by S1, not removed.
 
 **F2 · Critique → polish the in-scope surfaces** (last UI slice)
 - **Model:** Opus 5.5 (design critique judgement).
@@ -614,20 +628,23 @@ names, so nothing is renamed twice.
 | 4a | History for items the source removed | **Decided: soft delete** via a `media_item.deleted` boolean. The run link holds the datetime. Maintenance is post-MVP. |
 | 5 | Image registry | **Decided: GHCR** (`ghcr.io/nokternol/warden`). |
 | 6 | Product and DB name | **Decided: Warden**, with default DB file `warden.db`. The NAS deployment renames its file once or pins `DB_PATH`. |
-| 7 | What "hidden" means | **Open.** Recommendation: remove the entry point *and* every piece of code only it used; git history is the archive. A flag-hidden feature leaves a second mechanism in the codebase. |
+| 7 | What "hidden" means | **Decided: blocked, not removed.** Deferred code stays compiled, typechecked and tested. Every path to it (page, nav, section, API procedure, provider type, filter, task) is blocked by the one scope declaration (S1). |
 | 8a–8g | Glossary names | **Open.** Recommendations are in the [Glossary](#glossary): Filter, Query, included/excluded query, Source (provider role only), movie/series, Automation vs Task, Runs. |
-| 9 | Offered provider types | **Open.** Offered means verified in G1, so this is the set your NAS stack can verify. Recommendation: Radarr, Sonarr, Plex, Tautulli, plus whichever of Jellyfin, Overseerr and TMDB the NAS runs. |
-| 10 | Offered tasks | **Open.** Recommendation: every task of an offered type that G1 can run against a sacrificial item. Any task that can't be verified safely is not offered. |
+| 9 | Offered provider types | **Decided: Radarr, Sonarr, Overseerr, Plex, Jellyfin, Tautulli**, the stack running on the NAS where G1 verifies them. TMDB, OMDB, SEERR and TVMAZE are deferred; SEERR un-defers when the NAS upgrades from Overseerr. Plex and Jellyfin both active exercises the contested-field precedence (`playCount`, `lastWatchedAt`) in G1. |
+| 10 | Offered tasks | **Open.** The offered types declare 32 tasks, all wired, with parameterized ones backed by options routes. (D) marks destructive. **Radarr:** unmonitorMovie, triggerSearch, deleteMovieWithFiles (D), deleteMovieKeepFiles (D), refreshMovie, rescanMovie, renameMovies, refreshCollection, changeQualityProfile, addTag, removeTag. **Sonarr:** unmonitorSeries, triggerSearch, deleteSeriesWithFiles (D), deleteSeriesKeepFiles (D), refreshSeries, rescanSeries, renameSeries, changeQualityProfile, addTag, removeTag. **Plex:** deleteFromLibrary (D), refreshMetadata, markPlayed, markUnplayed. **Jellyfin:** deleteItem (D), refreshMetadata, markPlayed, markUnplayed, addToCollection, removeFromCollection. **Tautulli:** deleteWatchHistory (D). **Overseerr:** none (enrichment only). Recommendation: offer all 32, with G1 running each once against a sacrificial item, so destructive ones are proven on throwaway media. Any task you don't want verified on the NAS is deferred instead. |
 | 11 | Client/server contract mechanism | **Open.** Recommendation: **oRPC contract-first** (C0). Checked on npm 2026-10-03: oRPC 1.15.4 (released 2026-10-01, schema-agnostic, Zod 4 compatible); ts-rest 3.52.1 (last release 2025-06, peer `zod ^3`, incompatible with this repo's Zod 4.3); Zodios 10.9.6 (last release 2023-08, peer `zod ^3`, axios-based, unmaintained). The alternative is tightening the current bridge by hand (add method/path to the shared schemas, write our own typed client), which builds a homegrown second version of what oRPC already is. |
 
 ## Post-MVP (parked, in order)
 
-1. **Source-vs-enrichment precedence**, including the `primaryMediaServer`/`region` settings S1
-   removes. This unblocks Plex `genres`/`certification` and Radarr `runtime`/`studio`.
+1. **Source-vs-enrichment precedence**, un-deferring the `appSettings` route
+   (`primaryMediaServer`/`region`) as its input. This unblocks Plex `genres`/`certification` and
+   Radarr `runtime`/`studio`.
 2. Remaining parameterized tasks (`moveMovie`, `moveSeries`, `changeLanguageProfile`) and the
    `text`/`fields` parameter shapes.
 3. Maintenance of soft-deleted `media_item` rows (retention or purge policy).
 4. Provider e2e Phases 5–10 and any provider type not offered in the MVP. After C2 and C5, adding one
    is a server-only change.
-5. `docs/intent/`: automation archive, realtime run state, ratings provider, inter-provider
+5. Un-deferring each deferred surface, resolving its duplicate mechanism first (ratings vs rating
+   filters, search vs title filter).
+6. `docs/intent/`: automation archive, realtime run state, ratings provider, inter-provider
    dependency, editions, per-consumer watchlist.
