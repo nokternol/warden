@@ -1861,7 +1861,7 @@
     "@orpc/shared" "1.15.4"
     "@orpc/standard-server" "1.15.4"
 
-"@orpc/standard-server@1.15.4":
+"@orpc/standard-server@1.15.4", "@orpc/standard-server@~1.15.4":
   version "1.15.4"
   resolved "https://registry.yarnpkg.com/@orpc/standard-server/-/standard-server-1.15.4.tgz#0bb1d150658f3e9c64347150cda11fb5ed9daace"
   integrity sha512-woaFpUJavYPiqRQ0Eh716jOHRZ7o84mPpmEPS79bBUJNDilGEj2OBSjbHV2ez4FYdVnEnlbg+rYy7sX3PwwENA==

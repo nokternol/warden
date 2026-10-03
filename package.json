@@ -45,6 +45,7 @@
     "@orpc/openapi": "~1.15.4",
     "@orpc/openapi-client": "~1.15.4",
     "@orpc/server": "~1.15.4",
+    "@orpc/standard-server": "~1.15.4",
     "@tanstack/react-virtual": "^3.13.23",
     "awilix": "^12.1.0",
     "clsx": "^2.1.1",

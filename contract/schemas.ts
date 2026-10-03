@@ -7,8 +7,8 @@ export const IsoDateSchema = z.union([z.date().transform((d) => d.toISOString())
 
 // Strips empty query-string values (e.g. ?kind=) before optional parsing,
 // so absent params and empty params are both treated as undefined.
-export const emptyToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
-  z.preprocess((v) => (v === '' ? undefined : v), schema.optional());
+export const emptyToUndefined = <T extends z.ZodType>(schema: T) =>
+  z.union([z.literal('').transform(() => undefined), schema]).optional();
 
 // A path id: callers pass a number, the server receives the URL segment as a string.
 export const IdSchema = z.union([
