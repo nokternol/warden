@@ -1,4 +1,4 @@
-import { ProviderSchema } from '@app/lib/api/schemas';
+import { ProviderSchema } from '@contract/schemas';
 import { MetadataProviderType } from '@server/database/schema';
 import { defineRoute } from '@server/kernel/defineRoute';
 import { isAuthenticated } from '@server/kernel/middleware/auth';

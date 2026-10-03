@@ -1,4 +1,4 @@
-import type { AutomationSchema } from '@app/lib/api/schemas';
+import type { AutomationSchema } from '@contract/schemas';
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
 import type { z } from 'zod';

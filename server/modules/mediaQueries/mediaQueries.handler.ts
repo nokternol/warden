@@ -1,4 +1,4 @@
-import { MediaQueryRecordSchema } from '@app/lib/api/schemas';
+import { MediaQueryRecordSchema } from '@contract/schemas';
 import { defineRoute } from '@server/kernel/defineRoute';
 import { isAuthenticated } from '@server/kernel/middleware/auth';
 import type { MediaQueryEngine, MediaSourceFactory } from '@server/modules/media';

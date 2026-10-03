@@ -15,6 +15,7 @@
 
 // HTTP surface — mounted by the API router.
 export { createAutomationRoutes } from './automations.routes';
+export { createAutomationProcedures } from './automations.procedures';
 
 // Container contribution — the app builder composes Cradle from this slice
 // and calls the registration; classes registered here stay module-private

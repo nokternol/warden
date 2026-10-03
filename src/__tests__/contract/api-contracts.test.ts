@@ -4,7 +4,7 @@ import {
   MediaQueryRecordSchema,
   MediaQueryValueSchema,
   UpdateAutomationStatusInputSchema,
-} from '@app/lib/api/schemas';
+} from '@contract/schemas';
 import { MOCK_AUTOMATIONS, MOCK_MEDIA_QUERIES } from '@tests/mocks/handlers/automations';
 import { describe, expect, it } from 'vitest';
 

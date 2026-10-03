@@ -4,7 +4,7 @@ import type {
   FilterValueSchema,
   MediaQueryRecordSchema,
   QueryHealthSchema,
-} from '@app/lib/api/schemas';
+} from '@contract/schemas';
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
 import type { z } from 'zod';

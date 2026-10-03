@@ -1,4 +1,4 @@
-import { FilterValueEntrySchema } from '@app/lib/api/schemas';
+import { FilterValueEntrySchema } from '@contract/schemas';
 import { z } from 'zod';
 
 const idParams = z.object({

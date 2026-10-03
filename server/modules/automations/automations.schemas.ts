@@ -1,4 +1,4 @@
-import { emptyToUndefined } from '@app/lib/api/schemas';
+import { emptyToUndefined } from '@contract/schemas';
 import { z } from 'zod';
 
 const idParams = z.object({

@@ -1,4 +1,4 @@
-import { AutomationSchema, MediaQueryRecordSchema, ProviderSchema } from '@app/lib/api/schemas';
+import { AutomationSchema, MediaQueryRecordSchema, ProviderSchema } from '@contract/schemas';
 import { buildContainer } from '@server/container';
 import { MetadataProviderType } from '@server/database/schema';
 import { loadConfig } from '@server/kernel/config';

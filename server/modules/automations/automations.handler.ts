@@ -1,4 +1,4 @@
-import { AutomationSchema } from '@app/lib/api/schemas';
+import { AutomationSchema } from '@contract/schemas';
 import { defineRoute } from '@server/kernel/defineRoute';
 import { isAuthenticated } from '@server/kernel/middleware/auth';
 import { z } from 'zod';

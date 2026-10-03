@@ -1,5 +1,5 @@
-import type { ContentTypeSchema } from '@app/lib/api/schemas';
 import type { FetchResponse } from '@app/types/fetch';
+import type { ContentTypeSchema } from '@contract/schemas';
 import useSWR from 'swr';
 import type { z } from 'zod';
 
