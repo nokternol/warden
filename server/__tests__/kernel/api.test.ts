@@ -128,4 +128,18 @@ describe('serveApi — the contract served over HTTP', () => {
       error: { type: 'INTERNAL_ERROR', message: 'database unavailable' },
     });
   });
+
+  it('answers input that fails the contract schema with 400 VALIDATION_ERROR and its field errors', async () => {
+    const res = await request(app).post('/api/automations/not-a-number/run');
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      status: 'error',
+      error: {
+        type: 'VALIDATION_ERROR',
+        message: 'Invalid input',
+        errors: { id: [expect.any(String)] },
+      },
+    });
+  });
 });

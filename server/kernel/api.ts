@@ -47,6 +47,13 @@ function toApiError(err: unknown, requestId: string): ORPCError<string, unknown>
   if (err instanceof AppError) {
     return new ORPCError(err.type, { status: err.statusCode, message: err.message });
   }
+  if (err instanceof ORPCError && err.code === 'BAD_REQUEST' && Array.isArray(err.data?.issues)) {
+    return new ORPCError('VALIDATION_ERROR', {
+      status: 400,
+      message: 'Invalid input',
+      data: { errors: fieldErrorsOf(err.data.issues) },
+    });
+  }
   if (err instanceof ORPCError) return err;
 
   const cause = err instanceof Error ? err : new Error(String(err));
@@ -57,13 +64,30 @@ function toApiError(err: unknown, requestId: string): ORPCError<string, unknown>
   });
 }
 
+/** A schema issue as oRPC reports it for input that failed the contract. */
+interface InputIssue {
+  message: string;
+  path?: ReadonlyArray<PropertyKey | { key: PropertyKey }>;
+}
+
+/** Groups input issues by the top-level field they concern. */
+function fieldErrorsOf(issues: InputIssue[]): Record<string, string[]> {
+  const errors: Record<string, string[]> = {};
+  for (const { message, path } of issues) {
+    const first = path?.[0];
+    const field = String(typeof first === 'object' ? first.key : first);
+    errors[field] = [...(errors[field] ?? []), message];
+  }
+  return errors;
+}
+
 /** Serves a (sub)router of contract procedures over HTTP at their contract paths. */
 export function serveApi(router: Router<AnyContractRouter, ApiContext>): RequestHandler {
   const handler = new OpenAPIHandler(router, {
     clientInterceptors: [({ next, context }) => inSuccessEnvelope(next, context.requestId)],
     customErrorResponseBodyEncoder: (error) => ({
       status: 'error',
-      error: { type: error.code, message: error.message },
+      error: { type: error.code, message: error.message, ...error.data },
     }),
   });
 
