@@ -59,7 +59,7 @@ describe('POST /api/automations — Session C', () => {
 
     const showQuery = await mediaQueryService.create({
       name: 'Show Query',
-      contentType: 'show',
+      contentType: 'series',
       filterValues: [],
     });
     showQueryId = showQuery.id;

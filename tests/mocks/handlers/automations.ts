@@ -22,7 +22,7 @@ export const MOCK_AUTOMATIONS: AutomationDto[] = [
     id: 2,
     name: 'Weekly report',
     kind: 'user',
-    query: { id: 2, name: 'All series', contentType: 'show' },
+    query: { id: 2, name: 'All series', contentType: 'series' },
     querySources: [{ queryId: 2, role: 'include', sortOrder: 0 }],
     provider: { id: 1, name: 'Radarr Main', type: 'RADARR' },
     taskId: 'radarr.deleteUnmonitored',
@@ -81,7 +81,7 @@ export const MOCK_MEDIA_QUERIES: MediaQueryRecord[] = [
   {
     id: 2,
     name: 'All series',
-    contentType: 'show' as const,
+    contentType: 'series' as const,
     filterValues: [],
     health: MOCK_HEALTH,
     createdAt: '2026-01-01T00:00:00Z',

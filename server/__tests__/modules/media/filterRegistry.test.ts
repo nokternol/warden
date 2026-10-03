@@ -88,7 +88,7 @@ describe('MEDIA_RULES', () => {
 describe('dataType classification', () => {
   it('genres compares strings — csv-strings, both content types', () => {
     expect(getRule('genres', 'movie')!.dataType).toBe('csv-strings');
-    expect(getRule('genres', 'show')!.dataType).toBe('csv-strings');
+    expect(getRule('genres', 'series')!.dataType).toBe('csv-strings');
   });
 
   it('certification compares strings — csv-strings', () => {
@@ -96,7 +96,7 @@ describe('dataType classification', () => {
   });
 
   it('network compares strings — csv-strings', () => {
-    expect(getRule('network', 'show')!.dataType).toBe('csv-strings');
+    expect(getRule('network', 'series')!.dataType).toBe('csv-strings');
   });
 
   it('tagIds / qualityProfileIds compare numeric ids — csv-ids', () => {
@@ -145,7 +145,7 @@ describe('sourceProviders accuracy', () => {
   });
 
   it('tagIds (show) lists only Sonarr — Radarr cannot produce a show tag', () => {
-    expect(getRule('tagIds', 'show')!.sourceProviders).toEqual([MetadataProviderType.SONARR]);
+    expect(getRule('tagIds', 'series')!.sourceProviders).toEqual([MetadataProviderType.SONARR]);
   });
 
   it('watched is derived from playCount — Tautulli, Plex, and Jellyfin all produce it', () => {
@@ -165,7 +165,7 @@ describe('sourceProviders accuracy', () => {
   });
 
   it('communityRating is Sonarr-only — Sonarr ratings is a single aggregate, no TMDB key configured', () => {
-    expect(getRule('communityRating', 'show')!.sourceProviders).toEqual([
+    expect(getRule('communityRating', 'series')!.sourceProviders).toEqual([
       MetadataProviderType.SONARR,
     ]);
   });
@@ -178,7 +178,7 @@ describe('sourceProviders accuracy', () => {
   });
 
   it('addedDaysAgo (show) lists only Radarr/Sonarr — nothing populates addedDate from Plex', () => {
-    expect(getRule('addedDaysAgo', 'show')!.sourceProviders).toEqual([
+    expect(getRule('addedDaysAgo', 'series')!.sourceProviders).toEqual([
       MetadataProviderType.RADARR,
       MetadataProviderType.SONARR,
     ]);
@@ -222,9 +222,9 @@ describe('getRule', () => {
   });
 
   it('returns definition for (tagIds, show)', () => {
-    const rule = getRule('tagIds', 'show');
+    const rule = getRule('tagIds', 'series');
     expect(rule).toBeDefined();
-    expect(rule!.contentTypes).toContain('show');
+    expect(rule!.contentTypes).toContain('series');
   });
 
   it('returns undefined for unknown key', () => {
@@ -233,7 +233,7 @@ describe('getRule', () => {
 
   it('returns undefined when key exists but not for given contentType', () => {
     // imdbRating is movie-only
-    expect(getRule('imdbRating', 'show')).toBeUndefined();
+    expect(getRule('imdbRating', 'series')).toBeUndefined();
   });
 });
 
@@ -245,15 +245,15 @@ describe('getRule', () => {
 describe('instanceScoped classification', () => {
   it('flags qualityProfileIds and tagIds as instance-scoped for both content types', () => {
     expect(getRule('qualityProfileIds', 'movie')!.instanceScoped).toBe(true);
-    expect(getRule('qualityProfileIds', 'show')!.instanceScoped).toBe(true);
+    expect(getRule('qualityProfileIds', 'series')!.instanceScoped).toBe(true);
     expect(getRule('tagIds', 'movie')!.instanceScoped).toBe(true);
-    expect(getRule('tagIds', 'show')!.instanceScoped).toBe(true);
+    expect(getRule('tagIds', 'series')!.instanceScoped).toBe(true);
   });
 
   it('leaves universal rules unscoped', () => {
     expect(getRule('genres', 'movie')!.instanceScoped).toBeFalsy();
     expect(getRule('certification', 'movie')!.instanceScoped).toBeFalsy();
-    expect(getRule('network', 'show')!.instanceScoped).toBeFalsy();
+    expect(getRule('network', 'series')!.instanceScoped).toBeFalsy();
   });
 });
 
@@ -477,7 +477,7 @@ describe('studio predicates', () => {
   });
 
   it('show — passes when item studio is in the csv list', () => {
-    const rule = getRule('studio', 'show')!;
+    const rule = getRule('studio', 'series')!;
     expect(rule.predicate({ ...baseShow, studio: 'AMC Studios' }, 'AMC Studios')).toBe(true);
     expect(rule.predicate({ ...baseShow, studio: 'AMC Studios' }, 'HBO')).toBe(false);
   });
@@ -485,44 +485,44 @@ describe('studio predicates', () => {
 
 describe('show predicates', () => {
   it('title — show', () => {
-    const rule = getRule('title', 'show')!;
+    const rule = getRule('title', 'series')!;
     expect(rule.predicate(baseShow, 'breaking')).toBe(true);
     expect(rule.predicate(baseShow, 'Dexter')).toBe(false);
   });
 
   it('year — show', () => {
-    const rule = getRule('year', 'show')!;
+    const rule = getRule('year', 'series')!;
     expect(rule.predicate(baseShow, { min: 2008, max: 2008 })).toBe(true);
     expect(rule.predicate(baseShow, { min: 2009 })).toBe(false);
     expect(rule.predicate(baseShow, { max: 2007 })).toBe(false);
   });
 
   it('hasFile — show', () => {
-    const rule = getRule('hasFile', 'show')!;
+    const rule = getRule('hasFile', 'series')!;
     expect(rule.predicate(baseShow, true)).toBe(true);
     expect(rule.predicate(baseShow, false)).toBe(false);
   });
 
   it('tagIds — show', () => {
-    const rule = getRule('tagIds', 'show')!;
+    const rule = getRule('tagIds', 'series')!;
     expect(rule.predicate(baseShow, '5,99')).toBe(true);
     expect(rule.predicate(baseShow, '99')).toBe(false);
   });
 
   it('qualityProfileIds — show', () => {
-    const rule = getRule('qualityProfileIds', 'show')!;
+    const rule = getRule('qualityProfileIds', 'series')!;
     expect(rule.predicate(baseShow, '2,3')).toBe(true);
     expect(rule.predicate(baseShow, '99')).toBe(false);
   });
 
   it('genres — show', () => {
-    const rule = getRule('genres', 'show')!;
+    const rule = getRule('genres', 'series')!;
     expect(rule.predicate(baseShow, 'Drama,Comedy')).toBe(true);
     expect(rule.predicate(baseShow, 'Horror')).toBe(false);
   });
 
   it('monitored — show', () => {
-    const rule = getRule('monitored', 'show')!;
+    const rule = getRule('monitored', 'series')!;
     expect(rule.predicate(baseShow, false)).toBe(true);
     expect(rule.predicate(baseShow, true)).toBe(false);
   });
@@ -538,25 +538,25 @@ describe('show predicates', () => {
   });
 
   it('seriesStatus — show', () => {
-    const rule = getRule('seriesStatus', 'show')!;
+    const rule = getRule('seriesStatus', 'series')!;
     expect(rule.predicate(baseShow, 'ended')).toBe(true);
     expect(rule.predicate(baseShow, 'continuing')).toBe(false);
   });
 
   it('seriesType — show', () => {
-    const rule = getRule('seriesType', 'show')!;
+    const rule = getRule('seriesType', 'series')!;
     expect(rule.predicate(baseShow, 'standard')).toBe(true);
     expect(rule.predicate(baseShow, 'anime')).toBe(false);
   });
 
   it('network — show, csv list', () => {
-    const rule = getRule('network', 'show')!;
+    const rule = getRule('network', 'series')!;
     expect(rule.predicate(baseShow, 'AMC,HBO')).toBe(true);
     expect(rule.predicate(baseShow, 'HBO')).toBe(false);
   });
 
   it('addedDaysAgo — show', () => {
-    const rule = getRule('addedDaysAgo', 'show')!;
+    const rule = getRule('addedDaysAgo', 'series')!;
     expect(rule.predicate(baseShow, { min: 10 })).toBe(true); // added 20 days ago
     expect(rule.predicate(baseShow, { min: 30 })).toBe(false);
     expect(rule.predicate(baseShow, { max: 30 })).toBe(true);
@@ -564,7 +564,7 @@ describe('show predicates', () => {
   });
 
   it('sizeOnDiskGb — show', () => {
-    const rule = getRule('sizeOnDiskGb', 'show')!;
+    const rule = getRule('sizeOnDiskGb', 'series')!;
     expect(rule.predicate(baseShow, { min: 15 })).toBe(true);
     expect(rule.predicate(baseShow, { min: 25 })).toBe(false);
     expect(rule.predicate(baseShow, { max: 25 })).toBe(true);
@@ -572,13 +572,13 @@ describe('show predicates', () => {
   });
 
   it('certification — show', () => {
-    const rule = getRule('certification', 'show')!;
+    const rule = getRule('certification', 'series')!;
     expect(rule.predicate(baseShow, 'TV-MA')).toBe(true);
     expect(rule.predicate(baseShow, 'TV-PG')).toBe(false);
   });
 
   it('communityRating — show', () => {
-    const rule = getRule('communityRating', 'show')!;
+    const rule = getRule('communityRating', 'series')!;
     expect(rule.predicate(baseShow, { min: 9.0 })).toBe(true);
     expect(rule.predicate(baseShow, { min: 10.0 })).toBe(false);
     expect(rule.predicate(baseShow, { max: 10.0 })).toBe(true);
@@ -587,13 +587,13 @@ describe('show predicates', () => {
   });
 
   it('ended — show', () => {
-    const rule = getRule('ended', 'show')!;
+    const rule = getRule('ended', 'series')!;
     expect(rule.predicate(baseShow, true)).toBe(true);
     expect(rule.predicate(baseShow, false)).toBe(false);
   });
 
   it('lastAiredDaysAgo — show', () => {
-    const rule = getRule('lastAiredDaysAgo', 'show')!;
+    const rule = getRule('lastAiredDaysAgo', 'series')!;
     expect(rule.predicate(baseShow, { min: 50 })).toBe(true); // aired 100 days ago
     expect(rule.predicate(baseShow, { min: 150 })).toBe(false);
     expect(rule.predicate(baseShow, { max: 150 })).toBe(true);
@@ -602,7 +602,7 @@ describe('show predicates', () => {
   });
 
   it('episodePercentage — show', () => {
-    const rule = getRule('episodePercentage', 'show')!;
+    const rule = getRule('episodePercentage', 'series')!;
     expect(rule.predicate(baseShow, { min: 90 })).toBe(true);
     expect(rule.predicate(baseShow, { min: 100 })).toBe(false);
     expect(rule.predicate(baseShow, { max: 100 })).toBe(true);
@@ -611,7 +611,7 @@ describe('show predicates', () => {
   });
 
   it('watched — show', () => {
-    const rule = getRule('watched', 'show')!;
+    const rule = getRule('watched', 'series')!;
     expect(rule.predicate(baseShow, false)).toBe(true); // playCount=0
     expect(rule.predicate({ ...baseShow, playCount: 2 }, true)).toBe(true);
   });
@@ -669,7 +669,7 @@ describe('file-tech and release-date predicates', () => {
   });
 
   it('fileSizeBytes — show: passes within min/max bounds', () => {
-    const rule = getRule('fileSizeBytes', 'show')!;
+    const rule = getRule('fileSizeBytes', 'series')!;
     expect(rule.predicate({ ...baseShow, fileSizeBytes: 1000 }, { min: 500 })).toBe(true);
     expect(rule.predicate(baseShow, { min: 500 })).toBe(false);
   });
@@ -715,7 +715,7 @@ describe('file-tech and release-date predicates', () => {
   });
 
   it('labels — show: passes when item has any of the csv labels', () => {
-    const rule = getRule('labels', 'show')!;
+    const rule = getRule('labels', 'series')!;
     expect(rule.predicate({ ...baseShow, labels: ['Anime'] }, 'Anime,Kids')).toBe(true);
     expect(rule.predicate(baseShow, 'Anime')).toBe(false);
   });
@@ -740,7 +740,7 @@ describe('Jellyfin-only predicates', () => {
   });
 
   it('jellyfinIsFavorite — show: matches boolean exactly', () => {
-    const rule = getRule('jellyfinIsFavorite', 'show')!;
+    const rule = getRule('jellyfinIsFavorite', 'series')!;
     expect(rule.predicate({ ...baseShow, isFavorite: true }, true)).toBe(true);
     expect(rule.predicate({ ...baseShow, isFavorite: false }, true)).toBe(false);
   });
@@ -750,11 +750,11 @@ describe('Jellyfin-only predicates', () => {
 
 describe('Sonarr-only predicates', () => {
   it('seasonCount is a range, not a number — no natural small enum for a season count', () => {
-    expect(getRule('seasonCount', 'show')!.dataType).toBe('range');
+    expect(getRule('seasonCount', 'series')!.dataType).toBe('range');
   });
 
   it('seasonCount — show: passes within min/max bounds', () => {
-    const rule = getRule('seasonCount', 'show')!;
+    const rule = getRule('seasonCount', 'series')!;
     expect(rule.predicate({ ...baseShow, seasonCount: 5 }, { min: 3 })).toBe(true);
     expect(rule.predicate({ ...baseShow, seasonCount: 5 }, { min: 6 })).toBe(false);
     expect(rule.predicate({ ...baseShow, seasonCount: 5 }, { max: 6 })).toBe(true);
@@ -763,11 +763,11 @@ describe('Sonarr-only predicates', () => {
   });
 
   it('episodeCount is a range — spans totalEpisodeCount as the practical bound', () => {
-    expect(getRule('episodeCount', 'show')!.dataType).toBe('range');
+    expect(getRule('episodeCount', 'series')!.dataType).toBe('range');
   });
 
   it('episodeCount — show: reads totalEpisodeCount when present', () => {
-    const rule = getRule('episodeCount', 'show')!;
+    const rule = getRule('episodeCount', 'series')!;
     expect(
       rule.predicate({ ...baseShow, totalEpisodeCount: 62, episodeCount: 60 }, { min: 61 })
     ).toBe(true);
@@ -777,17 +777,17 @@ describe('Sonarr-only predicates', () => {
   });
 
   it('episodeCount — show: falls back to episodeCount when totalEpisodeCount is absent', () => {
-    const rule = getRule('episodeCount', 'show')!;
+    const rule = getRule('episodeCount', 'series')!;
     expect(rule.predicate({ ...baseShow, episodeCount: 12 }, { min: 10 })).toBe(true);
     expect(rule.predicate(baseShow, { min: 1 })).toBe(false);
   });
 
   it('nextAiringInDays is a forward-looking range — not the "days ago" convention', () => {
-    expect(getRule('nextAiringInDays', 'show')!.dataType).toBe('range');
+    expect(getRule('nextAiringInDays', 'series')!.dataType).toBe('range');
   });
 
   it('nextAiringInDays — show: passes within min/max bounds counting forward from now', () => {
-    const rule = getRule('nextAiringInDays', 'show')!;
+    const rule = getRule('nextAiringInDays', 'series')!;
     const inTenDays = new Date(Date.now() + 10 * 86_400_000 + 60_000).toISOString();
     expect(rule.predicate({ ...baseShow, nextAiring: inTenDays }, { min: 5, max: 15 })).toBe(true);
     expect(rule.predicate({ ...baseShow, nextAiring: inTenDays }, { min: 11 })).toBe(false);
@@ -796,14 +796,14 @@ describe('Sonarr-only predicates', () => {
   });
 
   it('languageProfileIds is csv-ids, instance-scoped — same shape as qualityProfileIds', () => {
-    const rule = getRule('languageProfileIds', 'show')!;
+    const rule = getRule('languageProfileIds', 'series')!;
     expect(rule.dataType).toBe('csv-ids');
     expect(rule.instanceScoped).toBe(true);
     expect(rule.sourceProviders).toEqual([MetadataProviderType.SONARR]);
   });
 
   it('languageProfileIds — show: passes when item languageProfileId is in the csv list', () => {
-    const rule = getRule('languageProfileIds', 'show')!;
+    const rule = getRule('languageProfileIds', 'series')!;
     expect(rule.predicate({ ...baseShow, languageProfileId: 3 }, '3,4')).toBe(true);
     expect(rule.predicate({ ...baseShow, languageProfileId: 3 }, '99')).toBe(false);
     expect(rule.predicate(baseShow, '3')).toBe(false); // no languageProfileId

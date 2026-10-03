@@ -15,7 +15,7 @@ export interface GroupIds {
 const PRIMARY_COLUMN: Record<MediaKind, typeof mediaIdentity.tmdbId | typeof mediaIdentity.tvdbId> =
   {
     movie: mediaIdentity.tmdbId,
-    show: mediaIdentity.tvdbId,
+    series: mediaIdentity.tvdbId,
   };
 
 /**

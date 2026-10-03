@@ -178,7 +178,7 @@ describe('AutomationService', () => {
     it('throws ValidationError when a RADARR provider is paired with a show query', async () => {
       const query = await mediaQueryService.create({
         name: 'Show Query',
-        contentType: 'show',
+        contentType: 'series',
         filterValues: [],
       });
       const provider = await providerSettingsService.create({
@@ -350,7 +350,7 @@ describe('AutomationService', () => {
     it('returns a dto with query.name and provider.type populated from the joined rows', async () => {
       const query = await mediaQueryService.create({
         name: 'Status Query',
-        contentType: 'show',
+        contentType: 'series',
         filterValues: [],
       });
       const provider = await providerSettingsService.create({

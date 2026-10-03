@@ -98,7 +98,7 @@ export function isMediaActuator(provider: object): provider is MediaActuator {
   return typeof (provider as Partial<MediaActuator>).tasks === 'function';
 }
 
-export type MediaKind = 'movie' | 'show';
+export type MediaKind = 'movie' | 'series';
 
 /**
  * The single authority for `MediaSource` role membership: which provider type
@@ -107,7 +107,7 @@ export type MediaKind = 'movie' | 'show';
  */
 export const SOURCE_OWNER_BY_KIND: Record<MediaKind, MetadataProviderType> = {
   movie: MetadataProviderType.RADARR,
-  show: MetadataProviderType.SONARR,
+  series: MetadataProviderType.SONARR,
 };
 
 const SOURCE_TYPES = new Set<MetadataProviderType>(Object.values(SOURCE_OWNER_BY_KIND));

@@ -60,7 +60,7 @@ describe('resolveGroup', () => {
   it('scopes the primary id by kind — a movie and a show may share a numeric tmdb/tvdb id', async () => {
     const db = getDb();
     const movieId = await resolveGroup(db, 'movie', { tmdbId: 603 });
-    const showId = await resolveGroup(db, 'show', { tvdbId: 603 });
+    const showId = await resolveGroup(db, 'series', { tvdbId: 603 });
 
     expect(movieId).not.toBe(showId);
     expect(await db.select().from(mediaIdentity)).toHaveLength(2);

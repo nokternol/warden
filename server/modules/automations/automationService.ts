@@ -78,7 +78,7 @@ const CONTENT_TYPE_PROVIDERS: Record<ContentType, MetadataProviderType[]> = {
     MetadataProviderType.JELLYFIN,
     MetadataProviderType.TAUTULLI,
   ],
-  show: [
+  series: [
     MetadataProviderType.SONARR,
     MetadataProviderType.PLEX,
     MetadataProviderType.JELLYFIN,

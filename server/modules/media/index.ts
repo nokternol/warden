@@ -62,7 +62,7 @@ export type {
   MediaRuleDescriptor,
   MovieRangeRuleKey,
   RangeValue,
-  ShowRangeRuleKey,
+  SeriesRangeRuleKey,
 } from './filterRegistry';
 export { MEDIA_RULES, getRule, toDescriptor } from './filterRegistry';
 

@@ -133,7 +133,7 @@ describe('Media browse — series registry predicates', () => {
       .where(eq(metadataProviders.type, MetadataProviderType.SONARR));
     const [identity] = await db
       .insert(mediaIdentity)
-      .values({ kind: 'show', enrichedAt: Math.floor(Date.now() / 1000) })
+      .values({ kind: 'series', enrichedAt: Math.floor(Date.now() / 1000) })
       .returning();
     await db
       .insert(mediaItems)

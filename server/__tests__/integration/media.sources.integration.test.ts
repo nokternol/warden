@@ -90,7 +90,7 @@ describe('GET /api/media/sources — ownership projection', () => {
       'Radarr 4k',
     ]);
 
-    const show = data.find((d: { contentType: string }) => d.contentType === 'show');
+    const show = data.find((d: { contentType: string }) => d.contentType === 'series');
     expect(show.ownerType).toBe('SONARR');
     expect(show.configured).toBe(false);
     expect(show.instances).toEqual([]);

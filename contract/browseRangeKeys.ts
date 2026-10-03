@@ -23,7 +23,7 @@ export type MovieRangeRuleKey =
   | 'physicalReleaseDaysAgo'
   | 'digitalReleaseDaysAgo';
 
-export type ShowRangeRuleKey =
+export type SeriesRangeRuleKey =
   | 'year'
   | 'addedDaysAgo'
   | 'plexAddedDaysAgo'

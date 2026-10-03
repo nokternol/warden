@@ -1,4 +1,5 @@
 import type { MediaFilters } from '@app/types/media';
+import type { ContentType } from '@contract/schemas';
 import { useRouter } from 'next/router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { MediaRuleDescriptor } from './useMediaRules';
@@ -8,38 +9,38 @@ const DEBOUNCE_MS = 300;
 
 export type RangeValue = { min?: number; max?: number };
 export type FilterValue = string | number | boolean | RangeValue;
-export type ContentScope = 'shared' | 'movie' | 'show';
+export type ContentScope = 'shared' | ContentType;
 
 export interface FilterState {
   shared: Record<string, FilterValue>;
   movie: Record<string, FilterValue>;
-  show: Record<string, FilterValue>;
-  /** Instance qualification for movie/show-scoped `instanceScoped` rule values (`tagIds`,
+  series: Record<string, FilterValue>;
+  /** Instance qualification for movie/series-scoped `instanceScoped` rule values (`tagIds`,
    *  `qualityProfileIds`) — ruleKey -> providerId. Absent key means unqualified, exactly
    *  today's semantics. Never populated for `shared` rules, which are never instance-scoped. */
   movieQualifiers: Record<string, number>;
-  showQualifiers: Record<string, number>;
+  seriesQualifiers: Record<string, number>;
   movieSort: string;
   seriesSort: string;
 }
 
-export type QualifierScope = 'movie' | 'show';
+export type QualifierScope = ContentType;
 
 const SORT_DEFAULT = 'title_asc';
 
 const EMPTY_FILTER_STATE: FilterState = {
   shared: { title: '' },
   movie: {},
-  show: {},
+  series: {},
   movieQualifiers: {},
-  showQualifiers: {},
+  seriesQualifiers: {},
   movieSort: SORT_DEFAULT,
   seriesSort: SORT_DEFAULT,
 };
 
 export function scopeOf(rule: MediaRuleDescriptor): ContentScope {
   if (rule.contentTypes.length === 2) return 'shared';
-  return rule.contentTypes[0] === 'movie' ? 'movie' : 'show';
+  return rule.contentTypes[0] === 'movie' ? 'movie' : 'series';
 }
 
 function capitalize(s: string): string {
@@ -54,7 +55,7 @@ interface ParamMeta {
 
 /**
  * Derives URL param names from (scope, key) — prefixing with the scope only
- * for the rule keys the registry intentionally reuses across movie/show
+ * for the rule keys the registry intentionally reuses across movie/series
  * (`tagIds`, `qualityProfileIds`, `genres`), so both can hold independent
  * values in one URL without collision. No hand-maintained name table: the
  * prefix is a mechanical function of whether the key collides.
@@ -108,9 +109,9 @@ function parseQuery(
   const state: FilterState = {
     shared: { title: '' },
     movie: {},
-    show: {},
+    series: {},
     movieQualifiers: {},
-    showQualifiers: {},
+    seriesQualifiers: {},
     movieSort: SORT_DEFAULT,
     seriesSort: SORT_DEFAULT,
   };
@@ -126,7 +127,7 @@ function parseQuery(
       if (!meta || meta.scope === 'shared') continue;
       const n = Number(raw);
       if (Number.isNaN(n)) continue;
-      state[meta.scope === 'movie' ? 'movieQualifiers' : 'showQualifiers'][meta.key] = n;
+      state[meta.scope === 'movie' ? 'movieQualifiers' : 'seriesQualifiers'][meta.key] = n;
       continue;
     }
     const meta = index?.reverse.get(param);
@@ -153,7 +154,7 @@ function buildQuery(state: FilterState, index: FieldIndex | undefined): Record<s
   if (state.movieSort !== SORT_DEFAULT) q.movieSort = state.movieSort;
   if (state.seriesSort !== SORT_DEFAULT) q.seriesSort = state.seriesSort;
 
-  for (const scope of ['shared', 'movie', 'show'] as const) {
+  for (const scope of ['shared', 'movie', 'series'] as const) {
     for (const [key, value] of Object.entries(state[scope])) {
       if (value === undefined) continue;
       if (scope === 'shared' && key === 'title' && value === '') continue;
@@ -167,8 +168,8 @@ function buildQuery(state: FilterState, index: FieldIndex | undefined): Record<s
     }
   }
 
-  for (const scope of ['movie', 'show'] as const) {
-    const qualifiers = state[scope === 'movie' ? 'movieQualifiers' : 'showQualifiers'];
+  for (const scope of ['movie', 'series'] as const) {
+    const qualifiers = state[scope === 'movie' ? 'movieQualifiers' : 'seriesQualifiers'];
     for (const [key, providerId] of Object.entries(qualifiers)) {
       const paramBase = index?.paramNameFor(scope, key) ?? key;
       q[`${paramBase}${QUALIFIER_SUFFIX}`] = String(providerId);
@@ -189,7 +190,9 @@ function isBucketActive(bucket: Record<string, FilterValue>, skipEmptyTitle = fa
 
 function isAnyFilterActive(state: FilterState): boolean {
   return (
-    isBucketActive(state.shared, true) || isBucketActive(state.movie) || isBucketActive(state.show)
+    isBucketActive(state.shared, true) ||
+    isBucketActive(state.movie) ||
+    isBucketActive(state.series)
   );
 }
 
@@ -254,9 +257,9 @@ export function useMediaFilters() {
     return {
       shared,
       movie: filterState.movie,
-      show: filterState.show,
+      series: filterState.series,
       movieQualifiers: filterState.movieQualifiers,
-      showQualifiers: filterState.showQualifiers,
+      seriesQualifiers: filterState.seriesQualifiers,
     };
   }, [debouncedTitle, filterState]);
 
@@ -268,8 +271,8 @@ export function useMediaFilters() {
       const next = { ...s, [scope]: bucket };
       // Clearing a value clears its qualification too — a stale providerId
       // pointing at an empty selection has nothing left to qualify.
-      if (value === undefined && (scope === 'movie' || scope === 'show')) {
-        const qualifiersKey = scope === 'movie' ? 'movieQualifiers' : 'showQualifiers';
+      if (value === undefined && (scope === 'movie' || scope === 'series')) {
+        const qualifiersKey = scope === 'movie' ? 'movieQualifiers' : 'seriesQualifiers';
         if (key in next[qualifiersKey]) {
           const qualifiers = { ...next[qualifiersKey] };
           delete qualifiers[key];
@@ -282,7 +285,7 @@ export function useMediaFilters() {
 
   const setQualifier = (scope: QualifierScope, key: string, providerId: number | undefined) => {
     setFilterState((s) => {
-      const qualifiersKey = scope === 'movie' ? 'movieQualifiers' : 'showQualifiers';
+      const qualifiersKey = scope === 'movie' ? 'movieQualifiers' : 'seriesQualifiers';
       const qualifiers = { ...s[qualifiersKey] };
       if (providerId === undefined) delete qualifiers[key];
       else qualifiers[key] = providerId;

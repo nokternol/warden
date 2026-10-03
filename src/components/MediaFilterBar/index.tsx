@@ -10,6 +10,7 @@ import type { MediaQualityProfile, MediaTag } from '@app/hooks/useMediaLookups';
 import type { MediaRuleDescriptor } from '@app/hooks/useMediaRules';
 import type { MediaSourceDescriptor } from '@app/hooks/useMediaSources';
 import { cn } from '@app/lib/utils/cn';
+import type { ContentType } from '@contract/schemas';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { OptionFilter } from '../filters/OptionFilter';
 import type { PickerEntry } from './FilterPicker';
@@ -57,7 +58,7 @@ export interface MediaFilterBarProps {
   /** Active-instance counts per content type — drives grouped, instance-qualified rendering
    *  for `instanceScoped` rules (§10). With zero or one instance every rule renders exactly
    *  as it did before this existed. */
-  sources?: Record<'movie' | 'show', MediaSourceDescriptor>;
+  sources?: Record<ContentType, MediaSourceDescriptor>;
   /** Scopes visible filter groups to the active tab. Omit to show all. */
   activeTab?: 'movies' | 'series';
   /** Mobile bottom sheet open state */
@@ -804,7 +805,7 @@ function toStringCsvOrUndefined(values: string[]): string | undefined {
 // ─── Rule grouping — derived from scope + sourceProviders, not a hand-kept table ──
 //
 // 'title' and 'year' are the two universal controls, rendered outside any
-// FilterGroup. Every other rule groups by content-type scope (movie/show), or
+// FilterGroup. Every other rule groups by content-type scope (movie/series), or
 // — for shared rules — by which provider(s) it's sourced from: a shared rule
 // sourced partly from RADARR/SONARR (addedDaysAgo, sizeOnDiskGb, hasFile)
 // appears in both the Movies and Series groups, matching how those groups
@@ -831,7 +832,7 @@ function groupsFor(rule: MediaRuleDescriptor, configuredTypes: Set<string>): Fil
   if (rule.key === 'title' || rule.key === 'year') return [];
   const scope = scopeOf(rule);
   if (scope === 'movie') return ['movies'];
-  if (scope === 'show') return ['series'];
+  if (scope === 'series') return ['series'];
 
   const providers = new Set(rule.sourceProviders.filter((sp) => configuredTypes.has(sp)));
   const groups: FilterGroupId[] = [];
@@ -970,7 +971,7 @@ function csvIdOptions(
  *  instance — the trigger for grouped, instance-qualified rendering (§10). */
 function hasMultipleInstances(
   scope: ContentScope,
-  sources: Record<'movie' | 'show', MediaSourceDescriptor> | undefined
+  sources: Record<ContentType, MediaSourceDescriptor> | undefined
 ): boolean {
   if (scope === 'shared') return false;
   return (sources?.[scope]?.instances.length ?? 0) > 1;
@@ -1185,7 +1186,7 @@ function RuleControl({
           grouped={grouped}
           onChange={(ids, providerId) => {
             onRuleChange(scope, rule.key, toCsvOrUndefined(ids));
-            if (rule.instanceScoped && (scope === 'movie' || scope === 'show')) {
+            if (rule.instanceScoped && (scope === 'movie' || scope === 'series')) {
               onQualifierChange(scope, rule.key, providerId);
             }
           }}

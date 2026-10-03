@@ -29,7 +29,7 @@ import type {
   NormalizedMovie,
   NormalizedShow,
   RangeValue,
-  ShowRangeRuleKey,
+  SeriesRangeRuleKey,
 } from './filterRegistry';
 import { paginateItems } from './media.pagination';
 import { sortMedia } from './media.sort';
@@ -174,7 +174,7 @@ const SERIES_PARAM_TO_KEY = {
  * Range-rule coverage witness, per content type: a plain `as const`-style lookup —
  * registry rule key → the (possibly legacy-renamed) `*_PARAM_TO_KEY` entry names that
  * cover it — typed as `Record<RuleKey, ...>` so it's exhaustive over the
- * registry-derived `MovieRangeRuleKey`/`ShowRangeRuleKey` union, and each `gte`/`lte`
+ * registry-derived `MovieRangeRuleKey`/`SeriesRangeRuleKey` union, and each `gte`/`lte`
  * value is typed `keyof typeof *_PARAM_TO_KEY` so a typo or a dangling reference to a
  * removed param also fails to compile. A new range rule, or a rule's content-type
  * scope changing, breaks this map until it's updated — not a silently-dropped filter
@@ -208,7 +208,7 @@ const _MOVIE_RANGE_PARAM_WITNESS: Record<
 };
 
 const _SERIES_RANGE_PARAM_WITNESS: Record<
-  ShowRangeRuleKey,
+  SeriesRangeRuleKey,
   { gte: keyof typeof SERIES_PARAM_TO_KEY; lte: keyof typeof SERIES_PARAM_TO_KEY }
 > = {
   year: { gte: 'yearMin', lte: 'yearMax' },
@@ -581,7 +581,7 @@ export function createMediaProcedures(cradle: MediaCradle) {
       };
       const matched = await mediaQueryEngine.evaluate({
         source,
-        contentType: 'show',
+        contentType: 'series',
         sources: [{ filterValues: toFilterValues(query, SERIES_PARAM_TO_KEY), role: 'include' }],
       });
       const matchedKeys = new Set(matched.map((s) => itemKey(s)));

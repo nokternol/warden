@@ -1,3 +1,4 @@
+import type { ContentType } from '@contract/schemas';
 import type { DrizzleDb } from '../../kernel/db';
 import { type QueryResult, evaluateCombination } from './combinationEvaluator';
 import type { EnrichmentQueries } from './enrichment/enrichment.queries';
@@ -23,7 +24,7 @@ export interface MediaQuerySource {
  * what each adds (a bound source / a database identity).
  */
 export interface MediaQuerySpec {
-  contentType: 'movie' | 'show';
+  contentType: ContentType;
   sources: MediaQuerySource[];
 }
 
@@ -49,7 +50,7 @@ export type { MediaItemSet };
 export function matchItems<T extends NormalizedMovie | NormalizedShow>(
   items: T[],
   filterValues: FilterValueEntry[],
-  contentType: 'movie' | 'show'
+  contentType: ContentType
 ): T[] {
   return items.filter((item) =>
     filterValues.every(({ key, value, providerId }) => {
@@ -92,7 +93,7 @@ export class MediaQueryEngine {
   private combine<T extends NormalizedMovie | NormalizedShow>(
     normalized: T[],
     sources: MediaQuerySource[],
-    contentType: 'movie' | 'show'
+    contentType: ContentType
   ): T[] {
     const queryResults: QueryResult[] = sources.map((s) => ({
       role: s.role,

@@ -206,7 +206,7 @@ describe('IdentityJobFactory', () => {
     const job = await makeFactory().create();
     await runIdentityJob(job);
 
-    const [row] = await db.select().from(mediaIdentity).where(eq(mediaIdentity.kind, 'show'));
+    const [row] = await db.select().from(mediaIdentity).where(eq(mediaIdentity.kind, 'series'));
     expect(row.tvMazeId).toBe(169);
   });
 });

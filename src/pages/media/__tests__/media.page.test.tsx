@@ -80,7 +80,7 @@ describe('MediaPage', () => {
     server.use(
       mockProcedure(contract.media.sources, (): MediaSourceDescriptor[] => [
         { contentType: 'movie', ownerType: 'JELLYFIN', configured: false, instances: [] },
-        { contentType: 'show', ownerType: 'SONARR', configured: false, instances: [] },
+        { contentType: 'series', ownerType: 'SONARR', configured: false, instances: [] },
       ]),
       mockProcedure(contract.media.movies, () => EMPTY_PAGE)
     );
@@ -94,7 +94,7 @@ describe('MediaPage', () => {
     server.use(
       mockProcedure(contract.media.sources, (): MediaSourceDescriptor[] => [
         { contentType: 'movie', ownerType: 'RADARR', configured: false, instances: [] },
-        { contentType: 'show', ownerType: 'SONARR', configured: false, instances: [] },
+        { contentType: 'series', ownerType: 'SONARR', configured: false, instances: [] },
       ]),
       mockProcedure(contract.media.movies, () => EMPTY_PAGE)
     );

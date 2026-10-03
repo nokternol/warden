@@ -130,7 +130,7 @@ export const MEDIA_RULES = [
   {
     key: 'title',
     label: 'Title',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'string',
     sourceProviders: [
       MetadataProviderType.RADARR,
@@ -143,7 +143,7 @@ export const MEDIA_RULES = [
   {
     key: 'year',
     label: 'Year',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'range',
     sourceProviders: [
       MetadataProviderType.RADARR,
@@ -157,7 +157,7 @@ export const MEDIA_RULES = [
   {
     key: 'watched',
     label: 'Watched',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     sourceProviders: deriveSourceProviders('playCount'),
     sourceField: 'playCount',
@@ -170,7 +170,7 @@ export const MEDIA_RULES = [
   {
     key: 'addedDaysAgo',
     label: 'Added (days ago)',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'range',
     sourceProviders: [MetadataProviderType.RADARR, MetadataProviderType.SONARR],
     required: false,
@@ -182,7 +182,7 @@ export const MEDIA_RULES = [
   {
     key: 'plexAddedDaysAgo',
     label: 'Plex added (days ago)',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'range',
     sourceProviders: deriveSourceProviders('plexAddedAt'),
     sourceField: 'plexAddedAt',
@@ -195,7 +195,7 @@ export const MEDIA_RULES = [
   {
     key: 'jellyfinAddedDaysAgo',
     label: 'Jellyfin added (days ago)',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'range',
     sourceProviders: deriveSourceProviders('jellyfinAddedAt'),
     sourceField: 'jellyfinAddedAt',
@@ -208,7 +208,7 @@ export const MEDIA_RULES = [
   {
     key: 'sizeOnDiskGb',
     label: 'Size on disk (GB)',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'range',
     sourceProviders: [MetadataProviderType.RADARR, MetadataProviderType.SONARR],
     required: false,
@@ -220,7 +220,7 @@ export const MEDIA_RULES = [
   {
     key: 'certification',
     label: 'Certification',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     sourceProviders: [
       MetadataProviderType.RADARR,
@@ -238,7 +238,7 @@ export const MEDIA_RULES = [
   {
     key: 'hasFile',
     label: 'Has file',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     sourceProviders: [
       MetadataProviderType.RADARR,
@@ -251,7 +251,7 @@ export const MEDIA_RULES = [
   {
     key: 'fileSizeBytes',
     label: 'File size (bytes)',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'range',
     sourceProviders: deriveSourceProviders('fileSizeBytes'),
     sourceField: 'fileSizeBytes',
@@ -264,7 +264,7 @@ export const MEDIA_RULES = [
   {
     key: 'releaseDaysAgo',
     label: 'Release date (days ago)',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'range',
     sourceProviders: deriveSourceProviders('releaseDate'),
     sourceField: 'releaseDate',
@@ -277,7 +277,7 @@ export const MEDIA_RULES = [
   {
     key: 'fileContainer',
     label: 'File container',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     sourceProviders: deriveSourceProviders('fileContainer'),
     sourceField: 'fileContainer',
@@ -290,7 +290,7 @@ export const MEDIA_RULES = [
   {
     key: 'videoCodec',
     label: 'Video codec',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     sourceProviders: deriveSourceProviders('videoCodec'),
     sourceField: 'videoCodec',
@@ -303,7 +303,7 @@ export const MEDIA_RULES = [
   {
     key: 'audioCodec',
     label: 'Audio codec',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     sourceProviders: deriveSourceProviders('audioCodec'),
     sourceField: 'audioCodec',
@@ -316,7 +316,7 @@ export const MEDIA_RULES = [
   {
     key: 'fileResolution',
     label: 'File resolution',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     sourceProviders: deriveSourceProviders('fileResolution'),
     sourceField: 'fileResolution',
@@ -329,7 +329,7 @@ export const MEDIA_RULES = [
   {
     key: 'labels',
     label: 'Labels',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     sourceProviders: deriveSourceProviders('labels'),
     sourceField: 'labels',
@@ -342,7 +342,7 @@ export const MEDIA_RULES = [
   {
     key: 'monitored',
     label: 'Monitored',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     sourceProviders: [MetadataProviderType.RADARR, MetadataProviderType.SONARR],
     required: false,
@@ -351,7 +351,7 @@ export const MEDIA_RULES = [
   {
     key: 'jellyfinIsFavorite',
     label: 'Jellyfin favorite',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     sourceProviders: deriveSourceProviders('isFavorite'),
     sourceField: 'isFavorite',
@@ -552,7 +552,7 @@ export const MEDIA_RULES = [
   {
     key: 'seriesStatus',
     label: 'Series status',
-    contentTypes: ['show'],
+    contentTypes: ['series'],
     dataType: 'string',
     sourceProviders: [MetadataProviderType.SONARR],
     required: false,
@@ -564,7 +564,7 @@ export const MEDIA_RULES = [
   {
     key: 'tagIds',
     label: 'Tags',
-    contentTypes: ['show'],
+    contentTypes: ['series'],
     dataType: 'csv-ids',
     // Hand-listed for the same reason as the movie-side tagIds rule above —
     // deriveSourceProviders('tags') would wrongly include Radarr here.
@@ -580,7 +580,7 @@ export const MEDIA_RULES = [
   {
     key: 'qualityProfileIds',
     label: 'Quality profile',
-    contentTypes: ['show'],
+    contentTypes: ['series'],
     dataType: 'csv-ids',
     sourceProviders: [MetadataProviderType.SONARR],
     required: false,
@@ -593,7 +593,7 @@ export const MEDIA_RULES = [
   {
     key: 'genres',
     label: 'Genres',
-    contentTypes: ['show'],
+    contentTypes: ['series'],
     dataType: 'csv-strings',
     sourceProviders: [MetadataProviderType.SONARR, MetadataProviderType.TMDB],
     required: false,
@@ -605,7 +605,7 @@ export const MEDIA_RULES = [
   {
     key: 'seriesType',
     label: 'Series type',
-    contentTypes: ['show'],
+    contentTypes: ['series'],
     dataType: 'string',
     sourceProviders: [MetadataProviderType.SONARR],
     required: false,
@@ -617,7 +617,7 @@ export const MEDIA_RULES = [
   {
     key: 'studio',
     label: 'Studio',
-    contentTypes: ['show'],
+    contentTypes: ['series'],
     dataType: 'csv-strings',
     sourceProviders: deriveSourceProviders('studio'),
     sourceField: 'studio',
@@ -631,7 +631,7 @@ export const MEDIA_RULES = [
   {
     key: 'network',
     label: 'Network',
-    contentTypes: ['show'],
+    contentTypes: ['series'],
     dataType: 'csv-strings',
     sourceProviders: [MetadataProviderType.SONARR, MetadataProviderType.TVMAZE],
     required: false,
@@ -644,7 +644,7 @@ export const MEDIA_RULES = [
   {
     key: 'communityRating',
     label: 'Community rating',
-    contentTypes: ['show'],
+    contentTypes: ['series'],
     dataType: 'range',
     sourceProviders: [MetadataProviderType.SONARR],
     required: false,
@@ -657,7 +657,7 @@ export const MEDIA_RULES = [
   {
     key: 'ended',
     label: 'Ended',
-    contentTypes: ['show'],
+    contentTypes: ['series'],
     dataType: 'boolean',
     sourceProviders: [MetadataProviderType.SONARR],
     required: false,
@@ -669,7 +669,7 @@ export const MEDIA_RULES = [
   {
     key: 'lastAiredDaysAgo',
     label: 'Last aired (days ago)',
-    contentTypes: ['show'],
+    contentTypes: ['series'],
     dataType: 'range',
     sourceProviders: [MetadataProviderType.SONARR],
     required: false,
@@ -682,7 +682,7 @@ export const MEDIA_RULES = [
   {
     key: 'episodePercentage',
     label: 'Episode completion (%)',
-    contentTypes: ['show'],
+    contentTypes: ['series'],
     dataType: 'range',
     sourceProviders: [MetadataProviderType.SONARR],
     required: false,
@@ -695,7 +695,7 @@ export const MEDIA_RULES = [
   {
     key: 'seasonCount',
     label: 'Season count',
-    contentTypes: ['show'],
+    contentTypes: ['series'],
     dataType: 'range',
     sourceProviders: [MetadataProviderType.SONARR],
     required: false,
@@ -708,7 +708,7 @@ export const MEDIA_RULES = [
   {
     key: 'episodeCount',
     label: 'Episode count',
-    contentTypes: ['show'],
+    contentTypes: ['series'],
     dataType: 'range',
     sourceProviders: [MetadataProviderType.SONARR],
     required: false,
@@ -722,7 +722,7 @@ export const MEDIA_RULES = [
   {
     key: 'nextAiringInDays',
     label: 'Next airing (days)',
-    contentTypes: ['show'],
+    contentTypes: ['series'],
     dataType: 'range',
     sourceProviders: [MetadataProviderType.SONARR],
     required: false,
@@ -735,7 +735,7 @@ export const MEDIA_RULES = [
   {
     key: 'languageProfileIds',
     label: 'Language profile',
-    contentTypes: ['show'],
+    contentTypes: ['series'],
     dataType: 'csv-ids',
     sourceProviders: [MetadataProviderType.SONARR],
     required: false,
@@ -749,7 +749,7 @@ export const MEDIA_RULES = [
   {
     key: 'tmdbStatus',
     label: 'TMDB status',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'string',
     sourceProviders: deriveSourceProviders('tmdbStatus'),
     sourceField: 'tmdbStatus',
@@ -762,7 +762,7 @@ export const MEDIA_RULES = [
   {
     key: 'overseerrRequestStatus',
     label: 'Overseerr request status',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'number',
     sourceProviders: deriveSourceProviders('overseerrRequestStatus'),
     sourceField: 'overseerrRequestStatus',
@@ -775,7 +775,7 @@ export const MEDIA_RULES = [
   {
     key: 'overseerrHasIssue',
     label: 'Overseerr has issue',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     sourceProviders: deriveSourceProviders('overseerrHasIssue'),
     sourceField: 'overseerrHasIssue',
@@ -786,7 +786,7 @@ export const MEDIA_RULES = [
   {
     key: 'lastWatchedDaysAgo',
     label: 'Last watched (days ago)',
-    contentTypes: ['movie', 'show'],
+    contentTypes: ['movie', 'series'],
     dataType: 'range',
     sourceProviders: deriveSourceProviders('lastWatchedAt'),
     sourceField: 'lastWatchedAt',
@@ -809,7 +809,7 @@ export function getRule(key: string, contentType: ContentType): MediaRule | unde
 
 // ─── Range-rule keys, by content type — checked against the API contract ──────
 // The browse-path param translators (server `*_PARAM_TO_KEY`, client
-// `BROWSE_PARAM_BINDINGS`) are checked against `MovieRangeRuleKey`/`ShowRangeRuleKey`
+// `BROWSE_PARAM_BINDINGS`) are checked against `MovieRangeRuleKey`/`SeriesRangeRuleKey`
 // — declared in the API contract (`contract/browseRangeKeys.ts`), not derived here,
 // because the contract depends on nothing in `server/`. `_ActualXRangeKey` below is
 // the real derivation, used only to assert the contract's list hasn't drifted from
@@ -818,8 +818,8 @@ export function getRule(key: string, contentType: ContentType): MediaRule | unde
 // here, naming the mismatched key (caught the hard way once already:
 // `plexAddedDaysAgo` shipped in the registry with no entry in any of the five
 // browse-path translators, and nothing failed to compile).
-export type { MovieRangeRuleKey, ShowRangeRuleKey } from '@contract/browseRangeKeys';
-import type { MovieRangeRuleKey, ShowRangeRuleKey } from '@contract/browseRangeKeys';
+export type { MovieRangeRuleKey, SeriesRangeRuleKey } from '@contract/browseRangeKeys';
+import type { MovieRangeRuleKey, SeriesRangeRuleKey } from '@contract/browseRangeKeys';
 
 type RangeRule = Extract<(typeof MEDIA_RULES)[number], { dataType: 'range' }>;
 
@@ -833,7 +833,7 @@ type _ActualRangeRuleFor<CT extends ContentType> = RangeRule extends infer R
   : never;
 
 type _ActualMovieRangeKey = _ActualRangeRuleFor<'movie'>['key'];
-type _ActualShowRangeKey = _ActualRangeRuleFor<'show'>['key'];
+type _ActualSeriesRangeKey = _ActualRangeRuleFor<'series'>['key'];
 
 /** Symmetric difference — non-`never` in either direction means the two lists disagree. */
 type _SymmetricDiff<A extends string, B extends string> = Exclude<A, B> | Exclude<B, A>;
@@ -842,8 +842,8 @@ const _movieRangeKeysMatchContract: Record<
   _SymmetricDiff<_ActualMovieRangeKey, MovieRangeRuleKey>,
   never
 > = {};
-const _showRangeKeysMatchContract: Record<
-  _SymmetricDiff<_ActualShowRangeKey, ShowRangeRuleKey>,
+const _seriesRangeKeysMatchContract: Record<
+  _SymmetricDiff<_ActualSeriesRangeKey, SeriesRangeRuleKey>,
   never
 > = {};
 

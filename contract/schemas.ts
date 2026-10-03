@@ -29,7 +29,7 @@ export const QueryIntSchema = z.union([
     .transform((v) => Number.parseInt(v, 10)),
 ]);
 
-export const ContentTypeSchema = z.enum(['movie', 'show']);
+export const ContentTypeSchema = z.enum(['movie', 'series']);
 export type ContentType = z.infer<typeof ContentTypeSchema>;
 
 export const FilterValueSchema = z.union([

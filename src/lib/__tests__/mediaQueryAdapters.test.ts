@@ -6,7 +6,7 @@ describe('toBrowseParams', () => {
     const buckets = {
       shared: { plexAddedDaysAgo: { min: 5, max: 15 } },
       movie: {},
-      show: {},
+      series: {},
     };
 
     const params = toBrowseParams(buckets, 'movie');

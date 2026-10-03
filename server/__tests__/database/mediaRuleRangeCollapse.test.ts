@@ -83,7 +83,7 @@ describe('migration 0013 — range rule collapse (data transform)', () => {
     const db = getDb();
     const [query] = await db
       .insert(mediaQueries)
-      .values({ name: 'Min-only Query', contentType: 'show' })
+      .values({ name: 'Min-only Query', contentType: 'series' })
       .returning();
 
     await db

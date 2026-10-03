@@ -1,3 +1,13 @@
+import type {
+  ContentScope,
+  FilterState,
+  FilterValue,
+  QualifierScope,
+  RangeValue,
+} from '@app/hooks/useMediaFilters';
+import type { FilterValueEntry } from '@app/hooks/useMediaQueries';
+import type { MediaFilters } from '@app/types/media';
+import type { MovieRangeRuleKey, SeriesRangeRuleKey } from '@contract/browseRangeKeys';
 /**
  * Two adapters from the registry-keyed, scoped `FilterState` (`useMediaFilters`)
  * to the two wire contracts that haven't caught up to it yet:
@@ -9,20 +19,11 @@
  *   client-side until it's removed.
  * - `toSaveValues`: not a legacy shim — it's the permanent shape queries
  *   need. Scoping by contentType (merging `shared` with just the one relevant
- *   scope, rather than movie+show together) is what avoids the
+ *   scope, rather than movie+series together) is what avoids the
  *   tagIds/qualityProfileIds/genres collision the two scopes intentionally
  *   share the same key for.
  */
-import type {
-  ContentScope,
-  FilterState,
-  FilterValue,
-  QualifierScope,
-  RangeValue,
-} from '@app/hooks/useMediaFilters';
-import type { FilterValueEntry } from '@app/hooks/useMediaQueries';
-import type { MediaFilters } from '@app/types/media';
-import type { MovieRangeRuleKey, ShowRangeRuleKey } from '@contract/browseRangeKeys';
+import type { ContentType } from '@contract/schemas';
 
 type Bound = 'min' | 'max';
 
@@ -84,37 +85,37 @@ const BROWSE_PARAM_BINDINGS = {
   collectionName: { scope: 'movie', key: 'collectionName' },
   isAvailable: { scope: 'movie', key: 'isAvailable' },
   radarrStatus: { scope: 'movie', key: 'radarrStatus' },
-  monitored: { scope: 'show', key: 'monitored' },
-  seriesStatus: { scope: 'show', key: 'seriesStatus' },
-  seriesTagIds: { scope: 'show', key: 'tagIds' },
-  seriesQualityProfileIds: { scope: 'show', key: 'qualityProfileIds' },
-  seriesGenres: { scope: 'show', key: 'genres' },
-  seriesType: { scope: 'show', key: 'seriesType' },
-  network: { scope: 'show', key: 'network' },
-  sonarrRatingGte: { scope: 'show', key: 'communityRating', bound: 'min' },
-  sonarrRatingLte: { scope: 'show', key: 'communityRating', bound: 'max' },
-  sonarrEnded: { scope: 'show', key: 'ended' },
-  sonarrLastAiredDaysAgoGte: { scope: 'show', key: 'lastAiredDaysAgo', bound: 'min' },
-  sonarrLastAiredDaysAgoLte: { scope: 'show', key: 'lastAiredDaysAgo', bound: 'max' },
-  sonarrPercentEpisodesGte: { scope: 'show', key: 'episodePercentage', bound: 'min' },
-  sonarrPercentEpisodesLte: { scope: 'show', key: 'episodePercentage', bound: 'max' },
-  seasonCountGte: { scope: 'show', key: 'seasonCount', bound: 'min' },
-  seasonCountLte: { scope: 'show', key: 'seasonCount', bound: 'max' },
-  episodeCountGte: { scope: 'show', key: 'episodeCount', bound: 'min' },
-  episodeCountLte: { scope: 'show', key: 'episodeCount', bound: 'max' },
-  nextAiringInDaysGte: { scope: 'show', key: 'nextAiringInDays', bound: 'min' },
-  nextAiringInDaysLte: { scope: 'show', key: 'nextAiringInDays', bound: 'max' },
-  seriesLanguageProfileIds: { scope: 'show', key: 'languageProfileIds' },
+  monitored: { scope: 'series', key: 'monitored' },
+  seriesStatus: { scope: 'series', key: 'seriesStatus' },
+  seriesTagIds: { scope: 'series', key: 'tagIds' },
+  seriesQualityProfileIds: { scope: 'series', key: 'qualityProfileIds' },
+  seriesGenres: { scope: 'series', key: 'genres' },
+  seriesType: { scope: 'series', key: 'seriesType' },
+  network: { scope: 'series', key: 'network' },
+  sonarrRatingGte: { scope: 'series', key: 'communityRating', bound: 'min' },
+  sonarrRatingLte: { scope: 'series', key: 'communityRating', bound: 'max' },
+  sonarrEnded: { scope: 'series', key: 'ended' },
+  sonarrLastAiredDaysAgoGte: { scope: 'series', key: 'lastAiredDaysAgo', bound: 'min' },
+  sonarrLastAiredDaysAgoLte: { scope: 'series', key: 'lastAiredDaysAgo', bound: 'max' },
+  sonarrPercentEpisodesGte: { scope: 'series', key: 'episodePercentage', bound: 'min' },
+  sonarrPercentEpisodesLte: { scope: 'series', key: 'episodePercentage', bound: 'max' },
+  seasonCountGte: { scope: 'series', key: 'seasonCount', bound: 'min' },
+  seasonCountLte: { scope: 'series', key: 'seasonCount', bound: 'max' },
+  episodeCountGte: { scope: 'series', key: 'episodeCount', bound: 'min' },
+  episodeCountLte: { scope: 'series', key: 'episodeCount', bound: 'max' },
+  nextAiringInDaysGte: { scope: 'series', key: 'nextAiringInDays', bound: 'min' },
+  nextAiringInDaysLte: { scope: 'series', key: 'nextAiringInDays', bound: 'max' },
+  seriesLanguageProfileIds: { scope: 'series', key: 'languageProfileIds' },
 } as const;
 
 /**
- * Range-rule coverage witness: exhaustive over `MovieRangeRuleKey`/`ShowRangeRuleKey`
+ * Range-rule coverage witness: exhaustive over `MovieRangeRuleKey`/`SeriesRangeRuleKey`
  * (imported from the server's zero-dependency browse-range contract), each entry
  * pointing at the `BROWSE_PARAM_BINDINGS` param names that cover it — typo'd or
  * dangling references fail to compile via `keyof typeof BROWSE_PARAM_BINDINGS`. A
  * range rule missing from here (new, or content-type rescoped) is a compile error,
  * not a silently-dropped filter (caught the hard way once already: `plexAddedDaysAgo`
- * shipped with no entry here, and nothing failed to compile). `movie`/`show` witnesses
+ * shipped with no entry here, and nothing failed to compile). `movie`/`series` witnesses
  * both check into the one shared `BROWSE_PARAM_BINDINGS` map — a rule reachable only
  * via its `shared`-scope entry (e.g. `year`) still resolves fine for both.
  */
@@ -139,7 +140,7 @@ const _MOVIE_RANGE_PARAM_WITNESS: Record<
 };
 
 const _SHOW_RANGE_PARAM_WITNESS: Record<
-  ShowRangeRuleKey,
+  SeriesRangeRuleKey,
   { gte: keyof typeof BROWSE_PARAM_BINDINGS; lte: keyof typeof BROWSE_PARAM_BINDINGS }
 > = {
   year: { gte: 'yearMin', lte: 'yearMax' },
@@ -158,12 +159,9 @@ const _SHOW_RANGE_PARAM_WITNESS: Record<
   nextAiringInDays: { gte: 'nextAiringInDaysGte', lte: 'nextAiringInDaysLte' },
 };
 
-type ScopedBuckets = Record<
-  'shared' | 'movie' | 'show',
-  Record<string, FilterValue | undefined>
-> & {
+type ScopedBuckets = Record<'shared' | ContentType, Record<string, FilterValue | undefined>> & {
   movieQualifiers?: Record<string, number>;
-  showQualifiers?: Record<string, number>;
+  seriesQualifiers?: Record<string, number>;
 };
 
 function readBinding(buckets: ScopedBuckets, binding: Binding): FilterValue | undefined {
@@ -172,7 +170,7 @@ function readBinding(buckets: ScopedBuckets, binding: Binding): FilterValue | un
   return value;
 }
 
-function scopesFor(contentType: 'movie' | 'show'): ContentScope[] {
+function scopesFor(contentType: ContentType): ContentScope[] {
   return ['shared', contentType];
 }
 
@@ -181,14 +179,11 @@ function qualifierFor(
   scope: QualifierScope,
   key: string
 ): number | undefined {
-  const qualifiers = scope === 'movie' ? buckets.movieQualifiers : buckets.showQualifiers;
+  const qualifiers = scope === 'movie' ? buckets.movieQualifiers : buckets.seriesQualifiers;
   return qualifiers?.[key];
 }
 
-export function toBrowseParams(
-  buckets: ScopedBuckets,
-  contentType: 'movie' | 'show'
-): MediaFilters {
+export function toBrowseParams(buckets: ScopedBuckets, contentType: ContentType): MediaFilters {
   const relevantScopes = new Set(scopesFor(contentType));
   const params: MediaFilters = {};
   for (const [name, binding] of Object.entries(BROWSE_PARAM_BINDINGS) as [string, Binding][]) {
@@ -197,7 +192,7 @@ export function toBrowseParams(
     if (value === undefined) continue;
     params[name] = value as string | number | boolean;
     if (binding.bound) continue;
-    if (binding.scope !== 'movie' && binding.scope !== 'show') continue;
+    if (binding.scope !== 'movie' && binding.scope !== 'series') continue;
     const providerId = qualifierFor(buckets, binding.scope, binding.key);
     if (providerId !== undefined) params[`${name}ProviderId`] = providerId;
   }
@@ -206,11 +201,11 @@ export function toBrowseParams(
 
 export function toSaveValues(
   filterState: FilterState,
-  contentType: 'movie' | 'show'
+  contentType: ContentType
 ): FilterValueEntry[] {
-  const scoped = contentType === 'movie' ? filterState.movie : filterState.show;
+  const scoped = contentType === 'movie' ? filterState.movie : filterState.series;
   const qualifiers =
-    contentType === 'movie' ? filterState.movieQualifiers : filterState.showQualifiers;
+    contentType === 'movie' ? filterState.movieQualifiers : filterState.seriesQualifiers;
   const merged: Record<string, FilterValue> = { ...filterState.shared, ...scoped };
   return Object.entries(merged)
     .filter((entry): entry is [string, FilterValue] => entry[1] !== undefined)

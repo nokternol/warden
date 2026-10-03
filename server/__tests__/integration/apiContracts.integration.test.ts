@@ -125,7 +125,7 @@ describe('API shape contracts — real server responses', () => {
   it('POST /api/media-queries response matches MediaQueryRecordSchema', async () => {
     const res = await client.post('/api/media-queries', {
       name: 'Contract test query',
-      contentType: 'show',
+      contentType: 'series',
       filterValues: [{ key: 'monitored', value: true }],
     });
     expect(res.status).toBe(200);
