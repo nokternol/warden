@@ -1,6 +1,6 @@
 import { buildContainer } from '@server/container';
 import { MetadataProviderType } from '@server/database/schema';
-import { serveApi } from '@server/kernel/api';
+import { api, serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
@@ -101,6 +101,31 @@ describe('serveApi — the contract served over HTTP', () => {
     expect(res.body).toEqual({
       status: 'error',
       error: { type: 'NOT_FOUND', message: 'Automation 9999 not found' },
+    });
+  });
+
+  it('answers an unexpected error with 500 INTERNAL_ERROR, naming the cause outside production', async () => {
+    const failing = express();
+    failing.use((req, _res, next) => {
+      req.user = { id: 1 } as unknown as NonNullable<typeof req.user>;
+      next();
+    });
+    failing.use(
+      serveApi({
+        automations: {
+          list: api.automations.list.handler(() => {
+            throw new Error('database unavailable');
+          }),
+        },
+      })
+    );
+
+    const res = await request(failing).get('/api/automations');
+
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({
+      status: 'error',
+      error: { type: 'INTERNAL_ERROR', message: 'database unavailable' },
     });
   });
 });

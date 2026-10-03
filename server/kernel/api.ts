@@ -6,6 +6,9 @@ import type { Router } from '@orpc/server';
 import type { RequestHandler } from 'express';
 import type { PublicUser } from '../database/schema';
 import { AppError } from './errors';
+import { getChildLogger } from './logger';
+
+const log = getChildLogger('Api');
 
 /** What every procedure handler receives about the request it serves. */
 export interface ApiContext {
@@ -27,25 +30,37 @@ export const api = implement(contract)
     return next();
   });
 
-/**
- * Runs a procedure and wraps its validated output in the success envelope. An
- * AppError it throws keeps its HTTP status and type on the way out.
- */
-async function inSuccessEnvelope(runProcedure: () => Promise<unknown>) {
+/** Runs a procedure and wraps its validated output in the success envelope. */
+async function inSuccessEnvelope(runProcedure: () => Promise<unknown>, requestId: string) {
   try {
     return { status: 'ok', data: await runProcedure() };
   } catch (err) {
-    if (err instanceof AppError) {
-      throw new ORPCError(err.type, { status: err.statusCode, message: err.message });
-    }
-    throw err;
+    throw toApiError(err, requestId);
   }
+}
+
+/**
+ * An AppError keeps its HTTP status and type; oRPC's own errors pass through;
+ * anything else is a logged 500 whose message is hidden in production.
+ */
+function toApiError(err: unknown, requestId: string): ORPCError<string, unknown> {
+  if (err instanceof AppError) {
+    return new ORPCError(err.type, { status: err.statusCode, message: err.message });
+  }
+  if (err instanceof ORPCError) return err;
+
+  const cause = err instanceof Error ? err : new Error(String(err));
+  log.error('Unhandled error', { requestId, error: cause.message, stack: cause.stack });
+  return new ORPCError('INTERNAL_ERROR', {
+    status: 500,
+    message: process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : cause.message,
+  });
 }
 
 /** Serves a (sub)router of contract procedures over HTTP at their contract paths. */
 export function serveApi(router: Router<AnyContractRouter, ApiContext>): RequestHandler {
   const handler = new OpenAPIHandler(router, {
-    clientInterceptors: [({ next }) => inSuccessEnvelope(next)],
+    clientInterceptors: [({ next, context }) => inSuccessEnvelope(next, context.requestId)],
     customErrorResponseBodyEncoder: (error) => ({
       status: 'error',
       error: { type: error.code, message: error.message },
