@@ -1,6 +1,7 @@
 import { contract } from '@contract/index';
 import { ORPCError, createORPCClient } from '@orpc/client';
 import { type ContractRouterClient, isContractProcedure } from '@orpc/contract';
+import { ResponseValidationPlugin } from '@orpc/contract/plugins';
 import { OpenAPILink } from '@orpc/openapi-client/fetch';
 import type { StandardLazyResponse } from '@orpc/standard-server';
 
@@ -32,6 +33,7 @@ const link = new OpenAPILink(contract, {
   url: () => window.location.origin,
   clientInterceptors: [unwrapSuccessEnvelope],
   customErrorResponseBodyDecoder: errorFromEnvelope,
+  plugins: [new ResponseValidationPlugin(contract)],
 });
 
 /**

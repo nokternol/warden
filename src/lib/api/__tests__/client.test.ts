@@ -30,4 +30,14 @@ describe('api client', () => {
 
     await expect(api.automations.run({ id: 9 })).rejects.toMatchObject({ status: 502 });
   });
+
+  it("rejects a response that doesn't match the procedure's contract output", async () => {
+    server.use(
+      http.get('/api/automations', () =>
+        HttpResponse.json({ status: 'ok', data: [{ id: 'not-a-number' }] })
+      )
+    );
+
+    await expect(api.automations.list({})).rejects.toThrow();
+  });
 });
