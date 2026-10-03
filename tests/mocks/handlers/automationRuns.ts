@@ -37,18 +37,17 @@ export const mockRunItems: Record<number, RunItemDto[]> = {
   2: [],
 };
 
+/** One page of `rows`, windowed by the request's `limit`/`offset` search params. */
+function pageOf<T>(request: Request, rows: T[]): { data: T[]; total: number } {
+  const url = new URL(request.url);
+  const limit = Number(url.searchParams.get('limit') ?? '50');
+  const offset = Number(url.searchParams.get('offset') ?? '0');
+  return { data: rows.slice(offset, offset + limit), total: rows.length };
+}
+
 export const automationRunHandlers = [
-  mockProcedure(contract.automations.runs, ({ request }) => {
-    const url = new URL(request.url);
-    const limit = Number(url.searchParams.get('limit') ?? '50');
-    const offset = Number(url.searchParams.get('offset') ?? '0');
-    return { data: mockRuns.slice(offset, offset + limit), total: mockRuns.length };
-  }),
-  mockProcedure(contract.automations.runItems, ({ params, request }) => {
-    const url = new URL(request.url);
-    const limit = Number(url.searchParams.get('limit') ?? '50');
-    const offset = Number(url.searchParams.get('offset') ?? '0');
-    const items = mockRunItems[Number(params.runId)] ?? [];
-    return { data: items.slice(offset, offset + limit), total: items.length };
-  }),
+  mockProcedure(contract.automations.runs, ({ request }) => pageOf(request, mockRuns)),
+  mockProcedure(contract.automations.runItems, ({ params, request }) =>
+    pageOf(request, mockRunItems[Number(params.runId)] ?? [])
+  ),
 ];
