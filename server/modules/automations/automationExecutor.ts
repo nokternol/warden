@@ -132,7 +132,7 @@ export class AutomationExecutor {
         sources,
         automation.taskParameter
       );
-      itemCount = outcome.itemCount;
+      itemCount = outcome.targets.length;
       await this.recordResult(automationId, taskId, {
         itemCount,
         status: 'success',
@@ -161,7 +161,7 @@ export class AutomationExecutor {
     providerSettings: MetadataProvider,
     sources: AutomationQuerySourceDto[],
     taskParameter?: string
-  ): Promise<{ itemCount: number; affects: 'media' | undefined; targets?: MediaItem[] }> {
+  ): Promise<{ targets: MediaItem[]; affects: 'media' | undefined }> {
     const queryDtos = await Promise.all(
       sources.map((s) => this.mediaQueryService.getById(s.queryId))
     );
@@ -199,7 +199,7 @@ export class AutomationExecutor {
       const finalIds = matched.map((item) => mediaSource.idOf(item)!);
 
       await task.run(finalIds, taskParameter);
-      return { itemCount: finalIds.length, affects: task.affects, targets: matched };
+      return { targets: matched, affects: task.affects };
     }
 
     // Non-source actuator: it owns no catalog, so the query evaluates against
@@ -230,7 +230,7 @@ export class AutomationExecutor {
     );
 
     await task.run(finalIds, taskParameter);
-    return { itemCount: finalIds.length, affects: task.affects, targets: addressed };
+    return { targets: addressed, affects: task.affects };
   }
 
   /**
