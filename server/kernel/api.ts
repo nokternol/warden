@@ -5,7 +5,7 @@ import { ORPCError, implement } from '@orpc/server';
 import type { Router } from '@orpc/server';
 import type { RequestHandler } from 'express';
 import type { PublicUser } from '../database/schema';
-import { AppError } from './errors';
+import { AppError, ValidationError } from './errors';
 import { getChildLogger } from './logger';
 
 const log = getChildLogger('Api');
@@ -45,7 +45,11 @@ async function inSuccessEnvelope(runProcedure: () => Promise<unknown>, requestId
  */
 function toApiError(err: unknown, requestId: string): ORPCError<string, unknown> {
   if (err instanceof AppError) {
-    return new ORPCError(err.type, { status: err.statusCode, message: err.message });
+    return new ORPCError(err.type, {
+      status: err.statusCode,
+      message: err.message,
+      data: err instanceof ValidationError ? { errors: err.errors } : undefined,
+    });
   }
   if (err instanceof ORPCError && err.code === 'BAD_REQUEST' && Array.isArray(err.data?.issues)) {
     return new ORPCError('VALIDATION_ERROR', {

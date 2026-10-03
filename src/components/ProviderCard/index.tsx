@@ -5,6 +5,7 @@ import type { TestStatus } from '@app/components/ConnectionTestIcon';
 import Toggle from '@app/components/Toggle';
 import type { ProviderSummary, UpdateProviderParams } from '@app/hooks/useProviderSettings';
 import type { ProviderTaskDescriptor } from '@app/hooks/useProviderTasks';
+import { api } from '@app/lib/api/client';
 import { cn } from '@app/lib/utils/cn';
 import {
   BarChart2,
@@ -150,15 +151,15 @@ export default function ProviderCard({
     setTestStatus('loading');
     setTestError(undefined);
     try {
-      const params = new URLSearchParams({ type: provider.type, url });
-      if (apiKey) params.set('apiKey', apiKey);
-      const res = await fetch(`/api/settings/providers/test?${params}`, { signal: ac.signal });
-      const json = await res.json();
-      if (json.data?.ok) {
+      const result = await api.providers.test(
+        { type: provider.type, url, apiKey: apiKey || undefined },
+        { signal: ac.signal }
+      );
+      if (result.ok) {
         setTestStatus('pass');
       } else {
         setTestStatus('fail');
-        setTestError(json.data?.error ?? 'Connection failed');
+        setTestError(result.error ?? 'Connection failed');
       }
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;

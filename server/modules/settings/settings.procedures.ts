@@ -1,11 +1,7 @@
-import { ProviderSchema } from '@contract/schemas';
 import { MetadataProviderType } from '@server/database/schema';
-import { defineRoute } from '@server/kernel/defineRoute';
-import { isAuthenticated } from '@server/kernel/middleware/auth';
+import { api } from '@server/kernel/api';
 import type { ProviderSettingsService } from '@server/modules/providers';
 import ky from 'ky';
-import { z } from 'zod';
-import { settingsSchemas, testProviderQuery } from './settings.schemas';
 
 const API_SUFFIXES: Record<string, string> = {
   SONARR: '/api/v3',
@@ -81,67 +77,40 @@ interface SettingsCradle {
   providerSettingsService: ProviderSettingsService;
 }
 
-export function createSettingsHandlers(cradle: SettingsCradle, invalidateMediaCaches?: () => void) {
+/** Provider CRUD and connection testing, declared under `providers` in the contract. */
+export function createProviderSettingsProcedures(
+  cradle: SettingsCradle,
+  invalidateMediaCaches?: () => void
+) {
   const { providerSettingsService } = cradle;
 
   return {
-    listProviders: [
-      isAuthenticated(),
-      defineRoute({
-        schemas: { response: z.array(ProviderSchema) },
-        handler: async () => {
-          return providerSettingsService.list();
-        },
-      }),
-    ],
+    list: api.providers.list.handler(async () => providerSettingsService.list()),
 
-    createProvider: [
-      isAuthenticated(),
-      defineRoute({
-        schemas: { ...settingsSchemas.createProvider, response: ProviderSchema },
-        handler: async ({ body }) => {
-          return providerSettingsService.create(body);
-        },
-      }),
-    ],
+    create: api.providers.create.handler(async ({ input }) =>
+      providerSettingsService.create({ ...input, type: input.type as MetadataProviderType })
+    ),
 
-    updateProvider: [
-      isAuthenticated(),
-      defineRoute({
-        schemas: { ...settingsSchemas.updateProvider, response: ProviderSchema },
-        handler: async ({ params, body }) => {
-          const result = await providerSettingsService.update(params.id, body);
-          invalidateMediaCaches?.();
-          return result;
-        },
-      }),
-    ],
+    update: api.providers.update.handler(async ({ input }) => {
+      const { id, ...patch } = input;
+      const result = await providerSettingsService.update(id, patch);
+      invalidateMediaCaches?.();
+      return result;
+    }),
 
-    deleteProvider: [
-      isAuthenticated(),
-      defineRoute({
-        schemas: settingsSchemas.deleteProvider,
-        handler: async ({ params }) => {
-          await providerSettingsService.delete(params.id);
-          invalidateMediaCaches?.();
-          return null;
-        },
-      }),
-    ],
+    delete: api.providers.delete.handler(async ({ input }) => {
+      await providerSettingsService.delete(input.id);
+      invalidateMediaCaches?.();
+      return null;
+    }),
 
-    testProvider: [
-      isAuthenticated(),
-      defineRoute({
-        schemas: { query: testProviderQuery },
-        handler: async ({ query }) => {
-          try {
-            await probeProvider(query.type, query.url, query.apiKey);
-            return { ok: true };
-          } catch (err) {
-            return { ok: false, error: err instanceof Error ? err.message : String(err) };
-          }
-        },
-      }),
-    ],
+    test: api.providers.test.handler(async ({ input }) => {
+      try {
+        await probeProvider(input.type as MetadataProviderType, input.url, input.apiKey);
+        return { ok: true };
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }),
   };
 }

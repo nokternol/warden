@@ -9,11 +9,12 @@ import { MetadataProviderType } from '@server/database/schema';
  *
  * Run: yarn vitest run --project server server/__tests__/integration/settings.testprovider.integration.test.ts
  */
+import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
-import { createSettingsRoutes } from '@server/modules/settings/settings.routes';
+import { createProviderSettingsProcedures } from '@server/modules/settings';
 import { createMockConfig } from '@tests/factories';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
@@ -39,7 +40,9 @@ describe('GET /api/settings/providers/test — TVMAZE and SEERR', () => {
     const config = loadConfig();
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
-    const settingsRoutes = createSettingsRoutes(container.cradle);
+    const settingsRoutes = serveApi({
+      providers: createProviderSettingsProcedures(container.cradle),
+    });
 
     authedApp = express();
     authedApp.use(express.json());
@@ -58,7 +61,7 @@ describe('GET /api/settings/providers/test — TVMAZE and SEERR', () => {
       };
       next();
     });
-    authedApp.use('/api/settings', settingsRoutes);
+    authedApp.use(settingsRoutes);
     authedApp.use(errorHandlerMiddleware);
   });
 

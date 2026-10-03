@@ -1,5 +1,6 @@
 import { buildContainer } from '@server/container';
 import { MetadataProviderType } from '@server/database/schema';
+import { serveApi } from '@server/kernel/api';
 /**
  * Integration tests: provider mutations bust all media caches.
  *
@@ -15,7 +16,7 @@ import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createMediaHandlers } from '@server/modules/media/media.handler';
-import { createSettingsHandlers } from '@server/modules/settings/settings.handler';
+import { createProviderSettingsProcedures } from '@server/modules/settings';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
@@ -92,11 +93,8 @@ describe('Provider mutation cache invalidation', () => {
     const mediaRouter = Router();
     mediaRouter.get('/movies', mediaHandlers.listMovies);
 
-    // Wire settings routes with the invalidator injected as second argument
-    const settingsHandlers = createSettingsHandlers(cradle, invalidateMediaCaches);
-    const settingsRouter = Router();
-    settingsRouter.patch('/providers/:id', ...settingsHandlers.updateProvider);
-    settingsRouter.delete('/providers/:id', ...settingsHandlers.deleteProvider);
+    // Provider settings procedures get the invalidator injected as second argument
+    const settingsProcedures = createProviderSettingsProcedures(cradle, invalidateMediaCaches);
 
     app = express();
     app.use(express.json());
@@ -106,7 +104,7 @@ describe('Provider mutation cache invalidation', () => {
       next();
     });
     app.use('/api/media', mediaRouter);
-    app.use('/api/settings', settingsRouter);
+    app.use(serveApi({ providers: settingsProcedures }));
     app.use(errorHandlerMiddleware);
 
     client = createApiClient(app);

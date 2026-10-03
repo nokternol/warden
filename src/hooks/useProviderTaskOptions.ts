@@ -1,24 +1,12 @@
-import useSWR from 'swr';
+import { api } from '@app/lib/api/client';
+import { useApi } from '@app/lib/api/useApi';
+import {
+  type ProviderTaskOption,
+  type ProviderTaskOptionsAvailability,
+  TaskOptionsRouteSchema,
+} from '@contract/providers';
 
-/** One choice a `select`-parameter task's control offers, from a live provider fetch. */
-export interface ProviderTaskOption {
-  id: string;
-  label: string;
-}
-
-/** A configured actuator instance and the options it offers for one route. */
-export interface ProviderTaskOptionsAvailability {
-  providerId: number;
-  type: string;
-  options: ProviderTaskOption[];
-}
-
-async function fetcher(url: string): Promise<ProviderTaskOptionsAvailability[]> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch task options');
-  const json = await res.json();
-  return json.data as ProviderTaskOptionsAvailability[];
-}
+export type { ProviderTaskOption, ProviderTaskOptionsAvailability };
 
 /** The options one provider instance offers for a route — empty if it declares none. */
 export function optionsForProvider(
@@ -31,17 +19,18 @@ export function optionsForProvider(
 /**
  * Instance-keyed live choices for a `select`-parameter task, fetched from its
  * `optionsRoute`. `route` is `undefined` when the selected task has no
- * `select` parameter — the fetch is skipped rather than requested with an
- * invalid route.
+ * `select` parameter; it, or a route the contract doesn't declare, skips the
+ * fetch.
  */
 export function useProviderTaskOptions(route: string | undefined): {
   availability: ProviderTaskOptionsAvailability[] | undefined;
   isLoading: boolean;
   error: unknown;
 } {
-  const { data, error, isLoading } = useSWR<ProviderTaskOptionsAvailability[]>(
-    route ? `/api/providers/task-options/${route}` : null,
-    fetcher
+  const parsed = TaskOptionsRouteSchema.safeParse(route);
+  const { data, error, isLoading } = useApi(
+    api.providers.taskOptions,
+    parsed.success ? { route: parsed.data } : null
   );
   return { availability: data, isLoading, error };
 }

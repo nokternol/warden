@@ -2,6 +2,8 @@ import Button from '@app/components/Button';
 import ConnectionTestIcon from '@app/components/ConnectionTestIcon';
 import type { TestStatus } from '@app/components/ConnectionTestIcon';
 import type { CreateProviderParams } from '@app/hooks/useProviderSettings';
+import { api } from '@app/lib/api/client';
+import { type ProviderType, ProviderTypeSchema } from '@contract/schemas';
 import { useRef, useState } from 'react';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -36,7 +38,7 @@ const PROVIDER_TYPES = [
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface AddFormState {
-  type: string;
+  type: ProviderType;
   name: string;
   url: string;
   apiKey: string;
@@ -63,7 +65,7 @@ export default function AddProviderForm({
   const [testError, setTestError] = useState<string | undefined>();
   const testAbortRef = useRef<AbortController | null>(null);
 
-  const runTest = async (url: string, apiKey: string, type: string) => {
+  const runTest = async (url: string, apiKey: string, type: ProviderType) => {
     if (!url) return;
     testAbortRef.current?.abort();
     const ac = new AbortController();
@@ -71,15 +73,15 @@ export default function AddProviderForm({
     setTestStatus('loading');
     setTestError(undefined);
     try {
-      const params = new URLSearchParams({ type, url });
-      if (apiKey) params.set('apiKey', apiKey);
-      const res = await fetch(`/api/settings/providers/test?${params}`, { signal: ac.signal });
-      const json = await res.json();
-      if (json.data?.ok) {
+      const result = await api.providers.test(
+        { type, url, apiKey: apiKey || undefined },
+        { signal: ac.signal }
+      );
+      if (result.ok) {
         setTestStatus('pass');
       } else {
         setTestStatus('fail');
-        setTestError(json.data?.error ?? 'Connection failed');
+        setTestError(result.error ?? 'Connection failed');
       }
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
@@ -119,7 +121,7 @@ export default function AddProviderForm({
             id="add-type"
             value={form.type}
             onChange={(e) => {
-              const newType = e.target.value;
+              const newType = ProviderTypeSchema.parse(e.target.value);
               const defaultUrl = PROVIDER_DEFAULT_URLS[newType];
               setForm((f) => ({ ...f, type: newType, url: defaultUrl ?? f.url }));
               setTestStatus('idle');

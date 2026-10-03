@@ -1,8 +1,10 @@
+import { contract } from '@contract/index';
 import { renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import React from 'react';
 import { SWRConfig } from 'swr';
 import { describe, expect, it } from 'vitest';
+import { contractPath, mockProcedure } from '../../../tests/mocks/contract';
 import { server } from '../../../tests/mocks/server';
 import { tasksForProvider, useProviderTasks } from '../useProviderTasks';
 
@@ -12,30 +14,26 @@ const wrapper = ({ children }: { children: React.ReactNode }) =>
 describe('useProviderTasks', () => {
   it('exposes instance-keyed availability and selects a provider instance by id', async () => {
     server.use(
-      http.get('/api/providers/tasks', () =>
-        HttpResponse.json({
-          data: [
+      mockProcedure(contract.providers.tasks, () => [
+        {
+          providerId: 1,
+          type: 'RADARR',
+          tasks: [
             {
-              providerId: 1,
-              type: 'RADARR',
-              tasks: [
-                {
-                  id: 'unmonitorMovie',
-                  label: 'Unmonitor movie',
-                  destructive: false,
-                  enabled: true,
-                },
-                {
-                  id: 'deleteMovieWithFiles',
-                  label: 'Delete movie + files',
-                  destructive: true,
-                  enabled: false,
-                },
-              ],
+              id: 'unmonitorMovie',
+              label: 'Unmonitor movie',
+              destructive: false,
+              enabled: true,
+            },
+            {
+              id: 'deleteMovieWithFiles',
+              label: 'Delete movie + files',
+              destructive: true,
+              enabled: false,
             },
           ],
-        })
-      )
+        },
+      ])
     );
 
     const { result } = renderHook(() => useProviderTasks(), { wrapper });
@@ -51,7 +49,7 @@ describe('useProviderTasks', () => {
   });
 
   it('treats an empty payload as no availability', async () => {
-    server.use(http.get('/api/providers/tasks', () => HttpResponse.json({ data: [] })));
+    server.use(mockProcedure(contract.providers.tasks, () => []));
 
     const { result } = renderHook(() => useProviderTasks(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -61,7 +59,12 @@ describe('useProviderTasks', () => {
   });
 
   it('surfaces a fetch failure without throwing — availability stays undefined', async () => {
-    server.use(http.get('/api/providers/tasks', () => new HttpResponse(null, { status: 500 })));
+    server.use(
+      http.get(
+        contractPath(contract.providers.tasks),
+        () => new HttpResponse(null, { status: 500 })
+      )
+    );
 
     const { result } = renderHook(() => useProviderTasks(), { wrapper });
     await waitFor(() => expect(result.current.error).toBeDefined());

@@ -1,7 +1,3 @@
-// Leaf type imports, not the module's public interface: this file is shared
-// with the client (RatingsDisplay imports it directly), and the interface's
-// value exports would pull the whole server graph into the client tsconfig
-// program.
 import type { OmdbRating } from './connections/omdbProvider';
 import type { TmdbRating } from './connections/tmdbProvider';
 import type { TvMazeRating } from './connections/tvmazeProvider';

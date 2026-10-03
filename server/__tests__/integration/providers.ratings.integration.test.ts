@@ -1,9 +1,10 @@
 import { buildContainer } from '@server/container';
+import { serveApi } from '@server/kernel/api';
 import { type AppConfig, loadConfig } from '@server/kernel/config';
 import { type DrizzleDb, closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
-import { createProvidersRoutes } from '@server/modules/providers';
+import { createProvidersProcedures } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import { server } from '@tests/mocks/server';
@@ -42,7 +43,7 @@ describe('GET /api/providers/ratings — TMDB key DI isolation', () => {
     const app = express();
     app.use(express.json());
     app.use(requestIdMiddleware);
-    app.use('/api/providers', createProvidersRoutes(container.cradle));
+    app.use(serveApi({ providers: createProvidersProcedures(container.cradle) }));
     app.use(errorHandlerMiddleware);
     return app;
   }

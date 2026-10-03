@@ -8,11 +8,12 @@ import { MetadataProviderType } from '@server/database/schema';
  *
  * Run: vitest run --project server
  */
+import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
-import { createSettingsRoutes } from '@server/modules/settings/settings.routes';
+import { createProviderSettingsProcedures } from '@server/modules/settings';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient, expectErrorResponse, expectSuccessResponse } from '@tests/helpers/api';
 import express, { type Express } from 'express';
@@ -39,7 +40,9 @@ describe('Settings API Integration', () => {
     const config = loadConfig();
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
-    const settingsRoutes = createSettingsRoutes(container.cradle);
+    const settingsRoutes = serveApi({
+      providers: createProviderSettingsProcedures(container.cradle),
+    });
 
     // Authenticated app: inject fake user before routes
     authedApp = express();
@@ -59,14 +62,14 @@ describe('Settings API Integration', () => {
       };
       next();
     });
-    authedApp.use('/api/settings', settingsRoutes);
+    authedApp.use(settingsRoutes);
     authedApp.use(errorHandlerMiddleware);
 
     // Unauthenticated app: no user injected
     unauthedApp = express();
     unauthedApp.use(express.json());
     unauthedApp.use(requestIdMiddleware);
-    unauthedApp.use('/api/settings', settingsRoutes);
+    unauthedApp.use(settingsRoutes);
     unauthedApp.use(errorHandlerMiddleware);
 
     authedClient = createApiClient(authedApp);

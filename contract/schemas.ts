@@ -146,29 +146,28 @@ export const MediaQueryValueSchema = z.object({
   filterValues: z.array(FilterValueEntrySchema),
 });
 
-export const CreateProviderInputSchema = z.object({
-  type: z.string(),
-  name: z.string().min(1),
-  url: z.string().url(),
-  apiKey: z.string().optional(),
-  settings: z.record(z.string(), z.unknown()).optional(),
-  isActive: z.boolean().optional(),
-});
-
-export const UpdateProviderInputSchema = z.object({
-  name: z.string().min(1).optional(),
-  url: z.string().url().optional(),
-  apiKey: z.string().optional(),
-  settings: z.record(z.string(), z.unknown()).optional(),
-  isActive: z.boolean().optional(),
-});
-
 // ─── Additional response schemas ─────────────────────────────────────────────
+
+/** Every provider type the server knows how to configure. */
+export const ProviderTypeSchema = z.enum([
+  'RADARR',
+  'SONARR',
+  'TAUTULLI',
+  'PLEX',
+  'JELLYFIN',
+  'OVERSEERR',
+  'SEERR',
+  'TMDB',
+  'OMDB',
+  'TVMAZE',
+]);
+
+export type ProviderType = z.infer<typeof ProviderTypeSchema>;
 
 export const ProviderSchema = z
   .object({
     id: z.number(),
-    type: z.string(),
+    type: ProviderTypeSchema,
     name: z.string(),
     url: z.string(),
     apiKey: z.union([z.literal('***'), z.null()]),
@@ -195,3 +194,4 @@ export const AutomationRunSchema = z
 export type AutomationDto = z.infer<typeof AutomationSchema>;
 export type AutomationRunDto = z.infer<typeof AutomationRunSchema>;
 export type MediaQueryRecord = z.infer<typeof MediaQueryRecordSchema>;
+export type ProviderSummary = z.infer<typeof ProviderSchema>;

@@ -11,8 +11,8 @@
  * its adapters directly over these connections' native surface.
  */
 
-// HTTP surface — mounted by the API router.
-export { createProvidersRoutes } from './providers.routes';
+// HTTP surface — this module's procedures of the API contract.
+export { createProvidersProcedures } from './providers.procedures';
 
 // Container contribution — the app builder composes Cradle from this slice
 // and calls the registration; classes registered here stay module-private

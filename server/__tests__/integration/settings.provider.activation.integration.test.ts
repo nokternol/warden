@@ -8,11 +8,12 @@ import { MetadataProviderType } from '@server/database/schema';
  *
  * Run: yarn vitest run --project server server/__tests__/integration/settings.provider.activation.integration.test.ts
  */
+import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
-import { createSettingsRoutes } from '@server/modules/settings/settings.routes';
+import { createProviderSettingsProcedures } from '@server/modules/settings';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient, expectSuccessResponse, expectValidationError } from '@tests/helpers/api';
 import express, { type Express } from 'express';
@@ -37,7 +38,9 @@ describe('POST /api/settings/providers — single-active-provider-per-type (D8)'
     const config = loadConfig();
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
-    const settingsRoutes = createSettingsRoutes(container.cradle);
+    const settingsRoutes = serveApi({
+      providers: createProviderSettingsProcedures(container.cradle),
+    });
 
     app = express();
     app.use(express.json());
@@ -56,7 +59,7 @@ describe('POST /api/settings/providers — single-active-provider-per-type (D8)'
       };
       next();
     });
-    app.use('/api/settings', settingsRoutes);
+    app.use(settingsRoutes);
     app.use(errorHandlerMiddleware);
 
     client = createApiClient(app);

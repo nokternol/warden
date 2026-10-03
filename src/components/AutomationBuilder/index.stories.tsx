@@ -1,12 +1,15 @@
 import type { MediaQueryRecord } from '@app/hooks/useMediaQueries';
 import type { ProviderSummary } from '@app/hooks/useProviderSettings';
 import type { ProviderTaskAvailability } from '@app/hooks/useProviderTasks';
+import { api } from '@app/lib/api/client';
+import { apiKey } from '@app/lib/api/useApi';
+import type { ProviderTaskOptionsAvailability, TaskOptionsRoute } from '@contract/providers';
 import type { Story } from '@ladle/react';
-import { SWRConfig } from 'swr';
+import { SWRConfig, unstable_serialize } from 'swr';
 import AutomationBuilder from './index';
 
-// Stories drive the real hooks from a preloaded SWR cache (no network): the
-// keys match `useProviderSettings` and `useProviderTasks`, so each state is
+// Stories drive the real hooks from a preloaded SWR cache (no network), keyed
+// exactly as `useApi` keys the procedures the hooks call, so each state is
 // deterministic for the visual pass.
 function makeProvider(overrides: Partial<ProviderSummary> = {}): ProviderSummary {
   return {
@@ -37,11 +40,11 @@ const queries: MediaQueryRecord[] = [
 function withData(
   providers: ProviderSummary[],
   availability: ProviderTaskAvailability[],
-  taskOptions: Record<string, Array<{ providerId: number; type: string; options: unknown[] }>> = {}
+  taskOptions: Partial<Record<TaskOptionsRoute, ProviderTaskOptionsAvailability[]>> = {}
 ): React.ReactNode {
   const optionsFallback = Object.fromEntries(
     Object.entries(taskOptions).map(([route, data]) => [
-      `/api/providers/task-options/${route}`,
+      unstable_serialize(apiKey(api.providers.taskOptions, { route: route as TaskOptionsRoute })),
       data,
     ])
   );
@@ -50,8 +53,8 @@ function withData(
       value={{
         provider: () => new Map(),
         fallback: {
-          '/api/settings/providers': providers,
-          '/api/providers/tasks': availability,
+          [unstable_serialize(apiKey(api.providers.list, undefined))]: providers,
+          [unstable_serialize(apiKey(api.providers.tasks, undefined))]: availability,
           ...optionsFallback,
         },
         revalidateOnMount: false,

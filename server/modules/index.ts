@@ -13,8 +13,8 @@ import {
   createSearchRoutes,
 } from './media';
 import { createMediaQueryProcedures } from './mediaQueries';
-import { createProvidersRoutes } from './providers';
-import { createSettingsRoutes } from './settings';
+import { createProvidersProcedures } from './providers';
+import { createProviderSettingsProcedures } from './settings';
 import { createSystemProcedures } from './system';
 
 const route = (path: string) => `/${path}`;
@@ -23,8 +23,6 @@ export const routes = {
   backdrops: route('backdrops'),
   filterFields: route('filter-fields'),
   media: route('media'),
-  providers: route('providers'),
-  settings: route('settings'),
   auth: route('auth'),
   search: route('search'),
 } as const;
@@ -53,6 +51,10 @@ export function createApiRouter(cradle: Cradle) {
     serveApi({
       automations: createAutomationProcedures(cradle),
       mediaQueries: createMediaQueryProcedures(cradle),
+      providers: {
+        ...createProvidersProcedures(cradle),
+        ...createProviderSettingsProcedures(cradle, invalidateMediaCaches),
+      },
       system: createSystemProcedures(cradle),
     })
   );
@@ -61,8 +63,6 @@ export function createApiRouter(cradle: Cradle) {
   router.use(routes.appSettings, createAppSettingsRoutes(cradle));
   router.use(routes.backdrops, createBackdropsRoutes(cradle));
   router.use(routes.auth, createAuthRoutes(cradle));
-  router.use(routes.providers, createProvidersRoutes(cradle));
-  router.use(routes.settings, createSettingsRoutes(cradle, invalidateMediaCaches));
   router.use(routes.media, createMediaRoutes(cradle, mediaHandlers));
   router.use(routes.search, createSearchRoutes(cradle));
   router.use(routes.filterFields, createFilterFieldsRoutes(cradle));

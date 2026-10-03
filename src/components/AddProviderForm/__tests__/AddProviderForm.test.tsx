@@ -1,7 +1,8 @@
+import { contract } from '@contract/index';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
+import { mockProcedure } from '../../../../tests/mocks/contract';
 import { server } from '../../../../tests/mocks/server';
 import AddProviderForm from '../index';
 
@@ -25,11 +26,7 @@ describe('AddProviderForm', () => {
 
     // Blurring the URL field fires a connection test; the test owns that endpoint
     // so the request is handled rather than falling through as unhandled.
-    server.use(
-      http.get('/api/settings/providers/test', () =>
-        HttpResponse.json({ status: 'ok', data: { ok: true } })
-      )
-    );
+    server.use(mockProcedure(contract.providers.test, () => ({ ok: true })));
 
     render(<AddProviderForm onSubmit={onSubmit} onCancel={vi.fn()} />);
 

@@ -43,10 +43,10 @@ const link = new OpenAPILink(contract, {
 function bind(node: object, client: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(node).map(([key, child]) => {
-      const target = client[key] as Record<string, unknown> & ((input: unknown) => unknown);
+      const target = client[key] as Record<string, unknown> & ((...args: unknown[]) => unknown);
       return [
         key,
-        isContractProcedure(child) ? (input: unknown) => target(input) : bind(child, target),
+        isContractProcedure(child) ? (...args: unknown[]) => target(...args) : bind(child, target),
       ];
     })
   );

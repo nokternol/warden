@@ -1,11 +1,12 @@
 import type { ProviderSummary } from '@app/hooks/useProviderSettings';
 import type { ProviderTaskAvailability } from '@app/hooks/useProviderTasks';
+import { contract } from '@contract/index';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
 import React from 'react';
 import { SWRConfig } from 'swr';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { mockProcedure } from '../../../../tests/mocks/contract';
 import { server } from '../../../../tests/mocks/server';
 import SettingsPage from '../index.page';
 
@@ -33,8 +34,8 @@ function makeProvider(overrides: Partial<ProviderSummary> = {}): ProviderSummary
 // the rendered conditions are explicit and predictable, never inherited.
 function mockApi(providers: ProviderSummary[], availability: ProviderTaskAvailability[]): void {
   server.use(
-    http.get('/api/settings/providers', () => HttpResponse.json({ status: 'ok', data: providers })),
-    http.get('/api/providers/tasks', () => HttpResponse.json({ status: 'ok', data: availability }))
+    mockProcedure(contract.providers.list, () => providers),
+    mockProcedure(contract.providers.tasks, () => availability)
   );
 }
 

@@ -11,7 +11,7 @@ import { AutomationService } from '@server/modules/automations/automationService
 import { createMediaQueryProcedures } from '@server/modules/mediaQueries';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
-import { createSettingsRoutes } from '@server/modules/settings/settings.routes';
+import { createProviderSettingsProcedures } from '@server/modules/settings';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient } from '@tests/helpers/api';
 import express, { type Express } from 'express';
@@ -75,7 +75,7 @@ describe('API shape contracts — real server responses', () => {
     });
     app.use(serveApi({ mediaQueries: createMediaQueryProcedures(container.cradle) }));
     app.use(serveApi({ automations: createAutomationProcedures(container.cradle) }));
-    app.use('/api/settings', createSettingsRoutes(container.cradle));
+    app.use(serveApi({ providers: createProviderSettingsProcedures(container.cradle) }));
     app.use(errorHandlerMiddleware);
 
     client = createApiClient(app);

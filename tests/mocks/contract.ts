@@ -18,6 +18,11 @@ export type ProcedureOutput<P> = P extends ContractProcedure<
   ? InferSchemaOutput<TOutput>
   : never;
 
+/** A procedure's contract path as an MSW path pattern (`{id}` becomes `:id`). */
+export function contractPath(procedure: AnyProcedure): string {
+  return (procedure['~orpc'].route.path ?? '').replace(/\{(\w+)\}/g, ':$1');
+}
+
 /**
  * Mocks a contract procedure at its own method and path, answering the
  * resolver's output inside the success envelope. The resolver must return the
@@ -30,11 +35,10 @@ export function mockProcedure<P extends AnyProcedure>(
     request: Request;
   }) => ProcedureOutput<P> | Promise<ProcedureOutput<P>>
 ) {
-  const { method = 'POST', path = '', successStatus = 200 } = procedure['~orpc'].route;
-  const mswPath = path.replace(/\{(\w+)\}/g, ':$1');
+  const { method = 'POST', successStatus = 200 } = procedure['~orpc'].route;
   const handle = http[method.toLowerCase() as Lowercase<typeof method>];
 
-  return handle(mswPath, async ({ params, request }) =>
+  return handle(contractPath(procedure), async ({ params, request }) =>
     HttpResponse.json(
       { status: 'ok', data: await resolve({ params, request }) },
       { status: successStatus }

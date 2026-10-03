@@ -1,6 +1,9 @@
-import { http, HttpResponse } from 'msw';
+import { contract } from '@contract/index';
+import type { ProviderDraft, ProviderPatch } from '@contract/providers';
+import type { ProviderSummary } from '@contract/schemas';
+import { mockProcedure } from '../contract';
 
-const mockProviders = [
+const mockProviders: ProviderSummary[] = [
   {
     id: 1,
     type: 'RADARR',
@@ -15,42 +18,35 @@ const mockProviders = [
 ];
 
 export const settingsHandlers = [
-  http.get('/api/settings/providers', () => {
-    return HttpResponse.json({ status: 'ok', data: mockProviders });
+  mockProcedure(contract.providers.list, () => mockProviders),
+
+  mockProcedure(contract.providers.create, async ({ request }) => {
+    const body = (await request.json()) as ProviderDraft;
+    return {
+      id: 2,
+      type: body.type,
+      name: body.name,
+      url: body.url,
+      apiKey: body.apiKey ? ('***' as const) : null,
+      settings: null,
+      isActive: body.isActive ?? true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
   }),
 
-  http.post('/api/settings/providers', async ({ request }) => {
-    const body = (await request.json()) as Record<string, unknown>;
-    return HttpResponse.json({
-      status: 'ok',
-      data: {
-        id: 2,
-        type: body.type,
-        name: body.name,
-        url: body.url,
-        apiKey: body.apiKey ? '***' : null,
-        settings: null,
-        isActive: body.isActive ?? true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    });
+  mockProcedure(contract.providers.update, async ({ params, request }) => {
+    const body = (await request.json()) as ProviderPatch;
+    return {
+      ...mockProviders[0],
+      ...body,
+      id: Number(params.id),
+      settings: body.settings ?? mockProviders[0].settings,
+      apiKey: '***' as const,
+    };
   }),
 
-  http.patch('/api/settings/providers/:id', async ({ params, request }) => {
-    const body = (await request.json()) as Record<string, unknown>;
-    return HttpResponse.json({
-      status: 'ok',
-      data: {
-        ...mockProviders[0],
-        id: Number(params.id),
-        ...body,
-        apiKey: '***',
-      },
-    });
-  }),
+  mockProcedure(contract.providers.delete, () => null),
 
-  http.delete('/api/settings/providers/:id', () => {
-    return HttpResponse.json({ status: 'ok', data: null });
-  }),
+  mockProcedure(contract.providers.test, () => ({ ok: true })),
 ];
