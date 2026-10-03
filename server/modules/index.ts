@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import type { Cradle } from '../container';
+import { serveApi } from '../kernel/api';
 import { checkUser } from '../kernel/middleware/auth';
 import { createAppSettingsRoutes } from './appSettings';
 import { createAuthRoutes } from './auth';
-import { createAutomationRoutes } from './automations';
+import { createAutomationProcedures, createAutomationRoutes } from './automations';
 import {
   createBackdropsRoutes,
   createFilterFieldsRoutes,
@@ -14,12 +15,11 @@ import {
 import { createMediaQueryRoutes } from './mediaQueries';
 import { createProvidersRoutes } from './providers';
 import { createSettingsRoutes } from './settings';
-import { createHealthRoutes } from './system';
+import { createSystemProcedures } from './system';
 
 const route = (path: string) => `/${path}`;
 export const routes = {
   appSettings: route('app-settings'),
-  health: route('health'),
   backdrops: route('backdrops'),
   filterFields: route('filter-fields'),
   media: route('media'),
@@ -49,9 +49,17 @@ export function createApiRouter(cradle: Cradle) {
   const mediaHandlers = createMediaHandlers(cradle);
   const { invalidateMediaCaches } = mediaHandlers;
 
+  // Contract procedures first; requests they don't match fall through to the
+  // Express routers below.
+  router.use(
+    serveApi({
+      automations: createAutomationProcedures(cradle),
+      system: createSystemProcedures(cradle),
+    })
+  );
+
   // Mount modules
   router.use(routes.appSettings, createAppSettingsRoutes(cradle));
-  router.use(routes.health, createHealthRoutes(cradle));
   router.use(routes.backdrops, createBackdropsRoutes(cradle));
   router.use(routes.auth, createAuthRoutes(cradle));
   router.use(routes.providers, createProvidersRoutes(cradle));
