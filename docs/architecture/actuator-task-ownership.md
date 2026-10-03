@@ -133,7 +133,7 @@ the executor branches on `isMediaSourceType(providerSettings.type)`
   catalog and its native ids (`mediaSource.idOf`) feed the task directly.
 - **Non-source actuator (Plex/Jellyfin/Tautulli):** it owns no catalog, so the query evaluates against
   the content type's owning source instances (pooled via `MediaSourceFactory.sourcesFor`), and matched
-  items are translated into the actuator's addressing space by `resolveActuatorIds`
+  items are translated into the actuator's addressing space by `resolveActuatorTargets`
   ([`server/modules/media/actuatorIdResolver.ts`](ref:path:server/modules/media/actuatorIdResolver.ts)):
   each item's `(providerId, externalId)` coordinate joins through `media_item` to its `media_identity`
   group, whose `plexRatingKey`/`jellyfinItemId` column carries the actuator-native id. Identities the

@@ -6,7 +6,7 @@ import {
 } from '@server/database/schema';
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
-import { resolveActuatorIds } from '@server/modules/media';
+import { resolveActuatorTargets } from '@server/modules/media';
 import type { NormalizedMovie } from '@server/modules/media';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -29,7 +29,7 @@ const movieItem = (providerId: number, radarrId: number): NormalizedMovie => ({
   title: `Movie ${radarrId}`,
 });
 
-describe('resolveActuatorIds', () => {
+describe('resolveActuatorTargets', () => {
   let radarrId: number;
   let radarr4kId: number;
 
@@ -80,7 +80,7 @@ describe('resolveActuatorIds', () => {
       copies: [{ providerId: radarrId, externalId: 2 }],
     });
 
-    const ids = await resolveActuatorIds(getDb(), MetadataProviderType.PLEX, [
+    const { actuatorIds: ids } = await resolveActuatorTargets(getDb(), MetadataProviderType.PLEX, [
       movieItem(radarrId, 1),
       movieItem(radarrId, 2),
     ]);
@@ -94,9 +94,11 @@ describe('resolveActuatorIds', () => {
       copies: [{ providerId: radarrId, externalId: 9 }],
     });
 
-    const ids = await resolveActuatorIds(getDb(), MetadataProviderType.TAUTULLI, [
-      movieItem(radarrId, 9),
-    ]);
+    const { actuatorIds: ids } = await resolveActuatorTargets(
+      getDb(),
+      MetadataProviderType.TAUTULLI,
+      [movieItem(radarrId, 9)]
+    );
 
     expect(ids).toEqual(['rk-9']);
   });
@@ -107,9 +109,11 @@ describe('resolveActuatorIds', () => {
       copies: [{ providerId: radarrId, externalId: 3 }],
     });
 
-    const ids = await resolveActuatorIds(getDb(), MetadataProviderType.JELLYFIN, [
-      movieItem(radarrId, 3),
-    ]);
+    const { actuatorIds: ids } = await resolveActuatorTargets(
+      getDb(),
+      MetadataProviderType.JELLYFIN,
+      [movieItem(radarrId, 3)]
+    );
 
     expect(ids).toEqual(['jf-abc']);
   });
@@ -124,7 +128,7 @@ describe('resolveActuatorIds', () => {
     });
     await seedIdentity({ copies: [{ providerId: radarrId, externalId: 6 }] });
 
-    const ids = await resolveActuatorIds(getDb(), MetadataProviderType.PLEX, [
+    const { actuatorIds: ids } = await resolveActuatorTargets(getDb(), MetadataProviderType.PLEX, [
       movieItem(radarrId, 5),
       movieItem(radarr4kId, 5),
       movieItem(radarrId, 6),
@@ -143,7 +147,7 @@ describe('resolveActuatorIds', () => {
       copies: [{ providerId: radarrId, externalId: 2 }],
     });
 
-    const ids = await resolveActuatorIds(getDb(), MetadataProviderType.PLEX, [
+    const { actuatorIds: ids } = await resolveActuatorTargets(getDb(), MetadataProviderType.PLEX, [
       movieItem(radarrId, 2),
     ]);
 
@@ -151,13 +155,17 @@ describe('resolveActuatorIds', () => {
   });
 
   it('returns empty for no items without querying', async () => {
-    const ids = await resolveActuatorIds(getDb(), MetadataProviderType.PLEX, []);
+    const { actuatorIds: ids } = await resolveActuatorTargets(
+      getDb(),
+      MetadataProviderType.PLEX,
+      []
+    );
     expect(ids).toEqual([]);
   });
 
   it('throws for a provider type with no actuator addressing space', async () => {
     await expect(
-      resolveActuatorIds(getDb(), MetadataProviderType.RADARR, [movieItem(radarrId, 1)])
+      resolveActuatorTargets(getDb(), MetadataProviderType.RADARR, [movieItem(radarrId, 1)])
     ).rejects.toThrow(/addressing space/i);
   });
 });

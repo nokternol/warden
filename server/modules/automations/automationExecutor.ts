@@ -2,7 +2,12 @@ import type { MetadataProvider } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
 import type { DomainEventBus } from '../../kernel/eventBus';
 import { getChildLogger } from '../../kernel/logger';
-import { EnrichmentQueries, MediaQueryEngine, mediaSourceFor, resolveActuatorIds } from '../media';
+import {
+  EnrichmentQueries,
+  MediaQueryEngine,
+  mediaSourceFor,
+  resolveActuatorTargets,
+} from '../media';
 import type { MediaItem, MediaSource, MediaSourceFactory } from '../media';
 import type { MediaQueryService } from '../mediaQueries';
 import {
@@ -218,10 +223,14 @@ export class AutomationExecutor {
       contentType,
       sources: querySpecs,
     });
-    const finalIds = await resolveActuatorIds(this.db, providerSettings.type, matched);
+    const { actuatorIds: finalIds, addressed } = await resolveActuatorTargets(
+      this.db,
+      providerSettings.type,
+      matched
+    );
 
     await task.run(finalIds, taskParameter);
-    return { itemCount: finalIds.length, affects: task.affects };
+    return { itemCount: finalIds.length, affects: task.affects, targets: addressed };
   }
 
   /**
