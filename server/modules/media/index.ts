@@ -10,7 +10,7 @@
 // HTTP surface — the media procedures of the API contract. Absorbs the
 // filterFields, backdrops, and search route-drawn modules; each keeps its own URL.
 export { createMediaProcedures } from './media.procedures';
-export { createFilterFieldsRoutes } from './media.filterFields.routes';
+export { createRulesProcedures } from './media.rules.procedures';
 export { createBackdropsRoutes } from './media.backdrops.routes';
 export { createSearchRoutes } from './media.search.routes';
 

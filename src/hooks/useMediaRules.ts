@@ -1,34 +1,14 @@
-import type { ContentTypeSchema } from '@contract/schemas';
-import useSWR from 'swr';
-import type { z } from 'zod';
+import { api } from '@app/lib/api/client';
+import { useApi } from '@app/lib/api/useApi';
+import type { MediaRuleDescriptor } from '@contract/media';
+import type { ContentType } from '@contract/schemas';
 
-type ContentType = z.infer<typeof ContentTypeSchema>;
-
-export interface MediaRuleDescriptor {
-  key: string;
-  label: string;
-  contentTypes: ContentType[];
-  dataType: 'boolean' | 'number' | 'string' | 'csv-ids' | 'csv-strings' | 'range';
-  sourceProviders: string[];
-  required: boolean;
-  /** True for rules whose values are a provider-defined id space (quality profiles, tags) —
-   *  the client must qualify these per instance when more than one is active. */
-  instanceScoped?: boolean;
-}
-
-const KEY = '/api/filter-fields';
-
-async function fetcher(url: string): Promise<MediaRuleDescriptor[]> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch filter fields');
-  return res.json();
-}
+export type { MediaRuleDescriptor };
 
 export function useMediaRules(contentType?: ContentType): {
   rules: MediaRuleDescriptor[] | undefined;
   isLoading: boolean;
 } {
-  const key = contentType ? `${KEY}?contentType=${contentType}` : KEY;
-  const { data, isLoading } = useSWR<MediaRuleDescriptor[]>(key, fetcher);
+  const { data, isLoading } = useApi(api.media.rules, { contentType });
   return { rules: data, isLoading };
 }

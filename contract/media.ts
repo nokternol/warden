@@ -181,10 +181,31 @@ export const MediaSourceDescriptorSchema = z.object({
   instances: z.array(z.object({ id: z.number(), name: z.string() })),
 });
 
+/** A filterable rule as the client sees it: everything but its predicate. */
+export const MediaRuleDescriptorSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  contentTypes: z.array(ContentTypeSchema).readonly(),
+  dataType: z.enum(['boolean', 'number', 'string', 'csv-ids', 'csv-strings', 'range']),
+  sourceProviders: z.array(ProviderTypeSchema).readonly(),
+  required: z.boolean(),
+  /** True for rules whose values are a provider-defined id space (quality profiles, tags) —
+   *  the client must qualify these per instance when more than one is active. */
+  instanceScoped: z.boolean().optional(),
+  sourceField: z.string().optional(),
+});
+
 const lookup = (path: string) =>
   base.route({ method: 'GET', path: `/api/media/${path}` }).output(z.array(z.string()));
 
 export const media = {
+  /** The rules a configured, active provider can produce, optionally for one content type. */
+  rules: base
+    .meta({ public: true })
+    .route({ method: 'GET', path: '/api/filter-fields' })
+    .input(z.object({ contentType: ContentTypeSchema.optional() }))
+    .output(z.array(MediaRuleDescriptorSchema)),
+
   /** One page of movies matching the browse filters, grouped by TMDB id across instances. */
   movies: base
     .route({ method: 'GET', path: '/api/media/movies' })
@@ -239,5 +260,6 @@ export type ManagedSeries = z.infer<typeof ManagedSeriesSchema>;
 export type MediaTag = z.infer<typeof MediaTagSchema>;
 export type MediaProfile = z.infer<typeof MediaProfileSchema>;
 export type MediaSourceDescriptor = z.infer<typeof MediaSourceDescriptorSchema>;
+export type MediaRuleDescriptor = z.infer<typeof MediaRuleDescriptorSchema>;
 export type MoviesBrowseQuery = z.input<typeof MoviesBrowseQuerySchema>;
 export type SeriesBrowseQuery = z.input<typeof SeriesBrowseQuerySchema>;

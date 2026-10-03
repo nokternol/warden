@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import { api } from '@server/kernel/api';
 import type { ActiveFieldSetCache } from './activeFieldSet';
 import { MEDIA_RULES, toDescriptor } from './filterRegistry';
 import type { ContentType, MediaRule, MediaRuleDescriptor } from './filterRegistry';
@@ -10,11 +10,11 @@ import type { ContentType, MediaRule, MediaRuleDescriptor } from './filterRegist
 // handler needs.
 const RULES: readonly MediaRule[] = MEDIA_RULES;
 
-interface FilterFieldsCradle {
+interface RulesCradle {
   activeFieldSetCache: ActiveFieldSetCache;
 }
 
-export function createFilterFieldsHandlers(cradle: FilterFieldsCradle) {
+export function createRulesProcedures(cradle: RulesCradle) {
   const { activeFieldSetCache } = cradle;
 
   async function gatedDescriptors(contentType?: ContentType): Promise<MediaRuleDescriptor[]> {
@@ -28,19 +28,6 @@ export function createFilterFieldsHandlers(cradle: FilterFieldsCradle) {
   }
 
   return {
-    async getFilterFields(req: Request, res: Response, next: NextFunction): Promise<void> {
-      const { contentType } = req.query;
-
-      if (contentType !== undefined && contentType !== 'movie' && contentType !== 'show') {
-        res.status(400).json({ error: `Invalid contentType: must be 'movie' or 'show'` });
-        return;
-      }
-
-      try {
-        res.json(await gatedDescriptors(contentType as ContentType | undefined));
-      } catch (err) {
-        next(err);
-      }
-    },
+    rules: api.media.rules.handler(async ({ input }) => gatedDescriptors(input.contentType)),
   };
 }

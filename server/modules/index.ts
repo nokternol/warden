@@ -7,8 +7,8 @@ import { createAuthRoutes } from './auth';
 import { createAutomationProcedures } from './automations';
 import {
   createBackdropsRoutes,
-  createFilterFieldsRoutes,
   createMediaProcedures,
+  createRulesProcedures,
   createSearchRoutes,
 } from './media';
 import { createMediaQueryProcedures } from './mediaQueries';
@@ -20,7 +20,6 @@ const route = (path: string) => `/${path}`;
 export const routes = {
   appSettings: route('app-settings'),
   backdrops: route('backdrops'),
-  filterFields: route('filter-fields'),
   auth: route('auth'),
   search: route('search'),
 } as const;
@@ -49,7 +48,7 @@ export function createApiRouter(cradle: Cradle) {
   router.use(
     serveApi({
       automations: createAutomationProcedures(cradle),
-      media: media.procedures,
+      media: { ...media.procedures, ...createRulesProcedures(cradle) },
       mediaQueries: createMediaQueryProcedures(cradle),
       providers: {
         ...createProvidersProcedures(cradle),
@@ -64,7 +63,6 @@ export function createApiRouter(cradle: Cradle) {
   router.use(routes.backdrops, createBackdropsRoutes(cradle));
   router.use(routes.auth, createAuthRoutes(cradle));
   router.use(routes.search, createSearchRoutes(cradle));
-  router.use(routes.filterFields, createFilterFieldsRoutes(cradle));
 
   return router;
 }
