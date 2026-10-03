@@ -12,8 +12,8 @@
  * interface and never reach into query internals.
  */
 
-// HTTP surface — mounted by the API router.
-export { createMediaQueryRoutes } from './mediaQueries.routes';
+// HTTP surface — the mediaQueries procedures of the API contract.
+export { createMediaQueryProcedures } from './mediaQueries.procedures';
 
 // Container contribution — the app builder composes Cradle from this slice
 // and calls the registration; the class stays module-private unless

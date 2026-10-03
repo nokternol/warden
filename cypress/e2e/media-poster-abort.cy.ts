@@ -43,16 +43,32 @@ const MOCK_MOVIES = Array.from({ length: 24 }, (_, i) => ({
       remoteUrl: `https://image.tmdb.org/t/p/original/movie${String(i + 1).padStart(3, '0')}.jpg`,
     },
   ],
+  sourceCount: 1,
+  sourceProviderIds: [1],
 }));
 
 const MOVIES_RESPONSE = {
   status: 'ok',
-  data: { items: MOCK_MOVIES, totalCount: MOCK_MOVIES.length, page: 1, pageSize: 48 },
+  data: {
+    items: MOCK_MOVIES,
+    totalCount: MOCK_MOVIES.length,
+    page: 1,
+    pageSize: 48,
+    yearRange: { min: 2020, max: 2024 },
+    errors: [],
+  },
 };
 
 const SERIES_RESPONSE = {
   status: 'ok',
-  data: { items: [], totalCount: 0, page: 1, pageSize: 48 },
+  data: {
+    items: [],
+    totalCount: 0,
+    page: 1,
+    pageSize: 48,
+    yearRange: { min: null, max: null },
+    errors: [],
+  },
 };
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -134,10 +150,12 @@ describe('MediaPoster — dwell gate and in-flight request abort', () => {
     // haven't fired yet.
     cy.wait(30);
 
-    cy.get('[data-testid^="media-card-movie-"]').its('length').then((visibleCards) => {
-      cy.then(() => {
-        expect(imageRequestCount).to.be.lessThan(visibleCards);
+    cy.get('[data-testid^="media-card-movie-"]')
+      .its('length')
+      .then((visibleCards) => {
+        cy.then(() => {
+          expect(imageRequestCount).to.be.lessThan(visibleCards);
+        });
       });
-    });
   });
 });

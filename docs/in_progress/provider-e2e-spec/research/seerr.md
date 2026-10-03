@@ -7,8 +7,8 @@ branch). Codebase audit as of this ticket: `git rev-parse HEAD` at time of writi
 
 Codebase entry points read: `server/modules/providers/connections/seerrProvider.ts`,
 `server/modules/providers/connections/overseerrProvider.ts` (Seerr re-exports this wholesale),
-`server/modules/providers/providerFactory.ts`, `server/modules/settings/settings.handler.ts`
-(L10-21, L59-61), `server/modules/providers/providers.handler.ts` (L117-122),
+`server/modules/providers/providerFactory.ts`, `server/modules/settings/settings.procedures.ts`
+(L10-21, L59-61), `server/modules/providers/providers.procedures.ts` (L117-122),
 `server/database/schema.ts` (`MetadataProviderType.SEERR`), `src/lib/provider-registry.ts`,
 `server/modules/media/enrichment/enricherAdapters.ts`, `server/modules/media/filterRegistry.ts`,
 `docs/architecture/media-providers.md` (existing "Seerr" section, L144-266).
@@ -70,10 +70,10 @@ This ambiguity is itself a flag for the decision ticket, not something this rese
 
 The **only** place Seerr is referenced beyond the dead-end connection class:
 
-- `settings.handler.ts` L17 (`API_SUFFIXES.SEERR: ''`) and L59-61 (`case
+- `settings.procedures.ts` L17 (`API_SUFFIXES.SEERR: ''`) and L59-61 (`case
   MetadataProviderType.SEERR: case MetadataProviderType.OVERSEERR:` share a connection-test probe
   hitting `GET {base}/api/v1/status` with an `X-Api-Key` header).
-- `providers.handler.ts` L117-122: the settings-page "test connection" `getData` route shares a
+- `providers.procedures.ts` L117-122: the settings-page "test connection" `getData` route shares a
   case between `OVERSEERR` and `SEERR`, and **directly instantiates `new OverseerrProvider(config,
   log)`** (not `SeerrProvider` — the re-export isn't even used here) to call `getRequests()` for a
   connection-test preview payload.

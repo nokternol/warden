@@ -1,10 +1,10 @@
+import { api } from '@app/lib/api/client';
+import { useApi } from '@app/lib/api/useApi';
+import type { QuerySourceInput } from '@contract/automations';
 import useSWR from 'swr';
 
-export interface QuerySource {
-  queryId: number;
-  role: 'include' | 'exclude';
-  sortOrder: number;
-}
+/** A query source as the list edits it: always in a known position. */
+export type QuerySource = Required<QuerySourceInput>;
 
 export interface QuerySourceListProps {
   sources: QuerySource[];
@@ -12,20 +12,8 @@ export interface QuerySourceListProps {
   onChange: (sources: QuerySource[]) => void;
 }
 
-function previewUrl(queryId: number): string {
-  return `/api/media-queries/${queryId}/preview`;
-}
-
-async function fetchPreview(url: string): Promise<{ count: number }> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('Preview failed');
-  const json = (await res.json()) as { data: { count: number } };
-  return json.data;
-}
-
 function usePreviewCount(queryId: number): number | null {
-  const key = queryId > 0 ? previewUrl(queryId) : null;
-  const { data } = useSWR(key, fetchPreview);
+  const { data } = useApi(api.mediaQueries.preview, queryId > 0 ? { id: queryId } : null);
   return data?.count ?? null;
 }
 
@@ -77,8 +65,8 @@ async function fetchAllPreviews(
   return Promise.all(
     sources.map(async (s) => {
       if (s.queryId === 0) return { role: s.role, count: 0 };
-      const data = await fetchPreview(previewUrl(s.queryId));
-      return { role: s.role, count: data.count };
+      const { count } = await api.mediaQueries.preview({ id: s.queryId });
+      return { role: s.role, count };
     })
   );
 }

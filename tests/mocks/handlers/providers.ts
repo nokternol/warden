@@ -1,4 +1,6 @@
-import { http, HttpResponse } from 'msw';
+import { contract } from '@contract/index';
+import type { AggregatedRatings } from '@contract/providers';
+import { type ProcedureOutput, mockProcedure } from '../contract';
 
 const SONARR_RESPONSE = {
   type: 'SONARR',
@@ -62,7 +64,7 @@ const OVERSEERR_RESPONSE = {
   },
 };
 
-const RESPONSE_BY_TYPE: Record<string, unknown> = {
+const RESPONSE_BY_TYPE: Record<string, ProcedureOutput<typeof contract.providers.metadata>> = {
   SONARR: SONARR_RESPONSE,
   RADARR: RADARR_RESPONSE,
   PLEX: PLEX_RESPONSE,
@@ -71,7 +73,7 @@ const RESPONSE_BY_TYPE: Record<string, unknown> = {
   OVERSEERR: OVERSEERR_RESPONSE,
 };
 
-const RATINGS_RESPONSE = {
+const RATINGS_RESPONSE: AggregatedRatings = {
   title: 'Breaking Bad',
   year: 2008,
   ids: {
@@ -108,45 +110,10 @@ const RATINGS_RESPONSE = {
 };
 
 export const providersHandlers = [
-  http.get('/api/providers/metadata', ({ request }) => {
-    const url = new URL(request.url);
-    const type = url.searchParams.get('type');
-
-    if (!type || !url.searchParams.get('url')) {
-      return HttpResponse.json(
-        {
-          status: 'error',
-          error: { type: 'VALIDATION_ERROR', message: 'Invalid query' },
-        },
-        { status: 400 }
-      );
-    }
-
-    const data = RESPONSE_BY_TYPE[type];
-    if (!data) {
-      return HttpResponse.json(
-        { status: 'error', error: { type: 'NOT_FOUND', message: 'Unknown type' } },
-        { status: 400 }
-      );
-    }
-
-    return HttpResponse.json({ status: 'ok', data });
+  mockProcedure(contract.providers.metadata, ({ request }) => {
+    const type = new URL(request.url).searchParams.get('type') ?? '';
+    return RESPONSE_BY_TYPE[type];
   }),
 
-  http.get('/api/providers/ratings', ({ request }) => {
-    const url = new URL(request.url);
-    const title = url.searchParams.get('title');
-
-    if (!title) {
-      return HttpResponse.json(
-        {
-          status: 'error',
-          error: { type: 'VALIDATION_ERROR', message: 'Title is required' },
-        },
-        { status: 400 }
-      );
-    }
-
-    return HttpResponse.json({ status: 'ok', data: RATINGS_RESPONSE });
-  }),
+  mockProcedure(contract.providers.ratings, () => RATINGS_RESPONSE),
 ];

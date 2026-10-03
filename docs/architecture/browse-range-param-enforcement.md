@@ -73,8 +73,9 @@ reachable via the browse endpoints (`GET /api/media/movies|series`) or the clien
 URL params:
 
 **The browse-path range-param translators** — `sharedFilterFields`,
-`moviesQuerySchema`/`seriesQuerySchema` (zod), `MOVIE_PARAM_TO_KEY`/`SERIES_PARAM_TO_KEY`
-(server, `media.handler.ts`), and the client's `BROWSE_PARAM_BINDINGS`
+`MoviesBrowseQuerySchema`/`SeriesBrowseQuerySchema` (zod, the browse procedures' input in
+`contract/media.ts`), `MOVIE_PARAM_TO_KEY`/`SERIES_PARAM_TO_KEY`
+(server, `media.procedures.ts`), and the client's `BROWSE_PARAM_BINDINGS`
 (`src/lib/mediaQueryAdapters.ts`) — each need an entry for every range rule. None of
 these param names equal the registry rule key 1:1: the browse URL contract is a
 deliberately-renamed legacy vocabulary (`radarrImdbRatingGte` for `imdbRating`,
@@ -85,16 +86,10 @@ each of the three layers:
 
 ## The mechanism
 
-**`server/modules/media/browseRangeKeys.ts`** is the one file in `media` safe to import
-a type from across the client/server boundary — deliberately zero imports. Any other
-type-only import from `media` (even from `filterRegistry.ts` directly) forces the
-Next.js client build's type-checker to resolve that file's *entire* transitive import
-graph — verified: it reaches `container.ts`'s Express-specific `Request.scope`
-augmentation and fails to compile. `import type` only erases at the bundler level; it
-does not stop the type-checker needing to fully resolve the imported file. This file
-hand-declares `MovieRangeRuleKey`/`ShowRangeRuleKey` as plain literal unions for exactly
-that reason — not derived from `MEDIA_RULES` in place, because the derivation itself
-needs `MEDIA_RULES`' full type, which pulls in the same graph.
+**`contract/browseRangeKeys.ts`** declares `MovieRangeRuleKey`/`ShowRangeRuleKey` as plain
+literal unions in the API contract, which both the server and the client import. The client may
+not import server code at all (dependency-cruiser forbids it), and the contract imports nothing
+from `server/`, so these lists are hand-declared rather than derived from `MEDIA_RULES` in place.
 
 **`filterRegistry.ts`** keeps the real derivation (`_ActualRangeRuleFor<CT>`, a
 distributive conditional type over `MEDIA_RULES`' `dataType: 'range'` entries) internal,
@@ -106,11 +101,11 @@ const _movieRangeKeysMatchContract: Record<_SymmetricDiff<_ActualMovieRangeKey, 
 ```
 
 A range rule added to, removed from, or content-type-rescoped in `MEDIA_RULES` without a
-matching edit to `browseRangeKeys.ts` fails to compile right here, naming the
+matching edit to `contract/browseRangeKeys.ts` fails to compile right here, naming the
 mismatched key — in either direction (registry has a key the contract doesn't, or vice
 versa).
 
-**`media.handler.ts`** and **`mediaQueryAdapters.ts`** each declare a "witness" map,
+**`media.procedures.ts`** and **`mediaQueryAdapters.ts`** each declare a "witness" map,
 keyed by `MovieRangeRuleKey`/`ShowRangeRuleKey` (so it's exhaustive — a missing rule
 fails to compile), whose `gte`/`lte` values are typed `keyof typeof MOVIE_PARAM_TO_KEY`
 /`keyof typeof BROWSE_PARAM_BINDINGS` (so a typo'd or dangling param-name reference also
@@ -137,7 +132,7 @@ union crosses an `import type`). The simpler `keyof typeof Table` form avoids th
 class of type entirely and was verified (by deliberately breaking each direction) to
 still catch both a missing rule and a dangling param reference.
 
-**The zod schemas** (`sharedFilterFields`, `moviesQuerySchema`, `seriesQuerySchema`) are
+**The zod schemas** (`sharedFilterFields`, `MoviesBrowseQuerySchema`, `SeriesBrowseQuerySchema`, in the contract) are
 checked separately, since a param stripped by validation never reaches the
 `*_PARAM_TO_KEY` maps at all — same silent-drop failure, one layer earlier:
 
@@ -154,7 +149,7 @@ The distributive-conditional derivation in `filterRegistry.ts` needs `MEDIA_RULE
 `sourceProviders` are `readonly` array types for the same reason — a `readonly` tuple
 from `as const` isn't assignable to a mutable array type, so the interface itself has
 to accept readonly to accept the const-asserted literal array. `getRule` and
-`media.filterFields.handler.ts`'s `gatedDescriptors` both widen back to
+`media.rules.procedures.ts`'s `gatedDescriptors` both widen back to
 `readonly MediaRule[]` before calling `.find`/`.filter` — iterating the literal-narrowed
 union directly breaks `Array.prototype.includes`' overload resolution (a union of
 differently-typed readonly tuples has no single well-typed `includes` signature).
@@ -195,7 +190,8 @@ story-only files, which by construction never need a real route.
 - [`server/modules/media/movie.ts`](ref:path:server/modules/media/movie.ts) / [`show.ts`](ref:path:server/modules/media/show.ts) — `Partial<EnrichmentFields>`.
 - [`server/modules/media/enrichmentJob.ts`](ref:path:server/modules/media/enrichmentJob.ts) — `EnrichmentWriteValues`.
 - [`server/modules/media/filterRegistry.ts`](ref:path:server/modules/media/filterRegistry.ts) — `MEDIA_RULES`, `sourceField`-coverage check, the range-key derivation, the bidirectional contract assertion.
-- [`server/modules/media/browseRangeKeys.ts`](ref:path:server/modules/media/browseRangeKeys.ts) — the zero-dependency contract.
-- [`server/modules/media/media.handler.ts`](ref:path:server/modules/media/media.handler.ts) — server-side witness maps and zod schema coverage checks.
+- [`contract/browseRangeKeys.ts`](ref:path:contract/browseRangeKeys.ts) — the range-rule key lists both sides share.
+- [`contract/media.ts`](ref:path:contract/media.ts) — the browse query schemas.
+- [`server/modules/media/media.procedures.ts`](ref:path:server/modules/media/media.procedures.ts) — server-side witness maps and zod schema coverage checks.
 - [`src/lib/mediaQueryAdapters.ts`](ref:path:src/lib/mediaQueryAdapters.ts) — client-side witness maps, `BROWSE_PARAM_BINDINGS`.
 - [`next.config.js`](ref:path:next.config.js) — `pageExtensions`' test/stories exclusion.

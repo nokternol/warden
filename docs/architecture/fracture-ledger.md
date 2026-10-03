@@ -241,6 +241,28 @@ is graphed, dated, and verified against code, not inferred from a plan.
   `mediaQueryRoutes.integration.test.ts` pins the canonical path. Test vocabulary followed (MSW
   `mediaQueriesHandlers`, integration mounts, contract-test labels).
 
+### Client/server bridge — the API declared three times (recorded and healed 2026-10-03, MVP slice C0)
+
+- **Fracture:** one process (calling the API) had three hand-kept descriptions that could disagree. The
+  server declared routes with `defineRoute` in per-module `*.routes.ts`/`*.handler.ts` pairs, fewer than
+  half with a response schema, and imported the shared schemas from the client's `src/lib/api/schemas.ts`.
+  The client hand-wrote every `/api/...` URL in a dozen local SWR fetchers, each casting `json.data` to the
+  type it hoped for, while `/api/filter-fields` answered without the envelope every other route used. MSW
+  mocks were a third copy. Nothing failed when one side changed alone: a route added to the server only, a
+  client call to a route that didn't exist, or a mock that drifted all compiled and passed.
+- **How it misled:** the drift was real, not hypothetical. The shared media-query preview mock lacked the
+  `instances` field the route returned, the browse mocks lacked `sourceCount`/`errors`, a hook test's
+  saved-query fixture carried `health: 'ok'` where the server returns an object, and the client reached
+  into server files (`browseRangeKeys.ts`, `ratingsAggregation.ts`) for types.
+- **Healed by:** one oRPC contract in a top-level `contract/` folder that both sides derive from. The
+  server implements it (a missing handler or wrong output doesn't compile), the client calls it through a
+  contract-typed client and one `useApi` SWR hook (an unknown call or wrong input doesn't compile, and
+  responses are validated against the declared output), and mocks are declared from it. Every Express
+  router, `defineRoute`, `isAuthenticated()`, `src/lib/api/schemas.ts` and the client's URLs and fetchers
+  are gone. Authentication is one default-deny middleware at the implementer root, with public procedures
+  marked on the contract. A dependency-cruiser rule forbids `src/` and `server/` importing each other, and
+  a test fails the build when a procedure has no client caller outside an explicit allowlist.
+
 ## Open
 
 No fracture is currently open.

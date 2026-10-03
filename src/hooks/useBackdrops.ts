@@ -1,13 +1,8 @@
-//@ts-ignore
-import useSWR from 'swr';
-
-const fetcher = (url: string) =>
-  fetch(url)
-    .then((r) => r.json())
-    .then((d) => d.data);
+import { api } from '@app/lib/api/client';
+import { useApi } from '@app/lib/api/useApi';
 
 export const useBackdrops = () => {
-  const { data: backdrops } = useSWR<string[]>('/api/backdrops', fetcher, {
+  const { data: backdrops } = useApi(api.media.backdrops, undefined, {
     refreshInterval: 0,
     revalidateOnFocus: false,
   });

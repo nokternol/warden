@@ -265,13 +265,12 @@ flowchart LR
   A1 --> A2[A2 owner-only sign-in]
   B1[B1 Disable verb] --> F1[F1 first-run path]
   B2[B2 movie/series] --> C3[C3 browse speaks registry]
-  C0 --> C1[C1 one API client]
   B5[B5 glossary guard + UI names] --> E1
   B5 --> B6[B6 rule, filter, query, source names]
   B6 --> C2[C2 rule presentation on registry]
-  C1 --> C3
-  C1 --> D1[D1 destructive guard]
-  C1 --> F1
+  C0 --> C3
+  C0 --> D1[D1 destructive guard]
+  C0 --> F1
   C2 --> C4[C4 one multi-select]
   C2 & B3 --> C5[C5 server decides exposure]
   D2[D2 run lists what changed]
@@ -318,8 +317,12 @@ names, so nothing is renamed twice.
   - A procedure added later is refused unauthenticated without anyone listing it.
 - **Expected end state:** one auth middleware at the contract implementer's root (C0), with the allowlist
   declared on the contract.
-- **Deletes:** every per-route and per-handler `isAuthenticated()` call (about 40 sites), and the
-  "playground stage" comment.
+- **Deletes:** the `public` marks on contract procedures that must not answer anonymously (C0 kept
+  the previously unguarded routes public: provider tasks/task-options/metadata/ratings and the rules).
+  The per-route `isAuthenticated()` calls and the "playground stage" comment went with C0's transport.
+- **Note:** `BYPASS_AUTH=true` (development only, refused in production by config validation) lets
+  every procedure answer without a user, for browser tooling. A1's coverage test keeps it in mind:
+  the default-deny behaviours hold with the bypass off.
 
 **A2 · Owner-only sign-in** *(decision 1)*
 - **Model:** Opus 5.5 (security; ownership semantics).
@@ -417,7 +420,7 @@ names, so nothing is renamed twice.
 
 ### Track C — One mechanism per job
 
-**C0 · One API contract** *(decision 11; first slice; before S1, A1, B3, C1, C3)*
+**C0 · One API contract** *(decision 11; first slice; before S1, A1, B3, C3, D1, F1)*
 - **Model:** Opus 5.5 (the contract every client and server change builds on).
 - **Why:** F12. The goal is that adding an API feature to one side only is impossible: one contract
   declares method, path, input, output and errors, and both sides are derived from it.
@@ -435,7 +438,9 @@ names, so nothing is renamed twice.
     `src/ → server/` and no `server/ → src/`.
 - **Behaviours:**
   - A contract procedure that nothing in `src/` calls fails the build unless it's on the explicit
-    server-only allowlist (`health`). This catches server-only features, which the type system
+    allowlist of uncalled procedures, each with its reason: `system.health` (server-only) and the
+    deferred `appSettings.get`/`appSettings.update`/`providers.metadata`, which have no client
+    consumer yet (L2; S1 blocks them). This catches server-only features, which the type system
     can't.
   - An import from `src/` into `server/`, or from `server/` into `src/`, fails the boundary check.
   - Every ported procedure answers the same requests with the same results as the Express route it
@@ -445,26 +450,27 @@ names, so nothing is renamed twice.
   compile. RED needs an assertion failure, so this is checked by typecheck rather than a cycle.
 - **Deferred routes are ported too:** they become contract procedures like everything else, so S1
   can block them and nothing stays on the retired `defineRoute` mechanism.
-- **Expected end state:** start with a spike that mounts oRPC beside the Express routers for one module
-  (automations), proves the SWR wrapper, auth middleware and error envelope, then ports the remaining
-  modules. Each module is a commit in this slice; the slice is done when the last Express router is
-  gone.
+- **Expected end state (as built):** `contract/` holds one namespace per domain (`appSettings`, `auth`,
+  `automations`, `media`, `mediaQueries`, `providers`, `system`) at the unchanged `/api/...` paths, with the
+  `{status:'ok', data}` / `{status:'error', error}` envelopes kept on the wire, so every existing
+  integration test answers identically once re-mounted. `server/kernel/api.ts` holds the implementer
+  (`api`, root default-deny middleware reading `meta.public`) and `serveApi`; each module has one
+  `<module>.procedures.ts`, and `createApiRouter` assembles them with `api.router()`. The public set
+  mirrors the previously unguarded routes (health, sign-in, sign-out, backdrops, rules, provider
+  tasks/task-options/metadata/ratings), which A1 narrows. `src/lib/api/client.ts` (`api`,
+  `createApiClient`) validates responses against the contract and surfaces the server's error;
+  `useApi` is the one SWR hook. `tests/mocks/contract.ts` (`mockProcedure`) declares mocks. Provider
+  CRUD/test are declared under `providers` but stay at `/api/settings/providers` and in the `settings`
+  module; B3 moves the URL and the handlers. Browse is a contract procedure taking the legacy
+  content-prefixed params unchanged; C3 changes the encoding.
 - **Deletes:** `defineRoute`, every `*.routes.ts`/`*.handler.ts` transport pair (logic moves into
   procedures), `src/lib/api/schemas.ts` (moved into `contract/`), and the client's hand-written URLs.
-- **Absorbs:** C1 (the contract client replaces `apiGet`), A1's mechanism (A1 keeps its auth-coverage behaviour and
-  the owner semantics in A2), B3's route move (provider procedures are declared under `providers` in
-  the contract), and C3's route shape (browse is a contract procedure taking the save encoding).
-
-**C1 · One API client** (after B3; *removed if decision 11 adopts C0, which absorbs it*)
-- **Model:** Sonnet 5.5 (contract fixed by tests; hook-by-hook migration).
-- **Why:** D1.
-- **Behaviours:**
-  - A successful call returns the parsed payload, not the envelope.
-  - A failed call surfaces the server's message and status to the UI.
-  - A response that doesn't match its schema is an error, not silently wrong data.
-- **Expected end state:** `src/lib/api/client.ts` with `apiGet`/`apiSend`, migrating hooks one at a time. Put
-  `/api/filter-fields` on the `{data}` envelope.
-- **Deletes:** 13 local `fetcher`s and every `json.data as T` cast.
+- **Absorbs:** C1 (the contract client and `useApi` replace the 13 local fetchers and `json.data as T`
+  casts, a failed call surfaces the server's message and status, a response that doesn't match its
+  schema is an error, and `/api/filter-fields` is on the `{data}` envelope), A1's mechanism (A1 keeps its auth-coverage behaviour and
+  the owner semantics in A2), B3's contract grouping (provider procedures, CRUD included, are declared
+  under `providers` in the contract; B3 still moves their URL and implementation), and C3's transport
+  (browse is a contract procedure; C3 still changes its input to the save encoding).
 
 **C2 · Rule presentation lives on the registry** (after B6)
 - **Model:** Opus 5.5 (registry contract every future provider builds on).
@@ -484,7 +490,7 @@ names, so nothing is renamed twice.
   switches in `csvIdOptions`/`csvStringOptions`, the client's own `MediaRuleDescriptor` declaration, and `ruleRendersControl` (C5 makes renderability a server
   fact).
 
-**C3 · Browse speaks the registry** (after B2, C1)
+**C3 · Browse speaks the registry** (after B2, C0)
 - **Model:** Opus 5.5 (deletes a translator without changing results).
 - **Why:** D3.
 - **Behaviours:**
@@ -529,7 +535,7 @@ names, so nothing is renamed twice.
 
 ### Track D — Finish the in-scope features
 
-**D1 · Destructive tasks state their blast radius** (after C1; story first)
+**D1 · Destructive tasks state their blast radius** (after C0; story first)
 - **Model:** Sonnet 5.5 (one component behaviour on an existing endpoint).
 - **Why:** state clarity. `ActuatorTaskDescriptor.destructive` exists but the builder ignores it.
 - **Behaviours:**

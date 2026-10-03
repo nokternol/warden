@@ -7,11 +7,13 @@
  *
  * Run: vitest run --project client
  */
+import { contract } from '@contract/index';
+import type { MediaRuleDescriptor } from '@contract/media';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
 import React from 'react';
 import { SWRConfig } from 'swr';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { mockProcedure } from '../../../tests/mocks/contract';
 import { server } from '../../../tests/mocks/server';
 import { useMediaFilters } from '../useMediaFilters';
 
@@ -35,7 +37,7 @@ vi.mock('next/router', () => ({
   }),
 }));
 
-const RULES = [
+const RULES: MediaRuleDescriptor[] = [
   {
     key: 'title',
     label: 'Title',
@@ -92,7 +94,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) =>
 beforeEach(() => {
   mockRouterQuery = {};
   mockReplace.mockClear();
-  server.use(http.get('/api/filter-fields', () => HttpResponse.json(RULES)));
+  server.use(mockProcedure(contract.media.rules, () => RULES));
 });
 
 afterEach(() => {

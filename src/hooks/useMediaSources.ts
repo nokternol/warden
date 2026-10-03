@@ -1,33 +1,15 @@
-import type { ContentTypeSchema } from '@app/lib/api/schemas';
-import type { FetchResponse } from '@app/types/fetch';
-import useSWR from 'swr';
-import type { z } from 'zod';
+import { api } from '@app/lib/api/client';
+import { useApi } from '@app/lib/api/useApi';
+import type { MediaSourceDescriptor } from '@contract/media';
+import type { ContentType } from '@contract/schemas';
 
-type ContentType = z.infer<typeof ContentTypeSchema>;
-
-/** One content type's ownership as projected by GET /api/media/sources. */
-export interface MediaSourceDescriptor {
-  contentType: ContentType;
-  ownerType: string;
-  configured: boolean;
-  /** Every active instance owning this content type — never collapsed to one. */
-  instances: Array<{ id: number; name: string }>;
-}
-
-const KEY = '/api/media/sources';
-
-async function fetcher(url: string) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch media sources');
-  const json = await res.json<FetchResponse<MediaSourceDescriptor[]>>();
-  return json.data;
-}
+export type { MediaSourceDescriptor };
 
 export function useMediaSources(): {
   sources: Record<ContentType, MediaSourceDescriptor> | undefined;
   isLoading: boolean;
 } {
-  const { data, isLoading } = useSWR(KEY, fetcher);
+  const { data, isLoading } = useApi(api.media.sources, undefined);
   const sources = data
     ? (Object.fromEntries(data.map((d) => [d.contentType, d])) as Record<
         ContentType,

@@ -1,8 +1,10 @@
+import { contract } from '@contract/index';
+import type { MediaQueryRecord } from '@contract/schemas';
 import { renderHook, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
 import React from 'react';
 import { SWRConfig } from 'swr';
 import { describe, expect, it } from 'vitest';
+import { mockProcedure } from '../../../tests/mocks/contract';
 import { server } from '../../../tests/mocks/server';
 import { toFilterValues, useMediaQueries } from '../useMediaQueries';
 
@@ -30,17 +32,24 @@ describe('toFilterValues', () => {
   });
 });
 
+const savedQuery: MediaQueryRecord = {
+  id: 1,
+  name: 'My query',
+  contentType: 'movie',
+  filterValues: [],
+  health: { status: 'healthy', providerStatus: [], qualificationIssues: [] },
+  createdAt: '2026-01-01T00:00:00.000Z',
+};
+
 describe('useMediaQueries — save', () => {
   it('posts registry-keyed filterValues for the given contentType, no translation', async () => {
     let body: unknown;
     server.use(
-      http.post('/api/media-queries', async ({ request }) => {
+      mockProcedure(contract.mediaQueries.create, async ({ request }) => {
         body = await request.json();
-        return HttpResponse.json({
-          data: { id: 1, name: 'My query', contentType: 'movie', filterValues: [], health: 'ok' },
-        });
+        return savedQuery;
       }),
-      http.get('/api/media-queries', () => HttpResponse.json({ data: [] }))
+      mockProcedure(contract.mediaQueries.list, () => [])
     );
 
     const { result } = renderHook(() => useMediaQueries(), { wrapper });
@@ -64,13 +73,11 @@ describe('useMediaQueries — save', () => {
   it('posts a providerId qualification through untouched', async () => {
     let body: unknown;
     server.use(
-      http.post('/api/media-queries', async ({ request }) => {
+      mockProcedure(contract.mediaQueries.create, async ({ request }) => {
         body = await request.json();
-        return HttpResponse.json({
-          data: { id: 1, name: 'My query', contentType: 'movie', filterValues: [], health: 'ok' },
-        });
+        return savedQuery;
       }),
-      http.get('/api/media-queries', () => HttpResponse.json({ data: [] }))
+      mockProcedure(contract.mediaQueries.list, () => [])
     );
 
     const { result } = renderHook(() => useMediaQueries(), { wrapper });

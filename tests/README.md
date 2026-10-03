@@ -49,13 +49,12 @@ const user = { id: generateId(), email: randomEmail() };
 MSW automatically mocks HTTP requests in client tests:
 
 ```typescript
-// tests/mocks/handlers/users.ts
-import { http, HttpResponse } from 'msw';
+// tests/mocks/handlers/automations.ts — Warden's own API, declared from the contract
+import { contract } from '@contract/index';
+import { mockProcedure } from '../contract';
 
-export const userHandlers = [
-  http.get('/api/users/:id', ({ params }) => {
-    return HttpResponse.json({ id: params.id, name: 'John' });
-  }),
+export const automationsHandlers = [
+  mockProcedure(contract.automations.list, () => MOCK_AUTOMATIONS),
 ];
 ```
 

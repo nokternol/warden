@@ -29,7 +29,7 @@ site. This flips several of the research doc's tentative conclusions:
 - **No placeholder/fake configuration is inserted as part of this spec or its implementation** — the
   row/registry entry exist so the provider works once a real key is available; the user configures
   it through the normal Settings UI when they have one again.
-- **Process-hygiene fix, same session**: `providers.handler.ts`'s duplicate inline `TvMazeProvider`
+- **Process-hygiene fix, same session**: `providers.procedures.ts`'s duplicate inline `TvMazeProvider`
   construction (bypassing `ProviderFactory.createTvMaze()`) is superseded by folding into the
   standard contract above — there's no longer a bespoke method to bypass.
 

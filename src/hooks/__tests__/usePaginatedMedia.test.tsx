@@ -1,21 +1,21 @@
+import { api } from '@app/lib/api/client';
+import { contract } from '@contract/index';
 import { renderHook, waitFor } from '@testing-library/react';
+import { mockProcedure } from '@tests/mocks/contract';
 import { server } from '@tests/mocks/server';
-import { http, HttpResponse } from 'msw';
 import { SWRConfig } from 'swr';
 import { describe, expect, it } from 'vitest';
+import type { useMovies } from '../useMovies';
 import { usePaginatedMedia } from '../usePaginatedMedia';
 
-interface MovieItem {
-  id: number;
-  title: string;
-  hasFile: boolean;
-}
-
-interface SeriesItem {
-  id: number;
-  title: string;
-  status: string;
-}
+const EMPTY_PAGE = {
+  items: [],
+  totalCount: 0,
+  page: 1,
+  pageSize: 48,
+  yearRange: { min: null, max: null },
+  errors: [],
+};
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <SWRConfig value={{ provider: () => new Map() }}>{children}</SWRConfig>
@@ -23,7 +23,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 
 describe('usePaginatedMedia', () => {
   it('returns the expected interface shape on mount', () => {
-    const { result } = renderHook(() => usePaginatedMedia<MovieItem>('/api/media/movies'), {
+    const { result } = renderHook(() => usePaginatedMedia(api.media.movies), {
       wrapper,
     });
 
@@ -37,14 +37,14 @@ describe('usePaginatedMedia', () => {
   });
 
   it('isLoading is true before first page resolves', () => {
-    const { result } = renderHook(() => usePaginatedMedia<MovieItem>('/api/media/movies'), {
+    const { result } = renderHook(() => usePaginatedMedia(api.media.movies), {
       wrapper,
     });
     expect(result.current.isLoading).toBe(true);
   });
 
   it('fetches first page of items from the given endpoint', async () => {
-    const { result } = renderHook(() => usePaginatedMedia<MovieItem>('/api/media/movies'), {
+    const { result } = renderHook(() => usePaginatedMedia(api.media.movies), {
       wrapper,
     });
 
@@ -57,7 +57,7 @@ describe('usePaginatedMedia', () => {
   });
 
   it('is generic — works with the series endpoint', async () => {
-    const { result } = renderHook(() => usePaginatedMedia<SeriesItem>('/api/media/series'), {
+    const { result } = renderHook(() => usePaginatedMedia(api.media.series), {
       wrapper,
     });
 
@@ -68,7 +68,7 @@ describe('usePaginatedMedia', () => {
   });
 
   it('exposes yearRange from the first page', async () => {
-    const { result } = renderHook(() => usePaginatedMedia<MovieItem>('/api/media/movies'), {
+    const { result } = renderHook(() => usePaginatedMedia(api.media.movies), {
       wrapper,
     });
 
@@ -77,7 +77,7 @@ describe('usePaginatedMedia', () => {
   });
 
   it('hasMore is true when loaded items < totalCount', async () => {
-    const { result } = renderHook(() => usePaginatedMedia<MovieItem>('/api/media/movies'), {
+    const { result } = renderHook(() => usePaginatedMedia(api.media.movies), {
       wrapper,
     });
 
@@ -86,7 +86,7 @@ describe('usePaginatedMedia', () => {
   });
 
   it('fetchMore appends the second page', async () => {
-    const { result } = renderHook(() => usePaginatedMedia<MovieItem>('/api/media/movies'), {
+    const { result } = renderHook(() => usePaginatedMedia(api.media.movies), {
       wrapper,
     });
 
@@ -101,7 +101,7 @@ describe('usePaginatedMedia', () => {
   });
 
   it('hasMore is false when all pages are loaded', async () => {
-    const { result } = renderHook(() => usePaginatedMedia<MovieItem>('/api/media/movies'), {
+    const { result } = renderHook(() => usePaginatedMedia(api.media.movies), {
       wrapper,
     });
 
@@ -115,18 +115,15 @@ describe('usePaginatedMedia', () => {
   it('appends filter entries as query params in the request URL', async () => {
     const capturedUrl = { value: '' };
     server.use(
-      http.get('/api/media/movies', ({ request }) => {
+      mockProcedure(contract.media.movies, ({ request }) => {
         capturedUrl.value = request.url;
-        return HttpResponse.json({
-          status: 'ok',
-          data: { items: [], totalCount: 0, page: 1, pageSize: 48 },
-        });
+        return EMPTY_PAGE;
       })
     );
 
     const { result } = renderHook(
       () =>
-        usePaginatedMedia<MovieItem>('/api/media/movies', {
+        usePaginatedMedia(api.media.movies, {
           hasFile: 'true',
           yearMin: 2010,
         }),
@@ -143,18 +140,15 @@ describe('usePaginatedMedia', () => {
   it('undefined filter values are not appended to the URL', async () => {
     const capturedUrl = { value: '' };
     server.use(
-      http.get('/api/media/movies', ({ request }) => {
+      mockProcedure(contract.media.movies, ({ request }) => {
         capturedUrl.value = request.url;
-        return HttpResponse.json({
-          status: 'ok',
-          data: { items: [], totalCount: 0, page: 1, pageSize: 48 },
-        });
+        return EMPTY_PAGE;
       })
     );
 
     const { result } = renderHook(
       () =>
-        usePaginatedMedia<MovieItem>('/api/media/movies', {
+        usePaginatedMedia(api.media.movies, {
           hasFile: undefined,
           title: 'foo',
         }),
@@ -170,9 +164,9 @@ describe('usePaginatedMedia', () => {
 
   it('resets to page 1 when filters change', async () => {
     const { result, rerender } = renderHook<
-      ReturnType<typeof usePaginatedMedia<MovieItem>>,
+      ReturnType<typeof useMovies>,
       { filters?: Record<string, string> }
-    >(({ filters }) => usePaginatedMedia<MovieItem>('/api/media/movies', filters), {
+    >(({ filters }) => usePaginatedMedia(api.media.movies, filters), {
       wrapper,
       initialProps: { filters: undefined },
     });

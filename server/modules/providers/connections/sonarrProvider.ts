@@ -7,12 +7,12 @@ export interface SonarrSeason {
   monitored: boolean;
 }
 
-export interface SonarrImage {
+export type SonarrImage = {
   coverType: string;
   remoteUrl: string;
-}
+};
 
-export interface SonarrSeries {
+export type SonarrSeries = {
   id: number;
   title: string;
   year?: number;
@@ -46,12 +46,12 @@ export interface SonarrSeries {
     sizeOnDisk: number;
     percentOfEpisodes: number;
   };
-}
+};
 
-export interface SonarrProfile {
+export type SonarrProfile = {
   id: number;
   name: string;
-}
+};
 
 export interface SonarrRootFolder {
   id: number;
@@ -60,10 +60,10 @@ export interface SonarrRootFolder {
   unmappedFolders: unknown[];
 }
 
-export interface SonarrTag {
+export type SonarrTag = {
   id: number;
   label: string;
-}
+};
 
 export class SonarrProvider extends BaseProviderConnection implements MediaActuator {
   public readonly actuatorType = MetadataProviderType.SONARR;

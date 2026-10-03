@@ -1,11 +1,12 @@
 import { buildContainer } from '@server/container';
 import { MetadataProviderType } from '@server/database/schema';
+import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { ProviderSettingsService } from '@server/modules/providers';
-import { createProvidersRoutes } from '@server/modules/providers';
+import { createProvidersProcedures } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient, expectErrorResponse, expectSuccessResponse } from '@tests/helpers/api';
 import express, { type Express } from 'express';
@@ -36,7 +37,7 @@ describe('Providers API Integration', () => {
     app = express();
     app.use(express.json());
     app.use(requestIdMiddleware);
-    app.use('/api/providers', createProvidersRoutes(container.cradle));
+    app.use(serveApi({ providers: createProvidersProcedures(container.cradle) }));
     app.use(errorHandlerMiddleware);
 
     client = createApiClient(app);

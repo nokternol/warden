@@ -18,12 +18,13 @@ import {
  *
  * Run: vitest run --project server
  */
+import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
+import { createMediaProcedures } from '@server/modules/media';
 import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.queries';
-import { createMediaRoutes } from '@server/modules/media/media.routes';
 import type { EnrichmentFields } from '@server/modules/media/mediaFieldProvider';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
@@ -116,7 +117,7 @@ describe('Media browse — series registry predicates', () => {
       _req.user = mockUser;
       next();
     });
-    app.use('/api/media', createMediaRoutes(cradle));
+    app.use('/api/media', serveApi({ media: createMediaProcedures(cradle).procedures }));
     app.use(errorHandlerMiddleware);
     return createApiClient(app);
   }

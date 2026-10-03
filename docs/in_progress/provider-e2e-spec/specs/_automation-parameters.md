@@ -41,7 +41,7 @@ small, task-declared option list inline (no fetch — e.g. Override status's `st
 
 ## Options routes
 
-Four new routes on `server/modules/providers/providers.routes.ts`, following the existing
+Four new routes on `contract/providers.ts (implemented in `server/modules/providers/providers.procedures.ts`)`, following the existing
 `getTasks`/`getMetadata` convention: no id param, one instance-keyed array covering every
 configured instance of the relevant provider type.
 

@@ -1,9 +1,10 @@
 import { buildContainer } from '@server/container';
+import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
-import { createHealthRoutes } from '@server/modules/system/health.routes';
+import { createSystemProcedures } from '@server/modules/system';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient, expectErrorResponse, expectSuccessResponse } from '@tests/helpers/api';
 import express, { type Express } from 'express';
@@ -49,8 +50,8 @@ describe('Health API Integration', () => {
     app.use(express.json());
     app.use(requestIdMiddleware);
 
-    // 5. Mount routes
-    app.use('/api/health', createHealthRoutes(container.cradle));
+    // 5. Mount the system procedures — no user is signed in, health is public
+    app.use(serveApi({ system: createSystemProcedures(container.cradle) }));
 
     // 6. Error handler must be last
     app.use(errorHandlerMiddleware);

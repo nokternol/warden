@@ -13,51 +13,47 @@ Encapsulate reusable logic:
 
 Hook files follow `use*.ts` naming:
 
+Hooks reach the API only through the contract client (`@app/lib/api/client`): reads go through the
+one generic SWR hook `useApi(procedure, input)`, writes call the procedure directly. No hook writes a
+URL or its own fetcher; the client unwraps the envelope, validates the payload against the contract and
+rejects with the server's error message.
+
 ```typescript
-// hooks/useUserData.ts
-import useSWR from 'swr';
+// hooks/useMediaQueries.ts
+import { api } from '@app/lib/api/client';
+import { useApi } from '@app/lib/api/useApi';
 
-export function useUserData(userId: number) {
-  const { data, error, isLoading } = useSWR(
-    `/api/users/${userId}`,
-    fetcher
-  );
+export function useMediaQueries() {
+  const { data: queries = [], isLoading, mutate } = useApi(api.mediaQueries.list, undefined);
 
-  return {
-    user: data,
-    isLoading,
-    isError: error,
+  const remove = async (id: number) => {
+    await api.mediaQueries.delete({ id });
+    await mutate();
   };
-}
 
-// Usage in components
-import { useUserData } from '@app/hooks/useUserData';
-
-function UserProfile({ userId }: { userId: number }) {
-  const { user, isLoading } = useUserData(userId);
-
-  if (isLoading) return <LoadingSpinner />;
-  return <div>{user?.name}</div>;
+  return { queries, isLoading, remove };
 }
 ```
+
+A `null` input defers the fetch (`useApi(api.mediaQueries.preview, id > 0 ? { id } : null)`).
 
 ## Testing Hooks
 
 Use `renderHook` from `@testing-library/react`:
 
 ```typescript
+import { contract } from '@contract/index';
 import { renderHook, waitFor } from '@testing-library/react';
-import { useUserData } from './useUserData';
+import { mockProcedure } from '@tests/mocks/contract';
+import { server } from '@tests/mocks/server';
+import { useMediaQueries } from './useMediaQueries';
 
-it('fetches user data', async () => {
-  const { result } = renderHook(() => useUserData(1));
+it('lists saved queries', async () => {
+  server.use(mockProcedure(contract.mediaQueries.list, () => [QUERY]));
 
-  expect(result.current.isLoading).toBe(true);
+  const { result } = renderHook(() => useMediaQueries(), { wrapper });
+  await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-  await waitFor(() => {
-    expect(result.current.isLoading).toBe(false);
-  });
-
-  expect(result.current.user).toEqual({ id: 1, name: 'John' });
+  expect(result.current.queries).toEqual([QUERY]);
 });
 ```

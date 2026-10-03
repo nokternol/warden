@@ -1,8 +1,9 @@
+import { contract } from '@contract/index';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
 import React from 'react';
 import { SWRConfig } from 'swr';
 import { describe, expect, it } from 'vitest';
+import { mockProcedure } from '../../../tests/mocks/contract';
 import { server } from '../../../tests/mocks/server';
 import { type AutomationDto, useAutomations } from '../useAutomations';
 
@@ -30,10 +31,10 @@ describe('useAutomations — create sends querySources', () => {
     const newAutomation = makeAutomation({ id: 2, name: 'New' });
 
     server.use(
-      http.get('/api/automations', () => HttpResponse.json({ data: [] })),
-      http.post('/api/automations', async ({ request }) => {
+      mockProcedure(contract.automations.list, () => []),
+      mockProcedure(contract.automations.create, async ({ request }) => {
         capturedBody = await request.json();
-        return HttpResponse.json({ data: newAutomation });
+        return newAutomation;
       })
     );
 
@@ -61,10 +62,10 @@ describe('useAutomations — create sends querySources', () => {
     const newAutomation = makeAutomation({ id: 3, name: 'Parameterized' });
 
     server.use(
-      http.get('/api/automations', () => HttpResponse.json({ data: [] })),
-      http.post('/api/automations', async ({ request }) => {
+      mockProcedure(contract.automations.list, () => []),
+      mockProcedure(contract.automations.create, async ({ request }) => {
         capturedBody = await request.json();
-        return HttpResponse.json({ data: newAutomation });
+        return newAutomation;
       })
     );
 
@@ -90,9 +91,9 @@ describe('useAutomations — kind filter', () => {
   it('requests ?kind=system when called with { kind: "system" }', async () => {
     let requestedUrl = '';
     server.use(
-      http.get('/api/automations', ({ request }) => {
+      mockProcedure(contract.automations.list, ({ request }) => {
         requestedUrl = request.url;
-        return HttpResponse.json({ data: [] });
+        return [];
       })
     );
 
@@ -107,10 +108,10 @@ describe('useAutomations — run now', () => {
   it('POSTs to /api/automations/:id/run when run() is called', async () => {
     const requests: string[] = [];
     server.use(
-      http.get('/api/automations', () => HttpResponse.json({ data: [makeAutomation({ id: 7 })] })),
-      http.post('/api/automations/7/run', ({ request }) => {
+      mockProcedure(contract.automations.list, () => [makeAutomation({ id: 7 })]),
+      mockProcedure(contract.automations.run, ({ request }) => {
         requests.push(`POST ${request.url}`);
-        return new HttpResponse(null, { status: 202 });
+        return null;
       })
     );
 
@@ -132,13 +133,13 @@ describe('useAutomations — network call count', () => {
     const newAutomation = makeAutomation({ id: 2, name: 'New' });
 
     server.use(
-      http.get('/api/automations', ({ request }) => {
+      mockProcedure(contract.automations.list, ({ request }) => {
         requests.push(`GET ${request.url}`);
-        return HttpResponse.json({ data: [] });
+        return [];
       }),
-      http.post('/api/automations', ({ request }) => {
+      mockProcedure(contract.automations.create, ({ request }) => {
         requests.push(`POST ${request.url}`);
-        return HttpResponse.json({ data: newAutomation });
+        return newAutomation;
       })
     );
 
@@ -168,13 +169,13 @@ describe('useAutomations — network call count', () => {
     const updated = makeAutomation({ id: 1, status: 'paused' });
 
     server.use(
-      http.get('/api/automations', ({ request }) => {
+      mockProcedure(contract.automations.list, ({ request }) => {
         requests.push(`GET ${request.url}`);
-        return HttpResponse.json({ data: [existing] });
+        return [existing];
       }),
-      http.patch('/api/automations/1/status', ({ request }) => {
+      mockProcedure(contract.automations.updateStatus, ({ request }) => {
         requests.push(`PATCH ${request.url}`);
-        return HttpResponse.json({ data: updated });
+        return updated;
       })
     );
 
@@ -197,13 +198,13 @@ describe('useAutomations — network call count', () => {
     const existing = makeAutomation({ id: 1 });
 
     server.use(
-      http.get('/api/automations', ({ request }) => {
+      mockProcedure(contract.automations.list, ({ request }) => {
         requests.push(`GET ${request.url}`);
-        return HttpResponse.json({ data: [existing] });
+        return [existing];
       }),
-      http.delete('/api/automations/1', ({ request }) => {
+      mockProcedure(contract.automations.delete, ({ request }) => {
         requests.push(`DELETE ${request.url}`);
-        return HttpResponse.json({});
+        return null;
       })
     );
 

@@ -1,10 +1,11 @@
 import { buildContainer } from '@server/container';
 import { MetadataProviderType } from '@server/database/schema';
+import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
-import { createMediaQueryRoutes } from '@server/modules/mediaQueries/mediaQueries.routes';
+import { createMediaQueryProcedures } from '@server/modules/mediaQueries';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { createMockConfig } from '@tests/factories';
 import { createRadarrMovie } from '@tests/factories';
@@ -66,7 +67,7 @@ describe('GET /api/media-queries/:id/preview', () => {
       req.user = { id: 1 } as unknown as NonNullable<typeof req.user>;
       next();
     });
-    app.use('/api/media-queries', createMediaQueryRoutes(container.cradle));
+    app.use(serveApi({ mediaQueries: createMediaQueryProcedures(container.cradle) }));
     app.use(errorHandlerMiddleware);
 
     client = createApiClient(app);

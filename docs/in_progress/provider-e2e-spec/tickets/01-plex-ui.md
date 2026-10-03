@@ -49,7 +49,7 @@ ticket's original scope — are unaddressed. Each still needs its own widget-sha
   (`studio`/`fileContainer`/`videoCodec`/`audioCodec`/`fileResolution`/`labels`), since unlike
   `genres`/`certification` they have no lookups entry yet. Decided with the user: one dedicated
   route per field, following the existing `listNetworks`/`listGenres` precedent
-  (`server/modules/media/media.routes.ts` + `media.handler.ts`, in-process `MediaCache<string[]>`,
+  (`contract/media.ts` + `media.procedures.ts`, in-process `MediaCache<string[]>`,
   dedupe+sort over already-fetched data) — not a combined multi-field "facets" endpoint.
 - **Flagged, not fixed**: `certification` already declares `dataType: 'csv-strings'` in
   `filterRegistry.ts` but has no lookup source wired, so its control silently renders empty today.

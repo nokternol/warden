@@ -1,4 +1,4 @@
-import type { AggregatedRatings } from '@app/components/RatingsDisplay';
+import { api } from '@app/lib/api/client';
 import useSWRMutation from 'swr/mutation';
 
 interface FetchRatingsArgs {
@@ -8,37 +8,10 @@ interface FetchRatingsArgs {
   omdbApiKey?: string;
 }
 
-async function fetchRatings(
-  _key: string,
-  { arg }: { arg: FetchRatingsArgs }
-): Promise<AggregatedRatings> {
-  const params = new URLSearchParams({ title: arg.title });
-
-  if (arg.year !== undefined) {
-    params.append('year', String(arg.year));
-  }
-  if (arg.tmdbApiKey) {
-    params.append('tmdbApiKey', arg.tmdbApiKey);
-  }
-  if (arg.omdbApiKey) {
-    params.append('omdbApiKey', arg.omdbApiKey);
-  }
-
-  const response = await fetch(`/api/providers/ratings?${params.toString()}`);
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error?.message || 'Failed to fetch ratings');
-  }
-
-  const result = await response.json();
-  return result.data as AggregatedRatings;
-}
-
 export function useRatings() {
   const { trigger, data, error, isMutating } = useSWRMutation(
-    '/api/providers/ratings',
-    fetchRatings
+    [api.providers.ratings],
+    (_key, { arg }: { arg: FetchRatingsArgs }) => api.providers.ratings(arg)
   );
 
   return {

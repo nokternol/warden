@@ -10,5 +10,5 @@
  * its own, consuming `providerSettingsService` from providers.
  */
 
-// HTTP surface — mounted by the API router.
-export { createSettingsRoutes } from './settings.routes';
+// HTTP surface — this module's procedures of the API contract.
+export { createProviderSettingsProcedures } from './settings.procedures';

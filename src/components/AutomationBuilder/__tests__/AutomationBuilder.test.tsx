@@ -1,12 +1,14 @@
 import type { MediaQueryRecord } from '@app/hooks/useMediaQueries';
 import type { ProviderSummary } from '@app/hooks/useProviderSettings';
 import type { ProviderTaskAvailability } from '@app/hooks/useProviderTasks';
+import { contract } from '@contract/index';
+import type { ProviderTaskOptionsAvailability } from '@contract/providers';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
 import React from 'react';
 import { SWRConfig } from 'swr';
 import { describe, expect, it, vi } from 'vitest';
+import { mockProcedure } from '../../../../tests/mocks/contract';
 import { server } from '../../../../tests/mocks/server';
 import AutomationBuilder from '../index';
 
@@ -34,13 +36,14 @@ function makeProvider(overrides: Partial<ProviderSummary> = {}): ProviderSummary
 function mockApi(
   providers: ProviderSummary[],
   availability: ProviderTaskAvailability[],
-  taskOptions: Record<string, Array<{ providerId: number; type: string; options: unknown[] }>> = {}
+  taskOptions: Record<string, ProviderTaskOptionsAvailability[]> = {}
 ): void {
   server.use(
-    http.get('/api/settings/providers', () => HttpResponse.json({ data: providers })),
-    http.get('/api/providers/tasks', () => HttpResponse.json({ data: availability })),
-    http.get('/api/providers/task-options/:route', ({ params }) =>
-      HttpResponse.json({ data: taskOptions[params.route as string] ?? [] })
+    mockProcedure(contract.providers.list, () => providers),
+    mockProcedure(contract.providers.tasks, () => availability),
+    mockProcedure(
+      contract.providers.taskOptions,
+      ({ params }) => taskOptions[String(params.route)] ?? []
     )
   );
 }

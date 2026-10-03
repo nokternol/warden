@@ -154,7 +154,7 @@ same saved query against two instances is two automations sharing that query rec
 
 ## Browse: per-instance sublists, live display dedup, and instance-qualified filters
 
-`media.handler.ts`'s `getMovies()`/`getSeries()` fetch every active instance's raw
+`media.procedures.ts`'s `getMovies()`/`getSeries()` fetch every active instance's raw
 `RadarrMovie[]`/`SonarrSeries[]` into **per-instance sublists** (`{ providerId, providerName, movies }`),
 never flattened into one array before matching. The inline `MediaSource` normalizes each sublist's rows
 with their own `providerId` (`normalizeRadarrMovie(m, providerId)`), so every item pooled into

@@ -2,10 +2,10 @@ import { MetadataProviderType } from '@server/database/schema';
 import { type ActuatorTask, type MediaActuator, requireParameter } from '../roles';
 import { BaseProviderConnection } from './baseProviderConnection';
 
-export interface RadarrImage {
+export type RadarrImage = {
   coverType: string;
   remoteUrl: string;
-}
+};
 
 export interface RadarrLanguage {
   id: number;
@@ -21,7 +21,7 @@ export interface RadarrCollection {
   tmdbId: number;
 }
 
-export interface RadarrMovie {
+export type RadarrMovie = {
   id: number;
   title: string;
   year?: number;
@@ -68,12 +68,12 @@ export interface RadarrMovie {
   rootFolderPath?: string;
   website?: string;
   youTubeTrailerId?: string;
-}
+};
 
-export interface RadarrProfile {
+export type RadarrProfile = {
   id: number;
   name: string;
-}
+};
 
 export interface RadarrRootFolder {
   id: number;
@@ -82,10 +82,10 @@ export interface RadarrRootFolder {
   unmappedFolders: unknown[];
 }
 
-export interface RadarrTag {
+export type RadarrTag = {
   id: number;
   label: string;
-}
+};
 
 export class RadarrProvider extends BaseProviderConnection implements MediaActuator {
   public readonly actuatorType = MetadataProviderType.RADARR;

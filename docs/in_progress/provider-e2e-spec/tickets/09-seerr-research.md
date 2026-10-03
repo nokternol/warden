@@ -26,7 +26,7 @@ API exposes:
 - Any gap that would require a *structural* schema change (new column/table, not just a new config
   value in the existing `settings` JSON blob) — flag, don't design.
 
-Known context to start from: Configurable via settings test-connection (server/modules/settings/settings.handler.ts, server/modules/providers/providers.handler.ts) but ProviderFactory.create() throws 'Unsupported provider type: SEERR' — connection.ts exists (server/modules/providers/connections/seerrProvider.ts) but is not wired to any MediaSource/MediaEnricher/MediaActuator role. Distinct product from Overseerr (Jellyseerr) — do not assume field/API parity with Overseerr during research.
+Known context to start from: Configurable via settings test-connection (server/modules/settings/settings.procedures.ts, server/modules/providers/providers.procedures.ts) but ProviderFactory.create() throws 'Unsupported provider type: SEERR' — connection.ts exists (server/modules/providers/connections/seerrProvider.ts) but is not wired to any MediaSource/MediaEnricher/MediaActuator role. Distinct product from Overseerr (Jellyseerr) — do not assume field/API parity with Overseerr during research.
 
 Do not decide what to build yet — that's the follow-on decision ticket. This ticket is exhaustive
 enumeration, not curation.
@@ -42,7 +42,7 @@ enumeration, not curation.
   has no `SEERR` case (throws `Unsupported provider type`), so no `SeerrProvider` instance is even
   constructible — which means no enricher, no filter rule, and no `PROVIDER_REGISTRY` entry can
   exist downstream either. The only live code paths are two connection-test-probe `case` clauses
-  in `settings.handler.ts` and `providers.handler.ts` (the latter directly instantiates
+  in `settings.procedures.ts` and `providers.procedures.ts` (the latter directly instantiates
   `OverseerrProvider`, not `SeerrProvider`).
 - **Naming ambiguity flagged for the decision ticket**: as of a Feb 2026 upstream announcement,
   Jellyseerr and Overseerr merged into one project now literally named "Seerr"

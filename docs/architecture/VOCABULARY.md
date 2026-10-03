@@ -46,7 +46,7 @@ the role interfaces it `implements`, never assumed from the connection base. Sou
 
 | Term | Meaning | Binds in code |
 |---|---|---|
-| **MediaRule / MediaRuleDescriptor** | The queryable predicate shapes: `MediaRule` pairs a `predicate` with `{ key, label, contentTypes, dataType, sourceProviders, required }`; `MediaRuleDescriptor` is its JSON-honest, predicate-free wire projection. `MEDIA_RULES` is the single authority — no client-side rule catalogue. Client derives its controls from `GET /api/filter-fields` ([`media.filterFields.handler.ts`](ref:path:server/modules/media/media.filterFields.handler.ts)) via [`useMediaRules`](ref:path:src/hooks/useMediaRules.ts), scoping state by content type because the registry intentionally reuses keys (`tagIds`, `qualityProfileIds`, `genres`) across movie/show. | [`server/modules/media/filterRegistry.ts`](ref:path:server/modules/media/filterRegistry.ts) |
+| **MediaRule / MediaRuleDescriptor** | The queryable predicate shapes: `MediaRule` pairs a `predicate` with `{ key, label, contentTypes, dataType, sourceProviders, required }`; `MediaRuleDescriptor` is its JSON-honest, predicate-free wire projection. `MEDIA_RULES` is the single authority — no client-side rule catalogue. The wire shape is declared once on the API contract ([`contract/media.ts`](ref:path:contract/media.ts)). Client derives its controls from the `media.rules` procedure (`GET /api/filter-fields`, [`media.rules.procedures.ts`](ref:path:server/modules/media/media.rules.procedures.ts)) via [`useMediaRules`](ref:path:src/hooks/useMediaRules.ts), scoping state by content type because the registry intentionally reuses keys (`tagIds`, `qualityProfileIds`, `genres`) across movie/show. | [`server/modules/media/filterRegistry.ts`](ref:path:server/modules/media/filterRegistry.ts) |
 | **MediaQuerySpec** | The persistable, source-less core of a query: `{ contentType, sources }`. | [`server/modules/media/mediaQueryEngine.ts`](ref:path:server/modules/media/mediaQueryEngine.ts) |
 | **MediaQuery** | A `MediaQuerySpec` bound to a `MediaSource` — the engine's input. | [`server/modules/media/mediaQueryEngine.ts`](ref:path:server/modules/media/mediaQueryEngine.ts) |
 | **MediaQueryRecord** | A `MediaQuerySpec` with database identity + presentation metadata (`id`, `name`, `health`). **"Saved" is a state, not a name** — the deprecated `SavedMediaQuery` vocabulary re-prefixed the concept instead of naming the state; its residue was healed in North Star Phase 0 (see the ledger). | [`server/modules/mediaQueries/mediaQueryService.ts`](ref:path:server/modules/mediaQueries/mediaQueryService.ts) |
@@ -62,7 +62,13 @@ the role interfaces it `implements`, never assumed from the connection base. Sou
 | **Automation** | A query bound to a task on a schedule — the product's unit of action. `kind: 'user' \| 'system'`; system automations are invariants (Run-Now-only, cannot be disabled or deleted). Spec: [`system-vs-user-automations.md`](ref:path:docs/architecture/system-vs-user-automations.md). | [`server/modules/automations/automationService.ts`](ref:path:server/modules/automations/automationService.ts) |
 | **AutomationExecutor** | Runs a task against the ids a query matches; binds the provider by `automation.provider.id`, dispatches via `source.tasks()`. Holds the in-flight guard that keeps manual and scheduled runs from overlapping. | [`server/modules/automations/automationExecutor.ts`](ref:path:server/modules/automations/automationExecutor.ts) |
 | **SystemTaskRunner** | Dispatch target for `system` automations (identity/enrichment jobs) — internal jobs, deliberately not actuator tasks. | [`server/modules/system/systemTaskRunner.ts`](ref:path:server/modules/system/systemTaskRunner.ts) |
-| **Run Now / Disable / Archive** | The UI verb model for automations — never Play/Pause, which would imply runtime control over an executing process. | [`src/pages/automations/index.tsx`](ref:path:src/pages/automations/index.tsx) |
+| **Run Now / Disable / Archive** | The UI verb model for automations — never Play/Pause, which would imply runtime control over an executing process. | [`src/pages/automations/index.page.tsx`](ref:path:src/pages/automations/index.page.tsx) |
+
+## API
+
+| Term | Meaning | Binds in code |
+|---|---|---|
+| **API contract / procedure** | The one declaration of the HTTP API: each *procedure* (`automations.list`, `media.rules`, …) states its method, path, input and output. The server implements it, the client calls it, mocks are declared from it. | [`contract/index.ts`](ref:path:contract/index.ts), [`server/kernel/api.ts`](ref:path:server/kernel/api.ts), [`src/lib/api/client.ts`](ref:path:src/lib/api/client.ts) |
 
 ## Deprecated names — stop writing these
 
@@ -72,3 +78,5 @@ the role interfaces it `implements`, never assumed from the connection base. Sou
 | `FILTER_FIELDS` (client rule catalogue) | Derived from `MediaRuleDescriptor[]` via `useMediaRules` | Deleted (Phase 4, healed). |
 | `taskManifest` (type-keyed task table) | `MediaActuator.tasks()` on the instance | Deleted (Phase 3, healed). |
 | `getMovies` / `getSeries` on sources | `getMediaItems()` on the `MediaSource` role | — |
+| `defineRoute`, `*.routes.ts`/`*.handler.ts` | A procedure in the API contract, implemented in `<module>.procedures.ts` | Deleted (C0). |
+| Local SWR `fetcher`s, hand-written `/api/...` URLs | `api.<ns>.<procedure>` via `useApi` | Deleted (C0). |

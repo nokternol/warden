@@ -109,6 +109,9 @@ async function startServer() {
     const httpServer = server.listen(port, '0.0.0.0', () => {
       log.info('Server started', { port, env: config.NODE_ENV });
       log.info(`Open http://localhost:${port}`);
+      if (config.BYPASS_AUTH) {
+        log.warn('BYPASS_AUTH is on: every API procedure answers without a signed-in user');
+      }
     });
 
     httpServer.on('error', (error: NodeJS.ErrnoException) => {

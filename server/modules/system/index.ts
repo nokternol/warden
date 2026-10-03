@@ -11,8 +11,8 @@
  * (`ensureSystemJobs`, `failedStateMiddleware`) — see the fracture ledger.
  */
 
-// HTTP surface — mounted by the API router.
-export { createHealthRoutes } from './health.routes';
+// HTTP surface — the system procedures of the API contract.
+export { createSystemProcedures } from './system.procedures';
 
 // Startup-time self-healing — called directly by server/index.ts before the
 // container exists, so these are value exports rather than container-only.

@@ -1,16 +1,17 @@
-import { AutomationSchema, MediaQueryRecordSchema, ProviderSchema } from '@app/lib/api/schemas';
+import { AutomationSchema, MediaQueryRecordSchema, ProviderSchema } from '@contract/schemas';
 import { buildContainer } from '@server/container';
 import { MetadataProviderType } from '@server/database/schema';
+import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
+import { createAutomationProcedures } from '@server/modules/automations';
 import { AutomationService } from '@server/modules/automations/automationService';
-import { createAutomationRoutes } from '@server/modules/automations/automations.routes';
-import { createMediaQueryRoutes } from '@server/modules/mediaQueries/mediaQueries.routes';
+import { createMediaQueryProcedures } from '@server/modules/mediaQueries';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
-import { createSettingsRoutes } from '@server/modules/settings/settings.routes';
+import { createProviderSettingsProcedures } from '@server/modules/settings';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient } from '@tests/helpers/api';
 import express, { type Express } from 'express';
@@ -72,9 +73,9 @@ describe('API shape contracts — real server responses', () => {
       req.user = { id: 1 } as unknown as NonNullable<typeof req.user>;
       next();
     });
-    app.use('/api/media-queries', createMediaQueryRoutes(container.cradle));
-    app.use('/api/automations', createAutomationRoutes(container.cradle));
-    app.use('/api/settings', createSettingsRoutes(container.cradle));
+    app.use(serveApi({ mediaQueries: createMediaQueryProcedures(container.cradle) }));
+    app.use(serveApi({ automations: createAutomationProcedures(container.cradle) }));
+    app.use(serveApi({ providers: createProviderSettingsProcedures(container.cradle) }));
     app.use(errorHandlerMiddleware);
 
     client = createApiClient(app);

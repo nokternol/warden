@@ -6,9 +6,9 @@
  * are deny-by-default — a module omitted from another's allow-list is
  * forbidden as a target, not enumerated as a violation to avoid.
  *
- * Scope is server/ only, matching the North Star's own scope; server/__tests__/
- * is excluded because tests legitimately reach into a module's own internals
- * to unit-test them.
+ * Scope is server/, src/ and contract/. Test folders and stories are excluded
+ * because tests legitimately reach into a module's own internals to unit-test
+ * them.
  */
 
 const MODULES = [
@@ -58,6 +58,46 @@ const directionRules = MODULES.map((mod) => {
 module.exports = {
   forbidden: [
     {
+      name: 'no-src-to-server',
+      severity: 'error',
+      comment:
+        'The client may reach the server only through the API contract (contract/), ' +
+        'never by importing server code — not even a type.',
+      from: { path: '^src/' },
+      to: { path: '^server/' },
+    },
+    {
+      name: 'no-server-to-src',
+      severity: 'error',
+      comment:
+        'The server may share code with the client only through the API contract ' +
+        '(contract/), never by importing client code.',
+      from: { path: '^server/' },
+      to: { path: '^src/' },
+    },
+    {
+      name: 'contract-depends-on-nothing-local',
+      severity: 'error',
+      comment:
+        'The API contract is the shared root both sides derive from: it imports neither ' +
+        'src/ nor server/ (only zod and @orpc/contract).',
+      from: { path: '^contract/' },
+      to: { path: '^(src|server)/' },
+    },
+    {
+      name: 'contract-imports-only-zod-and-orpc',
+      severity: 'error',
+      comment:
+        'The API contract is declarations only: the one package it may import besides ' +
+        'zod is @orpc/contract, so no runtime, framework or Node code reaches the client ' +
+        'through it.',
+      from: { path: '^contract/' },
+      to: {
+        dependencyTypes: ['npm', 'npm-dev', 'npm-peer', 'npm-optional', 'npm-no-pkg', 'npm-unknown', 'core'],
+        pathNot: 'node_modules/(zod|@orpc/contract)/',
+      },
+    },
+    {
       name: 'no-module-internal-reach-in',
       severity: 'error',
       comment:
@@ -90,8 +130,9 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: '^server/__tests__/' },
-    includeOnly: { path: '^server/' },
+    exclude: { path: '(^|/)__tests__/|\\.stories\\.tsx$' },
+    // node_modules is included (but not followed) so package imports can be checked.
+    includeOnly: { path: '^(server|src|contract)/|node_modules/' },
     tsPreCompilationDeps: true,
     tsConfig: { fileName: require('path').join(__dirname, 'server/tsconfig.json') },
     enhancedResolveOptions: {

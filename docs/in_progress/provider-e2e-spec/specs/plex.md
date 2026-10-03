@@ -203,8 +203,8 @@ source, not inventing new widget shapes:
   no new control, only a new producer.
 
 **Options-source decision for the 6 net-new `csv-strings` fields**: one dedicated route per field,
-following the existing `listNetworks`/`listGenres` precedent exactly (`server/modules/media/media.routes.ts`
-+ `media.handler.ts`) — an in-process `MediaCache<string[]>`, computed by dedupe+sort over
+following the existing `listNetworks`/`listGenres` precedent exactly (`contract/media.ts`
++ `media.procedures.ts`) — an in-process `MediaCache<string[]>`, computed by dedupe+sort over
 already-fetched library data (no dedicated DB distinct-query), added to the `Lookups` interface and
 wired into `csvStringOptions`. Considered and rejected: one combined "facets" endpoint returning all
 six lists — diverges from the established per-field pattern and couples six independent caches'

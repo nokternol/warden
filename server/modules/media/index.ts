@@ -7,13 +7,12 @@
  * growing export list is a design smell to challenge.
  */
 
-// HTTP surface — mounted by the API router. Absorbs the filterFields,
-// backdrops, and search route-drawn modules; each keeps its own URL mount.
-export { createMediaHandlers } from './media.handler';
-export { createMediaRoutes } from './media.routes';
-export { createFilterFieldsRoutes } from './media.filterFields.routes';
-export { createBackdropsRoutes } from './media.backdrops.routes';
-export { createSearchRoutes } from './media.search.routes';
+// HTTP surface — the media procedures of the API contract. Absorbs the
+// filterFields, backdrops, and search route-drawn modules; each keeps its own URL.
+export { createMediaProcedures } from './media.procedures';
+export { createRulesProcedures } from './media.rules.procedures';
+export { createBackdropsProcedures } from './media.backdrops.procedures';
+export { createSearchProcedures } from './media.search.procedures';
 
 // Container contribution — the app builder composes Cradle from this slice
 // and calls the registration; classes registered here stay module-private

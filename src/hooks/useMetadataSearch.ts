@@ -1,13 +1,8 @@
+import { api } from '@app/lib/api/client';
+import type { SearchResult } from '@contract/media';
 import { useState } from 'react';
 
-export interface SearchResult {
-  providerId: number;
-  name: string;
-  type: string;
-  status: 'ok' | 'error' | 'unavailable';
-  data?: unknown;
-  error?: string;
-}
+export type { SearchResult };
 
 export function useMetadataSearch() {
   const [results, setResults] = useState<SearchResult[] | null>(null);
@@ -20,11 +15,7 @@ export function useMetadataSearch() {
     setError(undefined);
     setResults(null);
     try {
-      const params = new URLSearchParams({ title });
-      const res = await fetch(`/api/search/metadata?${params}`);
-      if (!res.ok) throw new Error(`Search failed: ${res.status}`);
-      const json = await res.json();
-      setResults(json.data as SearchResult[]);
+      setResults(await api.media.search({ title }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Search failed');
     } finally {

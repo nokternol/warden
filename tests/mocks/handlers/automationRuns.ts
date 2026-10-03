@@ -1,6 +1,8 @@
-import { http, HttpResponse } from 'msw';
+import { contract } from '@contract/index';
+import type { AutomationRunDto } from '@contract/schemas';
+import { mockProcedure } from '../contract';
 
-export const mockRuns = [
+export const mockRuns: AutomationRunDto[] = [
   {
     id: 1,
     automationId: 1,
@@ -24,11 +26,10 @@ export const mockRuns = [
 ];
 
 export const automationRunHandlers = [
-  http.get('/api/automations/runs', ({ request }) => {
+  mockProcedure(contract.automations.runs, ({ request }) => {
     const url = new URL(request.url);
     const limit = Number(url.searchParams.get('limit') ?? '50');
     const offset = Number(url.searchParams.get('offset') ?? '0');
-    const sliced = mockRuns.slice(offset, offset + limit);
-    return HttpResponse.json({ status: 'ok', data: { data: sliced, total: mockRuns.length } });
+    return { data: mockRuns.slice(offset, offset + limit), total: mockRuns.length };
   }),
 ];

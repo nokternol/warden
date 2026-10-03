@@ -1,9 +1,10 @@
 import { buildContainer } from '@server/container';
+import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
-import { createAppSettingsRoutes } from '@server/modules/appSettings/appSettings.routes';
+import { createAppSettingsProcedures } from '@server/modules/appSettings';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient, expectErrorResponse } from '@tests/helpers/api';
 import express, { type Express } from 'express';
@@ -28,7 +29,9 @@ describe('App Settings API Integration', () => {
     const config = loadConfig();
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
-    const appSettingsRoutes = createAppSettingsRoutes(container.cradle);
+    const appSettingsRoutes = serveApi({
+      appSettings: createAppSettingsProcedures(container.cradle),
+    });
 
     authedApp = express();
     authedApp.use(express.json());

@@ -22,13 +22,7 @@ import type {
 } from '@app/hooks/useMediaFilters';
 import type { FilterValueEntry } from '@app/hooks/useMediaQueries';
 import type { MediaFilters } from '@app/types/media';
-// Type-only, from a deliberately zero-dependency contract file (see its own
-// docstring) — any other `@server/*` import here breaks the Next.js build, since
-// the type-checker resolves the whole imported file's transitive import graph,
-// not just the specific type (verified: importing from `filterRegistry.ts`
-// directly reaches `container.ts`'s Express-specific type augmentations and fails
-// to compile).
-import type { MovieRangeRuleKey, ShowRangeRuleKey } from '@server/modules/media/browseRangeKeys';
+import type { MovieRangeRuleKey, ShowRangeRuleKey } from '@contract/browseRangeKeys';
 
 type Bound = 'min' | 'max';
 

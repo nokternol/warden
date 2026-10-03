@@ -1,8 +1,9 @@
 import type { AutomationDto } from '@app/hooks/useAutomations';
+import { contract } from '@contract/index';
 import userEvent from '@testing-library/user-event';
 import { render, screen, waitFor } from '@tests/helpers/component';
+import { mockProcedure } from '@tests/mocks/contract';
 import { server } from '@tests/mocks/server';
-import { http, HttpResponse } from 'msw';
 import { SWRConfig } from 'swr';
 import { describe, expect, it } from 'vitest';
 import SystemPage from '../index.page';
@@ -42,10 +43,9 @@ const SYSTEM_AUTOMATIONS: AutomationDto[] = [
 
 function useSystemList() {
   server.use(
-    http.get('/api/automations', ({ request }) => {
+    mockProcedure(contract.automations.list, ({ request }) => {
       const kind = new URL(request.url).searchParams.get('kind');
-      const data = kind === 'system' ? SYSTEM_AUTOMATIONS : [];
-      return HttpResponse.json({ status: 'ok', data });
+      return kind === 'system' ? SYSTEM_AUTOMATIONS : [];
     })
   );
 }
@@ -65,9 +65,9 @@ describe('SystemPage', () => {
     useSystemList();
     let runUrl = '';
     server.use(
-      http.post('/api/automations/:id/run', ({ request }) => {
+      mockProcedure(contract.automations.run, ({ request }) => {
         runUrl = request.url;
-        return new HttpResponse(null, { status: 202 });
+        return null;
       })
     );
 

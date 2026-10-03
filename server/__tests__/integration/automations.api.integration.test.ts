@@ -4,11 +4,12 @@ import { MetadataProviderType } from '@server/database/schema';
  * POST /api/automations — Session C API integration tests
  * Cycles 9–11: querySources array, cross-type rejection, legacy queryId conversion
  */
+import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
-import { createAutomationRoutes } from '@server/modules/automations/automations.routes';
+import { createAutomationProcedures } from '@server/modules/automations';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
@@ -70,7 +71,7 @@ describe('POST /api/automations — Session C', () => {
       req.user = { id: 1 } as unknown as NonNullable<typeof req.user>;
       next();
     });
-    app.use('/api/automations', createAutomationRoutes(container.cradle));
+    app.use(serveApi({ automations: createAutomationProcedures(container.cradle) }));
     app.use(errorHandlerMiddleware);
 
     client = createApiClient(app);

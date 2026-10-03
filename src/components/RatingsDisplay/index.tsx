@@ -1,6 +1,6 @@
 import Badge from '@app/components/Badge';
 import { Card } from '@app/components/Card';
-import type { AggregatedRatings } from '../../../server/modules/providers/ratingsAggregation.ts';
+import type { AggregatedRatings } from '@contract/providers';
 import styles from './RatingsDisplay.module.css';
 
 export type { AggregatedRatings };

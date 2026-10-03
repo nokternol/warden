@@ -3,6 +3,7 @@
 import { ImageFader } from '@app/components/ImageFader';
 import { PlexIcon, WardenLogo } from '@app/components/Logo';
 import { useBackdrops } from '@app/hooks/useBackdrops';
+import { api } from '@app/lib/api/client';
 import { PlexOAuth } from '@app/lib/utils/plexOAuth';
 import { useEffect, useState } from 'react';
 
@@ -14,9 +15,10 @@ export default function LoginPage() {
 
   // Redirect already-authenticated users away from the login page
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then((r) => {
-        if (r.ok) window.location.href = '/dashboard';
+    api.auth
+      .me()
+      .then(() => {
+        window.location.href = '/dashboard';
       })
       .catch(() => {
         /* not authenticated, stay on login */
@@ -35,15 +37,7 @@ export default function LoginPage() {
     try {
       const authToken = await oauth.login();
 
-      const response = await fetch('/api/auth/plex', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ authToken }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Authentication failed');
-      }
+      await api.auth.plexLogin({ authToken });
 
       window.location.href = '/dashboard';
     } catch (err) {

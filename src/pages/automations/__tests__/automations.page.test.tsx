@@ -1,8 +1,9 @@
+import { contract } from '@contract/index';
 import userEvent from '@testing-library/user-event';
 import { render, screen, waitFor } from '@tests/helpers/component';
+import { mockProcedure } from '@tests/mocks/contract';
 import { MOCK_AUTOMATIONS } from '@tests/mocks/handlers/automations';
 import { server } from '@tests/mocks/server';
-import { http, HttpResponse } from 'msw';
 import { SWRConfig } from 'swr';
 import { describe, expect, it } from 'vitest';
 import AutomationsPage from '../index.page';
@@ -24,9 +25,9 @@ describe('AutomationsPage', () => {
   it('POSTs /:id/run when a Run-now control is clicked', async () => {
     let runUrl = '';
     server.use(
-      http.post('/api/automations/:id/run', ({ request }) => {
+      mockProcedure(contract.automations.run, ({ request }) => {
         runUrl = request.url;
-        return new HttpResponse(null, { status: 202 });
+        return null;
       })
     );
 

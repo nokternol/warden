@@ -99,7 +99,8 @@ state to toggle; the builder offers the enabled subset.
 
 ## Discovery: `GET /api/providers/tasks` is instance-keyed
 
-[`server/modules/providers/providers.handler.ts`](ref:path:server/modules/providers/providers.handler.ts) returns, per configured provider instance that plays
+The `providers.tasks` contract procedure, implemented in
+[`server/modules/providers/providers.procedures.ts`](ref:path:server/modules/providers/providers.procedures.ts), returns, per configured provider instance that plays
 `MediaActuator`:
 
 ```ts
@@ -159,7 +160,7 @@ populated by the identity job's stamping passes (`runForPlex`, `runForJellyfin`,
 - [`server/modules/providers/providerFactory.ts`](ref:path:server/modules/providers/providerFactory.ts) — constructs every configured type so discovery can ask any
   instance for its role.
 - [`server/modules/automations/automationService.ts`](ref:path:server/modules/automations/automationService.ts), [`automationExecutor.ts`](ref:path:server/modules/automations/automationExecutor.ts) — create-time and run-time enablement.
-- [`server/modules/providers/providers.handler.ts`](ref:path:server/modules/providers/providers.handler.ts) — instance-keyed discovery.
+- [`server/modules/providers/providers.procedures.ts`](ref:path:server/modules/providers/providers.procedures.ts) — instance-keyed discovery.
 
 ## The client derives, holds no catalogue
 

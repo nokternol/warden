@@ -17,6 +17,7 @@ const testConfig: AppConfig = {
   DB_PATH: ':memory:',
   DB_LOGGING: false,
   TRUST_PROXY: false,
+  BYPASS_AUTH: false,
   TMDB_API_KEY: '',
   SESSION_SECRET: 'test-secret',
 };
@@ -45,7 +46,7 @@ describe('GET /api/filter-fields', () => {
   it('returns 200 with an empty array when no providers are configured', async () => {
     const res = await supertest(app).get('/api/filter-fields');
     expect(res.status).toBe(200);
-    expect(res.body).toEqual([]);
+    expect(res.body).toEqual({ status: 'ok', data: [] });
   });
 
   it('returns only rules gated by a configured, active provider', async () => {
@@ -58,7 +59,7 @@ describe('GET /api/filter-fields', () => {
 
     const res = await supertest(app).get('/api/filter-fields');
     expect(res.status).toBe(200);
-    const keys: string[] = res.body.map((f: { key: string }) => f.key);
+    const keys: string[] = res.body.data.map((f: { key: string }) => f.key);
     // Radarr-sourced rule present
     expect(keys).toContain('title');
     expect(keys).toContain('tagIds');
@@ -76,7 +77,7 @@ describe('GET /api/filter-fields', () => {
     });
 
     const res = await supertest(app).get('/api/filter-fields');
-    const keys: string[] = res.body.map((f: { key: string }) => f.key);
+    const keys: string[] = res.body.data.map((f: { key: string }) => f.key);
     expect(keys).not.toContain('monitored');
   });
 
@@ -96,7 +97,7 @@ describe('GET /api/filter-fields', () => {
 
     const res = await supertest(app).get('/api/filter-fields?contentType=movie');
     expect(res.status).toBe(200);
-    const keys: string[] = res.body.map((f: { key: string }) => f.key);
+    const keys: string[] = res.body.data.map((f: { key: string }) => f.key);
     // shared fields present
     expect(keys).toContain('title');
     expect(keys).toContain('hasFile');
@@ -124,7 +125,7 @@ describe('GET /api/filter-fields', () => {
 
     const res = await supertest(app).get('/api/filter-fields?contentType=show');
     expect(res.status).toBe(200);
-    const keys: string[] = res.body.map((f: { key: string }) => f.key);
+    const keys: string[] = res.body.data.map((f: { key: string }) => f.key);
     // shared fields present
     expect(keys).toContain('title');
     expect(keys).toContain('hasFile');
@@ -145,7 +146,7 @@ describe('GET /api/filter-fields', () => {
 
     const res = await supertest(app).get('/api/filter-fields?contentType=movie');
     expect(res.status).toBe(200);
-    for (const field of res.body) {
+    for (const field of res.body.data) {
       expect(field.key).toBeTruthy();
       expect(field.label).toBeTruthy();
       expect(['boolean', 'number', 'string', 'csv-ids', 'csv-strings', 'range']).toContain(
@@ -161,11 +162,12 @@ describe('GET /api/filter-fields', () => {
   it('returns 400 for invalid contentType', async () => {
     const res = await supertest(app).get('/api/filter-fields?contentType=invalid');
     expect(res.status).toBe(400);
+    expect(res.body.error.type).toBe('VALIDATION_ERROR');
   });
 
   it('reflects a provider created between two requests — cache invalidates on provider:changed', async () => {
     const before = await supertest(app).get('/api/filter-fields');
-    expect(before.body.map((f: { key: string }) => f.key)).not.toContain('monitored');
+    expect(before.body.data.map((f: { key: string }) => f.key)).not.toContain('monitored');
 
     await providerSettingsService.create({
       type: MetadataProviderType.SONARR,
@@ -175,6 +177,6 @@ describe('GET /api/filter-fields', () => {
     });
 
     const after = await supertest(app).get('/api/filter-fields');
-    expect(after.body.map((f: { key: string }) => f.key)).toContain('monitored');
+    expect(after.body.data.map((f: { key: string }) => f.key)).toContain('monitored');
   });
 });

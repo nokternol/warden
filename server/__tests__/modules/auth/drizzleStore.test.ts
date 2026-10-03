@@ -26,6 +26,7 @@ const testConfig: AppConfig = {
   DB_PATH: ':memory:',
   DB_LOGGING: false,
   TRUST_PROXY: false,
+  BYPASS_AUTH: false,
   TMDB_API_KEY: 'test-tmdb-key',
   SESSION_SECRET: 'test-session-secret',
 };

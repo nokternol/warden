@@ -11,6 +11,7 @@ import { DomainEventBus, type DomainEvents } from '@server/kernel/eventBus';
 import { getChildLogger } from '@server/kernel/logger';
 import { AutomationExecutor } from '@server/modules/automations/automationExecutor';
 import { AutomationRunService } from '@server/modules/automations/automationRunService';
+import { AutomationScheduler } from '@server/modules/automations/automationScheduler';
 import { AutomationService } from '@server/modules/automations/automationService';
 import type { MediaItem } from '@server/modules/media';
 import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.queries';
@@ -41,6 +42,7 @@ const testConfig: AppConfig = {
   DB_PATH: ':memory:',
   DB_LOGGING: false,
   TRUST_PROXY: false,
+  BYPASS_AUTH: false,
   TMDB_API_KEY: '',
   SESSION_SECRET: 'test-secret',
 };
@@ -1461,10 +1463,6 @@ describe('AutomationExecutor', () => {
 
   describe('AutomationScheduler integration', () => {
     it('calls executor.execute when a scheduled tick fires', async () => {
-      const { AutomationScheduler } = await import(
-        '@server/modules/automations/automationScheduler'
-      );
-
       let executedId: number | null = null;
       const mockExecutor = {
         execute: async (id: number) => {

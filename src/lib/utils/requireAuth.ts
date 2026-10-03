@@ -1,3 +1,4 @@
+import { createApiClient } from '@app/lib/api/client';
 import type { GetServerSidePropsContext } from 'next';
 
 type AuthRedirect = { redirect: { destination: string; permanent: false } };
@@ -7,12 +8,14 @@ export async function requireAuth(ctx: GetServerSidePropsContext): Promise<AuthR
 
   const port = process.env.PORT ?? 5057;
   try {
-    const res = await fetch(`http://localhost:${port}/api/auth/me`, {
+    const server = createApiClient({
+      url: `http://localhost:${port}`,
       headers: { cookie: ctx.req.headers.cookie ?? '' },
     });
-    if (res.ok) return null;
+    await server.auth.me();
+    return null;
   } catch {
-    // Server unavailable — redirect to login
+    // Not signed in, or the server is unavailable — redirect to login
   }
 
   return { redirect: { destination: '/login', permanent: false } };
