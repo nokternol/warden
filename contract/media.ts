@@ -195,6 +195,16 @@ export const MediaRuleDescriptorSchema = z.object({
   sourceField: z.string().optional(),
 });
 
+/** One provider's answer to a cross-provider title search. */
+export const SearchResultSchema = z.object({
+  providerId: z.number(),
+  name: z.string(),
+  type: z.string(),
+  status: z.enum(['ok', 'error', 'unavailable']),
+  data: z.unknown().optional(),
+  error: z.string().optional(),
+});
+
 const lookup = (path: string) =>
   base.route({ method: 'GET', path: `/api/media/${path}` }).output(z.array(z.string()));
 
@@ -249,6 +259,12 @@ export const media = {
     .route({ method: 'GET', path: '/api/media/sources' })
     .output(z.array(MediaSourceDescriptorSchema)),
 
+  /** Searches every active searchable provider for a title. */
+  search: base
+    .route({ method: 'GET', path: '/api/search/metadata' })
+    .input(z.object({ title: z.string().min(1) }))
+    .output(z.array(SearchResultSchema)),
+
   /** Deletes Warden's stored media identity and enrichment data. */
   reset: base
     .route({ method: 'DELETE', path: '/api/media/reset' })
@@ -261,5 +277,6 @@ export type MediaTag = z.infer<typeof MediaTagSchema>;
 export type MediaProfile = z.infer<typeof MediaProfileSchema>;
 export type MediaSourceDescriptor = z.infer<typeof MediaSourceDescriptorSchema>;
 export type MediaRuleDescriptor = z.infer<typeof MediaRuleDescriptorSchema>;
+export type SearchResult = z.infer<typeof SearchResultSchema>;
 export type MoviesBrowseQuery = z.input<typeof MoviesBrowseQuerySchema>;
 export type SeriesBrowseQuery = z.input<typeof SeriesBrowseQuerySchema>;

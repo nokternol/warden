@@ -9,7 +9,7 @@ import {
   createBackdropsRoutes,
   createMediaProcedures,
   createRulesProcedures,
-  createSearchRoutes,
+  createSearchProcedures,
 } from './media';
 import { createMediaQueryProcedures } from './mediaQueries';
 import { createProvidersProcedures } from './providers';
@@ -21,7 +21,6 @@ export const routes = {
   appSettings: route('app-settings'),
   backdrops: route('backdrops'),
   auth: route('auth'),
-  search: route('search'),
 } as const;
 
 /**
@@ -48,7 +47,11 @@ export function createApiRouter(cradle: Cradle) {
   router.use(
     serveApi({
       automations: createAutomationProcedures(cradle),
-      media: { ...media.procedures, ...createRulesProcedures(cradle) },
+      media: {
+        ...media.procedures,
+        ...createRulesProcedures(cradle),
+        ...createSearchProcedures(cradle),
+      },
       mediaQueries: createMediaQueryProcedures(cradle),
       providers: {
         ...createProvidersProcedures(cradle),
@@ -62,7 +65,6 @@ export function createApiRouter(cradle: Cradle) {
   router.use(routes.appSettings, createAppSettingsRoutes(cradle));
   router.use(routes.backdrops, createBackdropsRoutes(cradle));
   router.use(routes.auth, createAuthRoutes(cradle));
-  router.use(routes.search, createSearchRoutes(cradle));
 
   return router;
 }

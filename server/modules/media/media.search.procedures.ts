@@ -1,8 +1,8 @@
+import type { SearchResult } from '@contract/media';
 import { MetadataProviderType } from '@server/database/schema';
 import type { MetadataProvider } from '@server/database/schema';
-import { defineRoute } from '@server/kernel/defineRoute';
+import { api } from '@server/kernel/api';
 import { getChildLogger } from '@server/kernel/logger';
-import { isAuthenticated } from '@server/kernel/middleware/auth';
 import {
   JellyfinProvider,
   OverseerrProvider,
@@ -12,21 +12,11 @@ import {
   SonarrProvider,
   TautulliProvider,
 } from '@server/modules/providers';
-import { searchMetadataQuery } from './media.search.schemas';
 
-const log = getChildLogger('SearchHandler');
+const log = getChildLogger('SearchProcedures');
 
 interface SearchCradle {
   providerSettingsService: ProviderSettingsService;
-}
-
-export interface SearchResult {
-  providerId: number;
-  name: string;
-  type: string;
-  status: 'ok' | 'error' | 'unavailable';
-  data?: unknown;
-  error?: string;
 }
 
 const SEARCHABLE_TYPES = [
@@ -96,32 +86,27 @@ async function searchProvider(provider: MetadataProvider, title: string): Promis
   }
 }
 
-export function createSearchHandlers(cradle: SearchCradle) {
+export function createSearchProcedures(cradle: SearchCradle) {
   const { providerSettingsService } = cradle;
 
   return {
-    searchMetadata: [
-      isAuthenticated(),
-      defineRoute({
-        schemas: { query: searchMetadataQuery },
-        handler: async ({ query }) => {
-          const providers = await providerSettingsService.findActiveByTypes(SEARCHABLE_TYPES);
-          const results = await Promise.allSettled(
-            providers.map((p) => searchProvider(p, query.title))
-          );
-          return results.map((r) =>
-            r.status === 'fulfilled'
-              ? r.value
-              : {
-                  providerId: -1,
-                  name: 'unknown',
-                  type: 'unknown',
-                  status: 'error' as const,
-                  error: String(r.reason),
-                }
-          );
-        },
-      }),
-    ],
+    search: api.media.search.handler(async ({ input }) => {
+      const providers = await providerSettingsService.findActiveByTypes(SEARCHABLE_TYPES);
+      const results = await Promise.allSettled(
+        providers.map((p) => searchProvider(p, input.title))
+      );
+      return results.map(
+        (r): SearchResult =>
+          r.status === 'fulfilled'
+            ? r.value
+            : {
+                providerId: -1,
+                name: 'unknown',
+                type: 'unknown',
+                status: 'error',
+                error: String(r.reason),
+              }
+      );
+    }),
   };
 }

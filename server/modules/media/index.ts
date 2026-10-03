@@ -12,7 +12,7 @@
 export { createMediaProcedures } from './media.procedures';
 export { createRulesProcedures } from './media.rules.procedures';
 export { createBackdropsRoutes } from './media.backdrops.routes';
-export { createSearchRoutes } from './media.search.routes';
+export { createSearchProcedures } from './media.search.procedures';
 
 // Container contribution — the app builder composes Cradle from this slice
 // and calls the registration; classes registered here stay module-private
