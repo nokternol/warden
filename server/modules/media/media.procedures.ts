@@ -27,7 +27,7 @@ import type {
   FilterValueEntry,
   MovieRangeRuleKey,
   NormalizedMovie,
-  NormalizedShow,
+  NormalizedSeries,
   RangeValue,
   SeriesRangeRuleKey,
 } from './filterRegistry';
@@ -577,7 +577,7 @@ export function createMediaProcedures(cradle: MediaCradle) {
           sublists.flatMap(({ providerId, series }) =>
             series.map((s) => normalizeSonarrSeries(s, providerId))
           ),
-        idOf: (item) => (item as NormalizedShow)._sourceIds.sonarr,
+        idOf: (item) => (item as NormalizedSeries)._sourceIds.sonarr,
       };
       const matched = await mediaQueryEngine.evaluate({
         source,

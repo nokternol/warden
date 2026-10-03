@@ -23,7 +23,7 @@ export type { MediaCradle } from './media.registrations';
 // Canonical item shapes every provider role (Source, Enricher) operates on.
 export type { MediaItem, MediaItemSet } from './mediaItem';
 export type { NormalizedMovie } from './movie';
-export type { NormalizedShow } from './show';
+export type { NormalizedSeries } from './series';
 
 // Per-provider DTO → canonical shape translation.
 export { normalizeRadarrMovie, normalizeSonarrSeries } from './normalizeMedia';

@@ -619,24 +619,24 @@ export function MediaContent({
             isLoading={series.isLoading}
             isFetchingMore={series.isFetchingMore}
             density={density}
-            renderItem={(show: ManagedSeries) => (
+            renderItem={(item: ManagedSeries) => (
               <MediaCard
-                key={`series-${show.id}`}
-                id={`series-${show.id}`}
-                data-testid={`media-card-series-${show.id}`}
+                key={`series-${item.id}`}
+                id={`series-${item.id}`}
+                data-testid={`media-card-series-${item.id}`}
                 className={
-                  selectedId === `series-${show.id}` ? 'ring-2 ring-primary rounded-lg' : undefined
+                  selectedId === `series-${item.id}` ? 'ring-2 ring-primary rounded-lg' : undefined
                 }
                 onClick={(id) => {
-                  setSelected({ title: show.title, year: show.year });
+                  setSelected({ title: item.title, year: item.year });
                   setSelectedId(id);
                 }}
               >
-                <MediaCard.Poster src={getPosterUrl(show.images)} alt={show.title} />
+                <MediaCard.Poster src={getPosterUrl(item.images)} alt={item.title} />
                 <MediaCard.Content>
-                  <MediaCard.Title>{show.title}</MediaCard.Title>
-                  <MediaCard.Year>{show.year}</MediaCard.Year>
-                  <MediaCard.StatusBadge status={show.monitored ? 'monitored' : undefined} />
+                  <MediaCard.Title>{item.title}</MediaCard.Title>
+                  <MediaCard.Year>{item.year}</MediaCard.Year>
+                  <MediaCard.StatusBadge status={item.monitored ? 'monitored' : undefined} />
                 </MediaCard.Content>
               </MediaCard>
             )}

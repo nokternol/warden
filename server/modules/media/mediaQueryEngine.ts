@@ -9,7 +9,7 @@ import type { MediaItemSet } from './mediaItem';
 import { itemKey } from './mediaItem';
 import type { MediaSource } from './mediaSource';
 import type { NormalizedMovie } from './movie';
-import type { NormalizedShow } from './show';
+import type { NormalizedSeries } from './series';
 
 /** One source within a query: a set of predicates and the role it plays. */
 export interface MediaQuerySource {
@@ -47,7 +47,7 @@ export type { MediaItemSet };
  * item from another instance cannot satisfy it, so it fails the entry outright rather
  * than falling through to the predicate.
  */
-export function matchItems<T extends NormalizedMovie | NormalizedShow>(
+export function matchItems<T extends NormalizedMovie | NormalizedSeries>(
   items: T[],
   filterValues: FilterValueEntry[],
   contentType: ContentType
@@ -90,7 +90,7 @@ export class MediaQueryEngine {
    * spanning two providers never collides on provider-native id alone), combine
    * include/exclude, return survivors.
    */
-  private combine<T extends NormalizedMovie | NormalizedShow>(
+  private combine<T extends NormalizedMovie | NormalizedSeries>(
     normalized: T[],
     sources: MediaQuerySource[],
     contentType: ContentType

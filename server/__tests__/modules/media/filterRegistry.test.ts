@@ -2,7 +2,7 @@ import { MetadataProviderType } from '@server/database/schema';
 import {
   MEDIA_RULES,
   type NormalizedMovie,
-  type NormalizedShow,
+  type NormalizedSeries,
   deriveSourceProviders,
   getRule,
 } from '@server/modules/media/filterRegistry';
@@ -27,7 +27,7 @@ const baseMovie: NormalizedMovie = {
   playCount: 3,
 };
 
-const baseShow: NormalizedShow = {
+const baseShow: NormalizedSeries = {
   _sourceIds: { sonarr: 1 },
   title: 'Breaking Bad',
   year: 2008,

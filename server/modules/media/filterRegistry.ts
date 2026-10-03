@@ -3,10 +3,10 @@ import { MetadataProviderType } from '../../database/schema';
 import { fieldsByProviderType } from './activeFieldSet';
 import type { EnrichmentFields } from './mediaFieldProvider';
 import type { NormalizedMovie } from './movie';
-import type { NormalizedShow } from './show';
+import type { NormalizedSeries } from './series';
 
 export type { NormalizedMovie } from './movie';
-export type { NormalizedShow } from './show';
+export type { NormalizedSeries } from './series';
 
 export type RangeValue = { min?: number; max?: number };
 export type FilterValue = string | number | boolean | RangeValue;
@@ -25,11 +25,11 @@ export interface FilterValueEntry {
 }
 
 export type Predicate<
-  T extends NormalizedMovie | NormalizedShow = NormalizedMovie | NormalizedShow,
+  T extends NormalizedMovie | NormalizedSeries = NormalizedMovie | NormalizedSeries,
 > = (item: T, value: FilterValue) => boolean;
 
 export interface MediaRule<
-  T extends NormalizedMovie | NormalizedShow = NormalizedMovie | NormalizedShow,
+  T extends NormalizedMovie | NormalizedSeries = NormalizedMovie | NormalizedSeries,
 > {
   key: string;
   label: string;
@@ -106,15 +106,15 @@ function inRange(actual: number, value: FilterValue): boolean {
  * A rule's `sourceProviders` for a field `MediaFieldProvider`/`MediaFieldSource`
  * tracks — every provider type whose `fieldsByProviderType` entry includes it,
  * the inverse lookup of that declaration. Rules backed by a source-owned field
- * outside `EnrichmentFields` (most of `NormalizedMovie`/`NormalizedShow`) still
- * hand-list `sourceProviders` until `movie.ts`/`show.ts` derive from
+ * outside `EnrichmentFields` (most of `NormalizedMovie`/`NormalizedSeries`) still
+ * hand-list `sourceProviders` until `movie.ts`/`series.ts` derive from
  * `EnrichmentFields` too (see spec's Risks section).
  *
  * Not content-type-scoped: a field produced by two providers who never both
- * apply to the same rule (`tags`: Radarr for movies, Sonarr for shows) derives
+ * apply to the same rule (`tags`: Radarr for movies, Sonarr for series) derives
  * to *both*, which is wrong for a content-type-scoped rule. Safe to call only
  * when the field's producer set doesn't vary by content type — see the
- * movie/show `tagIds` rules, which stay hand-listed for exactly this reason.
+ * movie/series `tagIds` rules, which stay hand-listed for exactly this reason.
  */
 export function deriveSourceProviders(field: keyof EnrichmentFields): MetadataProviderType[] {
   return (Object.entries(fieldsByProviderType) as [MetadataProviderType, readonly string[]][])
@@ -368,7 +368,7 @@ export const MEDIA_RULES = [
     // both Radarr and Sonarr, one per content type — deriving here would
     // wrongly list Sonarr on a movie-only rule. deriveSourceProviders has no
     // content-type scoping; only safe for a field with one producer regardless
-    // of content type (see the show-side tagIds rule for the same reasoning).
+    // of content type (see the series-side tagIds rule for the same reasoning).
     sourceProviders: [MetadataProviderType.RADARR],
     sourceField: 'tags',
     required: false,
@@ -547,7 +547,7 @@ export const MEDIA_RULES = [
     },
   },
 
-  // ── Show-only ──────────────────────────────────────────────────────────────
+  // ── Series-only ──────────────────────────────────────────────────────────────
   {
     key: 'seriesStatus',
     label: 'Series status',
@@ -556,8 +556,8 @@ export const MEDIA_RULES = [
     sourceProviders: [MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => {
-      const show = item as NormalizedShow;
-      return show.seriesStatus === String(value);
+      const series = item as NormalizedSeries;
+      return series.seriesStatus === String(value);
     },
   },
   {
@@ -609,8 +609,8 @@ export const MEDIA_RULES = [
     sourceProviders: [MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => {
-      const show = item as NormalizedShow;
-      return show.seriesType === String(value);
+      const series = item as NormalizedSeries;
+      return series.seriesType === String(value);
     },
   },
   {
@@ -622,9 +622,9 @@ export const MEDIA_RULES = [
     sourceField: 'studio',
     required: false,
     predicate: (item, value) => {
-      const show = item as NormalizedShow;
-      if (!show.studio) return false;
-      return parseCsvStrings(value).includes(show.studio);
+      const series = item as NormalizedSeries;
+      if (!series.studio) return false;
+      return parseCsvStrings(value).includes(series.studio);
     },
   },
   {
@@ -635,9 +635,9 @@ export const MEDIA_RULES = [
     sourceProviders: [MetadataProviderType.SONARR, MetadataProviderType.TVMAZE],
     required: false,
     predicate: (item, value) => {
-      const show = item as NormalizedShow;
-      if (!show.network) return false;
-      return parseCsvStrings(value).includes(show.network);
+      const series = item as NormalizedSeries;
+      if (!series.network) return false;
+      return parseCsvStrings(value).includes(series.network);
     },
   },
   {
@@ -648,9 +648,9 @@ export const MEDIA_RULES = [
     sourceProviders: [MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => {
-      const show = item as NormalizedShow;
-      if (show.communityRating === undefined) return false;
-      return inRange(show.communityRating, value);
+      const series = item as NormalizedSeries;
+      if (series.communityRating === undefined) return false;
+      return inRange(series.communityRating, value);
     },
   },
   {
@@ -661,8 +661,8 @@ export const MEDIA_RULES = [
     sourceProviders: [MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => {
-      const show = item as NormalizedShow;
-      return show.ended === asBool(value);
+      const series = item as NormalizedSeries;
+      return series.ended === asBool(value);
     },
   },
   {
@@ -673,9 +673,9 @@ export const MEDIA_RULES = [
     sourceProviders: [MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => {
-      const show = item as NormalizedShow;
-      if (!show.lastAiredAt) return false;
-      return inRange(daysElapsed(show.lastAiredAt), value);
+      const series = item as NormalizedSeries;
+      if (!series.lastAiredAt) return false;
+      return inRange(daysElapsed(series.lastAiredAt), value);
     },
   },
   {
@@ -686,9 +686,9 @@ export const MEDIA_RULES = [
     sourceProviders: [MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => {
-      const show = item as NormalizedShow;
-      if (show.episodePercentage === undefined) return false;
-      return inRange(show.episodePercentage, value);
+      const series = item as NormalizedSeries;
+      if (series.episodePercentage === undefined) return false;
+      return inRange(series.episodePercentage, value);
     },
   },
   {
@@ -699,9 +699,9 @@ export const MEDIA_RULES = [
     sourceProviders: [MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => {
-      const show = item as NormalizedShow;
-      if (show.seasonCount === undefined) return false;
-      return inRange(show.seasonCount, value);
+      const series = item as NormalizedSeries;
+      if (series.seasonCount === undefined) return false;
+      return inRange(series.seasonCount, value);
     },
   },
   {
@@ -712,8 +712,8 @@ export const MEDIA_RULES = [
     sourceProviders: [MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => {
-      const show = item as NormalizedShow;
-      const count = show.totalEpisodeCount ?? show.episodeCount;
+      const series = item as NormalizedSeries;
+      const count = series.totalEpisodeCount ?? series.episodeCount;
       if (count === undefined) return false;
       return inRange(count, value);
     },
@@ -726,9 +726,9 @@ export const MEDIA_RULES = [
     sourceProviders: [MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => {
-      const show = item as NormalizedShow;
-      if (!show.nextAiring) return false;
-      return inRange(daysUntil(show.nextAiring), value);
+      const series = item as NormalizedSeries;
+      if (!series.nextAiring) return false;
+      return inRange(daysUntil(series.nextAiring), value);
     },
   },
   {
@@ -740,9 +740,9 @@ export const MEDIA_RULES = [
     required: false,
     instanceScoped: true,
     predicate: (item, value) => {
-      const show = item as NormalizedShow;
+      const series = item as NormalizedSeries;
       const ids = parseCsvIds(value);
-      return show.languageProfileId !== undefined && ids.includes(show.languageProfileId);
+      return series.languageProfileId !== undefined && ids.includes(series.languageProfileId);
     },
   },
   {
