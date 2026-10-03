@@ -7,7 +7,7 @@ import {
   mediaItems,
 } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
-import { type MediaItem, sourceCopyIds } from '../media';
+import { type MediaItem, ensureSourceCopies } from '../media';
 
 export interface AutomationRunDto {
   id: number;
@@ -86,7 +86,7 @@ export class AutomationRunService {
    * SQLite transaction, so a run is never recorded without its items.
    */
   async createRun(data: CreateRunData): Promise<AutomationRunDto> {
-    const mediaItemIds = await sourceCopyIds(this.db, data.targets ?? []);
+    const mediaItemIds = await ensureSourceCopies(this.db, data.targets ?? []);
     const insertRun = this.db
       .insert(automationRuns)
       .values({

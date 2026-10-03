@@ -42,8 +42,8 @@ export type { MediaSourceDescriptor, MediaSourceFactory } from './mediaSourceFac
 // actuator's own id space through the identity graph.
 export { resolveActuatorTargets } from './actuatorIdResolver';
 
-// Run history: the recorded source copies a run's targeted items resolve to.
-export { sourceCopyIds } from './sourceCopies';
+// Run history: the source copies a run's targeted items resolve to.
+export { ensureSourceCopies } from './sourceCopies';
 
 // Enrichment roles and the adapters that bind providers' native connections
 // to them.

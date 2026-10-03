@@ -52,6 +52,8 @@ export type { TmdbService } from './tmdbService';
 
 // Identity resolution — the system job that stitches source identities.
 export type { IdentityJobFactory } from './identityJobFactory';
+export { resolveGroup } from './groupResolver';
+export type { GroupIds } from './groupResolver';
 
 // Connection classes + payload types still consumed outside the module
 // (search handler, media handler, enrichment mappers) until Phase 4.

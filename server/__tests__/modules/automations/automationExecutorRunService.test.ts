@@ -197,5 +197,17 @@ describe('AutomationExecutor writes to automation_runs', () => {
       expect(items.data.map((i) => i.title).sort()).toEqual(['Heat', 'The Matrix']);
       expect(run.itemCount).toBe(items.data.length);
     });
+
+    it('records a targeted item the identity job has not seen yet', async () => {
+      serveRadarr([createRadarrMovie({ id: 7, tmdbId: 107, title: 'Heat', year: 1995 })]);
+      const { automation } = await seedRadarrAutomation();
+
+      await executor.execute(automation.id);
+
+      const [run] = await automationRunService.listRuns({ automationId: automation.id });
+      const items = await automationRunService.listRunItems(run.id);
+      expect(items.data.map((i) => [i.title, i.year])).toEqual([['Heat', 1995]]);
+      expect(run.itemCount).toBe(1);
+    });
   });
 });
