@@ -42,25 +42,7 @@ export default function RunsPage() {
             <>
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-white/10">
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide">
-                        Automation
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide">
-                        Status
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide">
-                        Ran At
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide">
-                        Items
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide">
-                        Error
-                      </th>
-                    </tr>
-                  </thead>
+                  <RunRow.Head />
                   <tbody>
                     {runs.map((run) => (
                       <RunRow key={run.id} run={run} />

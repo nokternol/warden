@@ -5,7 +5,8 @@ import { cn } from '@app/lib/utils/cn';
 import { ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 
-const COLUMN_COUNT = 5;
+/** The run table's columns, in order — the header and every row's cells follow it. */
+const COLUMNS = ['Automation', 'Status', 'Ran At', 'Items', 'Error'] as const;
 
 function formatDate(dateStr: string): string {
   try {
@@ -25,7 +26,7 @@ export interface RunRowProps {
 }
 
 /** One run in the Runs table; expands to the titles the run targeted. */
-export default function RunRow({ run, defaultExpanded = false }: RunRowProps) {
+function Root({ run, defaultExpanded = false }: RunRowProps) {
   const [open, setOpen] = useState(defaultExpanded);
   const targetedAny = (run.itemCount ?? 0) > 0;
 
@@ -91,7 +92,7 @@ function ExpandToggle({ open, onToggle }: { open: boolean; onToggle: () => void 
 function TargetedItems({ runId }: { runId: number }) {
   return (
     <tr className="border-b border-white/5 bg-white/[0.015]">
-      <td colSpan={COLUMN_COUNT} className="px-4 pt-1 pb-4 pl-11">
+      <td colSpan={COLUMNS.length} className="px-4 pt-1 pb-4 pl-11">
         <TargetedItemList runId={runId} />
       </td>
     </tr>
@@ -146,3 +147,25 @@ function TargetedItem({ item }: { item: RunItemDto }) {
     </li>
   );
 }
+
+/** The run table's header row, naming the columns each `RunRow` fills. */
+function Head() {
+  return (
+    <thead>
+      <tr className="border-b border-white/10">
+        {COLUMNS.map((column) => (
+          <th
+            key={column}
+            className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide"
+          >
+            {column}
+          </th>
+        ))}
+      </tr>
+    </thead>
+  );
+}
+
+const RunRow = Object.assign(Root, { Head });
+
+export default RunRow;

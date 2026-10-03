@@ -54,6 +54,20 @@ describe('RunRow', () => {
     expect(await screen.findByText('Alien')).toBeInTheDocument();
   });
 
+  it("spans an expanded run's titles across every column of the table head", async () => {
+    render(
+      <table>
+        <RunRow.Head />
+        <tbody>
+          <RunRow run={run} defaultExpanded />
+        </tbody>
+      </table>
+    );
+
+    const titles = (await screen.findByText('Alien')).closest('td') as HTMLTableCellElement;
+    expect(titles.colSpan).toBe(screen.getAllByRole('columnheader').length);
+  });
+
   it('offers no expansion for a run that targeted nothing', () => {
     renderRow({ ...run, id: 2, status: 'error', itemCount: 0, error: 'Connection refused' });
 
