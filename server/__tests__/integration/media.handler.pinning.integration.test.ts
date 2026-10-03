@@ -12,11 +12,12 @@ import { MetadataProviderType } from '@server/database/schema';
  *
  * Run: vitest run --project server
  */
+import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
-import { createMediaRoutes } from '@server/modules/media/media.routes';
+import { createMediaProcedures } from '@server/modules/media';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import { server } from '@tests/mocks/server';
@@ -166,7 +167,7 @@ describe('Media browse — Phase 2 pinning net', () => {
       _req.user = mockUser;
       next();
     });
-    app.use('/api/media', createMediaRoutes(container.cradle));
+    app.use('/api/media', serveApi({ media: createMediaProcedures(container.cradle).procedures }));
     app.use(errorHandlerMiddleware);
 
     client = createApiClient(app);

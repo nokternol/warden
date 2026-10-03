@@ -1,10 +1,21 @@
+import { contract } from '@contract/index';
+import type { MediaSourceDescriptor } from '@contract/media';
 import '@testing-library/jest-dom/vitest';
 import { render, screen, setupUser, waitFor } from '@tests/helpers/component';
+import { mockProcedure } from '@tests/mocks/contract';
 import { server } from '@tests/mocks/server';
-import { http, HttpResponse } from 'msw';
 import { SWRConfig } from 'swr';
 import { describe, expect, it } from 'vitest';
 import MediaPage from '../index.page';
+
+const EMPTY_PAGE = {
+  items: [],
+  totalCount: 0,
+  page: 1,
+  pageSize: 48,
+  yearRange: { min: null, max: null },
+  errors: [],
+};
 
 // Isolate SWR cache per test
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -53,18 +64,8 @@ describe('MediaPage', () => {
 
   it('shows empty library message on movies tab when movies API returns empty', async () => {
     server.use(
-      http.get('/api/media/movies', () =>
-        HttpResponse.json({
-          status: 'ok',
-          data: { items: [], totalCount: 0, page: 1, pageSize: 48 },
-        })
-      ),
-      http.get('/api/media/series', () =>
-        HttpResponse.json({
-          status: 'ok',
-          data: { items: [], totalCount: 0, page: 1, pageSize: 48 },
-        })
-      )
+      mockProcedure(contract.media.movies, () => EMPTY_PAGE),
+      mockProcedure(contract.media.series, () => EMPTY_PAGE)
     );
     render(<MediaPage />, { wrapper: Wrapper });
     // Active tab defaults to 'movies'; default provider mock has RADARR active
@@ -77,21 +78,11 @@ describe('MediaPage', () => {
     // Settings still report an active RADARR — the projection, not the client's
     // own provider-type constant, must decide the empty state and its copy.
     server.use(
-      http.get('/api/media/sources', () =>
-        HttpResponse.json({
-          status: 'ok',
-          data: [
-            { contentType: 'movie', ownerType: 'JELLYFIN', configured: false, instances: [] },
-            { contentType: 'show', ownerType: 'SONARR', configured: false, instances: [] },
-          ],
-        })
-      ),
-      http.get('/api/media/movies', () =>
-        HttpResponse.json({
-          status: 'ok',
-          data: { items: [], totalCount: 0, page: 1, pageSize: 48 },
-        })
-      )
+      mockProcedure(contract.media.sources, (): MediaSourceDescriptor[] => [
+        { contentType: 'movie', ownerType: 'JELLYFIN', configured: false, instances: [] },
+        { contentType: 'show', ownerType: 'SONARR', configured: false, instances: [] },
+      ]),
+      mockProcedure(contract.media.movies, () => EMPTY_PAGE)
     );
     render(<MediaPage />, { wrapper: Wrapper });
     await waitFor(() => {
@@ -101,21 +92,11 @@ describe('MediaPage', () => {
 
   it('shows no-provider message on movies tab when the movie owner is not configured', async () => {
     server.use(
-      http.get('/api/media/sources', () =>
-        HttpResponse.json({
-          status: 'ok',
-          data: [
-            { contentType: 'movie', ownerType: 'RADARR', configured: false, instances: [] },
-            { contentType: 'show', ownerType: 'SONARR', configured: false, instances: [] },
-          ],
-        })
-      ),
-      http.get('/api/media/movies', () =>
-        HttpResponse.json({
-          status: 'ok',
-          data: { items: [], totalCount: 0, page: 1, pageSize: 48 },
-        })
-      )
+      mockProcedure(contract.media.sources, (): MediaSourceDescriptor[] => [
+        { contentType: 'movie', ownerType: 'RADARR', configured: false, instances: [] },
+        { contentType: 'show', ownerType: 'SONARR', configured: false, instances: [] },
+      ]),
+      mockProcedure(contract.media.movies, () => EMPTY_PAGE)
     );
     render(<MediaPage />, { wrapper: Wrapper });
     await waitFor(() => {

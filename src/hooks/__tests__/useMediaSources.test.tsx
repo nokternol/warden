@@ -1,8 +1,10 @@
+import { contract } from '@contract/index';
+import type { MediaSourceDescriptor } from '@contract/media';
 import { renderHook, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
 import React from 'react';
 import { SWRConfig } from 'swr';
 import { describe, expect, it } from 'vitest';
+import { mockProcedure } from '../../../tests/mocks/contract';
 import { server } from '../../../tests/mocks/server';
 import { useMediaSources } from '../useMediaSources';
 
@@ -12,20 +14,15 @@ const wrapper = ({ children }: { children: React.ReactNode }) =>
 describe('useMediaSources', () => {
   it('exposes the ownership projection keyed by content type', async () => {
     server.use(
-      http.get('/api/media/sources', () =>
-        HttpResponse.json({
-          status: 'ok',
-          data: [
-            {
-              contentType: 'movie',
-              ownerType: 'RADARR',
-              configured: true,
-              instances: [{ id: 1, name: 'Radarr' }],
-            },
-            { contentType: 'show', ownerType: 'SONARR', configured: false, instances: [] },
-          ],
-        })
-      )
+      mockProcedure(contract.media.sources, (): MediaSourceDescriptor[] => [
+        {
+          contentType: 'movie',
+          ownerType: 'RADARR',
+          configured: true,
+          instances: [{ id: 1, name: 'Radarr' }],
+        },
+        { contentType: 'show', ownerType: 'SONARR', configured: false, instances: [] },
+      ])
     );
 
     const { result } = renderHook(() => useMediaSources(), { wrapper });

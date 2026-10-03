@@ -7,11 +7,12 @@ import { MetadataProviderType } from '@server/database/schema';
  *
  * Run: vitest run --project server
  */
+import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
-import { createMediaRoutes } from '@server/modules/media/media.routes';
+import { createMediaProcedures } from '@server/modules/media';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
@@ -34,7 +35,7 @@ const MOCK_USER = {
   updatedAt: new Date(),
 };
 
-function buildAuthedApp(routes: ReturnType<typeof createMediaRoutes>): Express {
+function buildAuthedApp(routes: ReturnType<typeof serveApi>): Express {
   const app = express();
   app.use(express.json());
   app.use(requestIdMiddleware);
@@ -104,7 +105,7 @@ describe('Jellyfin lookup routes — additional producer alongside Plex', () => 
       )
     );
 
-    const routes = createMediaRoutes(cradle);
+    const routes = serveApi({ media: createMediaProcedures(cradle).procedures });
     const client = createApiClient(buildAuthedApp(routes));
 
     const res = await client.get('/api/media/studio');
@@ -132,7 +133,7 @@ describe('Jellyfin lookup routes — additional producer alongside Plex', () => 
       )
     );
 
-    const routes = createMediaRoutes(cradle);
+    const routes = serveApi({ media: createMediaProcedures(cradle).procedures });
     const client = createApiClient(buildAuthedApp(routes));
 
     const res = await client.get('/api/media/file-resolutions');
@@ -162,7 +163,7 @@ describe('Jellyfin lookup routes — additional producer alongside Plex', () => 
       )
     );
 
-    const routes = createMediaRoutes(cradle);
+    const routes = serveApi({ media: createMediaProcedures(cradle).procedures });
     const client = createApiClient(buildAuthedApp(routes));
 
     const res = await client.get('/api/media/labels');

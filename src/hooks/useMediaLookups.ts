@@ -1,63 +1,24 @@
-import useSWR from 'swr';
+import { api } from '@app/lib/api/client';
+import { useApi } from '@app/lib/api/useApi';
+import type { MediaProfile, MediaTag } from '@contract/media';
 
-export interface MediaTag {
-  id: number;
-  label: string;
-  /** The instance this tag was fetched from — always set by the server (`listTags`). */
-  providerId: number;
-  providerName: string;
-}
-
-export interface MediaQualityProfile {
-  id: number;
-  name: string;
-  /** The instance this profile was fetched from — always set by the server (`listQualityProfiles`). */
-  providerId: number;
-  providerName: string;
-}
-
-interface TagsResponse {
-  radarr: MediaTag[];
-  sonarr: MediaTag[];
-}
-
-interface QualityProfilesResponse {
-  radarr: MediaQualityProfile[];
-  sonarr: MediaQualityProfile[];
-}
-
-interface GenresResponse {
-  movies: string[];
-  series: string[];
-}
-
-async function fetcher<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch');
-  const json = await res.json();
-  return json.data as T;
-}
+export type { MediaTag };
+export type MediaQualityProfile = MediaProfile;
 
 export function useMediaLookups() {
-  const { data: tagsData } = useSWR<TagsResponse>('/api/media/tags', fetcher);
-  const { data: profilesData } = useSWR<QualityProfilesResponse>(
-    '/api/media/quality-profiles',
-    fetcher
-  );
-  const { data: genresData } = useSWR<GenresResponse>('/api/media/genres', fetcher);
-  const { data: networksData } = useSWR<string[]>('/api/media/networks', fetcher);
-  const { data: studioData } = useSWR<string[]>('/api/media/studio', fetcher);
-  const { data: releaseGroupsData } = useSWR<string[]>('/api/media/release-groups', fetcher);
-  const { data: collectionNamesData } = useSWR<string[]>('/api/media/collection-names', fetcher);
-  const { data: languageProfilesData } = useSWR<MediaQualityProfile[]>(
-    '/api/media/language-profiles',
-    fetcher
-  );
-  const { data: fileContainersData } = useSWR<string[]>('/api/media/file-containers', fetcher);
-  const { data: videoCodecsData } = useSWR<string[]>('/api/media/video-codecs', fetcher);
-  const { data: audioCodecsData } = useSWR<string[]>('/api/media/audio-codecs', fetcher);
-  const { data: fileResolutionsData } = useSWR<string[]>('/api/media/file-resolutions', fetcher);
-  const { data: labelsData } = useSWR<string[]>('/api/media/labels', fetcher);
+  const { data: tagsData } = useApi(api.media.tags, undefined);
+  const { data: profilesData } = useApi(api.media.qualityProfiles, undefined);
+  const { data: genresData } = useApi(api.media.genres, undefined);
+  const { data: networksData } = useApi(api.media.networks, undefined);
+  const { data: studioData } = useApi(api.media.studio, undefined);
+  const { data: releaseGroupsData } = useApi(api.media.releaseGroups, undefined);
+  const { data: collectionNamesData } = useApi(api.media.collectionNames, undefined);
+  const { data: languageProfilesData } = useApi(api.media.languageProfiles, undefined);
+  const { data: fileContainersData } = useApi(api.media.fileContainers, undefined);
+  const { data: videoCodecsData } = useApi(api.media.videoCodecs, undefined);
+  const { data: audioCodecsData } = useApi(api.media.audioCodecs, undefined);
+  const { data: fileResolutionsData } = useApi(api.media.fileResolutions, undefined);
+  const { data: labelsData } = useApi(api.media.labels, undefined);
 
   return {
     tags: {

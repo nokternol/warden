@@ -807,21 +807,19 @@ export function getRule(key: string, contentType: ContentType): MediaRule | unde
   );
 }
 
-// ─── Range-rule keys, by content type — checked against the cross-boundary contract ──
+// ─── Range-rule keys, by content type — checked against the API contract ──────
 // The browse-path param translators (server `*_PARAM_TO_KEY`, client
 // `BROWSE_PARAM_BINDINGS`) are checked against `MovieRangeRuleKey`/`ShowRangeRuleKey`
-// — re-exported from `browseRangeKeys.ts`, not derived here, because that file has
-// to be safely importable from the client (see its own docstring for why deriving
-// cross-boundary from `MEDIA_RULES` directly breaks the Next.js build). `_ActualXRangeKey`
-// below is the real derivation, used only to assert the hand-authored contract file
-// hasn't drifted from `MEDIA_RULES` — never exported, never crosses the boundary.
-// A range rule added to, removed from, or re-scoped in `MEDIA_RULES` without a
-// matching update to `browseRangeKeys.ts` fails to compile right here, naming the
-// mismatched key (caught the hard way once already: `plexAddedDaysAgo` shipped in
-// the registry with no entry in any of the five browse-path translators, and
-// nothing failed to compile).
-export type { MovieRangeRuleKey, ShowRangeRuleKey } from './browseRangeKeys';
-import type { MovieRangeRuleKey, ShowRangeRuleKey } from './browseRangeKeys';
+// — declared in the API contract (`contract/browseRangeKeys.ts`), not derived here,
+// because the contract depends on nothing in `server/`. `_ActualXRangeKey` below is
+// the real derivation, used only to assert the contract's list hasn't drifted from
+// `MEDIA_RULES`. A range rule added to, removed from, or re-scoped in `MEDIA_RULES`
+// without a matching update to `contract/browseRangeKeys.ts` fails to compile right
+// here, naming the mismatched key (caught the hard way once already:
+// `plexAddedDaysAgo` shipped in the registry with no entry in any of the five
+// browse-path translators, and nothing failed to compile).
+export type { MovieRangeRuleKey, ShowRangeRuleKey } from '@contract/browseRangeKeys';
+import type { MovieRangeRuleKey, ShowRangeRuleKey } from '@contract/browseRangeKeys';
 
 type RangeRule = Extract<(typeof MEDIA_RULES)[number], { dataType: 'range' }>;
 

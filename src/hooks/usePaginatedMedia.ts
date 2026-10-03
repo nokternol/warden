@@ -1,23 +1,26 @@
+import { apiKey } from '@app/lib/api/useApi';
 import type { MediaFilters } from '@app/types/media';
 import { useCallback, useLayoutEffect, useRef } from 'react';
 import useSWRInfinite from 'swr/infinite';
-
-interface YearRange {
-  min: number | null;
-  max: number | null;
-}
 
 interface PaginatedPage<T> {
   items: T[];
   totalCount: number;
   page: number;
   pageSize: number;
-  yearRange?: YearRange;
+  yearRange?: { min: number | null; max: number | null };
 }
 
 const PAGE_SIZE = 48;
 
-export function usePaginatedMedia<T>(endpoint: string, filters?: MediaFilters) {
+/**
+ * Pages through a browse procedure (`api.media.movies` or `api.media.series`).
+ * `filters` are browse params as `toBrowseParams` encodes them.
+ */
+export function usePaginatedMedia<TInput, T>(
+  browse: (input: TInput) => Promise<PaginatedPage<T>>,
+  filters?: MediaFilters
+) {
   const filtersKey = JSON.stringify(filters ?? null);
 
   const getKey = (pageIndex: number, prev: PaginatedPage<T> | null) => {
@@ -29,26 +32,16 @@ export function usePaginatedMedia<T>(endpoint: string, filters?: MediaFilters) {
     if (pageIndex > 0 && !prev) return null;
     if (prev && prev.items.length === 0) return null;
 
-    const params = new URLSearchParams({
-      page: String(pageIndex + 1),
-      pageSize: String(PAGE_SIZE),
-    });
-    if (filters) {
-      for (const [k, v] of Object.entries(filters)) {
-        if (v !== undefined) params.set(k, String(v));
-      }
-    }
-    return `${endpoint}?${params}`;
+    // Browse params are the legacy content-prefixed encoding; the browse
+    // procedure's input schema parses them server-side.
+    const input = { ...filters, page: pageIndex + 1, pageSize: PAGE_SIZE } as TInput;
+    return apiKey(browse, input);
   };
 
   const { data, isLoading, isValidating, setSize, error } = useSWRInfinite<PaginatedPage<T>>(
     getKey,
-    async (url: string) => {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Failed to fetch ${endpoint}`);
-      const json = await res.json();
-      return json.data as PaginatedPage<T>;
-    },
+    ([procedure, input]: ReturnType<typeof apiKey<TInput>>) =>
+      procedure(input) as Promise<PaginatedPage<T>>,
     {
       // Don't re-fetch page 1 every time a new page is appended. The default
       // (true) doubles network traffic on every fetchMore call.

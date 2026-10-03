@@ -9,11 +9,12 @@ import { MetadataProviderType } from '@server/database/schema';
  *
  * Run: vitest run --project server
  */
+import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
-import { createMediaRoutes } from '@server/modules/media/media.routes';
+import { createMediaProcedures } from '@server/modules/media';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient, expectErrorResponse, expectSuccessResponse } from '@tests/helpers/api';
 import { server } from '@tests/mocks/server';
@@ -89,7 +90,7 @@ describe('Paginated Media API', () => {
       apiKey: 'fake-key',
     });
 
-    const mediaRoutes = createMediaRoutes(cradle);
+    const mediaRoutes = serveApi({ media: createMediaProcedures(cradle).procedures });
 
     authedApp = express();
     authedApp.use(express.json());
@@ -227,12 +228,12 @@ describe('Paginated Media API', () => {
 
   // ─── provider error propagation ─────────────────────────────────────────────
   //
-  // Each test creates a fresh createMediaRoutes(cradle) so the cache is cold
+  // Each test creates a fresh serveApi({ media: createMediaProcedures(cradle).procedures }) so the cache is cold
   // and the per-test MSW override is the sole source of truth for that request.
   //
   describe('provider error propagation', () => {
     function buildErrorClient(
-      routes: ReturnType<typeof createMediaRoutes>
+      routes: ReturnType<typeof serveApi>
     ): ReturnType<typeof createApiClient> {
       const app = express();
       app.use(express.json());
@@ -254,7 +255,9 @@ describe('Paginated Media API', () => {
         )
       );
 
-      const client = buildErrorClient(createMediaRoutes(cradle));
+      const client = buildErrorClient(
+        serveApi({ media: createMediaProcedures(cradle).procedures })
+      );
       const res = await client.get('/api/media/movies');
       const data = expectSuccessResponse(res);
 
@@ -273,7 +276,9 @@ describe('Paginated Media API', () => {
         )
       );
 
-      const client = buildErrorClient(createMediaRoutes(cradle));
+      const client = buildErrorClient(
+        serveApi({ media: createMediaProcedures(cradle).procedures })
+      );
       const res = await client.get('/api/media/series');
       const data = expectSuccessResponse(res);
 
@@ -289,7 +294,9 @@ describe('Paginated Media API', () => {
         http.get('http://localhost:7878/api/v3/movie', () => HttpResponse.json(makeMovies(2)))
       );
 
-      const client = buildErrorClient(createMediaRoutes(cradle));
+      const client = buildErrorClient(
+        serveApi({ media: createMediaProcedures(cradle).procedures })
+      );
       const res = await client.get('/api/media/movies');
       const data = expectSuccessResponse(res);
 
@@ -315,7 +322,9 @@ describe('Paginated Media API', () => {
         )
       );
 
-      const client = buildErrorClient(createMediaRoutes(cradle));
+      const client = buildErrorClient(
+        serveApi({ media: createMediaProcedures(cradle).procedures })
+      );
       const res = await client.get('/api/media/series');
       const data = expectSuccessResponse(res);
 

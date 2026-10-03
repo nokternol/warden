@@ -1,6 +1,9 @@
+import { contract } from '@contract/index';
+import type { ManagedMovie, ManagedSeries, MediaSourceDescriptor } from '@contract/media';
 import { http, HttpResponse } from 'msw';
+import { mockProcedure } from '../contract';
 
-const MOCK_MOVIES = Array.from({ length: 96 }, (_, i) => ({
+const MOCK_MOVIES: ManagedMovie[] = Array.from({ length: 96 }, (_, i) => ({
   id: i + 1,
   title: `Movie ${i + 1}`,
   year: 2000 + (i % 30),
@@ -8,9 +11,11 @@ const MOCK_MOVIES = Array.from({ length: 96 }, (_, i) => ({
   monitored: true,
   tmdbId: 1000 + i,
   images: [{ coverType: 'poster', remoteUrl: `https://example.com/movie${i + 1}.jpg` }],
+  sourceCount: 1,
+  sourceProviderIds: [1],
 }));
 
-const MOCK_SERIES = Array.from({ length: 10 }, (_, i) => ({
+const MOCK_SERIES: ManagedSeries[] = Array.from({ length: 10 }, (_, i) => ({
   id: i + 1,
   title: i === 0 ? 'Breaking Bad' : `Series ${i + 1}`,
   year: 2008 + i,
@@ -18,151 +23,87 @@ const MOCK_SERIES = Array.from({ length: 10 }, (_, i) => ({
   monitored: true,
   tvdbId: 81189 + i,
   images: [{ coverType: 'poster', remoteUrl: `https://example.com/series${i + 1}.jpg` }],
+  sourceCount: 1,
+  sourceProviderIds: [2],
 }));
 
+/** One browse page of `items`, as the browse procedures answer it. */
+function browsePage<T>(items: T[], request: Request, yearRange: { min: number; max: number }) {
+  const url = new URL(request.url);
+  const page = Number(url.searchParams.get('page') ?? '1');
+  const pageSize = Number(url.searchParams.get('pageSize') ?? '48');
+  const start = (page - 1) * pageSize;
+  return {
+    items: items.slice(start, start + pageSize),
+    totalCount: items.length,
+    page,
+    pageSize,
+    yearRange,
+    errors: [],
+  };
+}
+
 export const mediaHandlers = [
-  http.get('/api/media/movies', ({ request }) => {
-    const url = new URL(request.url);
-    const page = Number(url.searchParams.get('page') ?? '1');
-    const pageSize = Number(url.searchParams.get('pageSize') ?? '48');
-    const start = (page - 1) * pageSize;
-    return HttpResponse.json({
-      status: 'ok',
-      data: {
-        items: MOCK_MOVIES.slice(start, start + pageSize),
-        totalCount: MOCK_MOVIES.length,
-        page,
-        pageSize,
-        yearRange: { min: 2000, max: 2029 },
-      },
-    });
-  }),
+  mockProcedure(contract.media.movies, ({ request }) =>
+    browsePage(MOCK_MOVIES, request, { min: 2000, max: 2029 })
+  ),
 
-  http.get('/api/media/series', ({ request }) => {
-    const url = new URL(request.url);
-    const page = Number(url.searchParams.get('page') ?? '1');
-    const pageSize = Number(url.searchParams.get('pageSize') ?? '48');
-    const start = (page - 1) * pageSize;
-    return HttpResponse.json({
-      status: 'ok',
-      data: {
-        items: MOCK_SERIES.slice(start, start + pageSize),
-        totalCount: MOCK_SERIES.length,
-        page,
-        pageSize,
-        yearRange: { min: 2008, max: 2017 },
-      },
-    });
-  }),
+  mockProcedure(contract.media.series, ({ request }) =>
+    browsePage(MOCK_SERIES, request, { min: 2008, max: 2017 })
+  ),
 
-  http.get('/api/media/tags', () => {
-    return HttpResponse.json({
-      status: 'ok',
-      data: {
-        radarr: [
-          { id: 1, label: 'action', providerId: 1, providerName: 'Radarr' },
-          { id: 2, label: 'sci-fi', providerId: 1, providerName: 'Radarr' },
-        ],
-        sonarr: [{ id: 1, label: 'drama', providerId: 2, providerName: 'Sonarr' }],
-      },
-    });
-  }),
+  mockProcedure(contract.media.tags, () => ({
+    radarr: [
+      { id: 1, label: 'action', providerId: 1, providerName: 'Radarr' },
+      { id: 2, label: 'sci-fi', providerId: 1, providerName: 'Radarr' },
+    ],
+    sonarr: [{ id: 1, label: 'drama', providerId: 2, providerName: 'Sonarr' }],
+  })),
 
-  http.get('/api/media/quality-profiles', () => {
-    return HttpResponse.json({
-      status: 'ok',
-      data: {
-        radarr: [
-          { id: 1, name: 'HD-1080p', providerId: 1, providerName: 'Radarr' },
-          { id: 2, name: 'Any', providerId: 1, providerName: 'Radarr' },
-        ],
-        sonarr: [
-          { id: 1, name: 'HD-1080p', providerId: 2, providerName: 'Sonarr' },
-          { id: 2, name: 'Any', providerId: 2, providerName: 'Sonarr' },
-        ],
-      },
-    });
-  }),
+  mockProcedure(contract.media.qualityProfiles, () => ({
+    radarr: [
+      { id: 1, name: 'HD-1080p', providerId: 1, providerName: 'Radarr' },
+      { id: 2, name: 'Any', providerId: 1, providerName: 'Radarr' },
+    ],
+    sonarr: [
+      { id: 1, name: 'HD-1080p', providerId: 2, providerName: 'Sonarr' },
+      { id: 2, name: 'Any', providerId: 2, providerName: 'Sonarr' },
+    ],
+  })),
 
-  http.get('/api/media/genres', () => {
-    return HttpResponse.json({
-      status: 'ok',
-      data: {
-        movies: ['Action', 'Comedy', 'Crime', 'Drama', 'Horror', 'Sci-Fi', 'Thriller'],
-        series: ['Animation', 'Comedy', 'Crime', 'Drama', 'Reality', 'Sci-Fi'],
-      },
-    });
-  }),
+  mockProcedure(contract.media.genres, () => ({
+    movies: ['Action', 'Comedy', 'Crime', 'Drama', 'Horror', 'Sci-Fi', 'Thriller'],
+    series: ['Animation', 'Comedy', 'Crime', 'Drama', 'Reality', 'Sci-Fi'],
+  })),
 
-  http.get('/api/media/networks', () => {
-    return HttpResponse.json({
-      status: 'ok',
-      data: ['HBO', 'Netflix', 'Apple TV+', 'Disney+', 'AMC'],
-    });
-  }),
+  mockProcedure(contract.media.networks, () => ['HBO', 'Netflix', 'Apple TV+', 'Disney+', 'AMC']),
+  mockProcedure(contract.media.studio, () => ['Legendary Pictures', 'Warner Bros', 'AMC Studios']),
+  mockProcedure(contract.media.releaseGroups, () => ['SPARKS', 'RARBG']),
+  mockProcedure(contract.media.collectionNames, () => ['The Matrix Collection']),
 
-  http.get('/api/media/studio', () => {
-    return HttpResponse.json({
-      status: 'ok',
-      data: ['Legendary Pictures', 'Warner Bros', 'AMC Studios'],
-    });
-  }),
+  mockProcedure(contract.media.languageProfiles, () => [
+    { id: 1, name: 'English', providerId: 2, providerName: 'Sonarr' },
+    { id: 2, name: 'English/Japanese', providerId: 2, providerName: 'Sonarr' },
+  ]),
 
-  http.get('/api/media/release-groups', () => {
-    return HttpResponse.json({ status: 'ok', data: ['SPARKS', 'RARBG'] });
-  }),
+  mockProcedure(contract.media.fileContainers, () => ['mkv', 'mp4']),
+  mockProcedure(contract.media.videoCodecs, () => ['h264', 'hevc']),
+  mockProcedure(contract.media.audioCodecs, () => ['aac', 'dts']),
+  mockProcedure(contract.media.fileResolutions, () => ['1080', '4k']),
+  mockProcedure(contract.media.labels, () => ['4K', 'Favorites']),
 
-  http.get('/api/media/collection-names', () => {
-    return HttpResponse.json({ status: 'ok', data: ['The Matrix Collection'] });
-  }),
+  // Configured state matches the default settings.ts fixture (RADARR active, no SONARR).
+  mockProcedure(contract.media.sources, (): MediaSourceDescriptor[] => [
+    {
+      contentType: 'movie',
+      ownerType: 'RADARR',
+      configured: true,
+      instances: [{ id: 1, name: 'Radarr' }],
+    },
+    { contentType: 'show', ownerType: 'SONARR', configured: false, instances: [] },
+  ]),
 
-  http.get('/api/media/language-profiles', () => {
-    return HttpResponse.json({
-      status: 'ok',
-      data: [
-        { id: 1, name: 'English', providerId: 2, providerName: 'Sonarr' },
-        { id: 2, name: 'English/Japanese', providerId: 2, providerName: 'Sonarr' },
-      ],
-    });
-  }),
-
-  http.get('/api/media/file-containers', () => {
-    return HttpResponse.json({ status: 'ok', data: ['mkv', 'mp4'] });
-  }),
-
-  http.get('/api/media/video-codecs', () => {
-    return HttpResponse.json({ status: 'ok', data: ['h264', 'hevc'] });
-  }),
-
-  http.get('/api/media/audio-codecs', () => {
-    return HttpResponse.json({ status: 'ok', data: ['aac', 'dts'] });
-  }),
-
-  http.get('/api/media/file-resolutions', () => {
-    return HttpResponse.json({ status: 'ok', data: ['1080', '4k'] });
-  }),
-
-  http.get('/api/media/labels', () => {
-    return HttpResponse.json({ status: 'ok', data: ['4K', 'Favorites'] });
-  }),
-
-  // Mirrors GET /api/media/sources' ownership projection (sourceOwnership in
-  // server/providers/mediaSourceFactory.ts) — configured state matches the
-  // default settings.ts fixture (RADARR active, no SONARR).
-  http.get('/api/media/sources', () => {
-    return HttpResponse.json({
-      status: 'ok',
-      data: [
-        {
-          contentType: 'movie',
-          ownerType: 'RADARR',
-          configured: true,
-          instances: [{ id: 1, name: 'Radarr' }],
-        },
-        { contentType: 'show', ownerType: 'SONARR', configured: false, instances: [] },
-      ],
-    });
-  }),
+  mockProcedure(contract.media.reset, () => ({ deletedIdentities: 0 })),
 
   // Mirrors GET /api/filter-fields' provider-gated MediaRuleDescriptor projection
   // (server/modules/media/filterRegistry.ts) — the default set every RADARR+SONARR test

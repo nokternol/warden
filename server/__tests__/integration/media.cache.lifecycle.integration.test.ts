@@ -5,11 +5,12 @@ import { MetadataProviderType } from '@server/database/schema';
  *
  * Run: vitest run --project server
  */
+import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
-import { createMediaRoutes } from '@server/modules/media/media.routes';
+import { createMediaProcedures } from '@server/modules/media';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
@@ -33,7 +34,7 @@ const MOCK_USER = {
   updatedAt: new Date(),
 };
 
-function buildAuthedApp(routes: ReturnType<typeof createMediaRoutes>): Express {
+function buildAuthedApp(routes: ReturnType<typeof serveApi>): Express {
   const app = express();
   app.use(express.json());
   app.use(requestIdMiddleware);
@@ -103,7 +104,7 @@ describe('MediaHandler cache lifecycle', () => {
       })
     );
 
-    const routes = createMediaRoutes(cradle);
+    const routes = serveApi({ media: createMediaProcedures(cradle).procedures });
     const client = createApiClient(buildAuthedApp(routes));
 
     const [res1, res2] = await Promise.all([
@@ -116,7 +117,7 @@ describe('MediaHandler cache lifecycle', () => {
     expect(expectSuccessResponse(res2).items).toHaveLength(1);
   });
 
-  it('two createMediaHandlers() instances have independent caches', async () => {
+  it('two createMediaProcedures() instances have independent caches', async () => {
     // Arrange: each successive Radarr call returns a different film title so we
     // can detect whether handler B read from handler A's cache or fetched independently.
     let radarrCallCount = 0;
@@ -128,8 +129,8 @@ describe('MediaHandler cache lifecycle', () => {
       })
     );
 
-    const routesA = createMediaRoutes(cradle);
-    const routesB = createMediaRoutes(cradle);
+    const routesA = serveApi({ media: createMediaProcedures(cradle).procedures });
+    const routesB = serveApi({ media: createMediaProcedures(cradle).procedures });
     const clientA = createApiClient(buildAuthedApp(routesA));
     const clientB = createApiClient(buildAuthedApp(routesB));
 

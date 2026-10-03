@@ -4,10 +4,10 @@ import { serveApi } from '@server/kernel/api';
 /**
  * Integration tests: provider mutations bust all media caches.
  *
- * Both the settings and media routes share the same cradle.
- * `createMediaHandlers()` returns an `invalidateMediaCaches` function alongside
- * the route handlers. That function is passed into the settings handler cradle
- * so updateProvider and deleteProvider can call it.
+ * The provider settings and media procedures share the same cradle.
+ * `createMediaProcedures()` returns an `invalidateMediaCaches` function
+ * alongside the procedures. That function is passed into the provider settings
+ * procedures so update and delete can call it.
  *
  * Run: vitest run --project server
  */
@@ -15,12 +15,11 @@ import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
-import { createMediaHandlers } from '@server/modules/media/media.handler';
+import { createMediaProcedures } from '@server/modules/media';
 import { createProviderSettingsProcedures } from '@server/modules/settings';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
-import { Router } from 'express';
 import { http, HttpResponse } from 'msw';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { server } from '../../../tests/mocks/server';
@@ -83,15 +82,11 @@ describe('Provider mutation cache invalidation', () => {
   });
 
   beforeEach(() => {
-    // Build a fresh set of media handlers per test so caches start empty.
-    // The handlers expose `invalidateMediaCaches` which is passed to the
-    // settings handler so provider mutations can bust stale data.
-    const mediaHandlers = createMediaHandlers(cradle);
-    const { invalidateMediaCaches } = mediaHandlers;
-
-    // Wire the media routes directly from the shared handler instances
-    const mediaRouter = Router();
-    mediaRouter.get('/movies', mediaHandlers.listMovies);
+    // Build fresh media procedures per test so caches start empty. They expose
+    // `invalidateMediaCaches`, which is passed to the provider settings
+    // procedures so provider mutations can bust stale data.
+    const media = createMediaProcedures(cradle);
+    const { invalidateMediaCaches } = media;
 
     // Provider settings procedures get the invalidator injected as second argument
     const settingsProcedures = createProviderSettingsProcedures(cradle, invalidateMediaCaches);
@@ -103,8 +98,7 @@ describe('Provider mutation cache invalidation', () => {
       _req.user = MOCK_USER;
       next();
     });
-    app.use('/api/media', mediaRouter);
-    app.use(serveApi({ providers: settingsProcedures }));
+    app.use(serveApi({ media: media.procedures, providers: settingsProcedures }));
     app.use(errorHandlerMiddleware);
 
     client = createApiClient(app);

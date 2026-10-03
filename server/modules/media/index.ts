@@ -7,10 +7,9 @@
  * growing export list is a design smell to challenge.
  */
 
-// HTTP surface — mounted by the API router. Absorbs the filterFields,
-// backdrops, and search route-drawn modules; each keeps its own URL mount.
-export { createMediaHandlers } from './media.handler';
-export { createMediaRoutes } from './media.routes';
+// HTTP surface — the media procedures of the API contract. Absorbs the
+// filterFields, backdrops, and search route-drawn modules; each keeps its own URL.
+export { createMediaProcedures } from './media.procedures';
 export { createFilterFieldsRoutes } from './media.filterFields.routes';
 export { createBackdropsRoutes } from './media.backdrops.routes';
 export { createSearchRoutes } from './media.search.routes';

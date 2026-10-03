@@ -1,17 +1,8 @@
-import type { MediaFilters, MediaImage } from '@app/types/media';
+import { api } from '@app/lib/api/client';
+import type { MediaFilters } from '@app/types/media';
+import type { ManagedMovie } from '@contract/media';
 import { usePaginatedMedia } from './usePaginatedMedia';
 
-export type { MediaFilters };
+export type { MediaFilters, ManagedMovie };
 
-export interface ManagedMovie {
-  id: number;
-  title: string;
-  year?: number;
-  hasFile: boolean;
-  monitored: boolean;
-  tmdbId: number;
-  images?: MediaImage[];
-}
-
-export const useMovies = (filters?: MediaFilters) =>
-  usePaginatedMedia<ManagedMovie>('/api/media/movies', filters);
+export const useMovies = (filters?: MediaFilters) => usePaginatedMedia(api.media.movies, filters);

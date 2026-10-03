@@ -1,7 +1,8 @@
+import type { MoviesBrowseQuerySchema, SeriesBrowseQuerySchema } from '@contract/media';
 import { MetadataProviderType } from '@server/database/schema';
+import { api } from '@server/kernel/api';
 import { MediaCache } from '@server/kernel/cache';
 import type { DrizzleDb } from '@server/kernel/db';
-import { defineRoute } from '@server/kernel/defineRoute';
 import { getChildLogger } from '@server/kernel/logger';
 import {
   type IProviderFactory,
@@ -20,7 +21,7 @@ import {
   type SonarrSeries,
   type SonarrTag,
 } from '@server/modules/providers';
-import { z } from 'zod';
+import type { z } from 'zod';
 import type {
   FilterValue,
   FilterValueEntry,
@@ -40,116 +41,7 @@ import type { MediaSource } from './mediaSource';
 import { sourceOwnership } from './mediaSourceFactory';
 import { normalizeRadarrMovie, normalizeSonarrSeries } from './normalizeMedia';
 
-const log = getChildLogger('MediaHandler');
-
-const paginationQuerySchema = z.object({
-  page: z.coerce.number().int().positive().optional().default(1),
-  pageSize: z.coerce.number().int().positive().optional().default(48),
-});
-
-// Query-param coercion helpers (browse params arrive as strings).
-const num = () => z.coerce.number().optional();
-const intNum = () => z.coerce.number().int().optional();
-const bool3 = () =>
-  z
-    .enum(['true', 'false'])
-    .transform((v) => v === 'true')
-    .optional();
-const sortField = z
-  .enum(['title_asc', 'title_desc', 'year_asc', 'year_desc', 'status_asc', 'status_desc'])
-  .optional()
-  .default('title_asc');
-
-// Fields valid for both content types — including the enriched predicates.
-const sharedFilterFields = {
-  title: z.string().optional(),
-  yearMin: intNum(),
-  yearMax: intNum(),
-  certification: z.string().optional(),
-  addedDaysAgoGte: intNum(),
-  addedDaysAgoLte: intNum(),
-  sizeOnDiskGbGte: num(),
-  sizeOnDiskGbLte: num(),
-  overseerrRequestStatus: intNum(),
-  overseerrHasIssue: bool3(),
-  tmdbStatus: z.string().optional(),
-  lastWatchedDaysAgoGte: intNum(),
-  lastWatchedDaysAgoLte: intNum(),
-  plexAddedDaysAgoGte: intNum(),
-  plexAddedDaysAgoLte: intNum(),
-  jellyfinAddedDaysAgoGte: intNum(),
-  jellyfinAddedDaysAgoLte: intNum(),
-  fileSizeBytesGte: num(),
-  fileSizeBytesLte: num(),
-  releaseDaysAgoGte: intNum(),
-  releaseDaysAgoLte: intNum(),
-  fileContainer: z.string().optional(),
-  videoCodec: z.string().optional(),
-  audioCodec: z.string().optional(),
-  fileResolution: z.string().optional(),
-  labels: z.string().optional(),
-  jellyfinIsFavorite: bool3(),
-  sort: sortField,
-  tautulliWatched: z.enum(['true', 'false']).optional(),
-};
-
-// Positive-int qualifier for an instance-scoped rule's sibling `*ProviderId` param —
-// which instance's namespace the paired id list belongs to (§10). Absent means unqualified.
-const providerIdParam = () => z.coerce.number().int().positive().optional();
-
-const moviesQuerySchema = paginationQuerySchema.extend({
-  ...sharedFilterFields,
-  hasFile: bool3(),
-  movieTagIds: z.string().optional(),
-  movieTagIdsProviderId: providerIdParam(),
-  movieQualityProfileIds: z.string().optional(),
-  movieQualityProfileIdsProviderId: providerIdParam(),
-  movieGenres: z.string().optional(),
-  radarrImdbRatingGte: num(),
-  radarrImdbRatingLte: num(),
-  runtimeMinutesGte: intNum(),
-  runtimeMinutesLte: intNum(),
-  movieFileCountGte: intNum(),
-  movieFileCountLte: intNum(),
-  inCinemasDaysAgoGte: intNum(),
-  inCinemasDaysAgoLte: intNum(),
-  physicalReleaseDaysAgoGte: intNum(),
-  physicalReleaseDaysAgoLte: intNum(),
-  digitalReleaseDaysAgoGte: intNum(),
-  digitalReleaseDaysAgoLte: intNum(),
-  releaseGroups: z.string().optional(),
-  collectionName: z.string().optional(),
-  isAvailable: bool3(),
-  radarrStatus: z.string().optional(),
-});
-
-const seriesQuerySchema = paginationQuerySchema.extend({
-  ...sharedFilterFields,
-  monitored: bool3(),
-  seriesStatus: z.string().optional(),
-  seriesTagIds: z.string().optional(),
-  seriesTagIdsProviderId: providerIdParam(),
-  seriesQualityProfileIds: z.string().optional(),
-  seriesQualityProfileIdsProviderId: providerIdParam(),
-  seriesGenres: z.string().optional(),
-  seriesType: z.string().optional(),
-  network: z.string().optional(),
-  sonarrRatingGte: num(),
-  sonarrRatingLte: num(),
-  sonarrEnded: bool3(),
-  sonarrLastAiredDaysAgoGte: intNum(),
-  sonarrLastAiredDaysAgoLte: intNum(),
-  sonarrPercentEpisodesGte: num(),
-  sonarrPercentEpisodesLte: num(),
-  seasonCountGte: intNum(),
-  seasonCountLte: intNum(),
-  episodeCountGte: intNum(),
-  episodeCountLte: intNum(),
-  nextAiringInDaysGte: intNum(),
-  nextAiringInDaysLte: intNum(),
-  seriesLanguageProfileIds: z.string().optional(),
-  seriesLanguageProfileIdsProviderId: providerIdParam(),
-});
+const log = getChildLogger('MediaProcedures');
 
 // ─── Registry delegation ───────────────────────────────────────────────────────
 // The browse contract uses content-prefixed param names; the registry uses bare
@@ -344,12 +236,12 @@ const _SERIES_RANGE_PARAM_WITNESS: Record<
  * those as `never`-typed properties makes the assignment fail naming them by name if
  * the schema falls out of sync.
  */
-type MovieSchemaShape = z.infer<typeof moviesQuerySchema>;
+type MovieSchemaShape = z.infer<typeof MoviesBrowseQuerySchema>;
 type MovieSchemaMissing = Exclude<keyof typeof MOVIE_PARAM_TO_KEY, keyof MovieSchemaShape>;
 const _movieSchemaCoversParams: MovieSchemaShape & Record<MovieSchemaMissing, never> =
   {} as MovieSchemaShape;
 
-type SeriesSchemaShape = z.infer<typeof seriesQuerySchema>;
+type SeriesSchemaShape = z.infer<typeof SeriesBrowseQuerySchema>;
 type SeriesSchemaMissing = Exclude<keyof typeof SERIES_PARAM_TO_KEY, keyof SeriesSchemaShape>;
 const _seriesSchemaCoversParams: SeriesSchemaShape & Record<SeriesSchemaMissing, never> =
   {} as SeriesSchemaShape;
@@ -423,15 +315,15 @@ interface SeriesSublist {
   series: SonarrSeries[];
 }
 
-interface DecoratedTag extends RadarrTag {
+type DecoratedTag = RadarrTag & {
   providerId: number;
   providerName: string;
-}
+};
 
-interface DecoratedProfile extends RadarrProfile {
+type DecoratedProfile = RadarrProfile & {
   providerId: number;
   providerName: string;
-}
+};
 
 /** A raw provider row carrying which instance it came from — internal grouping state only. */
 type Attributed<T> = T & { providerId: number };
@@ -474,7 +366,7 @@ function toMediaError(providerName: string, err: unknown): MediaError {
   };
 }
 
-export function createMediaHandlers(cradle: MediaCradle) {
+export function createMediaProcedures(cradle: MediaCradle) {
   const { providerSettingsService, mediaQueryEngine } = cradle;
   const factory = cradle.providerFactory ?? new ProviderFactory();
 
@@ -642,317 +534,299 @@ export function createMediaHandlers(cradle: MediaCradle) {
     jellyfinItemsCache.invalidate('jellyfinItems');
   }
 
-  return {
-    invalidateMediaCaches,
+  const procedures = {
+    movies: api.media.movies.handler(async ({ input: query }) => {
+      const { sublists, errors } = await getMovies();
+      const all = sublists.flatMap((s) => s.movies);
 
-    listMovies: defineRoute({
-      schemas: { query: moviesQuerySchema },
-      handler: async ({ query }) => {
-        const { sublists, errors } = await getMovies();
-        const all = sublists.flatMap((s) => s.movies);
-
-        const yearRange = computeYearRange(all);
-        const source: MediaSource = {
-          getMediaItems: async () =>
-            sublists.flatMap(({ providerId, movies }) =>
-              movies.map((m) => normalizeRadarrMovie(m, providerId))
-            ),
-          idOf: (item) => (item as NormalizedMovie)._sourceIds.radarr,
-        };
-        const matched = await mediaQueryEngine.evaluate({
-          source,
-          contentType: 'movie',
-          sources: [{ filterValues: toFilterValues(query, MOVIE_PARAM_TO_KEY), role: 'include' }],
-        });
-        const matchedKeys = new Set(matched.map((m) => itemKey(m)));
-        const matchedRaw: Attributed<RadarrMovie>[] = sublists.flatMap(({ providerId, movies }) =>
-          movies
-            .filter((m) => matchedKeys.has(rawItemKey(providerId, m.id)))
-            .map((m) => ({ ...m, providerId }))
-        );
-        const sorted = sortMedia(matchedRaw, query.sort, (m) => m.hasFile);
-        const grouped = groupByPrimaryId(sorted, (m) => m.tmdbId);
-        return {
-          ...paginateItems(grouped, { page: query.page, pageSize: query.pageSize }),
-          yearRange,
-          errors,
-        };
-      },
+      const yearRange = computeYearRange(all);
+      const source: MediaSource = {
+        getMediaItems: async () =>
+          sublists.flatMap(({ providerId, movies }) =>
+            movies.map((m) => normalizeRadarrMovie(m, providerId))
+          ),
+        idOf: (item) => (item as NormalizedMovie)._sourceIds.radarr,
+      };
+      const matched = await mediaQueryEngine.evaluate({
+        source,
+        contentType: 'movie',
+        sources: [{ filterValues: toFilterValues(query, MOVIE_PARAM_TO_KEY), role: 'include' }],
+      });
+      const matchedKeys = new Set(matched.map((m) => itemKey(m)));
+      const matchedRaw: Attributed<RadarrMovie>[] = sublists.flatMap(({ providerId, movies }) =>
+        movies
+          .filter((m) => matchedKeys.has(rawItemKey(providerId, m.id)))
+          .map((m) => ({ ...m, providerId }))
+      );
+      const sorted = sortMedia(matchedRaw, query.sort, (m) => m.hasFile);
+      const grouped = groupByPrimaryId(sorted, (m) => m.tmdbId);
+      return {
+        ...paginateItems(grouped, { page: query.page, pageSize: query.pageSize }),
+        yearRange,
+        errors,
+      };
     }),
 
-    listSeries: defineRoute({
-      schemas: { query: seriesQuerySchema },
-      handler: async ({ query }) => {
-        const { sublists, errors } = await getSeries();
-        const all = sublists.flatMap((s) => s.series);
+    series: api.media.series.handler(async ({ input: query }) => {
+      const { sublists, errors } = await getSeries();
+      const all = sublists.flatMap((s) => s.series);
 
-        const yearRange = computeYearRange(all);
-        const source: MediaSource = {
-          getMediaItems: async () =>
-            sublists.flatMap(({ providerId, series }) =>
-              series.map((s) => normalizeSonarrSeries(s, providerId))
-            ),
-          idOf: (item) => (item as NormalizedShow)._sourceIds.sonarr,
-        };
-        const matched = await mediaQueryEngine.evaluate({
-          source,
-          contentType: 'show',
-          sources: [{ filterValues: toFilterValues(query, SERIES_PARAM_TO_KEY), role: 'include' }],
-        });
-        const matchedKeys = new Set(matched.map((s) => itemKey(s)));
-        const matchedRaw: Attributed<SonarrSeries>[] = sublists.flatMap(({ providerId, series }) =>
-          series
-            .filter((s) => matchedKeys.has(rawItemKey(providerId, s.id)))
-            .map((s) => ({ ...s, providerId }))
-        );
-        const sorted = sortMedia(matchedRaw, query.sort, (s) => s.monitored);
-        const grouped = groupByPrimaryId(sorted, (s) => s.tvdbId);
-        return {
-          ...paginateItems(grouped, { page: query.page, pageSize: query.pageSize }),
-          yearRange,
-          errors,
-        };
-      },
+      const yearRange = computeYearRange(all);
+      const source: MediaSource = {
+        getMediaItems: async () =>
+          sublists.flatMap(({ providerId, series }) =>
+            series.map((s) => normalizeSonarrSeries(s, providerId))
+          ),
+        idOf: (item) => (item as NormalizedShow)._sourceIds.sonarr,
+      };
+      const matched = await mediaQueryEngine.evaluate({
+        source,
+        contentType: 'show',
+        sources: [{ filterValues: toFilterValues(query, SERIES_PARAM_TO_KEY), role: 'include' }],
+      });
+      const matchedKeys = new Set(matched.map((s) => itemKey(s)));
+      const matchedRaw: Attributed<SonarrSeries>[] = sublists.flatMap(({ providerId, series }) =>
+        series
+          .filter((s) => matchedKeys.has(rawItemKey(providerId, s.id)))
+          .map((s) => ({ ...s, providerId }))
+      );
+      const sorted = sortMedia(matchedRaw, query.sort, (s) => s.monitored);
+      const grouped = groupByPrimaryId(sorted, (s) => s.tvdbId);
+      return {
+        ...paginateItems(grouped, { page: query.page, pageSize: query.pageSize }),
+        yearRange,
+        errors,
+      };
     }),
 
-    listTags: defineRoute({
-      handler: () =>
-        tagsCache.getOrFetch('tags', async () => {
-          const providers = await providerSettingsService.findActiveByTypes([
-            MetadataProviderType.RADARR,
-            MetadataProviderType.SONARR,
-          ]);
+    tags: api.media.tags.handler(() =>
+      tagsCache.getOrFetch('tags', async () => {
+        const providers = await providerSettingsService.findActiveByTypes([
+          MetadataProviderType.RADARR,
+          MetadataProviderType.SONARR,
+        ]);
 
-          const radarrTags: DecoratedTag[] = [];
-          const sonarrTags: DecoratedTag[] = [];
+        const radarrTags: DecoratedTag[] = [];
+        const sonarrTags: DecoratedTag[] = [];
 
-          await Promise.all(
-            providers.map(async (provider) => {
-              try {
-                if (provider.type === MetadataProviderType.RADARR) {
-                  const radarr = factory.create(provider, log) as RadarrProvider;
-                  const tags = await radarr.getTags();
-                  radarrTags.push(
-                    ...tags.map((t) => ({
-                      ...t,
-                      providerId: provider.id,
-                      providerName: provider.name,
-                    }))
-                  );
-                } else if (provider.type === MetadataProviderType.SONARR) {
-                  const sonarr = factory.create(provider, log) as SonarrProvider;
-                  const tags = await sonarr.getTags();
-                  sonarrTags.push(
-                    ...tags.map((t) => ({
-                      ...t,
-                      providerId: provider.id,
-                      providerName: provider.name,
-                    }))
-                  );
-                }
-              } catch (err) {
-                log.warn('Tags fetch failed', { provider: provider.name, err });
-              }
-            })
-          );
-
-          return { radarr: radarrTags, sonarr: sonarrTags };
-        }),
-    }),
-
-    listQualityProfiles: defineRoute({
-      handler: () =>
-        qualityProfilesCache.getOrFetch('qualityProfiles', async () => {
-          const providers = await providerSettingsService.findActiveByTypes([
-            MetadataProviderType.RADARR,
-            MetadataProviderType.SONARR,
-          ]);
-
-          const radarrProfiles: DecoratedProfile[] = [];
-          const sonarrProfiles: DecoratedProfile[] = [];
-
-          await Promise.all(
-            providers.map(async (provider) => {
-              try {
-                if (provider.type === MetadataProviderType.RADARR) {
-                  const radarr = factory.create(provider, log) as RadarrProvider;
-                  const profiles = await radarr.getProfiles();
-                  radarrProfiles.push(
-                    ...profiles.map((p) => ({
-                      ...p,
-                      providerId: provider.id,
-                      providerName: provider.name,
-                    }))
-                  );
-                } else if (provider.type === MetadataProviderType.SONARR) {
-                  const sonarr = factory.create(provider, log) as SonarrProvider;
-                  const profiles = await sonarr.getProfiles();
-                  sonarrProfiles.push(
-                    ...profiles.map((p) => ({
-                      ...p,
-                      providerId: provider.id,
-                      providerName: provider.name,
-                    }))
-                  );
-                }
-              } catch (err) {
-                log.warn('Quality profiles fetch failed', { provider: provider.name, err });
-              }
-            })
-          );
-
-          return { radarr: radarrProfiles, sonarr: sonarrProfiles };
-        }),
-    }),
-
-    listLanguageProfiles: defineRoute({
-      handler: () =>
-        languageProfilesCache.getOrFetch('languageProfiles', async () => {
-          const providers = await providerSettingsService.findActiveByTypes([
-            MetadataProviderType.SONARR,
-          ]);
-
-          const profiles: DecoratedProfile[] = [];
-
-          await Promise.all(
-            providers.map(async (provider) => {
-              try {
+        await Promise.all(
+          providers.map(async (provider) => {
+            try {
+              if (provider.type === MetadataProviderType.RADARR) {
+                const radarr = factory.create(provider, log) as RadarrProvider;
+                const tags = await radarr.getTags();
+                radarrTags.push(
+                  ...tags.map((t) => ({
+                    ...t,
+                    providerId: provider.id,
+                    providerName: provider.name,
+                  }))
+                );
+              } else if (provider.type === MetadataProviderType.SONARR) {
                 const sonarr = factory.create(provider, log) as SonarrProvider;
-                const languageProfiles = await sonarr.getLanguageProfiles();
-                profiles.push(
-                  ...languageProfiles.map((p) => ({
+                const tags = await sonarr.getTags();
+                sonarrTags.push(
+                  ...tags.map((t) => ({
+                    ...t,
+                    providerId: provider.id,
+                    providerName: provider.name,
+                  }))
+                );
+              }
+            } catch (err) {
+              log.warn('Tags fetch failed', { provider: provider.name, err });
+            }
+          })
+        );
+
+        return { radarr: radarrTags, sonarr: sonarrTags };
+      })
+    ),
+
+    qualityProfiles: api.media.qualityProfiles.handler(() =>
+      qualityProfilesCache.getOrFetch('qualityProfiles', async () => {
+        const providers = await providerSettingsService.findActiveByTypes([
+          MetadataProviderType.RADARR,
+          MetadataProviderType.SONARR,
+        ]);
+
+        const radarrProfiles: DecoratedProfile[] = [];
+        const sonarrProfiles: DecoratedProfile[] = [];
+
+        await Promise.all(
+          providers.map(async (provider) => {
+            try {
+              if (provider.type === MetadataProviderType.RADARR) {
+                const radarr = factory.create(provider, log) as RadarrProvider;
+                const profiles = await radarr.getProfiles();
+                radarrProfiles.push(
+                  ...profiles.map((p) => ({
                     ...p,
                     providerId: provider.id,
                     providerName: provider.name,
                   }))
                 );
-              } catch (err) {
-                log.warn('Language profiles fetch failed', { provider: provider.name, err });
+              } else if (provider.type === MetadataProviderType.SONARR) {
+                const sonarr = factory.create(provider, log) as SonarrProvider;
+                const profiles = await sonarr.getProfiles();
+                sonarrProfiles.push(
+                  ...profiles.map((p) => ({
+                    ...p,
+                    providerId: provider.id,
+                    providerName: provider.name,
+                  }))
+                );
               }
-            })
-          );
+            } catch (err) {
+              log.warn('Quality profiles fetch failed', { provider: provider.name, err });
+            }
+          })
+        );
 
-          return profiles;
-        }),
-    }),
+        return { radarr: radarrProfiles, sonarr: sonarrProfiles };
+      })
+    ),
 
-    listGenres: defineRoute({
-      handler: () =>
-        genresCache.getOrFetch('genres', async () => {
-          const [{ sublists: movieSublists }, { sublists: seriesSublists }] = await Promise.all([
-            getMovies(),
-            getSeries(),
-          ]);
-          const movies = movieSublists.flatMap((s) => s.movies);
-          const series = seriesSublists.flatMap((s) => s.series);
-          return {
-            movies: [...new Set(movies.flatMap((m) => m.genres ?? []))].sort(),
-            series: [...new Set(series.flatMap((s) => s.genres ?? []))].sort(),
-          };
-        }),
-    }),
+    languageProfiles: api.media.languageProfiles.handler(() =>
+      languageProfilesCache.getOrFetch('languageProfiles', async () => {
+        const providers = await providerSettingsService.findActiveByTypes([
+          MetadataProviderType.SONARR,
+        ]);
 
-    listNetworks: defineRoute({
-      handler: () =>
-        networksCache.getOrFetch('networks', async () => {
-          const { sublists } = await getSeries();
-          const all = sublists.flatMap((s) => s.series);
-          return [...new Set(all.map((s) => s.network).filter((n): n is string => !!n))].sort();
-        }),
-    }),
+        const profiles: DecoratedProfile[] = [];
 
-    listStudio: defineRoute({
-      handler: mediaServerStringLookup(
+        await Promise.all(
+          providers.map(async (provider) => {
+            try {
+              const sonarr = factory.create(provider, log) as SonarrProvider;
+              const languageProfiles = await sonarr.getLanguageProfiles();
+              profiles.push(
+                ...languageProfiles.map((p) => ({
+                  ...p,
+                  providerId: provider.id,
+                  providerName: provider.name,
+                }))
+              );
+            } catch (err) {
+              log.warn('Language profiles fetch failed', { provider: provider.name, err });
+            }
+          })
+        );
+
+        return profiles;
+      })
+    ),
+
+    genres: api.media.genres.handler(() =>
+      genresCache.getOrFetch('genres', async () => {
+        const [{ sublists: movieSublists }, { sublists: seriesSublists }] = await Promise.all([
+          getMovies(),
+          getSeries(),
+        ]);
+        const movies = movieSublists.flatMap((s) => s.movies);
+        const series = seriesSublists.flatMap((s) => s.series);
+        return {
+          movies: [...new Set(movies.flatMap((m) => m.genres ?? []))].sort(),
+          series: [...new Set(series.flatMap((s) => s.genres ?? []))].sort(),
+        };
+      })
+    ),
+
+    networks: api.media.networks.handler(() =>
+      networksCache.getOrFetch('networks', async () => {
+        const { sublists } = await getSeries();
+        const all = sublists.flatMap((s) => s.series);
+        return [...new Set(all.map((s) => s.network).filter((n): n is string => !!n))].sort();
+      })
+    ),
+
+    studio: api.media.studio.handler(
+      mediaServerStringLookup(
         studioCache,
         'studio',
         (i) => i.studio,
         (i) => i.Studios?.map((s) => s.Name)
-      ),
-    }),
+      )
+    ),
 
-    listReleaseGroups: defineRoute({
-      handler: () =>
-        releaseGroupsCache.getOrFetch('releaseGroups', async () => {
-          const { sublists } = await getMovies();
-          const all = sublists.flatMap((s) => s.movies);
-          return [...new Set(all.flatMap((m) => m.statistics?.releaseGroups ?? []))].sort();
-        }),
-    }),
+    releaseGroups: api.media.releaseGroups.handler(() =>
+      releaseGroupsCache.getOrFetch('releaseGroups', async () => {
+        const { sublists } = await getMovies();
+        const all = sublists.flatMap((s) => s.movies);
+        return [...new Set(all.flatMap((m) => m.statistics?.releaseGroups ?? []))].sort();
+      })
+    ),
 
-    listCollectionNames: defineRoute({
-      handler: () =>
-        collectionNamesCache.getOrFetch('collectionNames', async () => {
-          const { sublists } = await getMovies();
-          const all = sublists.flatMap((s) => s.movies);
-          return [
-            ...new Set(all.map((m) => m.collection?.name).filter((n): n is string => !!n)),
-          ].sort();
-        }),
-    }),
+    collectionNames: api.media.collectionNames.handler(() =>
+      collectionNamesCache.getOrFetch('collectionNames', async () => {
+        const { sublists } = await getMovies();
+        const all = sublists.flatMap((s) => s.movies);
+        return [
+          ...new Set(all.map((m) => m.collection?.name).filter((n): n is string => !!n)),
+        ].sort();
+      })
+    ),
 
-    listFileContainers: defineRoute({
-      handler: mediaServerStringLookup(
+    fileContainers: api.media.fileContainers.handler(
+      mediaServerStringLookup(
         fileContainerCache,
         'fileContainer',
         (i) => i.Media?.[0]?.container,
         (i) => i.MediaSources?.[0]?.Container
-      ),
-    }),
+      )
+    ),
 
-    listVideoCodecs: defineRoute({
-      handler: mediaServerStringLookup(
+    videoCodecs: api.media.videoCodecs.handler(
+      mediaServerStringLookup(
         videoCodecCache,
         'videoCodec',
         (i) => i.Media?.[0]?.videoCodec,
         (i) => i.MediaSources?.[0]?.MediaStreams?.find((s) => s.Type === 'Video')?.Codec
-      ),
-    }),
+      )
+    ),
 
-    listAudioCodecs: defineRoute({
-      handler: mediaServerStringLookup(
+    audioCodecs: api.media.audioCodecs.handler(
+      mediaServerStringLookup(
         audioCodecCache,
         'audioCodec',
         (i) => i.Media?.[0]?.audioCodec,
         (i) => i.MediaSources?.[0]?.MediaStreams?.find((s) => s.Type === 'Audio')?.Codec
-      ),
-    }),
+      )
+    ),
 
-    listFileResolutions: defineRoute({
-      handler: mediaServerStringLookup(
+    fileResolutions: api.media.fileResolutions.handler(
+      mediaServerStringLookup(
         fileResolutionCache,
         'fileResolution',
         (i) => i.Media?.[0]?.videoResolution,
         (i) =>
           resolutionTier(i.MediaSources?.[0]?.MediaStreams?.find((s) => s.Type === 'Video')?.Height)
-      ),
-    }),
+      )
+    ),
 
-    listLabels: defineRoute({
-      handler: mediaServerStringLookup(
+    labels: api.media.labels.handler(
+      mediaServerStringLookup(
         labelsCache,
         'labels',
         (i) => i.Label?.map((l) => l.tag),
         (i) => i.Tags
-      ),
+      )
+    ),
+
+    sources: api.media.sources.handler(async () => {
+      const providers = await providerSettingsService.list();
+      return sourceOwnership(providers.filter((p) => p.isActive));
     }),
 
-    listSources: defineRoute({
-      handler: async () => {
-        const providers = await providerSettingsService.list();
-        return sourceOwnership(providers.filter((p) => p.isActive));
-      },
-    }),
-
-    resetMedia: defineRoute({
-      schemas: { response: z.object({ deletedIdentities: z.number() }) },
-      handler: async () => {
-        if (!cradle.db) {
-          throw new Error('resetMedia requires a database handle');
-        }
-        const result = await resetMediaData(cradle.db);
-        log.warn('Media data reset', { deletedIdentities: result.deletedIdentities });
-        return result;
-      },
+    reset: api.media.reset.handler(async () => {
+      if (!cradle.db) {
+        throw new Error('resetMedia requires a database handle');
+      }
+      const result = await resetMediaData(cradle.db);
+      log.warn('Media data reset', { deletedIdentities: result.deletedIdentities });
+      return result;
     }),
   };
+
+  return { procedures, invalidateMediaCaches };
 }

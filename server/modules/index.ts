@@ -8,8 +8,7 @@ import { createAutomationProcedures } from './automations';
 import {
   createBackdropsRoutes,
   createFilterFieldsRoutes,
-  createMediaHandlers,
-  createMediaRoutes,
+  createMediaProcedures,
   createSearchRoutes,
 } from './media';
 import { createMediaQueryProcedures } from './mediaQueries';
@@ -22,7 +21,6 @@ export const routes = {
   appSettings: route('app-settings'),
   backdrops: route('backdrops'),
   filterFields: route('filter-fields'),
-  media: route('media'),
   auth: route('auth'),
   search: route('search'),
 } as const;
@@ -31,9 +29,10 @@ export const routes = {
  * Creates the API router with all module routes mounted.
  * The cradle provides injected dependencies to every module.
  *
- * Media handlers are built once so their `invalidateMediaCaches` function
- * can be shared with the settings handler — provider mutations bust stale
- * movies/series/tags/profiles/genres/networks cache entries immediately.
+ * Media procedures are built once so their `invalidateMediaCaches` function
+ * can be shared with the provider settings procedures — provider mutations
+ * bust stale movies/series/tags/profiles/genres/networks cache entries
+ * immediately.
  */
 export function createApiRouter(cradle: Cradle) {
   const router = Router();
@@ -41,15 +40,16 @@ export function createApiRouter(cradle: Cradle) {
   // Attach user to all requests (if session exists)
   router.use(checkUser);
 
-  // Build media handlers once so the invalidator can be shared.
-  const mediaHandlers = createMediaHandlers(cradle);
-  const { invalidateMediaCaches } = mediaHandlers;
+  // Build the media procedures once so their cache invalidator can be shared.
+  const media = createMediaProcedures(cradle);
+  const { invalidateMediaCaches } = media;
 
   // Contract procedures first; requests they don't match fall through to the
   // Express routers below.
   router.use(
     serveApi({
       automations: createAutomationProcedures(cradle),
+      media: media.procedures,
       mediaQueries: createMediaQueryProcedures(cradle),
       providers: {
         ...createProvidersProcedures(cradle),
@@ -63,7 +63,6 @@ export function createApiRouter(cradle: Cradle) {
   router.use(routes.appSettings, createAppSettingsRoutes(cradle));
   router.use(routes.backdrops, createBackdropsRoutes(cradle));
   router.use(routes.auth, createAuthRoutes(cradle));
-  router.use(routes.media, createMediaRoutes(cradle, mediaHandlers));
   router.use(routes.search, createSearchRoutes(cradle));
   router.use(routes.filterFields, createFilterFieldsRoutes(cradle));
 
