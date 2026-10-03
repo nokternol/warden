@@ -62,7 +62,7 @@ the role interfaces it `implements`, never assumed from the connection base. Sou
 | **Automation** | A query bound to a task on a schedule — the product's unit of action. `kind: 'user' \| 'system'`; system automations are invariants (Run-Now-only, cannot be disabled or deleted). Spec: [`system-vs-user-automations.md`](ref:path:docs/architecture/system-vs-user-automations.md). | [`server/modules/automations/automationService.ts`](ref:path:server/modules/automations/automationService.ts) |
 | **AutomationExecutor** | Runs a task against the ids a query matches; binds the provider by `automation.provider.id`, dispatches via `source.tasks()`. Holds the in-flight guard that keeps manual and scheduled runs from overlapping. | [`server/modules/automations/automationExecutor.ts`](ref:path:server/modules/automations/automationExecutor.ts) |
 | **SystemTaskRunner** | Dispatch target for `system` automations (identity/enrichment jobs) — internal jobs, deliberately not actuator tasks. | [`server/modules/system/systemTaskRunner.ts`](ref:path:server/modules/system/systemTaskRunner.ts) |
-| **Run Now / Disable / Archive** | The UI verb model for automations — never Play/Pause, which would imply runtime control over an executing process. | [`src/pages/automations/index.tsx`](ref:path:src/pages/automations/index.tsx) |
+| **Run Now / Disable / Archive** | The UI verb model for automations — never Play/Pause, which would imply runtime control over an executing process. | [`src/pages/automations/index.page.tsx`](ref:path:src/pages/automations/index.page.tsx) |
 
 ## API
 
