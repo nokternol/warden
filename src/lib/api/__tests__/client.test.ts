@@ -21,6 +21,30 @@ describe('api client', () => {
     });
   });
 
+  it("rejects a validation failure with the server's field errors", async () => {
+    server.use(
+      http.post('/api/automations/:id/run', () =>
+        HttpResponse.json(
+          {
+            status: 'error',
+            error: {
+              type: 'VALIDATION_ERROR',
+              message: 'Invalid input',
+              errors: { id: ['Expected a positive number'] },
+            },
+          },
+          { status: 400 }
+        )
+      )
+    );
+
+    await expect(api.automations.run({ id: 9 })).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+      status: 400,
+      data: { errors: { id: ['Expected a positive number'] } },
+    });
+  });
+
   it('rejects a failure that carries no error envelope with its HTTP status', async () => {
     server.use(
       http.post('/api/automations/:id/run', () =>
