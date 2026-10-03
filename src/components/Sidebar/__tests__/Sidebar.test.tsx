@@ -8,7 +8,7 @@ const TestIcon = () => <svg data-testid="test-icon" />;
 
 const sampleItems: SidebarItem[] = [
   { id: '1', label: 'Dashboard', icon: <TestIcon />, href: '/dashboard' },
-  { id: '2', label: 'Tasks', icon: <TestIcon />, href: '/tasks' },
+  { id: '2', label: 'Automations', icon: <TestIcon />, href: '/automations' },
 ];
 
 const bottomItems: SidebarItem[] = [
@@ -19,7 +19,7 @@ describe('Sidebar', () => {
   it('renders navigation items correctly', () => {
     render(<Sidebar items={sampleItems} />);
     expect(screen.getByText('Dashboard')).toBeInTheDocument();
-    expect(screen.getByText('Tasks')).toBeInTheDocument();
+    expect(screen.getByText('Automations')).toBeInTheDocument();
   });
 
   it('renders bottom items when provided', () => {
@@ -56,7 +56,7 @@ describe('Sidebar', () => {
 
   it('renders badges on items', () => {
     const itemsWithBadge: SidebarItem[] = [
-      { id: '1', label: 'Tasks', icon: <TestIcon />, href: '/tasks', badge: 5 },
+      { id: '1', label: 'Automations', icon: <TestIcon />, href: '/automations', badge: 5 },
     ];
     render(<Sidebar items={itemsWithBadge} />);
     expect(screen.getByText('5')).toBeInTheDocument();
@@ -65,7 +65,7 @@ describe('Sidebar', () => {
   it('highlights active item', () => {
     const itemsWithActive: SidebarItem[] = [
       { id: '1', label: 'Dashboard', icon: <TestIcon />, href: '/dashboard', active: true },
-      { id: '2', label: 'Tasks', icon: <TestIcon />, href: '/tasks' },
+      { id: '2', label: 'Automations', icon: <TestIcon />, href: '/automations' },
     ];
     render(<Sidebar items={itemsWithActive} />);
 

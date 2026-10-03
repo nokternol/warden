@@ -46,15 +46,7 @@ export default function RatingsPage() {
   };
 
   return (
-    <AppLayout
-      sidebar={<SidebarNav />}
-      topBar={
-        <TopBar
-          title="Ratings"
-          breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Ratings' }]}
-        />
-      }
-    >
+    <AppLayout sidebar={<SidebarNav />} topBar={<TopBar title="Ratings" />}>
       <div className={styles.page}>
         {/* Instructions */}
         <div className={styles.instructions}>

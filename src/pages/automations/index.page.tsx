@@ -54,7 +54,6 @@ export default function AutomationsPage() {
       topBar={
         <TopBar
           title="Automations"
-          breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }]}
           actions={
             <button
               type="button"
@@ -110,7 +109,7 @@ export default function AutomationsPage() {
             )}
           </div>
           <p className="text-xs text-text-muted mb-4 ml-[28px]">
-            Each automation pairs a saved query with a task and a cron schedule.
+            Each automation pairs a query with a task and a cron schedule.
           </p>
 
           {automations.length === 0 ? (
@@ -121,7 +120,7 @@ export default function AutomationsPage() {
                 <p className="text-xs text-text-muted max-w-xs">
                   {queries.length === 0
                     ? 'Save a query from the media page, then create an automation to run it on a schedule.'
-                    : 'Select a saved query above and click "+ New automation" to get started.'}
+                    : 'Select a query above and click "+ New automation" to get started.'}
                 </p>
               </div>
             </div>
@@ -151,7 +150,7 @@ export default function AutomationsPage() {
           )}
         </section>
 
-        {/* ── Saved Queries ────────────────────────────────────────────────── */}
+        {/* ── Queries ────────────────────────────────────────────────── */}
         <section aria-labelledby="media-queries-heading">
           <div className="flex items-center gap-3 mb-1">
             <BookMarked
@@ -161,11 +160,11 @@ export default function AutomationsPage() {
               aria-hidden="true"
             />
             <h2 id="media-queries-heading" className="text-sm font-semibold text-text-primary">
-              Saved Queries
+              Queries
             </h2>
           </div>
           <p className="text-xs text-text-muted mb-4 ml-[28px]">
-            Named filter sets from the Media page. Each automation targets one saved query.
+            Named filter sets from the Media page. Each automation targets one query.
           </p>
 
           {queries.length === 0 ? (
@@ -177,7 +176,7 @@ export default function AutomationsPage() {
                   className="text-text-muted"
                   aria-hidden="true"
                 />
-                <p className="text-sm font-medium text-text-secondary">No saved queries yet</p>
+                <p className="text-sm font-medium text-text-secondary">No queries yet</p>
                 <p className="text-xs text-text-muted max-w-xs">
                   Go to the Media page, apply any combination of filters, and use the "Save as
                   query" button to save them here.
@@ -195,7 +194,7 @@ export default function AutomationsPage() {
             <div
               className="rounded-lg border border-border bg-surface-panel overflow-hidden divide-y divide-divider"
               role="list"
-              aria-label="Saved queries"
+              aria-label="Queries"
             >
               {queries.map((query) => (
                 <div key={query.id} role="listitem">

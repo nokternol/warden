@@ -6,9 +6,9 @@
 Providers (configured by user)
   → unlock metadata capabilities
   → metadata maps to filter predicates
-  → predicates combine into saved queries
-  → saved queries define a media collection
-  → tasks run against that collection (scheduled or one-off)
+  → predicates combine into queries
+  → a query selects a set of media
+  → tasks run against that set (scheduled or one-off)
   → that is an automation
 ```
 

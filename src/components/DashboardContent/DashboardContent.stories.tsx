@@ -32,7 +32,6 @@ function Shell({ children }: { children: React.ReactNode }) {
       topBar={
         <TopBar
           title="Dashboard"
-          breadcrumbs={[{ label: 'Dashboard' }]}
           actions={
             <button
               type="button"

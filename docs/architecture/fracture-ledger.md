@@ -263,6 +263,25 @@ is graphed, dated, and verified against code, not inferred from a plan.
   marked on the contract. A dependency-cruiser rule forbids `src/` and `server/` importing each other, and
   a test fails the build when a procedure has no client caller outside an explicit allowlist.
 
+### Product and concept names — Maintainarr, Saved queries, Tasks, Activity (recorded and healed 2026-10-03, MVP slice B5)
+
+- **Fracture:** the glossary's one-name-per-concept rule was broken at the user-facing edge. The live
+  Automations page said "Saved queries" (a name `VOCABULARY.md` had retired); the System page called system
+  automations "Tasks" although Task means a provider action everywhere else, and stories added "New Task",
+  "Active Tasks" and "Collections" for automations and queries; the run history page was "Activity" while
+  the verb is Run Now and the API is `/automations/runs`. The product itself carried a second name:
+  Maintainarr survived in the log filenames, the Plex OAuth product and device name, the default `DB_PATH`
+  (while the Dockerfile and config said `warden.db`), user fixtures, `.env.example`, `config/README.md` and
+  the README links.
+- **How it misled:** a reader following the Dockerfile looked for `warden.db` and found
+  `maintainarr.db`, and the same query appeared under two names in one page's source.
+- **Healed by:** renaming at the surface rather than translating. UI copy and stories use Query,
+  System automations, Runs (`/runs`, `src/pages/runs`) and providers; the default database is
+  `./config/db/warden.db`, logs are `warden-*.log`, Plex lists the app as Warden (so an existing instance
+  shows as a new device on plex.tv while existing sessions keep working). The plan's Glossary lives in
+  `VOCABULARY.md`, with its retired names. A server running with the old default starts with a new
+  database unless `DB_PATH` points at its existing file.
+
 ## Open
 
 No fracture is currently open.

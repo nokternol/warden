@@ -303,7 +303,7 @@ describe('AutomationExecutor', () => {
       expect(unmonitored).toHaveLength(2);
     });
 
-    it('applies saved query filters before executing the task', async () => {
+    it('applies query filters before executing the task', async () => {
       const movies = [
         createRadarrMovie({ id: 1, title: 'The Matrix', year: 1999, hasFile: true }),
         createRadarrMovie({ id: 2, title: 'Inception', year: 2010, hasFile: false }),
@@ -531,7 +531,7 @@ describe('AutomationExecutor', () => {
       expect(unmonitored).toHaveLength(2);
     });
 
-    it('applies saved query filters before unmonitoring', async () => {
+    it('applies query filters before unmonitoring', async () => {
       const seriesList = [
         createSonarrSeries({ id: 1, title: 'Breaking Bad', year: 2008, status: 'ended' }),
         createSonarrSeries({ id: 2, title: 'Ongoing Show', year: 2020, status: 'continuing' }),

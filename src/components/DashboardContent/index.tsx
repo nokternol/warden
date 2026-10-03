@@ -57,7 +57,7 @@ export function DashboardContent({ automations }: { automations: AutomationDto[]
             <EmptyState
               icon={<EmptyAutomationIcon />}
               title="No automations yet"
-              description="An automation pairs a saved query with a task on a schedule. Save a query from the media page, then create an automation."
+              description="An automation pairs a query with a task on a schedule. Save a query from the Media page, then create an automation."
               action={{
                 label: '+ New automation',
                 onClick: () => void router.push('/automations'),

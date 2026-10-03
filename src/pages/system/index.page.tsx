@@ -23,10 +23,7 @@ export default function SystemPage() {
   const { reset } = useMediaReset();
 
   return (
-    <AppLayout
-      sidebar={<SidebarNav />}
-      topBar={<TopBar title="System" breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }]} />}
-    >
+    <AppLayout sidebar={<SidebarNav />} topBar={<TopBar title="System" />}>
       <div className="p-6 max-w-4xl">
         <section aria-labelledby="system-automations-heading">
           <div className="flex items-center justify-between gap-3 mb-1">
@@ -36,7 +33,7 @@ export default function SystemPage() {
                 id="system-automations-heading"
                 className="text-sm font-semibold text-text-primary"
               >
-                System tasks
+                System automations
               </h2>
             </div>
             <MediaResetControl
@@ -56,14 +53,14 @@ export default function SystemPage() {
             <div className="rounded-lg border border-border bg-surface-panel overflow-hidden">
               <EmptyState
                 icon={<MonitorIcon />}
-                title="No system tasks"
+                title="No system automations"
                 description="System data jobs will appear here once configured."
               />
             </div>
           ) : (
             <div className="rounded-lg border border-border bg-surface-panel overflow-hidden">
               <div className="hidden sm:grid sm:grid-cols-[1fr_160px_168px_88px] items-center px-4 py-2 border-b border-border bg-surface-bg/30">
-                <span className="text-xs font-medium text-text-muted">Task</span>
+                <span className="text-xs font-medium text-text-muted">Automation</span>
                 <span className="text-xs font-medium text-text-muted">Schedule</span>
                 <span className="text-xs font-medium text-text-muted">Last run</span>
                 <span className="text-xs font-medium text-text-muted">Next run</span>

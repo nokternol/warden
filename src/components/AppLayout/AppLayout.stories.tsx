@@ -19,7 +19,7 @@ const DashboardIcon = () => (
   </svg>
 );
 
-const TaskIcon = () => (
+const AutomationIcon = () => (
   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path
       strokeLinecap="round"
@@ -66,8 +66,14 @@ const sampleItems: SidebarItem[] = [
     href: '/dashboard',
     active: true,
   },
-  { id: 'tasks', label: 'Tasks', icon: <TaskIcon />, href: '/tasks', badge: 5 },
-  { id: 'collections', label: 'Collections', icon: <FolderIcon />, href: '/collections' },
+  {
+    id: 'automations',
+    label: 'Automations',
+    icon: <AutomationIcon />,
+    href: '/automations',
+    badge: 5,
+  },
+  { id: 'queries', label: 'Queries', icon: <FolderIcon />, href: '/queries' },
 ];
 
 const bottomItems: SidebarItem[] = [
@@ -94,7 +100,7 @@ export const WithSidebar: Story = () => (
             <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center text-text-primary font-bold">
               M
             </div>
-            <span className="text-xl font-bold text-text-primary">Maintainarr</span>
+            <span className="text-xl font-bold text-text-primary">Warden</span>
           </div>
         }
       />
@@ -114,7 +120,7 @@ export const WithTopBar: Story = () => (
         title="Dashboard"
         actions={
           <button className="px-4 py-2 bg-primary hover:bg-primary-hover text-text-primary rounded-lg transition-colors">
-            New Task
+            New automation
           </button>
         }
       />
@@ -138,7 +144,7 @@ export const CompleteLayout: Story = () => (
             <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center text-text-primary font-bold">
               M
             </div>
-            <span className="text-xl font-bold text-text-primary">Maintainarr</span>
+            <span className="text-xl font-bold text-text-primary">Warden</span>
           </div>
         }
       />
@@ -146,10 +152,9 @@ export const CompleteLayout: Story = () => (
     topBar={
       <TopBar
         title="Dashboard"
-        breadcrumbs={[{ label: 'Home', href: '/' }, { label: 'Dashboard' }]}
         actions={
           <button className="px-4 py-2 bg-primary hover:bg-primary-hover text-text-primary rounded-lg transition-colors">
-            New Task
+            New automation
           </button>
         }
       />
@@ -159,21 +164,21 @@ export const CompleteLayout: Story = () => (
       <WidgetGrid columns={4}>
         <StatCard
           value={142}
-          label="Active Tasks"
-          icon={<TaskIcon />}
+          label="Active automations"
+          icon={<AutomationIcon />}
           trend={{ value: 12, direction: 'up' }}
         />
-        <StatCard value={28} label="Collections" icon={<FolderIcon />} />
+        <StatCard value={28} label="Queries" icon={<FolderIcon />} />
         <StatCard value="Running" label="System Status" />
-        <StatCard value={5} label="Recent Activity" trend={{ value: 8, direction: 'down' }} />
+        <StatCard value={5} label="Recent runs" trend={{ value: 8, direction: 'down' }} />
 
         <div className="col-span-1 md:col-span-2 lg:col-span-4">
           <Card variant="outlined" padding="none">
             <Card.Header>
-              <h3 className="text-text-primary font-semibold">Recent Tasks</h3>
+              <h3 className="text-text-primary font-semibold">Recent runs</h3>
             </Card.Header>
             <Card.Content divided>
-              <div className="text-text-muted">Task list content would go here...</div>
+              <div className="text-text-muted">Automation list content would go here...</div>
             </Card.Content>
           </Card>
         </div>
@@ -187,7 +192,7 @@ export const ScrollableContent: Story = () => (
     sidebar={
       <Sidebar
         items={sampleItems}
-        logo={<div className="text-xl font-bold text-text-primary">Maintainarr</div>}
+        logo={<div className="text-xl font-bold text-text-primary">Warden</div>}
       />
     }
     topBar={<TopBar title="Scrollable Page" sticky={true} />}

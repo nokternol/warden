@@ -70,6 +70,20 @@ the role interfaces it `implements`, never assumed from the connection base. Sou
 |---|---|---|
 | **API contract / procedure** | The one declaration of the HTTP API: each *procedure* (`automations.list`, `media.rules`, …) states its method, path, input and output. The server implements it, the client calls it, mocks are declared from it. | [`contract/index.ts`](ref:path:contract/index.ts), [`server/kernel/api.ts`](ref:path:server/kernel/api.ts), [`src/lib/api/client.ts`](ref:path:src/lib/api/client.ts) |
 
+## Glossary — one name per concept
+
+The names the product settled on, across UI, API, code and docs. A second name for a concept is a
+fracture.
+
+| Concept | Canonical name | Retired names | Rationale |
+|---|---|---|---|
+| A configured external system | **Provider** | service, integration (UI) | PRODUCT.md and the UI already say Provider. `BaseProviderConnection` stays as an internal HTTP class name. |
+| A named, persisted set of filters | **MediaQuery**, shown as "Query" | saved query, `SavedQuery`, collection | "Saved" is a state, not a name. |
+| Query + task + schedule | **Automation** (user or system) | "Task" for automations (System page, stories) | A system automation is an automation, not a "Task". |
+| An action a provider offers | **Task** | — | `ActuatorTask`, unchanged. |
+| One execution of an automation | **Run**, page **Runs** | Activity | The page shows runs, the verb is Run Now, and the API is `/automations/runs`. |
+| The product | **Warden** | Maintainarr | Log files are `warden-*.log`, the default database is `./config/db/warden.db`, and Plex lists the app as Warden. |
+
 ## Deprecated names — stop writing these
 
 | Deprecated | Canonical | Residue |
@@ -80,3 +94,8 @@ the role interfaces it `implements`, never assumed from the connection base. Sou
 | `getMovies` / `getSeries` on sources | `getMediaItems()` on the `MediaSource` role | — |
 | `defineRoute`, `*.routes.ts`/`*.handler.ts` | A procedure in the API contract, implemented in `<module>.procedures.ts` | Deleted (C0). |
 | Local SWR `fetcher`s, hand-written `/api/...` URLs | `api.<ns>.<procedure>` via `useApi` | Deleted (C0). |
+| "Saved query", `SavedQuery`, "collection" (a named set of filters) | Query (`MediaQuery`) | Renamed in UI copy, stories, API errors and docs (B5). |
+| "Task" for an automation (System page, stories) | Automation — Task means a provider action | Renamed (B5). |
+| Activity (page) | Runs, route `/runs` | Renamed (B5). |
+| service, integration (in UI copy) | Provider | Renamed (B5). |
+| Maintainarr | Warden | Renamed (B5): log filenames, Plex product and device name, default `DB_PATH`, fixtures, README links. |

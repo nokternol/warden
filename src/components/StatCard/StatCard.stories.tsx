@@ -1,7 +1,7 @@
 import type { Story } from '@ladle/react';
 import StatCard from './index';
 
-const TaskIcon = () => (
+const AutomationIcon = () => (
   <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path
       strokeLinecap="round"
@@ -36,13 +36,13 @@ const ChartIcon = () => (
 
 export const BasicNumber: Story = () => (
   <div className="bg-surface-bg p-8">
-    <StatCard value={142} label="Active Tasks" />
+    <StatCard value={142} label="Active automations" />
   </div>
 );
 
 export const WithIcon: Story = () => (
   <div className="bg-surface-bg p-8">
-    <StatCard value={142} label="Active Tasks" icon={<TaskIcon />} />
+    <StatCard value={142} label="Active automations" icon={<AutomationIcon />} />
   </div>
 );
 
@@ -50,8 +50,8 @@ export const WithTrendUp: Story = () => (
   <div className="bg-surface-bg p-8">
     <StatCard
       value={142}
-      label="Active Tasks"
-      icon={<TaskIcon />}
+      label="Active automations"
+      icon={<AutomationIcon />}
       trend={{ value: 12, direction: 'up' }}
     />
   </div>
@@ -70,18 +70,13 @@ export const WithTrendDown: Story = () => (
 
 export const WithSubtitle: Story = () => (
   <div className="bg-surface-bg p-8">
-    <StatCard
-      value={28}
-      label="Collections"
-      icon={<FolderIcon />}
-      subtitle="Last updated 5 mins ago"
-    />
+    <StatCard value={28} label="Queries" icon={<FolderIcon />} subtitle="Last updated 5 mins ago" />
   </div>
 );
 
 export const StringValue: Story = () => (
   <div className="bg-surface-bg p-8">
-    <StatCard value="Running" label="System Status" subtitle="All services operational" />
+    <StatCard value="Running" label="System Status" subtitle="All providers operational" />
   </div>
 );
 
@@ -108,11 +103,11 @@ export const GridExample: Story = () => (
     >
       <StatCard
         value={142}
-        label="Active Tasks"
-        icon={<TaskIcon />}
+        label="Active automations"
+        icon={<AutomationIcon />}
         trend={{ value: 12, direction: 'up' }}
       />
-      <StatCard value={28} label="Collections" icon={<FolderIcon />} />
+      <StatCard value={28} label="Queries" icon={<FolderIcon />} />
       <StatCard value="Running" label="System Status" subtitle="All systems operational" />
       <StatCard
         value={1248}

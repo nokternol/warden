@@ -34,11 +34,11 @@ describe('MediaQueryService', () => {
 
   // ── list ──────────────────────────────────────────────────────────────────
 
-  it('returns an empty array when no saved queries exist', async () => {
+  it('returns an empty array when no queries exist', async () => {
     expect(await service.list()).toEqual([]);
   });
 
-  it('returns all saved queries ordered by createdAt', async () => {
+  it('returns all queries ordered by createdAt', async () => {
     await service.create({ name: 'First', contentType: 'movie', filterValues: [] });
     await service.create({ name: 'Second', contentType: 'show', filterValues: [] });
 

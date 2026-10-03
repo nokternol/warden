@@ -64,10 +64,10 @@ lifecycle:
 
 | Spec | Status | Branch | PR |
 |---|---|---|---|
-| [plex](plex.md) | implementing | `implement/plex-provider-spec` | [#46](https://github.com/nokternol/maintainarr/pull/46) |
-| [jellyfin](jellyfin.md) | implementing | `implement/jellyfin-provider-spec` | [#48](https://github.com/nokternol/maintainarr/pull/48) |
-| [radarr](radarr.md) | implementing | `implement/radarr-provider-spec` | [#49](https://github.com/nokternol/maintainarr/pull/49) (merged) |
-| [sonarr](sonarr.md) | implementing | `implement/sonarr-provider-spec` | [#50](https://github.com/nokternol/maintainarr/pull/50) (merged) |
+| [plex](plex.md) | implementing | `implement/plex-provider-spec` | [#46](https://github.com/nokternol/warden/pull/46) |
+| [jellyfin](jellyfin.md) | implementing | `implement/jellyfin-provider-spec` | [#48](https://github.com/nokternol/warden/pull/48) |
+| [radarr](radarr.md) | implementing | `implement/radarr-provider-spec` | [#49](https://github.com/nokternol/warden/pull/49) (merged) |
+| [sonarr](sonarr.md) | implementing | `implement/sonarr-provider-spec` | [#50](https://github.com/nokternol/warden/pull/50) (merged) |
 | [tautulli](tautulli.md) | draft | — | — |
 | [overseerr](overseerr.md) | draft | — | — |
 | [seerr](seerr.md) | draft | — | — |
@@ -80,7 +80,7 @@ lifecycle:
 `_automation-parameters` and `_precedence` are cross-cutting; implement them alongside whichever
 provider spec first needs the mechanism or precedence rule they define, not standalone.
 
-**Plex is partially done, still `implementing`.** [#46](https://github.com/nokternol/maintainarr/pull/46)
+**Plex is partially done, still `implementing`.** [#46](https://github.com/nokternol/warden/pull/46)
 merged every field in its filter-type-mapping table except `genres`/`certification`: the
 enrichment pipeline has no mechanism today to keep Radarr/Sonarr's construction-time value from
 being overwritten by Plex's enrichment-stored one, so wiring Plex as a producer for those two
@@ -88,13 +88,13 @@ fields now would regress existing behavior rather than extend it. Blocked on `_p
 implementation landing precedence-ordering machinery first — revisit `plex.md`'s `genres`/
 `certification` rows once that ships.
 
-**Radarr is partially done, still `implementing`.** [#49](https://github.com/nokternol/maintainarr/pull/49)
+**Radarr is partially done, still `implementing`.** [#49](https://github.com/nokternol/warden/pull/49)
 (merged) left `runtime`→`runtimeMinutes` and `studio` unwired for the same reason: both are
 already-live `EnrichmentFields` keys with Plex as sole current producer, and wiring Radarr in now
 would make it a second, uncoordinated producer with no precedence ordering. Also blocked on
 `_precedence`'s implementation — revisit `radarr.md`'s `runtime`/`studio` rows once that ships.
 
-**Sonarr is partially done, still `implementing`.** [#50](https://github.com/nokternol/maintainarr/pull/50)
+**Sonarr is partially done, still `implementing`.** [#50](https://github.com/nokternol/warden/pull/50)
 (merged) left `moveSeries`/`changeLanguageProfile` unwired — both need a single-select task
 parameter `AutomationBuilder` has no UI for yet (mirrors Radarr's `moveMovie`, same gap). Blocked
 on `tickets/11-automation-task-parameters.md`'s implementation, not `_precedence` — no Sonarr

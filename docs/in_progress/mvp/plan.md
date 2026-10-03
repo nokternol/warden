@@ -17,7 +17,9 @@ The MVP is done when all three of these hold for the deployed container:
    compiled, typechecked and covered by its existing tests, ready to be un-deferred (decision 7).
 3. **The system is simplified.** Simplified means low cognitive load. Each concept has **one name**
    and **one mechanism** across UI, API, code and docs, and no two of those contradict each other.
-   The [Glossary](#glossary) is the single list of names, and a guard test enforces it.
+   `VOCABULARY.md`'s glossary is the single list of names, fed by this plan's [Glossary](#glossary)
+   as slices ship. Names are not test-enforced: wording is checked in review, and renamed types are
+   proved complete by typecheck.
 
 Exposure is decided by **one mechanism**: a single **scope declaration** (`contract/scope.ts`,
 created in S1) lists every deferred page, API procedure, provider type, rule and task. The server
@@ -62,23 +64,19 @@ verified in G1**, and everything else of those kinds is declared deferred.
 
 ## Glossary
 
-One name per concept, everywhere. Every row is decided (8a–8g and decisions 2, 6, 9a).
+One name per concept, everywhere. Settled names live in
+[`VOCABULARY.md`](../../architecture/VOCABULARY.md#glossary--one-name-per-concept). The rows below are
+decided but not yet built; each slice moves its row into `VOCABULARY.md` when it ships.
 
-| Concept | Canonical name | Retired names (guard-tested) | Rationale |
-|---|---|---|---|
-| A configured external system | **Provider** | service, integration (UI) | PRODUCT.md and the UI already say Provider. `BaseProviderConnection` stays as an internal HTTP class name. |
-| The engine's definition of something that can be filtered on: key, type, predicate, the field it reads, the providers producing that field, and their precedence when several do | **Rule** *(8a)* | `filterRegistry`, `filterFields`, `/api/filter-fields` | `MediaRule`/`MEDIA_RULES` keep their names. Engine-only: the client receives a `MediaRuleDescriptor` that carries presentation and never the predicate, field mapping, producers or precedence (C2). |
-| A key/value pair: a rule's key and a chosen value, as set in the UI and stored by a query | **Filter** *(8a)* | `FilterValueEntry` | Knows nothing about which provider supplies the data; the rule resolves that. `FilterValue` stays the name of the value itself. |
-| A named, persisted set of filters | **MediaQuery**, shown as "Query" *(8b)* | saved query, `SavedQuery`, collection | "Saved" is a state, not a name (`VOCABULARY.md`). The UI still says "Saved queries". |
-| A query used by an automation, with role include/exclude | **Included / excluded query** *(8c)* | query source, `MediaQuerySource`, `automation_query_sources` | "Source" is reserved for one meaning (next row). |
-| A provider that owns media | **Source** *(8d)* | `sourceProviders` on rules (becomes `providers`) | Today "source" means four things. It keeps one. |
-| Movie or series | **movie / series** *(8e)* | show, `MediaKind`, `NormalizedShow` | Users see Sonarr's term, and the UI, routes and `series*` fields already say series. Persisted `'show'` values migrate. |
-| Query + task + schedule | **Automation** (user or system) *(8f)* | "Task" for automations (System page, stories) | The System page currently calls system automations "Tasks". |
-| An action a provider offers | **Task** | — | `ActuatorTask`, unchanged. |
-| One execution of an automation | **Run**, page **Runs** *(8g)* | Activity | The page shows runs, the verb is Run Now, and the API is `/automations/runs`. |
-| Automation controls | **Run Now / Disable / Enable / Delete** *(decided)* | Pause, Resume, Play | Decision 2. |
-| The request-manager provider | **Seerr** *(decided)* | Overseerr, `OVERSEERR`, `OverseerrProvider`, `overseerr*` rule keys | Decision 9a. Seerr is Overseerr's API-compatible successor, so one type serves both servers. |
-| The product | **Warden** *(decided)* | Maintainarr | Decision 6. |
+| Concept | Canonical name | Retired names | Rationale | Slice |
+|---|---|---|---|---|
+| The engine's definition of something that can be filtered on: key, type, predicate, the field it reads, the providers producing that field, and their precedence when several do | **Rule** *(8a)* | `filterRegistry`, `filterFields`, `/api/filter-fields` | `MediaRule`/`MEDIA_RULES` keep their names. Engine-only: the client receives a `MediaRuleDescriptor` that carries presentation and never the predicate, field mapping, producers or precedence (C2). | B6 |
+| A key/value pair: a rule's key and a chosen value, as set in the UI and stored by a query | **Filter** *(8a)* | `FilterValueEntry` | Knows nothing about which provider supplies the data; the rule resolves that. `FilterValue` stays the name of the value itself. | B6 |
+| A query used by an automation, with role include/exclude | **Included / excluded query** *(8c)* | query source, `MediaQuerySource`, `automation_query_sources` | "Source" is reserved for one meaning (next row). | B6 |
+| A provider that owns media | **Source** *(8d)* | `sourceProviders` on rules (becomes `providers`) | Today "source" means four things. It keeps one. | B6 |
+| Movie or series | **movie / series** *(8e)* | show, `MediaKind`, `NormalizedShow` | Users see Sonarr's term, and the UI, routes and `series*` fields already say series. Persisted `'show'` values migrate. | B2 |
+| Automation controls | **Run Now / Disable / Enable / Delete** *(decided)* | Pause, Resume, Play | Decision 2. | B1 |
+| The request-manager provider | **Seerr** *(decided)* | Overseerr, `OVERSEERR`, `OverseerrProvider`, `overseerr*` rule keys | Decision 9a. Seerr is Overseerr's API-compatible successor, so one type serves both servers. | D3 |
 
 ## Destination scenario
 
@@ -265,7 +263,7 @@ flowchart LR
   A1 --> A2[A2 owner-only sign-in]
   B1[B1 Disable verb] --> F1[F1 first-run path]
   B2[B2 movie/series] --> C3[C3 browse speaks registry]
-  B5[B5 glossary guard + UI names] --> E1
+  B5[B5 glossary + UI names] --> E1
   B5 --> B6[B6 rule, filter, query, source names]
   B6 --> C2[C2 rule presentation on registry]
   C0 --> C3
@@ -382,31 +380,29 @@ names, so nothing is renamed twice.
   stays, with a header marking it a dated snapshot rather than current fact. Record F1–F11
   and D2–D3 in the fracture ledger as Open entries pointing at their slices.
 
-**B5 · Glossary guard and user-facing names** *(decisions 6, 8)*
-- **Model:** Sonnet 5.5 (rename behind a guard test).
+**B5 · Glossary and user-facing names** *(decisions 6, 8)*
+- **Model:** Sonnet 5.5 (renames; TDD covers only the runtime paths).
 - **Why:** F6, F8, and the `maintainarr` residue: log filenames, the Plex OAuth product/device name,
   default `DB_PATH`, the Cypress home test, fixtures, `.env.example`, `config/README.md` and README
   links.
 - **Behaviours:**
-  - A retired name from `VOCABULARY.md`'s deprecated table appearing anywhere in `src/`, `server/`,
-    `cypress/`, `tests/`, config or READMEs fails the build. The only exception is an explicit
-    history allowlist (migrations, `.impeccable/` snapshots). The doc is the authority, and one
-    check enforces every glossary row.
   - With no `DB_PATH` set, the database is `./config/db/warden.db`.
   - Logs are written as `warden-*.log`, and Plex lists the app as Warden.
-- **Expected end state:** move the [Glossary](#glossary) into `VOCABULARY.md`. Rename UI copy and stories: Query
-  not "Saved query", System automations not "Tasks", page Runs not Activity, no
-  Collections/services.
+- **Expected end state:** move the [Glossary](#glossary)'s built rows into `VOCABULARY.md` as
+  documentation (no automated check reads it); the rows whose renames belong to later slices stay
+  in the plan until those slices ship. Rename UI copy and stories as plain edits, verified in Ladle and
+  `yarn dev`: Query not "Saved query", System automations not "Tasks", the Runs page at `/runs` not
+  Activity, no Collections/services.
 - **Note:** the new Plex product name makes the instance show up as a new device on plex.tv.
   Existing sessions keep working.
 
 **B6 · Rule, filter, query and source names in code and API** *(decisions 8a, 8c, 8d)*
-- **Model:** Sonnet 5.5 (cross-cutting rename; typecheck and B5's guard prove completeness).
+- **Model:** Sonnet 5.5 (cross-cutting rename; typecheck proves completeness).
 - **Why:** F5, F7.
 - **Behaviours:**
-  - With the retired code names (`filterRegistry`, `filterFields`, `FilterValueEntry`,
-    `MediaQuerySource`, `querySources`, `sourceProviders`) added to the deprecated table, B5's check
-    passes.
+  - The retired code names (`filterRegistry`, `filterFields`, `FilterValueEntry`,
+    `MediaQuerySource`, `querySources`, `sourceProviders`) are gone, and typecheck passes. They are
+    listed in `VOCABULARY.md`'s deprecated table.
   - An automation's included and excluded queries survive the table rename intact.
   - A filter is exactly a rule key and a value. An instance-scoped value (tags, quality and language
     profiles) names the configured instance its ids belong to inside the value itself.
@@ -575,7 +571,7 @@ names, so nothing is renamed twice.
   `VOCABULARY.md`.
 
 **D3 · Seerr is the one request-manager provider** *(decision 9a; after B5, C5)*
-- **Model:** Sonnet 5.5 (type consolidation with a data migration, guarded by B5's check).
+- **Model:** Sonnet 5.5 (type consolidation with a data migration, guarded by typecheck).
 - **Why:** two type names (`OVERSEERR`, `SEERR`) for one implementation, with `SEERR` unbuildable
   through `ProviderFactory`.
 - **Behaviours:**
@@ -589,8 +585,7 @@ names, so nothing is renamed twice.
 - **Expected end state:** `MetadataProviderType.SEERR` is the only request-manager type, built by
   `ProviderFactory`. The connection class is `SeerrProvider`. Rule keys become `seerrRequestStatus`
   and `seerrHasIssue`. The migration rewrites provider rows, `media_query_filter_values` keys and
-  enrichment rows. The `OVERSEERR` names join `VOCABULARY.md`'s retired names, so B5's check enforces
-  them.
+  enrichment rows. The `OVERSEERR` names join `VOCABULARY.md`'s retired names.
 - **Deletes:** the `seerrProvider.ts` re-export alias. The single class now carries the one name.
 - **Docs:** fold the provider e2e `seerr.md`/`overseerr.md` specs' status into the implementation
   map. Phase 9 is absorbed here.

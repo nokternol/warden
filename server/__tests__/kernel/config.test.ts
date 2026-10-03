@@ -34,7 +34,7 @@ describe('config', () => {
       expect(config.COMMIT_TAG).toBe('local');
       expect(config.LOG_LEVEL).toBe('info');
       expect(config.LOG_DIR).toBe('./config/logs');
-      expect(config.DB_PATH).toBe('./config/db/maintainarr.db');
+      expect(config.DB_PATH).toBe('./config/db/warden.db');
       expect(config.TRUST_PROXY).toBe(false);
     });
 

@@ -60,7 +60,7 @@ const logger = winston.createLogger({
   transports: [
     // Human-readable daily rotating log
     new DailyRotateFile({
-      filename: `${logDir}/maintainarr-%DATE%.log`,
+      filename: `${logDir}/warden-%DATE%.log`,
       datePattern: 'YYYY-MM-DD',
       maxSize: '20m',
       maxFiles: '14d',
@@ -68,7 +68,7 @@ const logger = winston.createLogger({
     }),
     // Machine-readable JSON log (for parsing/monitoring)
     new DailyRotateFile({
-      filename: `${logDir}/maintainarr-%DATE%.json.log`,
+      filename: `${logDir}/warden-%DATE%.json.log`,
       datePattern: 'YYYY-MM-DD',
       maxSize: '20m',
       maxFiles: '14d',

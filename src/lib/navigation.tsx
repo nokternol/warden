@@ -1,7 +1,7 @@
 import type { SidebarItem } from '@app/types/navigation';
 import {
-  Activity,
   Clapperboard,
+  History,
   LayoutDashboard,
   Monitor,
   Search,
@@ -35,10 +35,10 @@ export const NAV_ITEMS: Omit<SidebarItem, 'active'>[] = [
     href: '/automations',
   },
   {
-    id: 'activity',
-    label: 'Activity',
-    icon: <Activity size={20} strokeWidth={1.75} />,
-    href: '/activity',
+    id: 'runs',
+    label: 'Runs',
+    icon: <History size={20} strokeWidth={1.75} />,
+    href: '/runs',
   },
 ];
 
