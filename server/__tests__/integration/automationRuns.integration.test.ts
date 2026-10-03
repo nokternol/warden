@@ -75,7 +75,7 @@ describe('GET /api/automations/runs', () => {
     app = express();
     app.use(express.json());
     app.use(requestIdMiddleware);
-    // Inject a fake user so isAuthenticated() passes
+    // Inject a fake user so the contract's default-deny check passes
     app.use((req, _res, next) => {
       req.user = { id: 1, email: 'test@example.com' } as unknown as NonNullable<typeof req.user>;
       next();

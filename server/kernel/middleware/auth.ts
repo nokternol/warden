@@ -1,5 +1,4 @@
 import type { NextFunction, Request, Response } from 'express';
-import { UnauthorizedError } from '../errors';
 import { getChildLogger } from '../logger';
 
 const log = getChildLogger('AuthMiddleware');
@@ -11,8 +10,8 @@ declare module 'express-session' {
 }
 
 /**
- * Attaches user to request if session exists (non-blocking).
- * Use before routes to make req.user available.
+ * Attaches user to request if session exists (non-blocking). Requiring a
+ * user is the API contract implementer's job (`server/kernel/api.ts`).
  */
 export async function checkUser(req: Request, _res: Response, next: NextFunction): Promise<void> {
   try {
@@ -33,26 +32,4 @@ export async function checkUser(req: Request, _res: Response, next: NextFunction
     }
     next();
   }
-}
-
-/**
- * Guard middleware - requires authentication.
- * Throws 401 if no user attached.
- */
-export function isAuthenticated() {
-  return (req: Request, _res: Response, next: NextFunction): void => {
-    // DEV BYPASS: BYPASS_AUTH=true skips auth for Playwright analysis — remove before shipping
-    if (process.env.BYPASS_AUTH === 'true') {
-      next();
-      return;
-    }
-    if (!req.user) {
-      log.warn('Unauthenticated request', {
-        requestId: req.requestId,
-        path: req.path,
-      });
-      throw new UnauthorizedError('Authentication required');
-    }
-    next();
-  };
 }
