@@ -5,6 +5,7 @@ import { ORPCError, implement } from '@orpc/server';
 import type { Router } from '@orpc/server';
 import type { RequestHandler } from 'express';
 import type { PublicUser } from '../database/schema';
+import { AppError } from './errors';
 
 /** What every procedure handler receives about the request it serves. */
 export interface ApiContext {
@@ -26,10 +27,25 @@ export const api = implement(contract)
     return next();
   });
 
+/**
+ * Runs a procedure and wraps its validated output in the success envelope. An
+ * AppError it throws keeps its HTTP status and type on the way out.
+ */
+async function inSuccessEnvelope(runProcedure: () => Promise<unknown>) {
+  try {
+    return { status: 'ok', data: await runProcedure() };
+  } catch (err) {
+    if (err instanceof AppError) {
+      throw new ORPCError(err.type, { status: err.statusCode, message: err.message });
+    }
+    throw err;
+  }
+}
+
 /** Serves a (sub)router of contract procedures over HTTP at their contract paths. */
 export function serveApi(router: Router<AnyContractRouter, ApiContext>): RequestHandler {
   const handler = new OpenAPIHandler(router, {
-    clientInterceptors: [async ({ next }) => ({ status: 'ok', data: await next() })],
+    clientInterceptors: [({ next }) => inSuccessEnvelope(next)],
     customErrorResponseBodyEncoder: (error) => ({
       status: 'error',
       error: { type: error.code, message: error.message },

@@ -93,4 +93,14 @@ describe('serveApi — the contract served over HTTP', () => {
       error: { type: 'UNAUTHORIZED', message: 'Authentication required' },
     });
   });
+
+  it('answers an application error thrown by a procedure with its status inside the error envelope', async () => {
+    const res = await request(app).post('/api/automations/9999/run');
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({
+      status: 'error',
+      error: { type: 'NOT_FOUND', message: 'Automation 9999 not found' },
+    });
+  });
 });

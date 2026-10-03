@@ -10,6 +10,15 @@ export const IsoDateSchema = z.union([z.date().transform((d) => d.toISOString())
 export const emptyToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
   z.preprocess((v) => (v === '' ? undefined : v), schema.optional());
 
+// A path id: callers pass a number, the server receives the URL segment as a string.
+export const IdSchema = z.union([
+  z.number().int().positive(),
+  z
+    .string()
+    .regex(/^\d+$/, 'id must be a positive integer')
+    .transform((v) => Number.parseInt(v, 10)),
+]);
+
 export const ContentTypeSchema = z.enum(['movie', 'show']);
 
 export const FilterValueSchema = z.union([
