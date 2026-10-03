@@ -1,12 +1,10 @@
 import { api } from '@app/lib/api/client';
 import { useApi } from '@app/lib/api/useApi';
+import type { QuerySourceInput } from '@contract/automations';
 import useSWR from 'swr';
 
-export interface QuerySource {
-  queryId: number;
-  role: 'include' | 'exclude';
-  sortOrder: number;
-}
+/** A query source as the list edits it: always in a known position. */
+export type QuerySource = Required<QuerySourceInput>;
 
 export interface QuerySourceListProps {
   sources: QuerySource[];

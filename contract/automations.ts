@@ -10,9 +10,18 @@ import {
 
 const AutomationStatusSchema = z.enum(['active', 'paused']);
 
+/** One query an automation draws from, included in or excluded from its media set. */
+const QuerySourceInputSchema = z.object({
+  queryId: z.number().int().positive(),
+  role: z.enum(['include', 'exclude']),
+  sortOrder: z.number().int().optional(),
+});
+
+export type QuerySourceInput = z.input<typeof QuerySourceInputSchema>;
+
 /**
- * A new automation's draft. `queryId` is the single-query form older callers
- * send; it becomes one include source when `querySources` is absent.
+ * A new automation's draft. `queryId` is the single-query shorthand: it becomes
+ * one include source when `querySources` is absent.
  */
 const CreateAutomationInputSchema = z
   .object({
@@ -21,16 +30,7 @@ const CreateAutomationInputSchema = z
     taskId: z.string().min(1),
     taskParameter: z.string().min(1).optional(),
     schedule: z.string().min(1),
-    querySources: z
-      .array(
-        z.object({
-          queryId: z.number().int().positive(),
-          role: z.enum(['include', 'exclude']),
-          sortOrder: z.number().int().optional(),
-        })
-      )
-      .min(1)
-      .optional(),
+    querySources: z.array(QuerySourceInputSchema).min(1).optional(),
     queryId: z.number().int().positive().optional(),
   })
   .transform((val) => ({
@@ -43,6 +43,8 @@ const CreateAutomationInputSchema = z
       val.querySources ??
       (val.queryId ? [{ queryId: val.queryId, role: 'include' as const, sortOrder: 0 }] : []),
   }));
+
+export type CreateAutomationInput = z.input<typeof CreateAutomationInputSchema>;
 
 export const automations = {
   list: base

@@ -1,24 +1,10 @@
 import { api } from '@app/lib/api/client';
 import { useApi } from '@app/lib/api/useApi';
+import type { CreateAutomationInput } from '@contract/automations';
 import type { AutomationDto } from '@contract/schemas';
 import { useState } from 'react';
 
-export type { AutomationDto };
-
-export interface QuerySourceInput {
-  queryId: number;
-  role: 'include' | 'exclude';
-  sortOrder: number;
-}
-
-export interface CreateAutomationInput {
-  name: string;
-  querySources: QuerySourceInput[];
-  providerId: number;
-  taskId: string;
-  taskParameter?: string;
-  schedule: string;
-}
+export type { AutomationDto, CreateAutomationInput };
 
 // Run Now returns 202 once the job is *triggered*, not once it's finished — system jobs and
 // cross-provider tasks can take real time. These staggered revalidations catch the eventual
