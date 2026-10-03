@@ -55,7 +55,6 @@ export {
 
 // The rule vocabulary and its client-facing projection.
 export type {
-  ContentType,
   FilterValue,
   FilterValueEntry,
   MediaRule,

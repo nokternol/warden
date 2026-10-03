@@ -1,7 +1,7 @@
+import type { ContentType } from '@contract/schemas';
 import { mediaIdentity } from '@server/database/schema';
 import type { DrizzleDb } from '@server/kernel/db';
 import { and, eq } from 'drizzle-orm';
-import type { MediaKind } from './roles';
 
 export interface GroupIds {
   tmdbId?: number;
@@ -12,11 +12,13 @@ export interface GroupIds {
   year?: number;
 }
 
-const PRIMARY_COLUMN: Record<MediaKind, typeof mediaIdentity.tmdbId | typeof mediaIdentity.tvdbId> =
-  {
-    movie: mediaIdentity.tmdbId,
-    series: mediaIdentity.tvdbId,
-  };
+const PRIMARY_COLUMN: Record<
+  ContentType,
+  typeof mediaIdentity.tmdbId | typeof mediaIdentity.tvdbId
+> = {
+  movie: mediaIdentity.tmdbId,
+  series: mediaIdentity.tvdbId,
+};
 
 /**
  * Find-or-create the logical group (`media_identity` row) an item's ids belong to.
@@ -24,7 +26,11 @@ const PRIMARY_COLUMN: Record<MediaKind, typeof mediaIdentity.tmdbId | typeof med
  * and identifiers are only ever filled onto it (never overwritten), per the design's
  * "grouping: find-or-create, never merge" decision.
  */
-export async function resolveGroup(db: DrizzleDb, kind: MediaKind, ids: GroupIds): Promise<number> {
+export async function resolveGroup(
+  db: DrizzleDb,
+  kind: ContentType,
+  ids: GroupIds
+): Promise<number> {
   const primaryId = kind === 'movie' ? ids.tmdbId : ids.tvdbId;
   const primaryColumn = PRIMARY_COLUMN[kind];
 
@@ -71,7 +77,7 @@ export async function resolveGroup(db: DrizzleDb, kind: MediaKind, ids: GroupIds
   return insertGroup(db, kind, ids);
 }
 
-async function insertGroup(db: DrizzleDb, kind: MediaKind, ids: GroupIds): Promise<number> {
+async function insertGroup(db: DrizzleDb, kind: ContentType, ids: GroupIds): Promise<number> {
   const [row] = await db
     .insert(mediaIdentity)
     .values({

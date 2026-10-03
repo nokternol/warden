@@ -1,7 +1,8 @@
+import type { ContentType } from '@contract/schemas';
 import { api } from '@server/kernel/api';
 import type { ActiveFieldSetCache } from './activeFieldSet';
 import { MEDIA_RULES, toDescriptor } from './filterRegistry';
-import type { ContentType, MediaRule, MediaRuleDescriptor } from './filterRegistry';
+import type { MediaRule, MediaRuleDescriptor } from './filterRegistry';
 
 // Widened for iteration: MEDIA_RULES's literal-narrowed export type (needed for the
 // derived range-param-name types in filterRegistry.ts) breaks `.includes()`'s overload

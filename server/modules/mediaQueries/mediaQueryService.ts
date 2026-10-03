@@ -1,3 +1,4 @@
+import type { ContentType } from '@contract/schemas';
 import { eq } from 'drizzle-orm';
 import {
   type MetadataProviderType,
@@ -7,7 +8,7 @@ import {
 } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
 import { NotFoundError, ValidationError } from '../../kernel/errors';
-import { type ContentType, type FilterValue, type FilterValueEntry, getRule } from '../media';
+import { type FilterValue, type FilterValueEntry, getRule } from '../media';
 
 export type { ContentType, FilterValue, FilterValueEntry };
 

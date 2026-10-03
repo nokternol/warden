@@ -1,5 +1,5 @@
+import type { ContentType } from '@contract/schemas';
 import { MetadataProviderType } from '../../database/schema';
-import type { MediaKind } from '../providers';
 import { fieldsByProviderType } from './activeFieldSet';
 import type { EnrichmentFields } from './mediaFieldProvider';
 import type { NormalizedMovie } from './movie';
@@ -8,7 +8,6 @@ import type { NormalizedShow } from './show';
 export type { NormalizedMovie } from './movie';
 export type { NormalizedShow } from './show';
 
-export type ContentType = MediaKind;
 export type RangeValue = { min?: number; max?: number };
 export type FilterValue = string | number | boolean | RangeValue;
 

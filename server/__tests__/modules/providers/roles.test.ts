@@ -1,15 +1,15 @@
 import { MetadataProviderType } from '@server/database/schema';
 import {
-  SOURCE_OWNER_BY_KIND,
+  SOURCE_OWNER,
+  contentTypeOfSourceType,
   isMediaSourceType,
-  kindOfSourceType,
 } from '@server/modules/providers/roles';
 import { describe, expect, it } from 'vitest';
 
-describe('SOURCE_OWNER_BY_KIND', () => {
+describe('SOURCE_OWNER', () => {
   it('names Radarr as the movie catalog owner and Sonarr as the series catalog owner', () => {
-    expect(SOURCE_OWNER_BY_KIND.movie).toBe(MetadataProviderType.RADARR);
-    expect(SOURCE_OWNER_BY_KIND.series).toBe(MetadataProviderType.SONARR);
+    expect(SOURCE_OWNER.movie).toBe(MetadataProviderType.RADARR);
+    expect(SOURCE_OWNER.series).toBe(MetadataProviderType.SONARR);
   });
 });
 
@@ -24,13 +24,13 @@ describe('isMediaSourceType', () => {
   });
 });
 
-describe('kindOfSourceType', () => {
+describe('contentTypeOfSourceType', () => {
   it('maps a catalog-owning provider type to its media kind', () => {
-    expect(kindOfSourceType(MetadataProviderType.RADARR)).toBe('movie');
-    expect(kindOfSourceType(MetadataProviderType.SONARR)).toBe('series');
+    expect(contentTypeOfSourceType(MetadataProviderType.RADARR)).toBe('movie');
+    expect(contentTypeOfSourceType(MetadataProviderType.SONARR)).toBe('series');
   });
 
   it('is undefined for a provider type that owns no catalog', () => {
-    expect(kindOfSourceType(MetadataProviderType.TMDB)).toBeUndefined();
+    expect(contentTypeOfSourceType(MetadataProviderType.TMDB)).toBeUndefined();
   });
 });
