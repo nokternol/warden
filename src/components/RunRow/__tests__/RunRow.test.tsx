@@ -1,6 +1,5 @@
 import type { AutomationRunDto } from '@app/hooks/useAutomationRuns';
-import { render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, setupUser, within } from '@tests/helpers/component';
 import { describe, expect, it } from 'vitest';
 import RunRow from '../index';
 
@@ -27,7 +26,7 @@ function renderRow(row: AutomationRunDto) {
 
 describe('RunRow', () => {
   it('expands to the titles the run targeted', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderRow(run);
 
     await user.click(screen.getByRole('button', { name: /show items/i }));
@@ -37,7 +36,7 @@ describe('RunRow', () => {
   });
 
   it('marks a title that has since left its source as removed', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderRow(run);
 
     await user.click(screen.getByRole('button', { name: /show items/i }));
@@ -55,7 +54,7 @@ describe('RunRow', () => {
   });
 
   it('says so when an expanded run recorded no items', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderRow({ ...run, id: 2, automationName: 'system:identity-resolution', itemCount: 3 });
 
     await user.click(screen.getByRole('button', { name: /show items/i }));
