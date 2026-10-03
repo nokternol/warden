@@ -73,23 +73,15 @@ the role interfaces it `implements`, never assumed from the connection base. Sou
 ## Glossary — one name per concept
 
 The names the product settled on, across UI, API, code and docs. A second name for a concept is a
-fracture. Rows marked *decided* name a concept whose code rename is still to come, so they can run
-ahead of the tables above (for example movie/series, Included/excluded query and Seerr).
+fracture.
 
 | Concept | Canonical name | Retired names | Rationale |
 |---|---|---|---|
 | A configured external system | **Provider** | service, integration (UI) | PRODUCT.md and the UI already say Provider. `BaseProviderConnection` stays as an internal HTTP class name. |
-| The engine's definition of something that can be filtered on: key, type, predicate, the field it reads, the providers producing that field, and their precedence when several do | **Rule** *(decided)* | `filterRegistry`, `filterFields`, `/api/filter-fields` | `MediaRule`/`MEDIA_RULES` keep their names. Engine-only: the client receives a `MediaRuleDescriptor` that carries presentation and never the predicate, field mapping, producers or precedence. |
-| A key/value pair: a rule's key and a chosen value, as set in the UI and stored by a query | **Filter** *(decided)* | `FilterValueEntry` | Knows nothing about which provider supplies the data; the rule resolves that. `FilterValue` stays the name of the value itself. |
 | A named, persisted set of filters | **MediaQuery**, shown as "Query" | saved query, `SavedQuery`, collection | "Saved" is a state, not a name. |
-| A query used by an automation, with role include/exclude | **Included / excluded query** *(decided)* | query source, `MediaQuerySource`, `automation_query_sources` | "Source" is reserved for one meaning (next row). |
-| A provider that owns media | **Source** *(decided)* | `sourceProviders` on rules (becomes `providers`) | Today "source" means four things. It keeps one. |
-| Movie or series | **movie / series** *(decided)* | show, `MediaKind`, `NormalizedShow` | Users see Sonarr's term, and the UI, routes and `series*` fields already say series. Persisted `'show'` values migrate. |
 | Query + task + schedule | **Automation** (user or system) | "Task" for automations (System page, stories) | A system automation is an automation, not a "Task". |
 | An action a provider offers | **Task** | — | `ActuatorTask`, unchanged. |
 | One execution of an automation | **Run**, page **Runs** | Activity | The page shows runs, the verb is Run Now, and the API is `/automations/runs`. |
-| Automation controls | **Run Now / Disable / Enable / Delete** *(decided)* | Pause, Resume, Play | They would imply runtime control over an executing process. |
-| The request-manager provider | **Seerr** *(decided)* | Overseerr, `OVERSEERR`, `OverseerrProvider`, `overseerr*` rule keys | Seerr is Overseerr's API-compatible successor, so one type serves both servers. |
 | The product | **Warden** | Maintainarr | Log files are `warden-*.log`, the default database is `./config/db/warden.db`, and Plex lists the app as Warden. |
 
 ## Deprecated names — stop writing these
@@ -102,7 +94,7 @@ ahead of the tables above (for example movie/series, Included/excluded query and
 | `getMovies` / `getSeries` on sources | `getMediaItems()` on the `MediaSource` role | — |
 | `defineRoute`, `*.routes.ts`/`*.handler.ts` | A procedure in the API contract, implemented in `<module>.procedures.ts` | Deleted (C0). |
 | Local SWR `fetcher`s, hand-written `/api/...` URLs | `api.<ns>.<procedure>` via `useApi` | Deleted (C0). |
-| "Saved query", `SavedQuery`, "collection" (a named set of filters) | Query (`MediaQuery`) | Renamed in UI copy and stories (B5). |
+| "Saved query", `SavedQuery`, "collection" (a named set of filters) | Query (`MediaQuery`) | Renamed in UI copy, stories, API errors and docs (B5). |
 | "Task" for an automation (System page, stories) | Automation — Task means a provider action | Renamed (B5). |
 | Activity (page) | Runs, route `/runs` | Renamed (B5). |
 | service, integration (in UI copy) | Provider | Renamed (B5). |
