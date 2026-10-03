@@ -226,5 +226,23 @@ describe('AutomationExecutor writes to automation_runs', () => {
       const items = await automationRunService.listRunItems(run.id);
       expect(items.data.map((i) => [i.title, i.deleted])).toEqual([['Ronin', true]]);
     });
+
+    it('records the items a run targeted even when its task fails', async () => {
+      server.use(
+        http.get(`${RADARR_URL}/api/v3/movie`, () =>
+          HttpResponse.json([createRadarrMovie({ id: 4, tmdbId: 104, title: 'Alien' })])
+        ),
+        http.put(`${RADARR_URL}/api/v3/movie/:id`, () => new HttpResponse(null, { status: 400 }))
+      );
+      const { automation } = await seedRadarrAutomation();
+
+      await executor.execute(automation.id);
+
+      const [run] = await automationRunService.listRuns({ automationId: automation.id });
+      expect(run.status).toBe('error');
+      const items = await automationRunService.listRunItems(run.id);
+      expect(items.data.map((i) => i.title)).toEqual(['Alien']);
+      expect(run.itemCount).toBe(1);
+    });
   });
 });

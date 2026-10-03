@@ -27,7 +27,7 @@ builds the provider once, hands the instance to `evaluate`, and reuses the *same
 
 | Caller | Builds the provider via | Uses the result for |
 |---|---|---|
-| `AutomationExecutor.executeWithSources` | `providerFactory.create(providerSettings)` | project ids → `task.run` |
+| `AutomationExecutor.planRun` | `providerFactory.create(providerSettings)` | the run's target items and their actuator ids; `execute` passes the ids to `task.run` |
 | `GET /media-queries/:id/preview` | one active instance per `MediaSourceFactory.sourcesFor(contentType)` entry — no longer single-active for `movie`/`series` | `{ count, instances: [{ providerId, name, count }] }`, summed across instances |
 | `media.handler` browse (`listMovies`/`listSeries`) | a thin adapter over the cached per-instance sublists (`{ getMediaItems: async () => sublists.flatMap(...) }`, each item self-describing its `providerId`) | id set → live display-grouping → sort/paginate |
 

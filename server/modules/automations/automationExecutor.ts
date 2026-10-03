@@ -11,6 +11,7 @@ import {
 import type { MediaItem, MediaSource, MediaSourceFactory } from '../media';
 import type { MediaQueryService } from '../mediaQueries';
 import {
+  type ActuatorTask,
   type IProviderFactory,
   ProviderFactory,
   type ProviderSettingsService,
@@ -42,6 +43,13 @@ interface ExecutorDeps {
   db?: DrizzleDb;
   systemTaskRunner?: SystemTaskRunnerLike;
   eventBus?: DomainEventBus;
+}
+
+/** What a user run acts on: the task, its target items, and their actuator ids. */
+interface RunPlan {
+  task: ActuatorTask;
+  targets: MediaItem[];
+  actuatorIds: Parameters<ActuatorTask['run']>[0];
 }
 
 // ─── Executor ─────────────────────────────────────────────────────────────────
@@ -85,6 +93,7 @@ export class AutomationExecutor {
     let itemCount = 0;
     let kind: 'user' | 'system' = 'user';
     let taskId = '';
+    let targets: MediaItem[] = [];
 
     try {
       const automation = await this.automationService.getById(automationId);
@@ -126,21 +135,18 @@ export class AutomationExecutor {
       }
 
       const providerSettings = await this.providerSettingsService.findById(automation.provider.id);
-      const outcome = await this.executeWithSources(
-        automation.taskId,
-        providerSettings,
-        sources,
-        automation.taskParameter
-      );
-      itemCount = outcome.targets.length;
+      const plan = await this.planRun(automation.taskId, providerSettings, sources);
+      targets = plan.targets;
+      itemCount = targets.length;
+      await plan.task.run(plan.actuatorIds, automation.taskParameter);
       await this.recordResult(automationId, taskId, {
         itemCount,
         status: 'success',
         kind,
-        targets: outcome.targets,
+        targets,
       });
 
-      this.emitDataChange(outcome.affects, itemCount);
+      this.emitDataChange(plan.task.affects, itemCount);
 
       log.info('Automation executed', { automationId, taskId: automation.taskId, itemCount });
     } catch (err) {
@@ -150,18 +156,23 @@ export class AutomationExecutor {
         status: 'error',
         error: err instanceof Error ? err.message : 'Unknown error',
         kind,
+        targets,
       });
     } finally {
       this.inFlight.delete(automationId);
     }
   }
 
-  private async executeWithSources(
+  /**
+   * Decides what a user run acts on: the enabled task, the catalog items the
+   * query targets, and those items in the actuator's own id space. Running the
+   * task is the caller's step, so the targets are known even if the task fails.
+   */
+  private async planRun(
     taskId: string,
     providerSettings: MetadataProvider,
-    sources: AutomationQuerySourceDto[],
-    taskParameter?: string
-  ): Promise<{ targets: MediaItem[]; affects: 'media' | undefined }> {
+    sources: AutomationQuerySourceDto[]
+  ): Promise<RunPlan> {
     const queryDtos = await Promise.all(
       sources.map((s) => this.mediaQueryService.getById(s.queryId))
     );
@@ -196,10 +207,11 @@ export class AutomationExecutor {
         contentType,
         sources: querySpecs,
       });
-      const finalIds = matched.map((item) => mediaSource.idOf(item)!);
-
-      await task.run(finalIds, taskParameter);
-      return { targets: matched, affects: task.affects };
+      return {
+        task,
+        targets: matched,
+        actuatorIds: matched.map((item) => mediaSource.idOf(item)!),
+      };
     }
 
     // Non-source actuator: it owns no catalog, so the query evaluates against
@@ -223,14 +235,12 @@ export class AutomationExecutor {
       contentType,
       sources: querySpecs,
     });
-    const { actuatorIds: finalIds, addressed } = await resolveActuatorTargets(
+    const { actuatorIds, addressed } = await resolveActuatorTargets(
       this.db,
       providerSettings.type,
       matched
     );
-
-    await task.run(finalIds, taskParameter);
-    return { targets: addressed, affects: task.affects };
+    return { task, targets: addressed, actuatorIds };
   }
 
   /**
