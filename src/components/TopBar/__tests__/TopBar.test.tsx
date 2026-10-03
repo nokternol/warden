@@ -24,29 +24,29 @@ describe('TopBar', () => {
       <TopBar
         breadcrumbs={[
           { label: 'Home', href: '/' },
-          { label: 'Tasks', href: '/tasks' },
+          { label: 'Automations', href: '/automations' },
           { label: 'Details' },
         ]}
       />
     );
     expect(screen.getByText('Home')).toBeInTheDocument();
-    expect(screen.getByText('Tasks')).toBeInTheDocument();
+    expect(screen.getByText('Automations')).toBeInTheDocument();
     expect(screen.getByText('Details')).toBeInTheDocument();
   });
 
   it('renders breadcrumb links correctly', () => {
-    render(<TopBar breadcrumbs={[{ label: 'Home', href: '/' }, { label: 'Tasks' }]} />);
+    render(<TopBar breadcrumbs={[{ label: 'Home', href: '/' }, { label: 'Automations' }]} />);
     const homeLink = screen.getByText('Home');
     expect(homeLink.tagName).toBe('A');
     expect(homeLink).toHaveAttribute('href', '/');
 
-    const tasksText = screen.getByText('Tasks');
+    const tasksText = screen.getByText('Automations');
     expect(tasksText.tagName).toBe('SPAN');
   });
 
   it('renders breadcrumb separators', () => {
     const { container } = render(
-      <TopBar breadcrumbs={[{ label: 'Home', href: '/' }, { label: 'Tasks' }]} />
+      <TopBar breadcrumbs={[{ label: 'Home', href: '/' }, { label: 'Automations' }]} />
     );
     const separator = container.querySelector('nav span');
     expect(separator?.textContent).toContain('/');

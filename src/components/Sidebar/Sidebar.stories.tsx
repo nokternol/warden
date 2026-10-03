@@ -47,7 +47,7 @@ const CalendarIcon = () => (
   </svg>
 );
 
-const ActivityIcon = () => (
+const RunsIcon = () => (
   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path
       strokeLinecap="round"
@@ -94,10 +94,10 @@ const sampleItems: SidebarItem[] = [
     href: '/dashboard',
     active: true,
   },
-  { id: 'tasks', label: 'Tasks', icon: <TaskIcon />, href: '/tasks', badge: 5 },
-  { id: 'collections', label: 'Collections', icon: <FolderIcon />, href: '/collections' },
+  { id: 'automations', label: 'Automations', icon: <TaskIcon />, href: '/automations', badge: 5 },
+  { id: 'collections', label: 'Queries', icon: <FolderIcon />, href: '/queries' },
   { id: 'calendar', label: 'Calendar', icon: <CalendarIcon />, href: '/calendar' },
-  { id: 'activity', label: 'Activity', icon: <ActivityIcon />, href: '/activity' },
+  { id: 'runs', label: 'Runs', icon: <RunsIcon />, href: '/runs' },
 ];
 
 const bottomItems: SidebarItem[] = [
@@ -132,7 +132,7 @@ export const WithLogo: Story = () => (
             <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center text-text-primary font-bold">
               M
             </div>
-            <span className="text-xl font-bold text-text-primary">Maintainarr</span>
+            <span className="text-xl font-bold text-text-primary">Warden</span>
           </div>
         }
       />
@@ -146,12 +146,18 @@ export const WithBadges: Story = () => (
       <Sidebar
         items={[
           { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon />, href: '/dashboard' },
-          { id: 'tasks', label: 'Tasks', icon: <TaskIcon />, href: '/tasks', badge: 12 },
+          {
+            id: 'automations',
+            label: 'Automations',
+            icon: <TaskIcon />,
+            href: '/automations',
+            badge: 12,
+          },
           {
             id: 'collections',
-            label: 'Collections',
+            label: 'Queries',
             icon: <FolderIcon />,
-            href: '/collections',
+            href: '/queries',
             badge: '99+',
           },
           {
@@ -179,7 +185,7 @@ export const DifferentActiveStates: Story = () => (
     <div className="h-full w-64">
       <Sidebar
         items={sampleItems.map((item, i) => ({ ...item, active: i === 1 }))}
-        logo={<div className="text-text-primary font-bold">Tasks Active</div>}
+        logo={<div className="text-text-primary font-bold">Automations Active</div>}
       />
     </div>
   </div>

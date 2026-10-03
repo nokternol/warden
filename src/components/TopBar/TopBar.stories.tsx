@@ -16,10 +16,10 @@ export const BasicTitle: Story = () => (
 export const WithActions: Story = () => (
   <div className="bg-surface-bg min-h-screen">
     <TopBar
-      title="Tasks"
+      title="Automations"
       actions={
         <>
-          <DemoButton>New Task</DemoButton>
+          <DemoButton>New automation</DemoButton>
           <DemoButton>Refresh</DemoButton>
         </>
       }
@@ -30,11 +30,11 @@ export const WithActions: Story = () => (
 export const WithBreadcrumbs: Story = () => (
   <div className="bg-surface-bg min-h-screen">
     <TopBar
-      title="Task Details"
+      title="Automation Details"
       breadcrumbs={[
         { label: 'Home', href: '/' },
-        { label: 'Tasks', href: '/tasks' },
-        { label: 'Task #142' },
+        { label: 'Automations', href: '/automations' },
+        { label: 'Automation #142' },
       ]}
     />
   </div>
@@ -43,10 +43,10 @@ export const WithBreadcrumbs: Story = () => (
 export const WithEverything: Story = () => (
   <div className="bg-surface-bg min-h-screen">
     <TopBar
-      title="Collection Settings"
+      title="Query Settings"
       breadcrumbs={[
         { label: 'Home', href: '/' },
-        { label: 'Collections', href: '/collections' },
+        { label: 'Queries', href: '/queries' },
         { label: 'Settings' },
       ]}
       actions={
@@ -96,9 +96,9 @@ export const LongBreadcrumbs: Story = () => (
       title="Deeply Nested Page"
       breadcrumbs={[
         { label: 'Home', href: '/' },
-        { label: 'Collections', href: '/collections' },
-        { label: 'My Collection', href: '/collections/1' },
-        { label: 'Items', href: '/collections/1/items' },
+        { label: 'Queries', href: '/queries' },
+        { label: 'My Query', href: '/queries/1' },
+        { label: 'Items', href: '/queries/1/items' },
         { label: 'Item Details' },
       ]}
     />

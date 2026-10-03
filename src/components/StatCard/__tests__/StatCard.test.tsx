@@ -6,9 +6,9 @@ const TestIcon = () => <svg data-testid="test-icon" />;
 
 describe('StatCard', () => {
   it('renders value and label correctly', () => {
-    render(<StatCard value={142} label="Active Tasks" />);
+    render(<StatCard value={142} label="Active automations" />);
     expect(screen.getByText('142')).toBeInTheDocument();
-    expect(screen.getByText('Active Tasks')).toBeInTheDocument();
+    expect(screen.getByText('Active automations')).toBeInTheDocument();
   });
 
   it('renders string value correctly', () => {
@@ -97,7 +97,7 @@ describe('StatCard', () => {
     render(
       <StatCard
         value={142}
-        label="Active Tasks"
+        label="Active automations"
         icon={<TestIcon />}
         trend={{ value: 12, direction: 'up' }}
         subtitle="Last updated"
@@ -105,7 +105,7 @@ describe('StatCard', () => {
     );
 
     expect(screen.getByText('142')).toBeInTheDocument();
-    expect(screen.getByText('Active Tasks')).toBeInTheDocument();
+    expect(screen.getByText('Active automations')).toBeInTheDocument();
     expect(screen.getByTestId('test-icon')).toBeInTheDocument();
     expect(screen.getByText('↑')).toBeInTheDocument();
     expect(screen.getByText('12%')).toBeInTheDocument();

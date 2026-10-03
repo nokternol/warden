@@ -92,7 +92,7 @@ export const WithNumbers: Story = () => (
 export const StatusIndicators: Story = () => (
   <div className="bg-surface-bg p-8 space-y-4">
     <div className="flex items-center gap-2">
-      <span className="text-text-primary">Task Status:</span>
+      <span className="text-text-primary">Run status:</span>
       <Badge variant="success">Completed</Badge>
     </div>
     <div className="flex items-center gap-2">

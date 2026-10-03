@@ -90,11 +90,11 @@ export const DashboardExample: Story = () => (
   <div className="bg-surface-bg p-8">
     <WidgetGrid columns={4}>
       <DemoWidget>
-        <div className="text-sm text-text-muted mb-1">Active Tasks</div>
+        <div className="text-sm text-text-muted mb-1">Active automations</div>
         <div className="text-3xl font-bold">142</div>
       </DemoWidget>
       <DemoWidget>
-        <div className="text-sm text-text-muted mb-1">Collections</div>
+        <div className="text-sm text-text-muted mb-1">Queries</div>
         <div className="text-3xl font-bold">28</div>
       </DemoWidget>
       <DemoWidget>
@@ -102,19 +102,19 @@ export const DashboardExample: Story = () => (
         <div className="text-3xl font-bold">Running</div>
       </DemoWidget>
       <DemoWidget>
-        <div className="text-sm text-text-muted mb-1">Recent Activity</div>
+        <div className="text-sm text-text-muted mb-1">Recent runs</div>
         <div className="text-3xl font-bold">5</div>
       </DemoWidget>
       <div className="col-span-1 md:col-span-2">
         <DemoWidget>
-          <div className="text-lg font-semibold mb-2">Recent Tasks</div>
-          <div className="text-text-muted">Task list content...</div>
+          <div className="text-lg font-semibold mb-2">Recent runs</div>
+          <div className="text-text-muted">Automation list content...</div>
         </DemoWidget>
       </div>
       <div className="col-span-1 md:col-span-2 lg:col-span-2">
         <DemoWidget>
-          <div className="text-lg font-semibold mb-2">Activity Feed</div>
-          <div className="text-text-muted">Activity content...</div>
+          <div className="text-lg font-semibold mb-2">Run history</div>
+          <div className="text-text-muted">Run history content...</div>
         </DemoWidget>
       </div>
     </WidgetGrid>

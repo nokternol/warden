@@ -8,7 +8,7 @@ import TopBar from '@app/components/TopBar';
 import type { AutomationRunDto } from '@app/hooks/useAutomationRuns';
 import { useAutomationRuns } from '@app/hooks/useAutomationRuns';
 import { requireAuth } from '@app/lib/utils/requireAuth';
-import { Activity } from 'lucide-react';
+import { History } from 'lucide-react';
 import type { GetServerSideProps } from 'next';
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
@@ -17,7 +17,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   return { props: {} };
 };
 
-const ActivityIcon = () => <Activity className="w-12 h-12" strokeWidth={1.5} />;
+const RunsIcon = () => <History className="w-12 h-12" strokeWidth={1.5} />;
 
 function formatDate(dateStr: string): string {
   try {
@@ -58,7 +58,7 @@ function RunRow({ run }: { run: AutomationRunDto }) {
   );
 }
 
-export default function ActivityPage() {
+export default function RunsPage() {
   const { runs, isLoading, page, nextPage, prevPage } = useAutomationRuns();
   const PAGE_SIZE = 25;
   const hasMore = runs.length === PAGE_SIZE;
@@ -67,21 +67,19 @@ export default function ActivityPage() {
   return (
     <AppLayout
       sidebar={<SidebarNav />}
-      topBar={
-        <TopBar title="Activity" breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }]} />
-      }
+      topBar={<TopBar title="Runs" breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }]} />}
     >
       <div className="p-6">
         <Card variant="outlined" padding="none">
           {isLoading ? (
             <div className="p-8 text-center text-[var(--color-text-secondary)] text-sm">
-              Loading activity…
+              Loading runs…
             </div>
           ) : runs.length === 0 ? (
             <EmptyState
-              icon={<ActivityIcon />}
-              title="No activity yet"
-              description="Run history and task events will appear here once your automations have executed."
+              icon={<RunsIcon />}
+              title="No runs yet"
+              description="Runs will appear here once your automations have executed."
             />
           ) : (
             <>

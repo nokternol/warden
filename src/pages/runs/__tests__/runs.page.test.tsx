@@ -1,20 +1,20 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import ActivityPage from '../index.page';
+import RunsPage from '../index.page';
 
-describe('ActivityPage', () => {
+describe('RunsPage', () => {
   it('renders the page heading', () => {
-    render(<ActivityPage />);
-    expect(screen.getByRole('heading', { name: /activity/i })).toBeInTheDocument();
+    render(<RunsPage />);
+    expect(screen.getByRole('heading', { name: /runs/i })).toBeInTheDocument();
   });
 
   it('does not crash on initial render', () => {
-    const { container } = render(<ActivityPage />);
+    const { container } = render(<RunsPage />);
     expect(container).toBeTruthy();
   });
 
   it('renders run rows after data loads', async () => {
-    render(<ActivityPage />);
+    render(<RunsPage />);
 
     await waitFor(() => {
       const cells = screen.getAllByText(/nightly cleanup/i);
@@ -23,7 +23,7 @@ describe('ActivityPage', () => {
   });
 
   it('shows success badge for successful runs', async () => {
-    render(<ActivityPage />);
+    render(<RunsPage />);
 
     await waitFor(() => {
       const badges = screen.getAllByText(/success/i);
@@ -32,7 +32,7 @@ describe('ActivityPage', () => {
   });
 
   it('shows error badge for failed runs', async () => {
-    render(<ActivityPage />);
+    render(<RunsPage />);
 
     await waitFor(() => {
       // Check for the error badge specifically (not the column header)
@@ -43,7 +43,7 @@ describe('ActivityPage', () => {
   });
 
   it('shows pagination Next button', async () => {
-    render(<ActivityPage />);
+    render(<RunsPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /next/i })).toBeInTheDocument();

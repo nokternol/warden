@@ -7,7 +7,7 @@
  *   fracture ledger's "Filter/rule vocabulary" entry) — deleting that
  *   translator server-side is separate, unscheduled work, so this mirrors it
  *   client-side until it's removed.
- * - `toSaveValues`: not a legacy shim — it's the permanent shape saved queries
+ * - `toSaveValues`: not a legacy shim — it's the permanent shape queries
  *   need. Scoping by contentType (merging `shared` with just the one relevant
  *   scope, rather than movie+show together) is what avoids the
  *   tagIds/qualityProfileIds/genres collision the two scopes intentionally

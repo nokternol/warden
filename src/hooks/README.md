@@ -48,7 +48,7 @@ import { mockProcedure } from '@tests/mocks/contract';
 import { server } from '@tests/mocks/server';
 import { useMediaQueries } from './useMediaQueries';
 
-it('lists saved queries', async () => {
+it('lists queries', async () => {
   server.use(mockProcedure(contract.mediaQueries.list, () => [QUERY]));
 
   const { result } = renderHook(() => useMediaQueries(), { wrapper });
