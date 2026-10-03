@@ -1,6 +1,6 @@
 import { MetadataProviderType, mediaIdentity, mediaItems } from '@server/database/schema';
 import type { DrizzleDb } from '@server/kernel/db';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { itemKey, rawItemKey } from './mediaItem';
 import type { MediaItem } from './mediaItem';
 import { sourceCopyMatch } from './sourceCopies';
@@ -23,8 +23,9 @@ type AddressedActuatorType = keyof typeof ADDRESS_COLUMN_BY_TYPE;
  * addressing space: each item's `(providerId, externalId)` coordinate joins
  * through `media_item` to its `media_identity` group, whose Plex/Jellyfin
  * column carries the actuator-native id. Identities the resolution job has not
- * stamped yet drop out (no id to address), and multiple instance copies of one
- * identity collapse to a single id. `addressed` is the subset of `items` that
+ * stamped yet drop out (no id to address), as do copies marked deleted (they
+ * left their source, so a deleted row answers as a missing one). Multiple
+ * instance copies of one identity collapse to a single id. `addressed` is the subset of `items` that
  * reached an actuator id — the items the task targets.
  */
 export async function resolveActuatorTargets(
@@ -48,7 +49,7 @@ export async function resolveActuatorTargets(
     })
     .from(mediaItems)
     .innerJoin(mediaIdentity, eq(mediaItems.mediaIdentityId, mediaIdentity.id))
-    .where(match);
+    .where(and(match, eq(mediaItems.deleted, false)));
 
   const actuatorIdByItemKey = new Map<string, string>();
   for (const row of rows) {

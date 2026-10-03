@@ -53,7 +53,7 @@ describe('resolveActuatorTargets', () => {
   async function seedIdentity(opts: {
     plexRatingKey?: string;
     jellyfinItemId?: string;
-    copies: Array<{ providerId: number; externalId: number }>;
+    copies: Array<{ providerId: number; externalId: number; deleted?: boolean }>;
   }): Promise<void> {
     const db = getDb();
     const [{ id: identityId }] = await db
@@ -152,6 +152,22 @@ describe('resolveActuatorTargets', () => {
     ]);
 
     expect(ids).toEqual(['rk-2']);
+  });
+
+  it('does not address a copy that left its source', async () => {
+    await seedIdentity({
+      plexRatingKey: 'rk-4',
+      copies: [{ providerId: radarrId, externalId: 4, deleted: true }],
+    });
+
+    const { actuatorIds, addressed } = await resolveActuatorTargets(
+      getDb(),
+      MetadataProviderType.PLEX,
+      [movieItem(radarrId, 4)]
+    );
+
+    expect(actuatorIds).toEqual([]);
+    expect(addressed).toEqual([]);
   });
 
   it('returns empty for no items without querying', async () => {
