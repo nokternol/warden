@@ -49,11 +49,18 @@ async function inSuccessEnvelope(runProcedure: () => Promise<unknown>, requestId
 }
 
 /**
- * An AppError keeps its HTTP status and type; oRPC's own errors pass through;
- * anything else is a logged 500 whose message is hidden in production.
+ * An AppError keeps its HTTP status and type, logged as an error when the
+ * fault is the server's and as a warning otherwise. Input that fails the
+ * contract is a 400 VALIDATION_ERROR. oRPC's other client-side errors pass
+ * through; everything else, including a handler result that breaks the
+ * contract's output, is a logged 500 INTERNAL_ERROR whose message is hidden in
+ * production.
  */
 function toApiError(err: unknown, requestId: string): ORPCError<string, unknown> {
   if (err instanceof AppError) {
+    const meta = { requestId, type: err.type };
+    if (err.statusCode >= 500) log.error(err.message, meta);
+    else log.warn(err.message, meta);
     return new ORPCError(err.type, {
       status: err.statusCode,
       message: err.message,
@@ -61,13 +68,9 @@ function toApiError(err: unknown, requestId: string): ORPCError<string, unknown>
     });
   }
   if (err instanceof ORPCError && err.code === 'BAD_REQUEST' && Array.isArray(err.data?.issues)) {
-    return new ORPCError('VALIDATION_ERROR', {
-      status: 400,
-      message: 'Invalid input',
-      data: { errors: fieldErrorsOf(err.data.issues) },
-    });
+    return invalidInput(err.data.issues);
   }
-  if (err instanceof ORPCError) return err;
+  if (err instanceof ORPCError && err.status < 500) return err;
 
   const cause = err instanceof Error ? err : new Error(String(err));
   log.error('Unhandled error', { requestId, error: cause.message, stack: cause.stack });
@@ -83,15 +86,28 @@ interface InputIssue {
   path?: ReadonlyArray<PropertyKey | { key: PropertyKey }>;
 }
 
-/** Groups input issues by the top-level field they concern. */
-function fieldErrorsOf(issues: InputIssue[]): Record<string, string[]> {
+/**
+ * A 400 VALIDATION_ERROR whose `errors` groups issues by the top-level field
+ * they concern. An issue with the input as a whole (no path) has no field, so
+ * it is stated in the message instead.
+ */
+function invalidInput(issues: InputIssue[]): ORPCError<string, unknown> {
   const errors: Record<string, string[]> = {};
+  const wholeInput: string[] = [];
   for (const { message, path } of issues) {
     const first = path?.[0];
+    if (first === undefined) {
+      wholeInput.push(message);
+      continue;
+    }
     const field = String(typeof first === 'object' ? first.key : first);
     errors[field] = [...(errors[field] ?? []), message];
   }
-  return errors;
+  return new ORPCError('VALIDATION_ERROR', {
+    status: 400,
+    message: wholeInput.length ? `Invalid input: ${wholeInput.join('; ')}` : 'Invalid input',
+    data: { errors },
+  });
 }
 
 /** Serves a (sub)router of contract procedures over HTTP at their contract paths. */

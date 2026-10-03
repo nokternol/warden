@@ -3,6 +3,7 @@ import { MetadataProviderType } from '@server/database/schema';
 import { api, serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
+import { AppError } from '@server/kernel/errors';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createAutomationProcedures } from '@server/modules/automations';
 import { AutomationService } from '@server/modules/automations/automationService';
@@ -11,7 +12,22 @@ import { ProviderSettingsService } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
 import express, { type Express } from 'express';
 import request from 'supertest';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const apiLog = vi.hoisted(() => ({
+  error: vi.fn(),
+  warn: vi.fn(),
+  info: vi.fn(),
+  debug: vi.fn(),
+  http: vi.fn(),
+}));
+vi.mock('@server/kernel/logger', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@server/kernel/logger')>();
+  return {
+    ...actual,
+    getChildLogger: (name: string) => (name === 'Api' ? apiLog : actual.getChildLogger(name)),
+  };
+});
 
 describe('serveApi — the contract served over HTTP', () => {
   let app: Express;
@@ -75,6 +91,26 @@ describe('serveApi — the contract served over HTTP', () => {
   afterAll(async () => {
     await closeDatabase();
   });
+
+  beforeEach(() => {
+    apiLog.error.mockClear();
+    apiLog.warn.mockClear();
+  });
+
+  /** An app whose `automations.list` handler is replaced, signed in. */
+  const withListHandler = (handler: () => unknown) => {
+    const built = express();
+    built.use((req, _res, next) => {
+      req.user = { id: 1 } as unknown as NonNullable<typeof req.user>;
+      next();
+    });
+    built.use(
+      serveApi({
+        automations: { list: api.automations.list.handler(handler as never) },
+      })
+    );
+    return built;
+  };
 
   it('answers a contract procedure at its declared method and path inside the success envelope', async () => {
     const res = await request(app).get('/api/automations');
@@ -150,5 +186,48 @@ describe('serveApi — the contract served over HTTP', () => {
         errors: { id: [expect.any(String)] },
       },
     });
+  });
+
+  it('logs an application error with a server-side status as an error', async () => {
+    const res = await request(
+      withListHandler(() => {
+        throw new AppError('Upstream unavailable', 503, 'SERVICE_UNAVAILABLE');
+      })
+    ).get('/api/automations');
+
+    expect(res.status).toBe(503);
+    expect(apiLog.error).toHaveBeenCalledWith(
+      'Upstream unavailable',
+      expect.objectContaining({ type: 'SERVICE_UNAVAILABLE' })
+    );
+  });
+
+  it('logs an application error with a client-side status as a warning', async () => {
+    await request(app).post('/api/automations/9999/run');
+
+    expect(apiLog.warn).toHaveBeenCalledWith(
+      'Automation 9999 not found',
+      expect.objectContaining({ type: 'NOT_FOUND' })
+    );
+    expect(apiLog.error).not.toHaveBeenCalled();
+  });
+
+  it('answers a handler result that breaks the contract output as a logged 500 INTERNAL_ERROR', async () => {
+    const res = await request(withListHandler(() => [{ unexpected: true }])).get(
+      '/api/automations'
+    );
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.type).toBe('INTERNAL_ERROR');
+    expect(apiLog.error).toHaveBeenCalled();
+  });
+
+  it('reports input that fails the contract as a whole in the message, not under a field', async () => {
+    const res = await request(app).post('/api/automations').send([]);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.type).toBe('VALIDATION_ERROR');
+    expect(res.body.error.errors).toEqual({});
+    expect(res.body.error.message).toMatch(/^Invalid input: .+/);
   });
 });
