@@ -76,4 +76,25 @@ describe('AddProviderForm', () => {
       expect.objectContaining({ url: 'http://localhost:7878/api/v4' })
     );
   });
+
+  it('fills in and locks the host of a type the server gives a fixed URL', async () => {
+    const user = userEvent.setup();
+    const served: ProviderTypeDescriptor[] = [
+      { type: 'RADARR', label: 'Radarr', apiPath: '/api/v3', capabilities: [] },
+      {
+        type: 'TAUTULLI',
+        label: 'Tautulli',
+        apiPath: '',
+        defaultUrl: 'https://tautulli.example',
+        capabilities: [],
+      },
+    ];
+
+    render(<AddProviderForm types={served} onSubmit={vi.fn()} onCancel={vi.fn()} />);
+    await user.selectOptions(screen.getByLabelText('Type'), 'TAUTULLI');
+
+    const host = screen.getByLabelText(/host url/i) as HTMLInputElement;
+    expect(host.value).toBe('https://tautulli.example');
+    expect(host.readOnly).toBe(true);
+  });
 });

@@ -7,13 +7,6 @@ import type { ProviderTypeDescriptor } from '@contract/providers';
 import { type ProviderType, ProviderTypeSchema } from '@contract/schemas';
 import { useRef, useState } from 'react';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const PROVIDER_DEFAULT_URLS: Partial<Record<string, string>> = {
-  TMDB: 'https://api.themoviedb.org/3',
-  OMDB: 'http://www.omdbapi.com',
-};
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface AddFormState {
@@ -71,7 +64,8 @@ export default function AddProviderForm({
     }
   };
 
-  const chosen = types.find((t) => t.type === form.type);
+  const descriptorOf = (type: ProviderType) => types.find((t) => t.type === type);
+  const chosen = descriptorOf(form.type);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,7 +98,7 @@ export default function AddProviderForm({
             value={form.type}
             onChange={(e) => {
               const newType = ProviderTypeSchema.parse(e.target.value);
-              const defaultUrl = PROVIDER_DEFAULT_URLS[newType];
+              const defaultUrl = descriptorOf(newType)?.defaultUrl;
               setForm((f) => ({ ...f, type: newType, url: defaultUrl ?? f.url }));
               setTestStatus('idle');
               setTestError(undefined);
@@ -140,7 +134,7 @@ export default function AddProviderForm({
             </span>
             {testError && <span className="ml-1.5 text-xs text-danger-hover">{testError}</span>}
           </label>
-          {PROVIDER_DEFAULT_URLS[form.type] !== undefined ? (
+          {chosen?.defaultUrl !== undefined ? (
             <input
               id="add-url"
               type="url"
