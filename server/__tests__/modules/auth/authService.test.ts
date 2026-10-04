@@ -69,7 +69,7 @@ describe('AuthService', () => {
   });
 
   describe('authenticateWithPlex', () => {
-    it('creates a new user when no match exists', async () => {
+    it('makes the first account to sign in on a fresh instance its owner', async () => {
       const plexUser = makePlexUser();
       vi.mocked(plexService.getUserByToken).mockResolvedValue(plexUser);
 
@@ -82,7 +82,7 @@ describe('AuthService', () => {
       expect(user.isActive).toBe(true);
     });
 
-    it('lowercases the email when creating a new user', async () => {
+    it("lowercases the owner's email when the instance is claimed", async () => {
       vi.mocked(plexService.getUserByToken).mockResolvedValue(
         makePlexUser({ email: 'Plex@EXAMPLE.COM' })
       );
@@ -92,7 +92,7 @@ describe('AuthService', () => {
       expect(user.email).toBe('plex@example.com');
     });
 
-    it('updates plexToken, plexUsername and avatar when matched by plexId', async () => {
+    it("updates the owner's plexUsername and avatar when matched by plexId", async () => {
       const db = getDb();
       // Seed an existing user
       await db.insert(users).values({
@@ -113,6 +113,19 @@ describe('AuthService', () => {
       expect(user.avatar).toBe('https://new.jpg');
       // plexToken is written to DB but not returned by the service
       expect('plexToken' in user).toBe(false);
+    });
+
+    it("refreshes the owner's stored Plex token when they sign in again", async () => {
+      const db = getDb();
+      await db
+        .insert(users)
+        .values({ email: 'plex@example.com', plexId: 111, plexToken: 'old-token' });
+      vi.mocked(plexService.getUserByToken).mockResolvedValue(makePlexUser());
+
+      await authService.authenticateWithPlex('rotated-token');
+
+      const [stored] = await db.select({ plexToken: users.plexToken }).from(users);
+      expect(stored.plexToken).toBe('rotated-token');
     });
 
     it('sets plexId on an existing user matched by email when plexId was null', async () => {
