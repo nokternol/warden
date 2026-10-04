@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest';
-import { NumberRangeFilter } from '@app/components/MediaFilterBar';
 import { fireEvent, render, screen, setupUser } from '@tests/helpers/component';
 import { describe, expect, it, vi } from 'vitest';
+import { NumberRangeFilter } from '../index';
 
 const setup = (props: Partial<Parameters<typeof NumberRangeFilter>[0]> = {}) => {
   const onChangeMin = vi.fn();
