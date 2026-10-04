@@ -24,24 +24,11 @@ import {
 } from 'lucide-react';
 import { useRef, useState } from 'react';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const API_SUFFIXES: Record<string, string> = {
-  SONARR: '/api/v3',
-  RADARR: '/api/v3',
-  PLEX: '',
-  JELLYFIN: '',
-  TAUTULLI: '',
-  OVERSEERR: '',
-  TMDB: '',
-  OMDB: '',
-};
-
 // ─── Local helpers ────────────────────────────────────────────────────────────
 
-function stripSuffix(url: string, type: string): string {
-  const suffix = API_SUFFIXES[type] ?? '';
-  if (suffix && url.endsWith(suffix)) return url.slice(0, -suffix.length);
+/** The host the user entered, without the API path appended when it was saved. */
+function hostOf(url: string, apiPath: string): string {
+  if (apiPath && url.endsWith(apiPath)) return url.slice(0, -apiPath.length);
   return url;
 }
 
@@ -110,13 +97,14 @@ export default function ProviderCard({
   onUpdate: (patch: UpdateProviderParams) => Promise<unknown>;
   onDelete: () => void;
 }) {
+  const apiPath = providerType?.apiPath ?? '';
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
   const [editForm, setEditForm] = useState<EditFormState>({
     name: provider.name,
-    url: stripSuffix(provider.url, provider.type),
+    url: hostOf(provider.url, apiPath),
     apiKey: '',
     userId: typeof provider.settings?.userId === 'string' ? provider.settings.userId : '',
   });
@@ -163,9 +151,8 @@ export default function ProviderCard({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const suffix = API_SUFFIXES[provider.type] ?? '';
     const host = editForm.url.replace(/\/+$/, '');
-    const fullUrl = suffix ? `${host}${suffix}` : host;
+    const fullUrl = `${host}${apiPath}`;
 
     const patch: UpdateProviderParams = { name: editForm.name, url: fullUrl };
     if (editForm.apiKey) patch.apiKey = editForm.apiKey;
@@ -182,7 +169,7 @@ export default function ProviderCard({
   const handleCancelEdit = () => {
     setEditForm({
       name: provider.name,
-      url: stripSuffix(provider.url, provider.type),
+      url: hostOf(provider.url, apiPath),
       apiKey: '',
       userId: typeof provider.settings?.userId === 'string' ? provider.settings.userId : '',
     });

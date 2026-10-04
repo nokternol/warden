@@ -161,4 +161,28 @@ describe('ProviderCard', () => {
     await user.click(screen.getByRole('button', { name: /radarr main/i }));
     expect(screen.getByLabelText('Destructive action')).toBeInTheDocument();
   });
+
+  it('edits the host without the served API path and saves it with the path re-appended', async () => {
+    const user = userEvent.setup();
+    const onUpdate = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ProviderCard
+        provider={{ ...mockProvider, url: 'http://localhost:7878/api/v4' }}
+        providerType={{ ...radarrType, apiPath: '/api/v4' }}
+        tasks={[]}
+        onUpdate={onUpdate}
+        onDelete={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /radarr main/i }));
+    await user.click(screen.getByRole('button', { name: /^edit$/i }));
+    const host = screen.getByLabelText(/host url/i) as HTMLInputElement;
+    expect(host.value).toBe('http://localhost:7878');
+
+    await user.click(screen.getByRole('button', { name: /^save$/i }));
+    expect(onUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ url: 'http://localhost:7878/api/v4' })
+    );
+  });
 });
