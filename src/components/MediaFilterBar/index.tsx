@@ -834,7 +834,9 @@ function groupsFor(rule: MediaRuleDescriptor, configuredTypes: Set<string>): Fil
   if (scope === 'movie') return ['movies'];
   if (scope === 'series') return ['series'];
 
-  const providers = new Set(rule.providers.filter((sp) => configuredTypes.has(sp)));
+  const providers = new Set(
+    rule.providers.filter((providerType) => configuredTypes.has(providerType))
+  );
   const groups: FilterGroupId[] = [];
   if (providers.has('OVERSEERR')) groups.push('requests');
   if (providers.has('TMDB') && !providers.has('RADARR') && !providers.has('SONARR')) {

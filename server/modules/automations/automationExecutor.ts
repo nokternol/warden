@@ -174,12 +174,14 @@ export class AutomationExecutor {
     automationQueries: AutomationQueryDto[]
   ): Promise<RunPlan> {
     const queryDtos = await Promise.all(
-      automationQueries.map((s) => this.mediaQueryService.getById(s.queryId))
+      automationQueries.map((automationQuery) =>
+        this.mediaQueryService.getById(automationQuery.queryId)
+      )
     );
     const contentType = queryDtos[0].contentType;
-    const querySpecs = automationQueries.map((s, i) => ({
+    const querySpecs = automationQueries.map((automationQuery, i) => ({
       filters: queryDtos[i].filters,
-      role: s.role,
+      role: automationQuery.role,
     }));
 
     const provider = this.providerFactory.create(providerSettings, log);

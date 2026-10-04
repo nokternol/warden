@@ -18,17 +18,17 @@ function usePreviewCount(queryId: number): number | null {
 }
 
 function AutomationQueryRow({
-  src,
+  automationQuery,
   index,
   automationQueries,
   onChange,
 }: {
-  src: AutomationQueryItem;
+  automationQuery: AutomationQueryItem;
   index: number;
   automationQueries: AutomationQueryItem[];
-  onChange: (s: AutomationQueryItem[]) => void;
+  onChange: (next: AutomationQueryItem[]) => void;
 }) {
-  const count = usePreviewCount(src.queryId);
+  const count = usePreviewCount(automationQuery.queryId);
 
   function handleRemove() {
     onChange(automationQueries.filter((_, i) => i !== index));
@@ -42,12 +42,16 @@ function AutomationQueryRow({
   }
 
   const countLabel =
-    count != null ? (src.role === 'include' ? `${count} matched` : `${count} excluded`) : null;
+    count != null
+      ? automationQuery.role === 'include'
+        ? `${count} matched`
+        : `${count} excluded`
+      : null;
 
   return (
     <div>
-      <span>{src.queryId}</span>
-      <select value={src.role} onChange={handleRoleChange}>
+      <span>{automationQuery.queryId}</span>
+      <select value={automationQuery.role} onChange={handleRoleChange}>
         <option value="include">Include</option>
         <option value="exclude">Exclude (unless)</option>
       </select>
@@ -101,10 +105,10 @@ export default function AutomationQueryList({
 
   return (
     <div>
-      {automationQueries.map((src, i) => (
+      {automationQueries.map((automationQuery, i) => (
         <AutomationQueryRow
-          key={src.sortOrder}
-          src={src}
+          key={automationQuery.sortOrder}
+          automationQuery={automationQuery}
           index={i}
           automationQueries={automationQueries}
           onChange={onChange}
