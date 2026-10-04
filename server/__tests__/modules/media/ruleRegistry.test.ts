@@ -6,6 +6,7 @@ import {
   deriveProviders,
   getRule,
 } from '@server/modules/media/ruleRegistry';
+import { MOCK_RULES } from '@tests/mocks/handlers/media';
 import { describe, expect, it } from 'vitest';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -809,5 +810,21 @@ describe('Sonarr-only predicates', () => {
     expect(rule.predicate({ ...baseSeries, languageProfileId: 3 }, { ids: [3, 4] })).toBe(true);
     expect(rule.predicate({ ...baseSeries, languageProfileId: 3 }, { ids: [99] })).toBe(false);
     expect(rule.predicate(baseSeries, { ids: [3] })).toBe(false); // no languageProfileId
+  });
+});
+
+// ─── MSW rule mocks ────────────────────────────────────────────────────────────
+
+describe('MSW media.rules mock', () => {
+  it('declares the same instanceScoped class as the registry for every rule it lists', () => {
+    for (const mock of MOCK_RULES) {
+      for (const contentType of mock.contentTypes) {
+        const rule = getRule(mock.key, contentType);
+        expect(rule, `${mock.key}/${contentType}`).toBeDefined();
+        expect(Boolean(mock.instanceScoped), `${mock.key}/${contentType}`).toBe(
+          Boolean(rule!.instanceScoped)
+        );
+      }
+    }
   });
 });
