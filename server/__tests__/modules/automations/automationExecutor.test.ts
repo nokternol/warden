@@ -1845,6 +1845,56 @@ describe('non-source actuators — id translation through the identity graph', (
     expect(deleteWatchHistory).toHaveBeenCalledTimes(1);
     expect(deleteWatchHistory.mock.calls[0][0].sort()).toEqual(['rk-1', 'rk-2']);
   });
+  it('previews one Plex title once even when two source instances hold it', async () => {
+    const db = getDb();
+    const radarrProv = await seedRadarrProvider(providerSettingsService);
+    const radarr4kProv = await seedRadarrProvider(providerSettingsService);
+    const plexProv = await seedPlexProvider();
+    const [{ id: identityId }] = await db
+      .insert(mediaIdentity)
+      .values({ kind: 'movie', tmdbId: 500, title: 'Heat', plexRatingKey: 'rk-5' })
+      .returning({ id: mediaIdentity.id });
+    for (const providerId of [radarrProv.id, radarr4kProv.id]) {
+      await db
+        .insert(mediaItems)
+        .values({ providerId, externalId: 5, mediaIdentityId: identityId });
+    }
+    const copies = [radarrProv.id, radarr4kProv.id].map((providerId) => ({
+      _sourceIds: { radarr: 5, providerId, tmdb: 500 },
+      title: 'Heat',
+    }));
+    const plexInstance = new PlexProvider(
+      { name: 'Test Plex', url: 'http://localhost:32400', apiKey: 'plex-token', settings: {} },
+      mockConnectionLogger
+    );
+    const executor = new AutomationExecutor({
+      automationService,
+      automationRunService: new AutomationRunService({ db }),
+      providerSettingsService,
+      mediaQueryService,
+      providerFactory: { create: () => plexInstance },
+      mediaSourceFactory: {
+        sourcesFor: async () => [
+          {
+            providerId: radarrProv.id,
+            name: 'Radarr',
+            source: { getMediaItems: async () => copies, idOf: () => undefined },
+          },
+        ],
+      },
+      db,
+    });
+    const query = await seedMediaQuery(mediaQueryService);
+
+    const preview = await executor.preview({
+      providerId: plexProv.id,
+      taskId: 'deleteFromLibrary',
+      queries: [{ queryId: query.id, role: 'include' }],
+    });
+
+    expect(preview.count).toBe(1); // the one library entry Plex will delete
+  });
+
   it('previews a Tautulli task in the Plex addressing space', async () => {
     const db = getDb();
     const radarrProv = await seedRadarrProvider(providerSettingsService);
