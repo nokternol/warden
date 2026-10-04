@@ -254,3 +254,23 @@ describe('MultiSelectFilter — focus leaving the menu', () => {
     expect(screen.getByRole('menu')).toBeInTheDocument();
   });
 });
+
+describe('MultiSelectFilter — Home and End', () => {
+  it('Home focuses the first item and End the last, the clear action included', async () => {
+    const user = setupUser();
+    render(<MultiSelectFilter label="Tags" options={TAGS} selected={[2]} onChange={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: /tags/i }));
+    await user.keyboard('{End}');
+    expect(screen.getByRole('menuitem', { name: /clear/i })).toHaveFocus();
+    await user.keyboard('{Home}');
+    expect(screen.getByRole('menuitemcheckbox', { name: '4K' })).toHaveFocus();
+  });
+
+  it('End lands on the last option when there is no clear action', async () => {
+    const user = setupUser();
+    render(<MultiSelectFilter label="Tags" options={TAGS} selected={[]} onChange={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: /tags/i }));
+    await user.keyboard('{End}');
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Kids' })).toHaveFocus();
+  });
+});

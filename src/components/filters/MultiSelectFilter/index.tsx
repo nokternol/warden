@@ -11,7 +11,8 @@ import { useEffect, useId, useRef, useState } from 'react';
 // option by the instance it belongs to).
 //
 // Keyboard: ArrowDown on the trigger opens the menu and focuses the first
-// option; ArrowDown/ArrowUp move between options across groups; Space/Enter
+// option; ArrowDown/ArrowUp move between options across groups and Home/End
+// jump to the first and last item (the clear action counts as an item); Space/Enter
 // toggle the focused option; ArrowUp from the first option or Escape returns
 // focus to the trigger (Escape also closes the menu). Focus leaving the control,
 // by Tab or otherwise, closes it too; the menu itself is focusable so a press on
@@ -140,6 +141,14 @@ export function MultiSelectFilter<T extends string | number>({
         e.preventDefault();
         if (index === 0) triggerRef.current?.focus();
         else itemRefs.current[index - 1]?.focus();
+        break;
+      case 'Home':
+        e.preventDefault();
+        itemRefs.current[0]?.focus();
+        break;
+      case 'End':
+        e.preventDefault();
+        itemRefs.current[itemCount - 1]?.focus();
         break;
       case 'Enter':
       case ' ':
