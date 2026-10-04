@@ -162,3 +162,36 @@ describe('MultiSelectFilter — clearing', () => {
     expect(screen.queryByRole('menuitem', { name: /clear/i })).not.toBeInTheDocument();
   });
 });
+
+describe('MultiSelectFilter — selections that span groups', () => {
+  const GROUPED = [
+    { value: 10, label: 'Remux', group: 'Radarr 4K' },
+    { value: 11, label: 'HDR', group: 'Radarr 4K' },
+    { value: 20, label: 'Kids', group: 'Radarr Standard' },
+  ];
+  const NOTE = 'Spans multiple instances.';
+
+  const open = async (selected: number[]) => {
+    const user = setupUser();
+    render(
+      <MultiSelectFilter
+        label="Tags"
+        options={GROUPED}
+        selected={selected}
+        onChange={vi.fn()}
+        spanNote={NOTE}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: /tags/i }));
+  };
+
+  it('shows the caller note when the selection crosses groups', async () => {
+    await open([10, 20]);
+    expect(screen.getByRole('note')).toHaveTextContent(NOTE);
+  });
+
+  it('shows no note when the selection stays within one group', async () => {
+    await open([10, 11]);
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
+  });
+});

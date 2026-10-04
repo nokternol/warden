@@ -15,6 +15,9 @@ import { useEffect, useId, useRef, useState } from 'react';
 // toggle the focused option; ArrowUp from the first option or Escape returns
 // focus to the trigger (Escape also closes the menu).
 //
+// When the selection reaches into more than one group, `spanNote` is shown at
+// the foot of the options so the caller can explain how such a selection is read.
+//
 // While anything is selected the menu ends with a "Clear selection" item, the
 // last stop in the same keyboard order. It emits an empty selection and
 // returns focus to the trigger.
@@ -31,6 +34,8 @@ export interface MultiSelectFilterProps<T extends string | number> {
   options: readonly MultiSelectOption<T>[];
   selected: readonly T[];
   onChange: (selected: T[]) => void;
+  /** Explains a selection that spans several groups; shown only while it does. */
+  spanNote?: string;
 }
 
 /** Splits options into groups in first-seen order; ungrouped options form one headingless group. */
@@ -51,6 +56,7 @@ export function MultiSelectFilter<T extends string | number>({
   options,
   selected,
   onChange,
+  spanNote,
 }: MultiSelectFilterProps<T>) {
   const id = useId();
   const menuId = `${id}-menu`;
@@ -104,6 +110,10 @@ export function MultiSelectFilter<T extends string | number>({
     }
   };
 
+  const selectedGroups = new Set(
+    options.filter((option) => selected.includes(option.value)).map((option) => option.group)
+  );
+  const spansGroups = selectedGroups.size > 1;
   const hasClearItem = activeCount > 0;
   const itemCount = renderOrder.length + (hasClearItem ? 1 : 0);
 
@@ -237,6 +247,14 @@ export function MultiSelectFilter<T extends string | number>({
               })}
             </div>
           ))}
+          {spansGroups && spanNote && (
+            <div
+              role="note"
+              className="border-t border-border mt-1 px-3 pt-2 pb-1.5 text-[11px] leading-snug text-text-muted"
+            >
+              {spanNote}
+            </div>
+          )}
           {hasClearItem && (
             <div
               ref={(el) => {
