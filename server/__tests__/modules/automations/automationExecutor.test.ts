@@ -1774,6 +1774,35 @@ describe('non-source actuators — id translation through the identity graph', (
     expect(run.itemCount).toBe(2);
   });
 
+  it('previews only the matches that translate to a Plex id', async () => {
+    const db = getDb();
+    const radarrProv = await seedRadarrProvider(providerSettingsService);
+    const plexProv = await seedPlexProvider();
+    await seedIdentityGraph(radarrProv.id);
+    const plexInstance = new PlexProvider(
+      { name: 'Test Plex', url: 'http://localhost:32400', apiKey: 'plex-token', settings: {} },
+      mockConnectionLogger
+    );
+    const executor = new AutomationExecutor({
+      automationService,
+      automationRunService: new AutomationRunService({ db }),
+      providerSettingsService,
+      mediaQueryService,
+      providerFactory: { create: () => plexInstance },
+      mediaSourceFactory: fakeMovieSources(radarrProv.id),
+      db,
+    });
+    const query = await seedMediaQuery(mediaQueryService);
+
+    const preview = await executor.preview({
+      providerId: plexProv.id,
+      taskId: 'deleteFromLibrary',
+      queries: [{ queryId: query.id, role: 'include' }],
+    });
+
+    expect(preview).toEqual({ count: 2, contentType: 'movie' }); // movie 3 has no Plex key
+  });
+
   it('Tautulli rides the Plex addressing space end to end', async () => {
     const db = getDb();
     const radarrProv = await seedRadarrProvider(providerSettingsService);
