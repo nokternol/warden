@@ -7,6 +7,8 @@ import type { ProviderSummary, UpdateProviderParams } from '@app/hooks/useProvid
 import type { ProviderTaskDescriptor } from '@app/hooks/useProviderTasks';
 import { api } from '@app/lib/api/client';
 import { cn } from '@app/lib/utils/cn';
+import { apiUrlOf, hostOf } from '@contract/providerUrl';
+import type { ProviderTypeDescriptor } from '@contract/providers';
 import {
   BarChart2,
   Bell,
@@ -22,38 +24,6 @@ import {
   Tv,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const API_SUFFIXES: Record<string, string> = {
-  SONARR: '/api/v3',
-  RADARR: '/api/v3',
-  PLEX: '',
-  JELLYFIN: '',
-  TAUTULLI: '',
-  OVERSEERR: '',
-  TMDB: '',
-  OMDB: '',
-};
-
-const PROVIDER_FILTER_DATA: Record<string, string[]> = {
-  PLEX: ['Library contents', 'Item metadata'],
-  JELLYFIN: ['Library contents', 'Item metadata'],
-  RADARR: ['Movie library', 'Quality profiles', 'Tags'],
-  SONARR: ['Series library', 'Quality profiles', 'Tags'],
-  TAUTULLI: ['Watch history', 'Play statistics', 'User activity'],
-  OVERSEERR: ['Request queue'],
-  TMDB: ['Ratings', 'Metadata'],
-  OMDB: ['Ratings', 'Metadata'],
-};
-
-// ─── Local helpers ────────────────────────────────────────────────────────────
-
-function stripSuffix(url: string, type: string): string {
-  const suffix = API_SUFFIXES[type] ?? '';
-  if (suffix && url.endsWith(suffix)) return url.slice(0, -suffix.length);
-  return url;
-}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -108,22 +78,26 @@ interface EditFormState {
 
 export default function ProviderCard({
   provider,
+  typeDescriptor,
   tasks,
   onUpdate,
   onDelete,
 }: {
   provider: ProviderSummary;
+  /** The served description of the provider's type; absent for a type that is not offered. */
+  typeDescriptor?: ProviderTypeDescriptor;
   tasks: ProviderTaskDescriptor[];
   onUpdate: (patch: UpdateProviderParams) => Promise<unknown>;
   onDelete: () => void;
 }) {
+  const apiPath = typeDescriptor?.apiPath ?? '';
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
   const [editForm, setEditForm] = useState<EditFormState>({
     name: provider.name,
-    url: stripSuffix(provider.url, provider.type),
+    url: hostOf(provider.url, apiPath),
     apiKey: '',
     userId: typeof provider.settings?.userId === 'string' ? provider.settings.userId : '',
   });
@@ -140,7 +114,7 @@ export default function ProviderCard({
   const serverEnabledIds = tasks.filter((t) => t.enabled).map((t) => t.id);
   const enabledTasks = localEnabledTasks ?? serverEnabledIds;
   const allTasks = tasks;
-  const filterData = PROVIDER_FILTER_DATA[provider.type] ?? [];
+  const filterData = typeDescriptor?.filterData ?? [];
   const hasTasks = allTasks.length > 0;
 
   const runTest = async (url: string, apiKey: string) => {
@@ -170,9 +144,7 @@ export default function ProviderCard({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const suffix = API_SUFFIXES[provider.type] ?? '';
-    const host = editForm.url.replace(/\/+$/, '');
-    const fullUrl = suffix ? `${host}${suffix}` : host;
+    const fullUrl = apiUrlOf(editForm.url, apiPath);
 
     const patch: UpdateProviderParams = { name: editForm.name, url: fullUrl };
     if (editForm.apiKey) patch.apiKey = editForm.apiKey;
@@ -189,7 +161,7 @@ export default function ProviderCard({
   const handleCancelEdit = () => {
     setEditForm({
       name: provider.name,
-      url: stripSuffix(provider.url, provider.type),
+      url: hostOf(provider.url, apiPath),
       apiKey: '',
       userId: typeof provider.settings?.userId === 'string' ? provider.settings.userId : '',
     });
@@ -220,7 +192,7 @@ export default function ProviderCard({
     }
   };
 
-  const capabilitySummary = (() => {
+  const summary = (() => {
     const parts: string[] = [];
     if (filterData.length > 0) {
       const labels = filterData.slice(0, 2).join(' · ');
@@ -260,14 +232,12 @@ export default function ProviderCard({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium text-sm text-text-primary">{provider.name}</span>
             <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full font-medium">
-              {provider.type}
+              {typeDescriptor?.label ?? provider.type}
             </span>
             <StatusIndicator isActive={provider.isActive} />
           </div>
           <div className="text-xs text-text-muted mt-0.5 truncate">{provider.url}</div>
-          {capabilitySummary && (
-            <div className="text-xs text-text-muted mt-1">{capabilitySummary}</div>
-          )}
+          {summary && <div className="text-xs text-text-muted mt-1">{summary}</div>}
         </div>
 
         <div className="shrink-0 text-text-muted mt-1">

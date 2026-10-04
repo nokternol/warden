@@ -1,5 +1,6 @@
 import type { ProviderSummary } from '@app/hooks/useProviderSettings';
 import type { ProviderTaskDescriptor } from '@app/hooks/useProviderTasks';
+import type { ProviderTypeDescriptor } from '@contract/providers';
 import type { Story } from '@ladle/react';
 import { useEffect, useRef } from 'react';
 import ProviderCard from './index';
@@ -14,6 +15,20 @@ const provider: ProviderSummary = {
   isActive: true,
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
+};
+
+const radarrType: ProviderTypeDescriptor = {
+  type: 'RADARR',
+  label: 'Radarr',
+  apiPath: '/api/v3',
+  filterData: ['Movie library', 'Quality profiles', 'Tags'],
+};
+
+const overseerrType: ProviderTypeDescriptor = {
+  type: 'OVERSEERR',
+  label: 'Overseerr',
+  apiPath: '',
+  filterData: ['Request queue'],
 };
 
 const tasks: ProviderTaskDescriptor[] = [
@@ -35,14 +50,26 @@ function Expanded({ children }: { children: React.ReactNode }) {
 
 export const Collapsed: Story = () => (
   <div className="max-w-3xl p-6">
-    <ProviderCard provider={provider} tasks={tasks} onUpdate={noop} onDelete={() => {}} />
+    <ProviderCard
+      provider={provider}
+      typeDescriptor={radarrType}
+      tasks={tasks}
+      onUpdate={noop}
+      onDelete={() => {}}
+    />
   </div>
 );
 
 export const ExpandedWithTasks: Story = () => (
   <div className="max-w-3xl p-6">
     <Expanded>
-      <ProviderCard provider={provider} tasks={tasks} onUpdate={noop} onDelete={() => {}} />
+      <ProviderCard
+        provider={provider}
+        typeDescriptor={radarrType}
+        tasks={tasks}
+        onUpdate={noop}
+        onDelete={() => {}}
+      />
     </Expanded>
   </div>
 );
@@ -51,7 +78,13 @@ export const ExpandedNoTasks: Story = () => (
   <div className="max-w-3xl p-6">
     <Expanded>
       <ProviderCard
-        provider={{ ...provider, type: 'TMDB', name: 'TMDB' }}
+        provider={{
+          ...provider,
+          type: 'OVERSEERR',
+          name: 'Overseerr',
+          url: 'http://localhost:5055',
+        }}
+        typeDescriptor={overseerrType}
         tasks={[]}
         onUpdate={noop}
         onDelete={() => {}}

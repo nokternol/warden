@@ -255,7 +255,8 @@ enricher currently populates either field from OMDB — same "listed but not wir
 
 **Auth:** none. `ProviderFactory.createTvMaze()`
 ([`server/modules/providers/providerFactory.ts`](ref:path:server/modules/providers/providerFactory.ts))
-constructs it directly against the public `https://api.tvmaze.com` base with `apiKey: null` — no
+constructs it directly against its provider-catalogue `defaultUrl`, the public `https://api.tvmaze.com`
+base, with `apiKey: null` — no
 `metadata_provider` row is required to use it.
 
 **What the app can pull today** ([`connections/tvmazeProvider.ts`](ref:path:server/modules/providers/connections/tvmazeProvider.ts)):
@@ -271,18 +272,23 @@ returns per-show `network` data) that simply has no enricher built yet — unlik
 
 ## Summary table
 
-| Provider | Role(s) | Wired into media-item pipeline? |
-|---|---|---|
-| Radarr | MediaSource (movie), MediaActuator | Yes — source fields direct to `ruleRegistry` |
-| Sonarr | MediaSource (series), MediaActuator | Yes — source fields direct to `ruleRegistry` |
-| Tautulli | MediaEnricher, MediaActuator | Yes — `tautulliEnricher` |
-| Plex | MediaEnricher, MediaActuator | Yes — `plexEnricher` + identity stamping |
-| Jellyfin | MediaEnricher, MediaActuator | Yes — `jellyfinEnricher` |
-| Overseerr | MediaEnricher | Yes — `overseerrEnricher` |
-| Seerr | (same API as Overseerr; role not extended in code) | No — connection-test only, no `ProviderFactory`/enricher wiring |
-| TMDB | MediaEnricher | Partially — only `getStatus` wired; richer surface used by ratings aggregation only |
-| OMDB | inert | No — ratings aggregation only |
-| TVMaze | inert | No — ratings aggregation only; `network` data is real and buildable |
+**Offered** means the type can be configured: it is served by `GET /api/providers/types` and accepted by
+provider create and the connection test. The other types are declared deferred in
+[`contract/scope.ts`](ref:path:contract/scope.ts); their code stays compiled and tested, and no API path
+reaches them.
+
+| Provider | Role(s) | Wired into media-item pipeline? | Offered? |
+|---|---|---|---|
+| Radarr | MediaSource (movie), MediaActuator | Yes — source fields direct to `ruleRegistry` | Yes |
+| Sonarr | MediaSource (series), MediaActuator | Yes — source fields direct to `ruleRegistry` | Yes |
+| Tautulli | MediaEnricher, MediaActuator | Yes — `tautulliEnricher` | Yes |
+| Plex | MediaEnricher, MediaActuator | Yes — `plexEnricher` + identity stamping | Yes |
+| Jellyfin | MediaEnricher, MediaActuator | Yes — `jellyfinEnricher` | Yes |
+| Overseerr | MediaEnricher | Yes — `overseerrEnricher` | Yes (the request manager) |
+| Seerr | (same API as Overseerr; role not extended in code) | No — no `ProviderFactory`/enricher wiring; the connection probe handles it | No |
+| TMDB | MediaEnricher | Partially — only `getStatus` wired; richer surface used by ratings aggregation only | No |
+| OMDB | inert | No — ratings aggregation only | No |
+| TVMaze | inert | No — ratings aggregation only; `network` data is real and buildable | No |
 
 ## Relationship to `MediaFieldProvider`/`MediaFieldSource`
 

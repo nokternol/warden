@@ -1,6 +1,7 @@
 import type { ProviderSummary } from '@app/hooks/useProviderSettings';
 import type { ProviderTaskAvailability } from '@app/hooks/useProviderTasks';
 import { contract } from '@contract/index';
+import type { ProviderTypeDescriptor } from '@contract/providers';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
@@ -101,5 +102,31 @@ describe('SettingsPage', () => {
     // drop the other, which getByText would catch.
     expect(screen.getByText('Unmonitor movie')).toBeInTheDocument();
     expect(screen.getByText('Unmonitor series')).toBeInTheDocument();
+  });
+
+  it('lists configured providers grouped in the served type order', async () => {
+    mockApi(
+      [
+        makeProvider({ id: 1, type: 'PLEX', name: 'Living room Plex', url: 'http://plex:32400' }),
+        makeProvider({ id: 2, type: 'RADARR', name: 'Radarr Main' }),
+      ],
+      []
+    );
+    const served: ProviderTypeDescriptor[] = [
+      { type: 'RADARR', label: 'Radarr', apiPath: '/api/v3', filterData: [] },
+      { type: 'PLEX', label: 'Plex', apiPath: '', filterData: [] },
+    ];
+    server.use(mockProcedure(contract.providers.types, () => served));
+
+    render(<SettingsPage />, { wrapper: isolated });
+    // The cards carry their served labels once the types have arrived.
+    await screen.findByText('Plex');
+
+    const cardNames = screen
+      .getAllByRole('button', { name: /radarr main|living room plex/i })
+      .map((card) =>
+        card.textContent?.includes('Radarr Main') ? 'Radarr Main' : 'Living room Plex'
+      );
+    expect(cardNames).toEqual(['Radarr Main', 'Living room Plex']);
   });
 });

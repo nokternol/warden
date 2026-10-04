@@ -2,43 +2,18 @@ import Button from '@app/components/Button';
 import ConnectionTestIcon from '@app/components/ConnectionTestIcon';
 import type { TestStatus } from '@app/components/ConnectionTestIcon';
 import type { CreateProviderParams } from '@app/hooks/useProviderSettings';
+import { descriptorFor } from '@app/hooks/useProviderTypes';
 import { api } from '@app/lib/api/client';
-import { type ProviderType, ProviderTypeSchema } from '@contract/schemas';
+import { apiUrlOf } from '@contract/providerUrl';
+import type { ProviderType, ProviderTypeDescriptor } from '@contract/providers';
+import { ProviderTypeSchema } from '@contract/schemas';
 import { useRef, useState } from 'react';
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const API_SUFFIXES: Record<string, string> = {
-  SONARR: '/api/v3',
-  RADARR: '/api/v3',
-  PLEX: '',
-  JELLYFIN: '',
-  TAUTULLI: '',
-  OVERSEERR: '',
-  TMDB: '',
-  OMDB: '',
-};
-
-const PROVIDER_DEFAULT_URLS: Partial<Record<string, string>> = {
-  TMDB: 'https://api.themoviedb.org/3',
-  OMDB: 'http://www.omdbapi.com',
-};
-
-const PROVIDER_TYPES = [
-  'PLEX',
-  'JELLYFIN',
-  'SONARR',
-  'RADARR',
-  'TAUTULLI',
-  'OVERSEERR',
-  'TMDB',
-  'OMDB',
-] as const;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface AddFormState {
-  type: ProviderType;
+  /** The type the user picked; absent until they pick one. */
+  type?: ProviderType;
   name: string;
   url: string;
   apiKey: string;
@@ -48,14 +23,17 @@ interface AddFormState {
 // ─── AddProviderForm ──────────────────────────────────────────────────────────
 
 export default function AddProviderForm({
+  types: servedTypes,
   onSubmit,
   onCancel,
 }: {
+  /** The served provider types; absent while they load. */
+  types: ProviderTypeDescriptor[] | undefined;
   onSubmit: (params: CreateProviderParams) => void;
   onCancel: () => void;
 }) {
+  const types = servedTypes ?? [];
   const [form, setForm] = useState<AddFormState>({
-    type: 'RADARR',
     name: '',
     url: '',
     apiKey: '',
@@ -90,15 +68,17 @@ export default function AddProviderForm({
     }
   };
 
+  const chosen = form.type ? descriptorFor(types, form.type) : types[0];
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const suffix = API_SUFFIXES[form.type] ?? '';
-    const host = form.url.replace(/\/+$/, '');
-    const fullUrl = suffix ? `${host}${suffix}` : host;
-    const settings = form.type === 'JELLYFIN' && form.userId ? { userId: form.userId } : undefined;
+    if (!chosen) return;
+    const fullUrl = apiUrlOf(form.url, chosen.apiPath);
+    const settings =
+      chosen.type === 'JELLYFIN' && form.userId ? { userId: form.userId } : undefined;
 
     onSubmit({
-      type: form.type,
+      type: chosen.type,
       name: form.name,
       url: fullUrl,
       apiKey: form.apiKey || undefined,
@@ -112,6 +92,12 @@ export default function AddProviderForm({
       className="p-4 border border-primary/30 rounded-lg bg-surface-panel space-y-4"
     >
       <div className="text-sm font-medium text-text-primary">Add provider</div>
+      {servedTypes === undefined && (
+        <p className="text-xs text-text-muted">Loading provider types…</p>
+      )}
+      {servedTypes?.length === 0 && (
+        <p className="text-xs text-text-muted">No provider types are available to add.</p>
+      )}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label htmlFor="add-type" className="block text-xs text-text-secondary mb-1">
@@ -119,19 +105,19 @@ export default function AddProviderForm({
           </label>
           <select
             id="add-type"
-            value={form.type}
+            value={chosen?.type}
             onChange={(e) => {
               const newType = ProviderTypeSchema.parse(e.target.value);
-              const defaultUrl = PROVIDER_DEFAULT_URLS[newType];
+              const defaultUrl = descriptorFor(types, newType)?.defaultUrl;
               setForm((f) => ({ ...f, type: newType, url: defaultUrl ?? f.url }));
               setTestStatus('idle');
               setTestError(undefined);
             }}
             className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
           >
-            {PROVIDER_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
+            {types.map((t) => (
+              <option key={t.type} value={t.type}>
+                {t.label}
               </option>
             ))}
           </select>
@@ -158,7 +144,7 @@ export default function AddProviderForm({
             </span>
             {testError && <span className="ml-1.5 text-xs text-danger-hover">{testError}</span>}
           </label>
-          {PROVIDER_DEFAULT_URLS[form.type] !== undefined ? (
+          {chosen?.defaultUrl !== undefined ? (
             <input
               id="add-url"
               type="url"
@@ -175,7 +161,7 @@ export default function AddProviderForm({
                 setForm((f) => ({ ...f, url: e.target.value }));
                 setTestStatus('idle');
               }}
-              onBlur={() => runTest(form.url, form.apiKey, form.type)}
+              onBlur={() => chosen && runTest(form.url, form.apiKey, chosen.type)}
               placeholder="http://localhost:7878"
               className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
               required
@@ -194,12 +180,12 @@ export default function AddProviderForm({
               setForm((f) => ({ ...f, apiKey: e.target.value }));
               setTestStatus('idle');
             }}
-            onBlur={() => runTest(form.url, form.apiKey, form.type)}
+            onBlur={() => chosen && runTest(form.url, form.apiKey, chosen.type)}
             placeholder="Optional"
             className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
           />
         </div>
-        {form.type === 'JELLYFIN' && (
+        {chosen?.type === 'JELLYFIN' && (
           <div>
             <label htmlFor="add-userid" className="block text-xs text-text-secondary mb-1">
               User ID
@@ -219,7 +205,7 @@ export default function AddProviderForm({
         <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" variant="primary" size="sm">
+        <Button type="submit" variant="primary" size="sm" disabled={!chosen}>
           Save
         </Button>
       </div>

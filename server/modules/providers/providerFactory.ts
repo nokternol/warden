@@ -10,9 +10,7 @@ import { SonarrProvider } from './connections/sonarrProvider';
 import { TautulliProvider } from './connections/tautulliProvider';
 import { TmdbProvider } from './connections/tmdbProvider';
 import { TvMazeProvider } from './connections/tvmazeProvider';
-
-// TVmaze is a keyless public service — no configured provider required.
-const TVMAZE_BASE_URL = 'https://api.tvmaze.com';
+import { PROVIDER_CATALOGUE } from './providerCatalogue';
 
 /** Every concrete provider the factory can construct from settings. */
 export type AnyProvider =
@@ -93,10 +91,14 @@ export class ProviderFactory implements IProviderFactory {
     return providers.map((settings) => ({ settings, provider: this.create(settings, logger) }));
   }
 
-  /** The keyless TVmaze lookup provider, configured for the public TVmaze API. */
+  /**
+   * The TVmaze lookup provider, configured for the public TVmaze API. TVmaze is
+   * keyless, so no configured provider is required.
+   */
   createTvMaze(logger: Logger): TvMazeProvider {
+    const { label, defaultUrl } = PROVIDER_CATALOGUE[MetadataProviderType.TVMAZE];
     return new TvMazeProvider(
-      { name: 'TVmaze', url: TVMAZE_BASE_URL, apiKey: null, settings: null },
+      { name: label, url: defaultUrl, apiKey: null, settings: null },
       logger
     );
   }

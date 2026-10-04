@@ -1,5 +1,5 @@
 import { contract } from '@contract/index';
-import type { ProviderDraft, ProviderPatch } from '@contract/providers';
+import type { ProviderDraft, ProviderPatch, ProviderTypeDescriptor } from '@contract/providers';
 import type { ProviderSummary } from '@contract/schemas';
 import { mockProcedure } from '../contract';
 
@@ -17,7 +17,37 @@ const mockProviders: ProviderSummary[] = [
   },
 ];
 
+const mockProviderTypes: ProviderTypeDescriptor[] = [
+  { type: 'PLEX', label: 'Plex', apiPath: '', filterData: ['Library contents', 'Item metadata'] },
+  {
+    type: 'JELLYFIN',
+    label: 'Jellyfin',
+    apiPath: '',
+    filterData: ['Library contents', 'Item metadata'],
+  },
+  {
+    type: 'RADARR',
+    label: 'Radarr',
+    apiPath: '/api/v3',
+    filterData: ['Movie library', 'Quality profiles', 'Tags'],
+  },
+  {
+    type: 'SONARR',
+    label: 'Sonarr',
+    apiPath: '/api/v3',
+    filterData: ['Series library', 'Quality profiles', 'Tags'],
+  },
+  {
+    type: 'TAUTULLI',
+    label: 'Tautulli',
+    apiPath: '',
+    filterData: ['Watch history', 'Play statistics', 'User activity'],
+  },
+  { type: 'OVERSEERR', label: 'Overseerr', apiPath: '', filterData: ['Request queue'] },
+];
+
 export const settingsHandlers = [
+  mockProcedure(contract.providers.types, () => mockProviderTypes),
   mockProcedure(contract.providers.list, () => mockProviders),
 
   mockProcedure(contract.providers.create, async ({ request }) => {

@@ -24,7 +24,7 @@ against it is a separate, later effort (`/tdd` or `/plan-and-go`).
   (`server/database/schema.ts`): Plex, Jellyfin, Radarr, Sonarr, Tautulli, Overseerr, Seerr, TMDB,
   OMDB, TVMaze. ("Available" = currently configurable per the schema enum, whether or not a
   `metadata_provider` row exists yet — this is why Seerr and TVMaze are included even though
-  `PROVIDER_REGISTRY` in `src/lib/provider-registry.ts` only lists 8 of the 10.)
+  `contract/scope.ts` currently declares them, with TMDB and OMDB, as deferred.)
 - **Tasks = automations.** A provider's `MediaActuator` actions (exposed via its own API) are the
   building blocks the Automations UI offers as options — not a separate track. Spec "tasks" and
   "automation" together in the same ticket.
@@ -35,7 +35,8 @@ against it is a separate, later effort (`/tdd` or `/plan-and-go`).
   extend, don't take as complete): `docs/architecture/media-providers.md`,
   `docs/architecture/media-field-provider-role.md`, `docs/architecture/provider-roles-and-identity.md`,
   `server/modules/media/ruleRegistry.ts` (`contestedFieldPrecedence`, `providers`),
-  `src/lib/provider-registry.ts` (`PROVIDER_REGISTRY`), `server/database/schema.ts`
+  `server/modules/providers/providerCatalogue.ts` (`PROVIDER_CATALOGUE`), `contract/scope.ts`,
+  `server/database/schema.ts`
   (`MetadataProviderType`).
 - **Skills per ticket type:** research tickets — `WebSearch`/`WebFetch` against the provider's
   official API docs, plus a codebase audit; no other skill mandated. Decision tickets — `/grilling`

@@ -142,6 +142,25 @@ describe('Provider CRUD API Integration', () => {
       const res = await authedClient.post('/api/providers', { name: 'No type' });
       expectErrorResponse(res, 400);
     });
+
+    it.each([
+      MetadataProviderType.SEERR,
+      MetadataProviderType.TMDB,
+      MetadataProviderType.OMDB,
+      MetadataProviderType.TVMAZE,
+    ])('refuses a %s provider, a type that is not offered, and stores nothing', async (type) => {
+      const before = expectSuccessResponse(await authedClient.get('/api/providers'));
+
+      const res = await authedClient.post('/api/providers', {
+        type,
+        name: 'Not offered',
+        url: 'http://localhost:9999',
+        apiKey: 'k',
+      });
+
+      expect(res.status).toBe(400);
+      expect(expectSuccessResponse(await authedClient.get('/api/providers'))).toEqual(before);
+    });
   });
 
   describe('PATCH /providers/:id', () => {

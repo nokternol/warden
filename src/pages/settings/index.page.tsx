@@ -8,20 +8,19 @@ import TopBar from '@app/components/TopBar';
 import type { CreateProviderParams, ProviderSummary } from '@app/hooks/useProviderSettings';
 import { useProviderSettings } from '@app/hooks/useProviderSettings';
 import { tasksForProvider, useProviderTasks } from '@app/hooks/useProviderTasks';
-import { getProviderOrder } from '@app/lib/provider-registry';
+import { descriptorFor, useProviderTypes } from '@app/hooks/useProviderTypes';
 import { requireAuth } from '@app/lib/utils/requireAuth';
+import type { ProviderType } from '@contract/providers';
 import { Plug } from 'lucide-react';
 import type { GetServerSideProps } from 'next';
 import { useState } from 'react';
 
-// ─── Provider metadata — derived from registry ────────────────────────────────
+// ─── Provider order — the served type order ──────────────────────────────────
 
-const GROUP_ORDER = getProviderOrder();
-
-function sortProviders(providers: ProviderSummary[]): ProviderSummary[] {
+function sortProviders(providers: ProviderSummary[], typeOrder: ProviderType[]): ProviderSummary[] {
   return [...providers].sort((a, b) => {
-    const ai = GROUP_ORDER.indexOf(a.type);
-    const bi = GROUP_ORDER.indexOf(b.type);
+    const ai = typeOrder.indexOf(a.type);
+    const bi = typeOrder.indexOf(b.type);
     const aIdx = ai === -1 ? 999 : ai;
     const bIdx = bi === -1 ? 999 : bi;
     return aIdx !== bIdx ? aIdx - bIdx : a.name.localeCompare(b.name);
@@ -41,6 +40,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 export default function SettingsPage() {
   const { providers, isLoading, create, update, remove } = useProviderSettings();
   const { availability } = useProviderTasks();
+  const { types } = useProviderTypes();
   const [showAddForm, setShowAddForm] = useState(false);
 
   const handleCreate = async (params: CreateProviderParams) => {
@@ -48,7 +48,8 @@ export default function SettingsPage() {
     setShowAddForm(false);
   };
 
-  const sorted = providers ? sortProviders(providers) : [];
+  const typeOrder = (types ?? []).map((t) => t.type);
+  const sorted = providers ? sortProviders(providers, typeOrder) : [];
 
   return (
     <AppLayout
@@ -72,7 +73,11 @@ export default function SettingsPage() {
     >
       <div className="p-6 space-y-4 max-w-3xl">
         {showAddForm && (
-          <AddProviderForm onSubmit={handleCreate} onCancel={() => setShowAddForm(false)} />
+          <AddProviderForm
+            types={types}
+            onSubmit={handleCreate}
+            onCancel={() => setShowAddForm(false)}
+          />
         )}
 
         {isLoading && (
@@ -97,7 +102,7 @@ export default function SettingsPage() {
           <div className="space-y-2">
             {sorted.map((p, idx) => {
               const prev = idx > 0 ? sorted[idx - 1] : null;
-              const typeGroup = (t: string) => GROUP_ORDER.indexOf(t);
+              const typeGroup = (t: ProviderType) => typeOrder.indexOf(t);
               const showDivider = prev !== null && typeGroup(p.type) !== typeGroup(prev.type);
 
               return (
@@ -105,6 +110,7 @@ export default function SettingsPage() {
                   {showDivider && <div className="h-px bg-border/40 my-1" />}
                   <ProviderCard
                     provider={p}
+                    typeDescriptor={descriptorFor(types, p.type)}
                     tasks={tasksForProvider(availability, p.id)}
                     onUpdate={(patch) => update(p.id, patch)}
                     onDelete={() => remove(p.id)}
