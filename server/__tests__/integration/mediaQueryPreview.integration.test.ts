@@ -49,7 +49,7 @@ describe('GET /api/media-queries/:id/preview', () => {
     const filtered = await mediaQueryService.create({
       name: 'Downloaded Movies',
       contentType: 'movie',
-      filterValues: [{ key: 'hasFile', value: true }],
+      filterValues: [{ ruleKey: 'hasFile', value: true }],
     });
     filteredQueryId = filtered.id;
 

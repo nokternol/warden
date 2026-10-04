@@ -59,7 +59,7 @@ export {
 // The rule vocabulary and its client-facing projection.
 export type {
   FilterValue,
-  FilterValueEntry,
+  Filter,
   MediaRule,
   MediaRuleDescriptor,
   MovieRangeRuleKey,

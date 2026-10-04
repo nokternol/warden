@@ -1,4 +1,4 @@
-import type { FilterValueEntry } from '@app/hooks/useMediaQueries';
+import type { Filter } from '@app/hooks/useMediaQueries';
 
 const LABELS: Record<string, string> = {
   title: 'Title',
@@ -36,9 +36,9 @@ const LABELS: Record<string, string> = {
   plexAddedDaysAgoLte: 'Plex added ≤ days',
 };
 
-export function summarizeFilters(filterValues: FilterValueEntry[]): string[] {
-  return filterValues.map(({ key, value }) => {
-    const label = LABELS[key] ?? key;
+export function summarizeFilters(filterValues: Filter[]): string[] {
+  return filterValues.map(({ ruleKey, value }) => {
+    const label = LABELS[ruleKey] ?? ruleKey;
     if (typeof value === 'boolean') {
       return value ? label : `Not ${label.toLowerCase()}`;
     }

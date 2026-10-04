@@ -66,7 +66,7 @@ const mockQuery: MediaQueryRecord = {
   id: 1,
   name: 'Old Movies',
   contentType: 'movie',
-  filterValues: [{ key: 'yearMax', value: 2015 }],
+  filterValues: [{ ruleKey: 'yearMax', value: 2015 }],
   health: { status: 'healthy', providerStatus: [], qualificationIssues: [] },
   createdAt: '2024-01-01T00:00:00Z',
 };

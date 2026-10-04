@@ -87,7 +87,7 @@ describe('AutomationService', () => {
       const query = await mediaQueryService.create({
         name: 'My Query',
         contentType: 'movie',
-        filterValues: [{ key: 'hasFile', value: true }],
+        filterValues: [{ ruleKey: 'hasFile', value: true }],
       });
       const provider = await providerSettingsService.create({
         type: MetadataProviderType.RADARR,

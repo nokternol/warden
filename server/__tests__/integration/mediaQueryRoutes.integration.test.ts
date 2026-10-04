@@ -58,7 +58,7 @@ describe('media query routes', () => {
       .send({
         name: 'Qualified',
         contentType: 'movie',
-        filterValues: [{ key: 'qualityProfileIds', value: '5', providerId: provider.id }],
+        filterValues: [{ ruleKey: 'qualityProfileIds', value: '5', providerId: provider.id }],
       });
 
     expect(res.status).toBe(200);

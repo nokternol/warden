@@ -32,8 +32,8 @@ import type { MediaSource } from './mediaSource';
 import { sourceOwnership } from './mediaSourceFactory';
 import { normalizeRadarrMovie, normalizeSonarrSeries } from './normalizeMedia';
 import type {
+  Filter,
   FilterValue,
-  FilterValueEntry,
   MovieRangeRuleKey,
   NormalizedMovie,
   NormalizedSeries,
@@ -252,8 +252,8 @@ const _seriesSchemaCoversParams: SeriesSchemaShape & Record<SeriesSchemaMissing,
 function toFilterValues(
   query: Record<string, unknown>,
   paramMap: Record<string, ParamMapping>
-): FilterValueEntry[] {
-  const entries: FilterValueEntry[] = [];
+): Filter[] {
+  const entries: Filter[] = [];
   const ranges = new Map<string, RangeValue>();
 
   for (const [param, { key, bound, providerIdParam }] of Object.entries(paramMap)) {
@@ -264,14 +264,14 @@ function toFilterValues(
       range[bound] = Number(raw);
       ranges.set(key, range);
     } else {
-      const entry: FilterValueEntry = { key, value: raw as FilterValue };
+      const entry: Filter = { ruleKey: key, value: raw as FilterValue };
       const rawProviderId = providerIdParam ? query[providerIdParam] : undefined;
       if (rawProviderId !== undefined) entry.providerId = Number(rawProviderId);
       entries.push(entry);
     }
   }
   for (const [key, value] of ranges) {
-    entries.push({ key, value });
+    entries.push({ ruleKey: key, value });
   }
   return entries;
 }

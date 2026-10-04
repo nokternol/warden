@@ -12,14 +12,11 @@ export type RangeValue = { min?: number; max?: number };
 export type FilterValue = string | number | boolean | RangeValue;
 
 /**
- * One predicate application: a registry key paired with the value to test it against.
- * `providerId` qualifies which instance's namespace the value belongs to — set only on
- * `instanceScoped` rules; namespace qualification, not targeting (see `automations.providerId`
- * for that). Undefined means unqualified: the native id is interpreted in each item's own
- * instance namespace, today's behavior.
+ * A filter: a rule's key paired with the value to test it against. Nothing here knows
+ * which provider supplies the data — the rule resolves that.
  */
-export interface FilterValueEntry {
-  key: string;
+export interface Filter {
+  ruleKey: string;
   value: FilterValue;
   providerId?: number;
 }

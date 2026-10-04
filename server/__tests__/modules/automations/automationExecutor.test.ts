@@ -16,7 +16,7 @@ import { AutomationScheduler } from '@server/modules/automations/automationSched
 import { AutomationService } from '@server/modules/automations/automationService';
 import type { MediaItem } from '@server/modules/media';
 import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.queries';
-import type { FilterValueEntry } from '@server/modules/media/ruleRegistry';
+import type { Filter } from '@server/modules/media/ruleRegistry';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import {
   type IProviderFactory,
@@ -133,7 +133,7 @@ async function seedSonarrProvider(providerSettingsService: ProviderSettingsServi
 
 async function seedMediaQuery(
   mediaQueryService: MediaQueryService,
-  filterValues: FilterValueEntry[] = [],
+  filterValues: Filter[] = [],
   contentType: ContentType = 'movie'
 ) {
   return mediaQueryService.create({ name: 'Test Query', contentType, filterValues });
@@ -338,7 +338,7 @@ describe('AutomationExecutor', () => {
       );
 
       const provider = await seedRadarrProvider(providerSettingsService);
-      const query = await seedMediaQuery(mediaQueryService, [{ key: 'hasFile', value: true }]);
+      const query = await seedMediaQuery(mediaQueryService, [{ ruleKey: 'hasFile', value: true }]);
       const automation = await seedAutomation(automationService, {
         queryId: query.id,
         providerId: provider.id,
@@ -366,7 +366,7 @@ describe('AutomationExecutor', () => {
       );
 
       const provider = await seedRadarrProvider(providerSettingsService);
-      const query = await seedMediaQuery(mediaQueryService, [{ key: 'hasFile', value: true }]);
+      const query = await seedMediaQuery(mediaQueryService, [{ ruleKey: 'hasFile', value: true }]);
       const automation = await seedAutomation(automationService, {
         queryId: query.id,
         providerId: provider.id,
@@ -568,7 +568,7 @@ describe('AutomationExecutor', () => {
       const provider = await seedSonarrProvider(providerSettingsService);
       const query = await seedMediaQuery(
         mediaQueryService,
-        [{ key: 'seriesStatus', value: 'ended' }],
+        [{ ruleKey: 'seriesStatus', value: 'ended' }],
         'series'
       );
       const automation = await seedAutomation(automationService, {
@@ -600,7 +600,7 @@ describe('AutomationExecutor', () => {
       const provider = await seedSonarrProvider(providerSettingsService);
       const query = await seedMediaQuery(
         mediaQueryService,
-        [{ key: 'monitored', value: false }],
+        [{ ruleKey: 'monitored', value: false }],
         'series'
       );
       const automation = await seedAutomation(automationService, {
@@ -950,7 +950,7 @@ describe('AutomationExecutor', () => {
       });
       const mockFactory: IProviderFactory = { create: () => mockRadarr };
 
-      const query = await seedMediaQuery(mediaQueryService, [{ key: 'watched', value: true }]);
+      const query = await seedMediaQuery(mediaQueryService, [{ ruleKey: 'watched', value: true }]);
       const automation = await seedAutomation(automationService, {
         queryId: query.id,
         providerId: provider.id,
@@ -1012,7 +1012,7 @@ describe('AutomationExecutor', () => {
       const mockFactory: IProviderFactory = { create: () => mockRadarr };
 
       const query = await seedMediaQuery(mediaQueryService, [
-        { key: 'lastWatchedDaysAgo', value: { min: 7 } },
+        { ruleKey: 'lastWatchedDaysAgo', value: { min: 7 } },
       ]);
       const automation = await seedAutomation(automationService, {
         queryId: query.id,
@@ -1065,7 +1065,7 @@ describe('AutomationExecutor', () => {
       const mockFactory: IProviderFactory = { create: () => mockSonarr };
       const query = await seedMediaQuery(
         mediaQueryService,
-        [{ key: 'watched', value: true }],
+        [{ ruleKey: 'watched', value: true }],
         'series'
       );
       const automation = await seedAutomation(automationService, {
@@ -1115,11 +1115,11 @@ describe('AutomationExecutor', () => {
       const provider = await seedRadarrProvider(providerSettingsService);
       // include: all hasFile:true movies → [1, 3]
       const includeQuery = await seedMediaQuery(mediaQueryService, [
-        { key: 'hasFile', value: true },
+        { ruleKey: 'hasFile', value: true },
       ]);
       // exclude: qualityProfileId 20 → [3]
       const excludeQuery = await seedMediaQuery(mediaQueryService, [
-        { key: 'qualityProfileIds', value: '20' },
+        { ruleKey: 'qualityProfileIds', value: '20' },
       ]);
 
       const automation = await automationService.create({
@@ -1164,9 +1164,11 @@ describe('AutomationExecutor', () => {
 
       const provider = await seedRadarrProvider(providerSettingsService);
       // Query A: only hasFile:true → movies 1 and 3
-      const queryA = await seedMediaQuery(mediaQueryService, [{ key: 'hasFile', value: true }]);
+      const queryA = await seedMediaQuery(mediaQueryService, [{ ruleKey: 'hasFile', value: true }]);
       // Query B: only hasFile:false → movie 2
-      const queryB = await seedMediaQuery(mediaQueryService, [{ key: 'hasFile', value: false }]);
+      const queryB = await seedMediaQuery(mediaQueryService, [
+        { ruleKey: 'hasFile', value: false },
+      ]);
 
       const automation = await automationService.create({
         name: 'Multi-include',
@@ -1213,8 +1215,10 @@ describe('AutomationExecutor', () => {
       const mockFactory: IProviderFactory = { create: createSpy };
 
       const provider = await seedRadarrProvider(providerSettingsService);
-      const queryA = await seedMediaQuery(mediaQueryService, [{ key: 'hasFile', value: true }]);
-      const queryB = await seedMediaQuery(mediaQueryService, [{ key: 'hasFile', value: false }]);
+      const queryA = await seedMediaQuery(mediaQueryService, [{ ruleKey: 'hasFile', value: true }]);
+      const queryB = await seedMediaQuery(mediaQueryService, [
+        { ruleKey: 'hasFile', value: false },
+      ]);
 
       const automation = await automationService.create({
         name: 'Hoist Test',

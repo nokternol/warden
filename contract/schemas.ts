@@ -39,9 +39,9 @@ export const FilterValueSchema = z.union([
   z.object({ min: z.number().optional(), max: z.number().optional() }).strict(),
 ]);
 
-export const FilterValueEntrySchema = z
+export const FilterSchema = z
   .object({
-    key: z.string(),
+    ruleKey: z.string(),
     value: FilterValueSchema,
     // Namespace qualification for provider-defined id spaces (quality profiles, tags) —
     // not targeting (see automations.providerId for that). Undefined means unqualified.
@@ -79,7 +79,7 @@ export const MediaQueryRecordSchema = z
     id: z.number(),
     name: z.string(),
     contentType: ContentTypeSchema,
-    filterValues: z.array(FilterValueEntrySchema),
+    filterValues: z.array(FilterSchema),
     health: QueryHealthSchema,
     createdAt: z.string(),
   })
@@ -146,7 +146,7 @@ export const AutomationSchema = z
 export const MediaQueryValueSchema = z.object({
   name: z.string().min(1).max(200),
   contentType: ContentTypeSchema,
-  filterValues: z.array(FilterValueEntrySchema),
+  filterValues: z.array(FilterSchema),
 });
 
 // ─── Additional response schemas ─────────────────────────────────────────────

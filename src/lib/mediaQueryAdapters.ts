@@ -5,7 +5,7 @@ import type {
   QualifierScope,
   RangeValue,
 } from '@app/hooks/useMediaFilters';
-import type { FilterValueEntry } from '@app/hooks/useMediaQueries';
+import type { Filter } from '@app/hooks/useMediaQueries';
 import type { MediaFilters } from '@app/types/media';
 import type { MovieRangeRuleKey, SeriesRangeRuleKey } from '@contract/browseRangeKeys';
 /**
@@ -199,18 +199,15 @@ export function toBrowseParams(buckets: ScopedBuckets, contentType: ContentType)
   return params;
 }
 
-export function toSaveValues(
-  filterState: FilterState,
-  contentType: ContentType
-): FilterValueEntry[] {
+export function toSaveValues(filterState: FilterState, contentType: ContentType): Filter[] {
   const scoped = contentType === 'movie' ? filterState.movie : filterState.series;
   const qualifiers =
     contentType === 'movie' ? filterState.movieQualifiers : filterState.seriesQualifiers;
   const merged: Record<string, FilterValue> = { ...filterState.shared, ...scoped };
   return Object.entries(merged)
     .filter((entry): entry is [string, FilterValue] => entry[1] !== undefined)
-    .map(([key, value]) => {
-      const providerId = qualifiers[key];
-      return providerId === undefined ? { key, value } : { key, value, providerId };
+    .map(([ruleKey, value]) => {
+      const providerId = qualifiers[ruleKey];
+      return providerId === undefined ? { ruleKey, value } : { ruleKey, value, providerId };
     });
 }

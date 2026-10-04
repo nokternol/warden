@@ -7,13 +7,13 @@ import type { MediaItemSet } from './mediaItem';
 import { itemKey } from './mediaItem';
 import type { MediaSource } from './mediaSource';
 import type { NormalizedMovie } from './movie';
-import type { FilterValueEntry } from './ruleRegistry';
+import type { Filter } from './ruleRegistry';
 import { getRule } from './ruleRegistry';
 import type { NormalizedSeries } from './series';
 
 /** One clause of a query: a set of filters and the role it plays (an included or excluded query). */
 export interface MediaQueryClause {
-  filterValues: FilterValueEntry[];
+  filterValues: Filter[];
   role: 'include' | 'exclude';
 }
 
@@ -49,12 +49,12 @@ export type { MediaItemSet };
  */
 export function matchItems<T extends NormalizedMovie | NormalizedSeries>(
   items: T[],
-  filterValues: FilterValueEntry[],
+  filterValues: Filter[],
   contentType: ContentType
 ): T[] {
   return items.filter((item) =>
-    filterValues.every(({ key, value, providerId }) => {
-      const rule = getRule(key, contentType);
+    filterValues.every(({ ruleKey, value, providerId }) => {
+      const rule = getRule(ruleKey, contentType);
       if (!rule) return true;
       if (providerId !== undefined && item._sourceIds.providerId !== providerId) return false;
       return rule.predicate(item, value);

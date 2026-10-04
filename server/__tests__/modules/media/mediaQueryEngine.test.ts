@@ -28,7 +28,7 @@ describe('MediaQueryEngine', () => {
       const result = await engine.evaluate({
         source,
         contentType: 'movie',
-        clauses: [{ filterValues: [{ key: 'hasFile', value: true }], role: 'include' }],
+        clauses: [{ filterValues: [{ ruleKey: 'hasFile', value: true }], role: 'include' }],
       });
 
       expect(radarrIds(result as NormalizedMovie[])).toEqual([1]);
@@ -48,8 +48,8 @@ describe('MediaQueryEngine', () => {
         source,
         contentType: 'movie',
         clauses: [
-          { filterValues: [{ key: 'hasFile', value: true }], role: 'include' },
-          { filterValues: [{ key: 'qualityProfileIds', value: '20' }], role: 'exclude' },
+          { filterValues: [{ ruleKey: 'hasFile', value: true }], role: 'include' },
+          { filterValues: [{ ruleKey: 'qualityProfileIds', value: '20' }], role: 'exclude' },
         ],
       });
 
@@ -89,14 +89,14 @@ describe('matchItems — per-entry provider gate', () => {
   ];
 
   it('an unqualified entry (no providerId) matches items regardless of instance', () => {
-    const result = matchItems(items, [{ key: 'qualityProfileIds', value: '5' }], 'movie');
+    const result = matchItems(items, [{ ruleKey: 'qualityProfileIds', value: '5' }], 'movie');
     expect(result).toHaveLength(2);
   });
 
   it('a qualified entry matches only the items from that provider', () => {
     const result = matchItems(
       items,
-      [{ key: 'qualityProfileIds', value: '5', providerId: 1 }],
+      [{ ruleKey: 'qualityProfileIds', value: '5', providerId: 1 }],
       'movie'
     );
     expect(result).toHaveLength(1);
@@ -106,7 +106,7 @@ describe('matchItems — per-entry provider gate', () => {
   it('a qualified entry rejects an item from another instance even when the predicate would pass', () => {
     const result = matchItems(
       items,
-      [{ key: 'qualityProfileIds', value: '5', providerId: 999 }],
+      [{ ruleKey: 'qualityProfileIds', value: '5', providerId: 999 }],
       'movie'
     );
     expect(result).toHaveLength(0);
