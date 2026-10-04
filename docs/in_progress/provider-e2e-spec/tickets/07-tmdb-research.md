@@ -14,7 +14,7 @@ parent: docs/in_progress/provider-e2e-spec/map.md
 Audit Tmdb's full API surface (web research against its official API docs) and cross-check
 against what this codebase currently wires (`server/modules/providers/connections/tmdbProvider.ts`
 if it exists, `server/modules/providers/providerFactory.ts`, `server/modules/media/enrichment/enricherAdapters.ts`,
-`server/modules/media/filterRegistry.ts`, `src/lib/provider-registry.ts`). Produce a markdown asset
+`server/modules/media/ruleRegistry.ts`, `src/lib/provider-registry.ts`). Produce a markdown asset
 (linked from this ticket, not pasted into it) enumerating, for every field and task/action Tmdb's
 API exposes:
 
@@ -26,7 +26,7 @@ API exposes:
 - Any gap that would require a *structural* schema change (new column/table, not just a new config
   value in the existing `settings` JSON blob) — flag, don't design.
 
-Known context to start from: Partially wired: tmdbEnricher only calls getStatus(tmdbId) -> tmdbStatus. getMovieDetailsEnriched/getTvDetailsEnriched (certification, keywords, collection, spoken languages, origin country), getMovieWatchProviders/getTvWatchProviders, and getRatings are implemented but NOT consumed by EnrichmentJob — only by the separate ratingsAggregation.ts/providers.procedures.ts getRatings route and TmdbService's trending-backdrops feature. filterRegistry.ts already lists TMDB as a sourceProviders entry for genres/year/certification even though no enricher populates those fields from TMDB today — confirm whether to wire real enrichment or correct the stale registry entry.
+Known context to start from: Partially wired: tmdbEnricher only calls getStatus(tmdbId) -> tmdbStatus. getMovieDetailsEnriched/getTvDetailsEnriched (certification, keywords, collection, spoken languages, origin country), getMovieWatchProviders/getTvWatchProviders, and getRatings are implemented but NOT consumed by EnrichmentJob — only by the separate ratingsAggregation.ts/providers.procedures.ts getRatings route and TmdbService's trending-backdrops feature. ruleRegistry.ts already lists TMDB as a providers entry for genres/year/certification even though no enricher populates those fields from TMDB today — confirm whether to wire real enrichment or correct the stale registry entry.
 
 Do not decide what to build yet — that's the follow-on decision ticket. This ticket is exhaustive
 enumeration, not curation.
@@ -44,8 +44,8 @@ enumeration, not curation.
   in `tmdbProvider.ts` (`getMovieDetailsEnriched`/`getTvDetailsEnriched`, watch-providers, `getRatings`)
   is implemented but consumed only by `ratingsAggregation.ts`/`providers.procedures.ts`'s `getRatings`
   route and `TmdbService`'s trending-backdrops feature — none of it reaches `EnrichmentJob`.
-- `filterRegistry.ts`'s `year`/`certification`/`genres` rules hand-list `MetadataProviderType.TMDB` in
-  `sourceProviders` directly, bypassing `activeFieldSet.ts`'s `fieldsByProviderType` (whose only TMDB
+- `ruleRegistry.ts`'s `year`/`certification`/`genres` rules hand-list `MetadataProviderType.TMDB` in
+  `providers` directly, bypassing `activeFieldSet.ts`'s `fieldsByProviderType` (whose only TMDB
   entry is `tmdbStatus`) — two independent "does TMDB own this field" declarations that already
   disagree. Central open question for the decision ticket, presented but not resolved: wire real
   enrichment (`tmdbEnricher` starts calling the enriched-details methods, new `EnrichmentFields` keys,

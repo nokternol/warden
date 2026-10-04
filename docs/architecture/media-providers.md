@@ -40,7 +40,7 @@ once). None are modelled-only.
 `inCinemasDate`, `physicalReleaseDate`, `digitalReleaseDate`, `collectionName`, `isAvailable`,
 `radarrStatus`, etc.) are normalized directly onto `NormalizedMovie` by
 [`normalizeMedia.ts`](ref:path:server/modules/media/normalizeMedia.ts) and gated straight into
-`filterRegistry.ts` — no enrichment step needed for source-owned data.
+`ruleRegistry.ts` — no enrichment step needed for source-owned data.
 
 ## Sonarr
 
@@ -65,7 +65,7 @@ same precedent as Radarr's `moveMovie`.
 `statistics.episodeFileCount > 0`), `path`, `images`, `nextAiring`, `seasonCount`, `episodeFileCount`,
 `episodeCount`/`totalEpisodeCount`, `languageProfileId`, etc.) normalize onto `NormalizedSeries`
 ([`normalizeMedia.ts`](ref:path:server/modules/media/normalizeMedia.ts)) and are gated directly into
-`filterRegistry.ts`. `_sourceIds.imdb`/`_sourceIds.tvmaze` are also populated (identity fields, not
+`ruleRegistry.ts`. `_sourceIds.imdb`/`_sourceIds.tvmaze` are also populated (identity fields, not
 enrichment data), closing the asymmetry with `NormalizedMovie._sourceIds.imdb`. Language profiles are a
 Sonarr-only concept with no Radarr equivalent — `getLanguageProfiles()` backs the `languageProfileIds`
 filter rule and the `GET /api/media/language-profiles` lookup route, both independent of the
@@ -91,7 +91,7 @@ implemented against Tautulli's API.
 ([`mediaFieldProvider.ts`](ref:path:server/modules/media/mediaFieldProvider.ts),
 see [`docs/architecture/media-field-provider-role.md`](ref:path:docs/architecture/media-field-provider-role.md))
 into `playCount`/`lastWatchedAt` keyed by `plexRatingKey`, and wins precedence over Plex for both
-fields in `contestedFieldPrecedence`. Gated into `filterRegistry.ts` (`watched`, `lastWatchedDaysAgo`).
+fields in `contestedFieldPrecedence`. Gated into `ruleRegistry.ts` (`watched`, `lastWatchedDaysAgo`).
 
 ## Plex
 
@@ -115,7 +115,7 @@ modelled-only.
 ([`mediaFieldProvider.ts`](ref:path:server/modules/media/mediaFieldProvider.ts)) into `playCount`/
 `lastWatchedAt` keyed by `ratingKey`, loses precedence to Tautulli when both are configured. Also
 contributes `plexAddedAt` (Plex's own library-added timestamp, ISO-converted from `addedAt`) —
-single-producer, no precedence entry, gated into `filterRegistry.ts` as `plexAddedDaysAgo`. Also
+single-producer, no precedence entry, gated into `ruleRegistry.ts` as `plexAddedDaysAgo`. Also
 stamped onto `media_identity` groups by the identity job (`runForPlex`) for `plexRatingKey` matching —
 never inserts a group of its own.
 
@@ -151,7 +151,7 @@ kept prefixed and separate from `plexAddedAt` — mutually-exclusive server choi
 the settings-driven `primaryMediaServer` Plex/Jellyfin swap `_precedence.md` designs). `genres`/
 `certification` are deliberately not wired as Jellyfin-producer fields — same construction-time-vs-
 enrichment-overwrite gap Plex's `genres`/`certification` hit, blocked on precedence-ordering machinery.
-Gated into `filterRegistry.ts` (`studio`, `runtimeMinutes`, `fileContainer`, `videoCodec`, `audioCodec`,
+Gated into `ruleRegistry.ts` (`studio`, `runtimeMinutes`, `fileContainer`, `videoCodec`, `audioCodec`,
 `fileResolution`, `fileSizeBytes`, `releaseDaysAgo`, `labels`, `watched`, `lastWatchedDaysAgo`,
 `jellyfinAddedDaysAgo`, `jellyfinIsFavorite`).
 
@@ -171,7 +171,7 @@ Gated into `filterRegistry.ts` (`studio`, `runtimeMinutes`, `fileContainer`, `vi
 ([`enrichment/enricherAdapters.ts`](ref:path:server/modules/media/enrichment/enricherAdapters.ts)) calls
 `getRequests()`+`getIssues()`, runs them through `overseerrFieldProvider`
 ([`mediaFieldProvider.ts`](ref:path:server/modules/media/mediaFieldProvider.ts)) into
-`overseerrRequestStatus`/`overseerrHasIssue` keyed by `tmdbId`. Gated into `filterRegistry.ts`.
+`overseerrRequestStatus`/`overseerrHasIssue` keyed by `tmdbId`. Gated into `ruleRegistry.ts`.
 
 ## Seerr
 
@@ -193,7 +193,7 @@ container can register it as a separate SEERR-typed provider."
 switch has no `SEERR` case — Seerr is only constructed ad hoc in
 `providers.procedures.ts`'s ad-hoc `metadata` procedure (`OVERSEERR`/`SEERR` share one case there, calling
 `getRequests()` to prove connectivity). It is absent from `enricherAdapters.ts`, `ProviderSet`, and
-`filterRegistry.ts` entirely — configuring Seerr today gets you a working connection test and nothing
+`ruleRegistry.ts` entirely — configuring Seerr today gets you a working connection test and nothing
 else; even the `overseerrEnricher` role Overseerr itself plays is not extended to a configured Seerr
 instance.
 
@@ -214,13 +214,13 @@ feature, below).
 
 **Wired into the media-item pipeline?** Partially. `tmdbEnricher`
 ([`enrichment/enricherAdapters.ts`](ref:path:server/modules/media/enrichment/enricherAdapters.ts)) only
-calls `getStatus(tmdbId)`, contributing a single field (`tmdbStatus`), gated into `filterRegistry.ts`. The
+calls `getStatus(tmdbId)`, contributing a single field (`tmdbStatus`), gated into `ruleRegistry.ts`. The
 much larger enriched-details/watch-providers/ratings surface (`getMovieDetailsEnriched`, watch providers,
 `getRatings`) is implemented but consumed only by the separate on-demand
 `ratingsAggregation.ts`/`providers.ratings` procedure and `TmdbService`'s trending-backdrops
 feature ([`server/modules/providers/tmdbService.ts`](ref:path:server/modules/providers/tmdbService.ts),
 unrelated background-image fetching) — none of it flows through `EnrichmentJob` onto a `MediaItem`. Also
-note `filterRegistry.ts`'s `genres`/`year`/`certification` rules already list TMDB as a `sourceProviders`
+note `ruleRegistry.ts`'s `genres`/`year`/`certification` rules already list TMDB as a `providers`
 entry even though no enricher currently populates those fields from TMDB for a `MediaItem` — those entries
 describe a plausible source, not a wired one.
 
@@ -241,8 +241,8 @@ rating/votes, Rotten Tomatoes %, Metacritic score, award-winner/Oscar-winner fla
 
 **Wired into the media-item pipeline?** No — used only by the separate ratings-aggregation feature
 (`server/modules/providers/ratingsAggregation.ts`, the `providers.ratings` procedure in `providers.procedures.ts`). Not an
-enricher, not referenced by `enricherAdapters.ts` or `filterRegistry.ts` for any `MediaItem` field. (The
-`certification`/`imdbRating` rules in `filterRegistry.ts` list `OMDB` as a `sourceProviders` entry, but no
+enricher, not referenced by `enricherAdapters.ts` or `ruleRegistry.ts` for any `MediaItem` field. (The
+`certification`/`imdbRating` rules in `ruleRegistry.ts` list `OMDB` as a `providers` entry, but no
 enricher currently populates either field from OMDB — same "listed but not wired" gap as TMDB's
 `genres`/`year`/`certification` entries above.)
 
@@ -264,8 +264,8 @@ constructs it directly against the public `https://api.tvmaze.com` base with `ap
 ratings aggregation).
 
 **Wired into the media-item pipeline?** No — used only by ratings aggregation
-(`ratingsAggregation.ts`). `filterRegistry.ts`'s `network` rule already lists `TVMAZE` as a
-`sourceProviders` entry alongside Sonarr; this one is a real, live-testable capability (`getShow` genuinely
+(`ratingsAggregation.ts`). `ruleRegistry.ts`'s `network` rule already lists `TVMAZE` as a
+`providers` entry alongside Sonarr; this one is a real, live-testable capability (`getShow` genuinely
 returns per-show `network` data) that simply has no enricher built yet — unlike the TMDB/OMDB
 "listed but nothing populates it" cases above, TVMaze's is a buildable gap, not a stale one.
 
@@ -273,8 +273,8 @@ returns per-show `network` data) that simply has no enricher built yet — unlik
 
 | Provider | Role(s) | Wired into media-item pipeline? |
 |---|---|---|
-| Radarr | MediaSource (movie), MediaActuator | Yes — source fields direct to `filterRegistry` |
-| Sonarr | MediaSource (series), MediaActuator | Yes — source fields direct to `filterRegistry` |
+| Radarr | MediaSource (movie), MediaActuator | Yes — source fields direct to `ruleRegistry` |
+| Sonarr | MediaSource (series), MediaActuator | Yes — source fields direct to `ruleRegistry` |
 | Tautulli | MediaEnricher, MediaActuator | Yes — `tautulliEnricher` |
 | Plex | MediaEnricher, MediaActuator | Yes — `plexEnricher` + identity stamping |
 | Jellyfin | MediaEnricher, MediaActuator | Yes — `jellyfinEnricher` |
@@ -290,7 +290,7 @@ This catalog is the ground-truth input
 [`docs/architecture/media-field-provider-role.md`](ref:path:docs/architecture/media-field-provider-role.md)'s
 adapters bind to — this doc is where to check which providers actually expose data today (and via which
 connection method) before assuming a new enrichable field is easy to add. In particular: TVMaze's
-`network` data is real and already half-declared in `filterRegistry.ts` but has no adapter; TMDB and
+`network` data is real and already half-declared in `ruleRegistry.ts` but has no adapter; TMDB and
 OMDB's ratings/details surfaces are fully implemented in their connection classes but sit behind the
 separate ratings-aggregation feature, not the enrichment job, so wiring them into a
 `MediaFieldProvider` is plausible future work, not a rebuild from nothing; Seerr has no adapter at all

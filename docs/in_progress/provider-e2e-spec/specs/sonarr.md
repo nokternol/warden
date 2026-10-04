@@ -36,7 +36,7 @@ to `NormalizedSeries._sourceIds` (`series.ts`), not `EnrichmentFields`.
 | `_sourceIds.imdb` | `imdbId` | `NormalizedMovie._sourceIds` already has `imdb`; `NormalizedSeries._sourceIds` doesn't — adding this closes that asymmetry. Schema-shaped (new optional field on an existing interface), not a table/column change. |
 | `_sourceIds.tvmaze` | `tvMazeId` | Already typed on `SonarrSeries` (`sonarrProvider.ts:24`) but never read. New identity slot, same non-structural shape as `imdb` above. |
 
-### Series fields (source-owned, flow: `sonarrProvider.ts` → `normalizeMedia.ts` → `NormalizedSeries` → `filterRegistry.ts`)
+### Series fields (source-owned, flow: `sonarrProvider.ts` → `normalizeMedia.ts` → `NormalizedSeries` → `ruleRegistry.ts`)
 
 | Domain field | Source | Notes |
 |---|---|---|
@@ -95,7 +95,7 @@ nested addressing space exists. `MissingEpisodeSearch`, `RssSync`, `Backup`,
 ## Naming-collision notes (for the final precedence ticket)
 
 - **`network`** — Sonarr's `network` and TVMaze's `network` both feed the same `network` filter rule
-  (`sourceProviders: [SONARR, TVMAZE]`). Sonarr's is current-network-per-TheTVDB-record; TVMaze's can
+  (`providers: [SONARR, TVMAZE]`). Sonarr's is current-network-per-TheTVDB-record; TVMaze's can
   differ and additionally has a separate `webChannel` field. Not resolved here — TVMaze's own
   decision ticket owns the full resolution.
 - **`certification`** — see Radarr's spec; same value-format risk, shared verbatim key across four
@@ -210,7 +210,7 @@ than leaving flagged: **the filter key is `nextAiringInDays`**, not `nextAiringD
 Same situation Radarr hit with `folderName`/`path`: `string` dataType is strictly a fixed-enum
 picker keyed by `ENUM_OPTIONS[rule.key]` (confirmed again via `RuleControl`'s `string`/`number`
 branch) — never free text, and no free-text/substring `dataType` exists anywhere in
-`filterRegistry.ts`. Sonarr's `path` is described in the spec as "substring match, same shape as
+`ruleRegistry.ts`. Sonarr's `path` is described in the spec as "substring match, same shape as
 `title`" — the identical mismatch, not a new one.
 
 **Decision: leave `path` display-only, matching Radarr's precedent exactly.** This is the second

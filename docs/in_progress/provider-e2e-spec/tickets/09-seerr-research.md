@@ -14,7 +14,7 @@ parent: docs/in_progress/provider-e2e-spec/map.md
 Audit Seerr's full API surface (web research against its official API docs) and cross-check
 against what this codebase currently wires (`server/modules/providers/connections/seerrProvider.ts`
 if it exists, `server/modules/providers/providerFactory.ts`, `server/modules/media/enrichment/enricherAdapters.ts`,
-`server/modules/media/filterRegistry.ts`, `src/lib/provider-registry.ts`). Produce a markdown asset
+`server/modules/media/ruleRegistry.ts`, `src/lib/provider-registry.ts`). Produce a markdown asset
 (linked from this ticket, not pasted into it) enumerating, for every field and task/action Seerr's
 API exposes:
 

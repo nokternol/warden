@@ -13,8 +13,8 @@ directly. Rate limit per docs: ~20 calls/10s per IP; responses cacheable up to 6
 
 ## Highest-confidence finding: the `network` filter is wired to a rule but has no enricher
 
-`server/modules/media/filterRegistry.ts`'s `network` rule (~line 370) already lists
-`MetadataProviderType.TVMAZE` in `sourceProviders` alongside `SONARR`:
+`server/modules/media/ruleRegistry.ts`'s `network` rule (~line 370) already lists
+`MetadataProviderType.TVMAZE` in `providers` alongside `SONARR`:
 
 ```ts
 {
@@ -22,7 +22,7 @@ directly. Rate limit per docs: ~20 calls/10s per IP; responses cacheable up to 6
   label: 'Network',
   contentTypes: ['series'],
   dataType: 'csv-strings',
-  sourceProviders: [MetadataProviderType.SONARR, MetadataProviderType.TVMAZE],
+  providers: [MetadataProviderType.SONARR, MetadataProviderType.TVMAZE],
   ...
   predicate: (item, value) => {
     const show = item as NormalizedSeries;
@@ -57,7 +57,7 @@ target field exists, the source data is confirmed live, only the enricher functi
 registration + a way to resolve `_sourceIds.tvmaze` (or a TVDB→TVMaze lookup, see below) are
 missing.
 
-**Naming collision, not yet resolved:** `network` is already a `sourceProviders` entry for Sonarr
+**Naming collision, not yet resolved:** `network` is already a `providers` entry for Sonarr
 too, and the rule's predicate does a plain string match against a single `NormalizedSeries.network`
 slot. If a TVMaze enricher and Sonarr both populate `network` for the same show with differing
 strings/casing (e.g. Sonarr's network name vs. TVMaze's `network.name` — TVMaze also has a
@@ -124,7 +124,7 @@ Confirmed via live fetch of `https://api.tvmaze.com/shows/1`:
 | `name` | Yes (search/match only) | used to identify best match in `getRatings()`/`lookupByTvdbId`, not persisted as a title override |
 | `type` (Scripted/Animation/Reality/...) | **No** | not in `TvMazeShow` type; no `NormalizedSeries` equivalent field exists today — closest is `seriesType` (`standard`/`daily`/`anime`, Sonarr-sourced, different vocabulary) — **naming/semantic collision risk**: TVMaze's `type` and `NormalizedSeries.seriesType` are conceptually adjacent but not the same enum, would need explicit mapping, not blind aliasing |
 | `language` | Yes, typed | `TvMazeShow.language` exists on the type but not read/used by `getRatings()`; not in `NormalizedSeries` |
-| `genres` | Yes, typed | `TvMazeShow.genres` exists on the type but unused; `NormalizedSeries.genres?: string[]` already exists (Sonarr/TMDB-sourced today per `filterRegistry.ts`'s `genres` rule) — wiring TVMaze here is additive to an existing multi-source field, not a schema change, but is a second **collision candidate** (genre taxonomies differ across providers) |
+| `genres` | Yes, typed | `TvMazeShow.genres` exists on the type but unused; `NormalizedSeries.genres?: string[]` already exists (Sonarr/TMDB-sourced today per `ruleRegistry.ts`'s `genres` rule) — wiring TVMaze here is additive to an existing multi-source field, not a schema change, but is a second **collision candidate** (genre taxonomies differ across providers) |
 | `status` (Ended/Running/To Be Determined) | Partially | `TvMazeShow.status` typed but unused; `NormalizedSeries.status?: 'continuing'\|'ended'\|'upcoming'` already exists (Sonarr-sourced) — different string vocabulary than TVMaze's (`Ended`/`Running`/`To Be Determined`), would need mapping — **collision risk** |
 | `runtime` | **No** | not in `TvMazeShow` type at all; no direct `NormalizedSeries` equivalent (Sonarr likely owns runtime today, unverified in this audit — flagging as unconfirmed rather than asserting) |
 | `averageRuntime` | **No** | not in `TvMazeShow` type; distinct from `runtime` (average across episodes when runtime varies) |
@@ -175,7 +175,7 @@ Noting this explicitly as empty-by-design rather than an unflagged gap, per tick
 ## Naming-collision risks (flagged, not resolved)
 
 - **`network`**: TVMaze's `network.name` vs. Sonarr's `network` (both feed the same
-  `NormalizedSeries.network` slot per `filterRegistry.ts`'s rule) — the headline finding above.
+  `NormalizedSeries.network` slot per `ruleRegistry.ts`'s rule) — the headline finding above.
 - **`webChannel`**: no direct collision today since it's entirely unwired, but if a `network`
   enricher is built without also handling `webChannel`, streaming-exclusive shows will silently
   read as network-less — not a naming collision so much as a completeness gap adjacent to the same

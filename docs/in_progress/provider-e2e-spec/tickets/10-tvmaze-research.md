@@ -14,7 +14,7 @@ parent: docs/in_progress/provider-e2e-spec/map.md
 Audit Tvmaze's full API surface (web research against its official API docs) and cross-check
 against what this codebase currently wires (`server/modules/providers/connections/tvmazeProvider.ts`
 if it exists, `server/modules/providers/providerFactory.ts`, `server/modules/media/enrichment/enricherAdapters.ts`,
-`server/modules/media/filterRegistry.ts`, `src/lib/provider-registry.ts`). Produce a markdown asset
+`server/modules/media/ruleRegistry.ts`, `src/lib/provider-registry.ts`). Produce a markdown asset
 (linked from this ticket, not pasted into it) enumerating, for every field and task/action Tvmaze's
 API exposes:
 
@@ -26,7 +26,7 @@ API exposes:
 - Any gap that would require a *structural* schema change (new column/table, not just a new config
   value in the existing `settings` JSON blob) — flag, don't design.
 
-Known context to start from: No metadata_provider row/settings — ProviderFactory.createTvMaze() constructs it directly against the public https://api.tvmaze.com base, apiKey: null, keyless. Not in PROVIDER_REGISTRY (src/lib/provider-registry.ts) despite being a valid MetadataProviderType — flag whether it needs a registry entry. Known buildable gap: filterRegistry.ts's network rule already lists TVMAZE as a sourceProviders entry alongside Sonarr, and getShow() genuinely returns per-show network data — this one is confirmed real and wireable, not just 'listed'.
+Known context to start from: No metadata_provider row/settings — ProviderFactory.createTvMaze() constructs it directly against the public https://api.tvmaze.com base, apiKey: null, keyless. Not in PROVIDER_REGISTRY (src/lib/provider-registry.ts) despite being a valid MetadataProviderType — flag whether it needs a registry entry. Known buildable gap: ruleRegistry.ts's network rule already lists TVMAZE as a providers entry alongside Sonarr, and getShow() genuinely returns per-show network data — this one is confirmed real and wireable, not just 'listed'.
 
 Do not decide what to build yet — that's the follow-on decision ticket. This ticket is exhaustive
 enumeration, not curation.
@@ -37,8 +37,8 @@ enumeration, not curation.
 
 ## Resolution
 
-- **Confirmed-buildable headline gap**: `filterRegistry.ts`'s `network` rule already lists TVMaze
-  as a `sourceProviders` entry and `NormalizedSeries.network` already exists as a field, but no
+- **Confirmed-buildable headline gap**: `ruleRegistry.ts`'s `network` rule already lists TVMaze
+  as a `providers` entry and `NormalizedSeries.network` already exists as a field, but no
   `tvmazeEnricher` exists in `enricherAdapters.ts` and `enrichmentJobFactory.ts` never requests a
   TVMaze provider instance at all — the enricher is the only missing piece. A naive fix must also
   read `webChannel` (unwired, undeclared in the `TvMazeShow` type), not just `network`, or every

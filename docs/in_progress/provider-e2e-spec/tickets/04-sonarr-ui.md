@@ -37,7 +37,7 @@ than pasting them in.
 - **`path`** — dropped from filterable scope, matching Radarr's `folderName`/`path` precedent
   exactly (display-only, no free-text `dataType` invented). Flagged explicitly: this is now the
   *second* provider to hit the identical gap (no substring-match control exists anywhere in
-  `filterRegistry.ts`), which is worth watching — a third independent occurrence would tip this from
+  `ruleRegistry.ts`), which is worth watching — a third independent occurrence would tip this from
   "defer" to "build the shared control," but two doesn't yet justify one provider ticket deciding it
   unilaterally.
 - **`seasonCount`** — reclassified `number` → `range`, same reasoning and shape as Radarr's

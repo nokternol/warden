@@ -17,7 +17,7 @@ downloadedAt-to-library vs Radarr/Sonarr's `added` = addedAt-to-source — same 
 meaning). For each collision:
 
 - Decide the domain field name(s) that disambiguate it — grill the user; don't rename unilaterally.
-- Decide how `server/modules/media/filterRegistry.ts`'s `contestedFieldPrecedence` should treat it:
+- Decide how `server/modules/media/ruleRegistry.ts`'s `contestedFieldPrecedence` should treat it:
   one merged field with per-provider precedence, or genuinely separate fields that shouldn't merge
   at all.
 

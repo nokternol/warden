@@ -87,7 +87,7 @@ reads a type from a request checks at compile time that the contract's list equa
 `MetadataProviderType`'s values, in
 [`providers.procedures.ts`](ref:path:server/modules/providers/providers.procedures.ts). Likewise
 [`contract/browseRangeKeys.ts`](ref:path:contract/browseRangeKeys.ts) is checked against `MEDIA_RULES`
-in `filterRegistry.ts`.
+in `ruleRegistry.ts`.
 
 ## What enforces it
 

@@ -9,7 +9,7 @@ URL/UI). All six are now compiler-enforced. Two failure classes:
 
 **A. Does the field reach *anything* at all** — `activeFieldSet.ts` (does some provider
 declare it as producible), `movie.ts`/`series.ts` (does the domain shape carry it),
-`enrichmentJob.ts` (does the job actually persist it), `filterRegistry.ts` (does *any*
+`enrichmentJob.ts` (does the job actually persist it), `ruleRegistry.ts` (does *any*
 rule read it, not just a range one). All four now fail to compile if a new field is
 missing.
 
@@ -32,7 +32,7 @@ of `EnrichmentFields` via `Pick<EnrichmentFields, 'tags' | 'playCount' | ...>` �
 that compiled fine even with a field silently missing from it (`Pick` only constrains
 the *listed* keys to be real ones; it doesn't require the list to be complete). Since no
 field is actually movie-only or series-only within `EnrichmentFields` today (that
-distinction lives in `sourceProviders`/`contentTypes` instead), both interfaces now
+distinction lives in `providers`/`contentTypes` instead), both interfaces now
 simply extend `Partial<EnrichmentFields>` directly — not a check, a simplification that
 removes the maintenance burden rather than gating it.
 
@@ -45,7 +45,7 @@ compile here until the write side adds it — previously `plexAddedAt` shipped t
 other touch point but this one, and nothing caught it because tests insert enrichment
 rows directly, bypassing the job.
 
-**`filterRegistry.ts`'s `MEDIA_RULES`** — a `MediaRule` predicate reads an
+**`ruleRegistry.ts`'s `MEDIA_RULES`** — a `MediaRule` predicate reads an
 `EnrichmentFields` key without TypeScript being able to introspect that fact from the
 function body, so each field-backed rule now declares it explicitly via
 `sourceField?: keyof EnrichmentFields` (e.g. `plexAddedDaysAgo`'s rule sets
@@ -91,7 +91,7 @@ literal unions in the API contract, which both the server and the client import.
 not import server code at all (dependency-cruiser forbids it), and the contract imports nothing
 from `server/`, so these lists are hand-declared rather than derived from `MEDIA_RULES` in place.
 
-**`filterRegistry.ts`** keeps the real derivation (`_ActualRangeRuleFor<CT>`, a
+**`ruleRegistry.ts`** keeps the real derivation (`_ActualRangeRuleFor<CT>`, a
 distributive conditional type over `MEDIA_RULES`' `dataType: 'range'` entries) internal,
 never exported, and asserts it against the imported contract bidirectionally:
 
@@ -143,10 +143,10 @@ const _movieSchemaCoversParams: MovieSchemaShape & Record<MovieSchemaMissing, ne
 
 ## Why `MEDIA_RULES` is `as const satisfies readonly MediaRule[]`
 
-The distributive-conditional derivation in `filterRegistry.ts` needs `MEDIA_RULES`'
+The distributive-conditional derivation in `ruleRegistry.ts` needs `MEDIA_RULES`'
 `key`/`dataType`/`contentTypes` fields to be literal types, not widened to
 `string`/`MediaRule['dataType']`/`ContentType[]`. `MediaRule.contentTypes` and
-`sourceProviders` are `readonly` array types for the same reason — a `readonly` tuple
+`providers` are `readonly` array types for the same reason — a `readonly` tuple
 from `as const` isn't assignable to a mutable array type, so the interface itself has
 to accept readonly to accept the const-asserted literal array. `getRule` and
 `media.rules.procedures.ts`'s `gatedDescriptors` both widen back to
@@ -189,7 +189,7 @@ story-only files, which by construction never need a real route.
 - [`server/modules/media/activeFieldSet.ts`](ref:path:server/modules/media/activeFieldSet.ts) — `fieldsByProviderType` producer-coverage check.
 - [`server/modules/media/movie.ts`](ref:path:server/modules/media/movie.ts) / [`series.ts`](ref:path:server/modules/media/series.ts) — `Partial<EnrichmentFields>`.
 - [`server/modules/media/enrichmentJob.ts`](ref:path:server/modules/media/enrichmentJob.ts) — `EnrichmentWriteValues`.
-- [`server/modules/media/filterRegistry.ts`](ref:path:server/modules/media/filterRegistry.ts) — `MEDIA_RULES`, `sourceField`-coverage check, the range-key derivation, the bidirectional contract assertion.
+- [`server/modules/media/ruleRegistry.ts`](ref:path:server/modules/media/ruleRegistry.ts) — `MEDIA_RULES`, `sourceField`-coverage check, the range-key derivation, the bidirectional contract assertion.
 - [`contract/browseRangeKeys.ts`](ref:path:contract/browseRangeKeys.ts) — the range-rule key lists both sides share.
 - [`contract/media.ts`](ref:path:contract/media.ts) — the browse query schemas.
 - [`server/modules/media/media.procedures.ts`](ref:path:server/modules/media/media.procedures.ts) — server-side witness maps and zod schema coverage checks.

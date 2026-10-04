@@ -70,10 +70,6 @@ decided but not yet built; each slice moves its row into `VOCABULARY.md` when it
 
 | Concept | Canonical name | Retired names | Rationale | Slice |
 |---|---|---|---|---|
-| The engine's definition of something that can be filtered on: key, type, predicate, the field it reads, the providers producing that field, and their precedence when several do | **Rule** *(8a)* | `filterRegistry`, `filterFields`, `/api/filter-fields` | `MediaRule`/`MEDIA_RULES` keep their names. Engine-only: the client receives a `MediaRuleDescriptor` that carries presentation and never the predicate, field mapping, producers or precedence (C2). | B6 |
-| A key/value pair: a rule's key and a chosen value, as set in the UI and stored by a query | **Filter** *(8a)* | `FilterValueEntry` | Knows nothing about which provider supplies the data; the rule resolves that. `FilterValue` stays the name of the value itself. | B6 |
-| A query used by an automation, with role include/exclude | **Included / excluded query** *(8c)* | query source, `MediaQuerySource`, `automation_query_sources` | "Source" is reserved for one meaning (next row). | B6 |
-| A provider that owns media | **Source** *(8d)* | `sourceProviders` on rules (becomes `providers`) | Today "source" means four things. It keeps one. | B6 |
 | The request-manager provider | **Seerr** *(decided)* | Overseerr, `OVERSEERR`, `OverseerrProvider`, `overseerr*` rule keys | Decision 9a. Seerr is Overseerr's API-compatible successor, so one type serves both servers. | D3 |
 
 ## Destination scenario
@@ -143,9 +139,9 @@ principles become these acceptance checks on every UI slice:
 | F2 | **Movie/series has three spellings.** `ContentType` vs `MediaKind` (16 sites), the value `'show'` vs `/api/media/series`, `seriesSort`, `SERIES_PARAM_TO_KEY`, and UI copy "No series match". | `providers/roles.ts:101`, `filterRegistry.ts:11`, `media.routes.ts:33` |
 | F3 | **Three HTTP homes for providers and settings.** Provider CRUD lives at `/api/settings/providers` in a "transport-only" module, tasks at `/api/providers`, and system settings in an `appSettings` module **missing from `.dependency-cruiser.cjs`, so its boundaries are unenforced**. | `server/modules/index.ts`, `.dependency-cruiser.cjs:14`. **Healed by B3:** provider create/read/update/delete and the connection test are served at `/api/providers` from the providers module, the `settings` module is gone, and `boundaries.test.ts` fails when a module directory has no dependency rule (`appSettings` now has one). |
 | F4 | **Docs contradict code.** Core model: *"one active provider per type"* vs multi-instance sources, *"roles declared by the interfaces it `implements`"* vs adapter-bound roles, and an `addedBy=list` rule that doesn't exist. `precedence.ts` says `primaryMediaServer` "isn't built yet" while an unused `applyPrimaryMediaServer` exists. The implementation map says AutomationBuilder has no single-select parameter UI, but it does. The ledger cites the wrong path for `mediaQueryAdapters.ts`. Two intent docs link to missing files. The Dockerfile says `warden.db` vs config `maintainarr.db`. The README says port 5056 vs 5057. `INVENTORY.md` describes deleted files. | as cited |
-| F5 | **Rule vs filter used interchangeably.** `MediaRule`/`MEDIA_RULES`/`useMediaRules` beside `filterRegistry.ts`, `/api/filter-fields`, `FilterValue`, `MediaFilterBar` and the UI's "Add filter". | `filterRegistry.ts`, `useMediaRules.ts` |
+| F5 | **Rule vs filter used interchangeably.** `MediaRule`/`MEDIA_RULES`/`useMediaRules` beside `filterRegistry.ts`, `/api/filter-fields`, `FilterValue`, `MediaFilterBar` and the UI's "Add filter". | `filterRegistry.ts`, `useMediaRules.ts`. **Healed by B6:** the registry is `ruleRegistry.ts` and is served at `/api/rules`; a filter is `Filter { ruleKey, value }` with an instance-scoped value of `{ providerId?, ids }` (migration 0029 folded the `providerId` column into it), and the retired names are in `VOCABULARY.md`'s deprecated table. |
 | F6 | **"Saved queries"** in the live UI, a name `VOCABULARY.md` retired. | `pages/automations/index.page.tsx` |
-| F7 | **"Source" means four things:** the `MediaSource` role, an automation's include/exclude `MediaQuerySource`, `MediaQuerySpec.sources`, and a rule's `sourceProviders`. | `mediaQueryEngine.ts:27`, `filterRegistry.ts` |
+| F7 | **"Source" means four things:** the `MediaSource` role, an automation's include/exclude `MediaQuerySource`, `MediaQuerySpec.sources`, and a rule's `sourceProviders`. | `mediaQueryEngine.ts:27`, `filterRegistry.ts`. **Healed by B6:** "source" keeps the `MediaSource` role only. An automation has included and excluded `queries` (`AutomationQuery`, table `automation_queries` via migration 0028), a query spec holds `clauses`, and a rule lists its `providers`. |
 | F8 | **System automations are called "Tasks"** on the System page, while "Task" means a provider action everywhere else. Stories add "New Task" and "Active Tasks" for automations, plus "Collections". | `pages/system`, `*.stories.tsx` |
 | F9 | **The client re-declares the provider catalogue.** `PROVIDER_REGISTRY` lists 8 of the 10 types with hand-written labels and `filterCapabilities` strings, while the server's enum, factory and roles are the real authority. | `src/lib/provider-registry.ts` |
 | F10 | **Ratings have two mechanisms**: rating filters via enrichment, and an ad-hoc `/api/providers/ratings` aggregation feeding a separate page and panel. | `ratingsAggregation.ts`, `pages/ratings` |
@@ -409,11 +405,14 @@ names, so nothing is renamed twice.
     profiles) names the configured instance its ids belong to inside the value itself.
   - Stored instance-scoped filters read back with the same meaning after migration.
 - **Expected end state:** rules live in `ruleRegistry.ts` (`MEDIA_RULES`, `MediaRule`,
-  `MediaRuleDescriptor` unchanged) and are served by the contract's `rules` procedure. A filter is
-  `Filter { ruleKey, value }`, and an instance-scoped value is `{ providerId, ids }` (`providerId`
-  being the codebase's existing name for a configured instance). The migration folds
-  `media_query_filter_values.providerId` into the value. An automation has included and excluded queries
-  (`AutomationQuery { queryId, role }`, table `automation_queries`). A rule lists its `providers`.
+  `MediaRuleDescriptor` unchanged apart from `providers`) and are served by the contract's `rules`
+  procedure at `/api/rules`. A filter is `Filter { ruleKey, value }`, and an instance-scoped value is
+  `{ providerId?, ids }` (`providerId` being the codebase's existing name for a configured instance;
+  absent means the value was unqualified, which the engine reads in each item's own instance, as before).
+  Migration 0029 folds `media_query_filter_values.providerId` into the value. An automation has
+  included and excluded `queries` (`AutomationQuery { queryId, role, sortOrder }`, table
+  `automation_queries` via migration 0028; `sortOrder` stays because it orders the list). A query spec
+  holds `clauses` (`MediaQueryClause`), and a rule lists its `providers`.
 
 ### Track C — One mechanism per job
 

@@ -328,6 +328,29 @@ is graphed, dated, and verified against code, not inferred from a plan.
   joined the direction graph with no allowed cross-module targets, its behaviour and route unchanged, and
   a boundaries test fails when any directory under `server/modules/` has no direction rule.
 
+### Rule, filter, query and source names — two words for each of four concepts (recorded and healed 2026-10-04, MVP slice B6)
+
+Earlier entries in this ledger use the names that were current when they healed (`filterRegistry.ts`,
+`/api/filter-fields`, `FilterValueEntry`, `sourceProviders`); the names below replace them.
+
+- **Fracture:** *rule* and *filter* were used for the same thing (`MediaRule` / `MEDIA_RULES` beside
+  `filterRegistry.ts`, `/api/filter-fields` and `FilterValueEntry`), and *source* meant four things: the
+  `MediaSource` role, an automation's included or excluded query (`MediaQuerySource`, `querySources`,
+  table `automation_query_sources`), a query spec's `sources`, and a rule's `sourceProviders`. A saved
+  filter also kept its instance qualification outside its value, as a sibling `providerId` field and
+  column.
+- **How it misled:** a reader could not tell whether a filter was a rule or a value of one, or which of
+  four "sources" a name referred to, and an instance-scoped value could be copied without the
+  instance its ids belong to.
+- **Healed by:** a rule is the engine's definition and lives in `ruleRegistry.ts`, served by the contract's
+  `rules` procedure at `/api/rules`; a filter is exactly `Filter { ruleKey, value }`. An instance-scoped
+  value (tags, quality and language profiles) is `{ providerId?, ids }`, naming the configured instance
+  its ids belong to, and migration 0029 folds the `providerId` column into the stored value.
+  An automation has included and excluded `queries` (`AutomationQuery`), stored in `automation_queries`
+  (migration 0028 renames the table and keeps its rows). A query spec holds `clauses` and a rule lists
+  its `providers`, which leaves "source" meaning only the `MediaSource` role. The retired names are in
+  `VOCABULARY.md`'s deprecated table; the old path answers 404 by regression test.
+
 ## Open
 
 No fracture is currently open.

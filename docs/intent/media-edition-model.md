@@ -51,7 +51,7 @@ move to `docs/in_progress/`:
 3. **UI/API surface.** Do queries and automations need edition-level targeting from day one, or is
    "pick one edition, ignore the rest, but stop silently colliding" an acceptable first cut?
 4. **Interaction with instance-qualification.** The existing multi-instance model
-   (`FilterValueEntry.providerId`, `MediaRule.instanceScoped`) qualifies ids by provider instance;
+   (`InstanceScopedValue.providerId`, `MediaRule.instanceScoped`) qualifies ids by provider instance;
    an edition axis is a second, orthogonal qualifier and needs to compose with it without the
    combinatorics leaking into every call site.
 

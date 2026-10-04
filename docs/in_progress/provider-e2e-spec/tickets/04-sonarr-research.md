@@ -14,7 +14,7 @@ parent: docs/in_progress/provider-e2e-spec/map.md
 Audit Sonarr's full API surface (web research against its official API docs) and cross-check
 against what this codebase currently wires (`server/modules/providers/connections/sonarrProvider.ts`
 if it exists, `server/modules/providers/providerFactory.ts`, `server/modules/media/enrichment/enricherAdapters.ts`,
-`server/modules/media/filterRegistry.ts`, `src/lib/provider-registry.ts`). Produce a markdown asset
+`server/modules/media/ruleRegistry.ts`, `src/lib/provider-registry.ts`). Produce a markdown asset
 (linked from this ticket, not pasted into it) enumerating, for every field and task/action Sonarr's
 API exposes:
 
@@ -26,7 +26,7 @@ API exposes:
 - Any gap that would require a *structural* schema change (new column/table, not just a new config
   value in the existing `settings` JSON blob) — flag, don't design.
 
-Known context to start from: Wired: MediaSource (show) + MediaActuator, fields (genres, network, etc.) flow direct to filterRegistry. Audit for actuator/task gaps analogous to Radarr's modelledRun.
+Known context to start from: Wired: MediaSource (show) + MediaActuator, fields (genres, network, etc.) flow direct to ruleRegistry. Audit for actuator/task gaps analogous to Radarr's modelledRun.
 
 Do not decide what to build yet — that's the follow-on decision ticket. This ticket is exhaustive
 enumeration, not curation.
@@ -43,7 +43,7 @@ enumeration, not curation.
   its only `EnrichmentFields` contribution is `tags`.
 - Sonarr has the **same `modelledRun` gap as Radarr**: `deleteSeriesKeepFiles` is declared but
   rejects on invocation, mirroring `deleteMovieKeepFiles`. Not Sonarr-specific — a shared gap class.
-- Found a likely **latent bug**: the `hasFile` filter rule lists Sonarr as a `sourceProviders`
+- Found a likely **latent bug**: the `hasFile` filter rule lists Sonarr as a `providers`
   entry, but `SonarrSeries`/`NormalizedSeries` has no `hasFile` field at all, so the filter silently
   never matches a show. Flagged, not fixed (out of scope for a research ticket).
 - Sonarr's v3 API exposes several command families with no representation at all in this codebase's

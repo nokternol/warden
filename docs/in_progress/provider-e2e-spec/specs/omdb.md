@@ -80,7 +80,7 @@ None. OMDB is a read-only ratings/metadata lookup service; no `MediaActuator` ro
 ## Naming-collision notes (for the final precedence ticket)
 
 - **`certification`** — OMDB's `Rated` joins the existing multi-producer field, makes the current
-  stale `filterRegistry.ts` listing (declared, never populated) accurate.
+  stale `ruleRegistry.ts` listing (declared, never populated) accurate.
 
 Rating-specific collision notes (`imdbRating` vs. TMDB's non-equivalent rating, the Metacritic
 self-collision) moved to `docs/intent/media-ratings-provider.md` along with the fields themselves.
@@ -92,7 +92,7 @@ ratings/metadata lookup service; no `MediaActuator` role is plausible.").
 
 | Domain field | Filter key | dataType | Notes |
 |---|---|---|---|
-| `certification` | `certification` | `csv-strings` | Joins the existing shared `certification` rule (`csv-strings`, already lists OMDB in `sourceProviders` in `filterRegistry.ts`) as an additional producer. No new key — this wiring is exactly what makes that already-stale listing accurate, per the spec's own framing. |
+| `certification` | `certification` | `csv-strings` | Joins the existing shared `certification` rule (`csv-strings`, already lists OMDB in `providers` in `ruleRegistry.ts`) as an additional producer. No new key — this wiring is exactly what makes that already-stale listing accurate, per the spec's own framing. |
 | `genres` | `genres` | `csv-strings` | Joins the existing shared `genres` rule (movie and show variants, both already `csv-strings`) as an additional producer, per the spec's "Shared with Radarr, Sonarr, TMDB, Plex, Jellyfin" note. No new key. |
 | `runtime` | `runtimeMinutes` | `range` | Joins the `runtimeMinutes` range rule minted by `specs/radarr.md` ("runtime under 90 min", same shape as `sizeOnDiskGb`) as an additional producer, per this spec's "Shared with Radarr, Plex, Jellyfin" note. No new key — OMDB does not mint its own runtime rule. |
 | `originCountry` | `originCountry` | `csv-strings` | Joins the `originCountry` rule minted by `specs/tmdb.md` (ISO country codes, `csv-strings`, same shape as `genres`/`network`) as an additional producer — `specs/tmdb.md`'s own filter-mapping table already flags this exact OMDB/TMDB pairing as a future collision on the same field. No new key. |

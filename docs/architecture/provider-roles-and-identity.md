@@ -217,30 +217,32 @@ from the two additive fields. `listTags`/`listQualityProfiles` decorate each ret
 `{ providerId, providerName }`, and `MediaSourceDescriptor.instances` (`GET /api/media/sources`) lists
 every active instance — the provenance the client needs to label per-instance options.
 
-**Instance-qualified filter values.** `qualityProfileIds` and `tagIds` are provider-*minted* numeric id
-spaces — each instance numbers its own profiles/tags independently, so instance A's id `1` and instance
-B's id `1` are two unrelated things. `MediaRule.instanceScoped` (`filterRegistry.ts`) marks exactly these
-four rule variants (movie/series × tags/profiles); every other rule (strings, universal facts, computed
-measures) is unaffected. `FilterValueEntry` carries an optional `providerId`
-(`media_query_filter_values.providerId`, migration `0015`) that qualifies which instance's namespace the
-paired ids belong to — `undefined` means unqualified (today's pre-multi-instance semantics: the id is
-interpreted in each matched item's own namespace, which is exactly correct whenever evaluation is bound
-to one instance, i.e. every automation and every single-instance deployment). The gate lives once, in
-`matchItems`'s predicate loop
+**Instance-scoped filter values.** `qualityProfileIds`, `languageProfileIds` and `tagIds` are
+provider-*minted* numeric id spaces — each instance numbers its own profiles/tags independently, so
+instance A's id `1` and instance B's id `1` are two unrelated things. `MediaRule.instanceScoped`
+(`ruleRegistry.ts`) marks exactly these rule variants (movie/series × tags/profiles, plus series language
+profiles); every other rule (strings, universal facts, computed measures) is unaffected. The value of an
+instance-scoped rule is an `InstanceScopedValue`, `{ providerId?, ids }`: `providerId` is the configured
+instance whose namespace the `ids` belong to, so a `Filter { ruleKey, value }` stays exactly a rule key
+and a value. Omitting `providerId` means unqualified (today's pre-multi-instance semantics: each id is
+interpreted in the matched item's own namespace, which is exactly correct whenever evaluation is bound
+to one instance, i.e. every automation and every single-instance deployment). The stored value is that
+object as JSON in `media_query_filter_values.value` (migration `0029` folded the former `providerId`
+column into it). The gate lives once, in `matchItems`'s predicate loop
 ([`server/modules/media/mediaQueryEngine.ts`](ref:path:server/modules/media/mediaQueryEngine.ts)): a
-qualified entry only matches items whose `_sourceIds.providerId` equals the entry's — it never
+value that names a `providerId` only matches items whose `_sourceIds.providerId` equals it — it never
 pass-throughs to a different instance's coincidentally-matching id. `computeHealth`
 (`mediaQueryService.ts`) surfaces two misconfiguration cases as `QueryHealth` degradations rather than
-silent mismatches: an entry qualified to a `providerId` that is not an active instance, and — on the
-automation surface — an entry qualified to a provider other than the automation's own bound instance
+silent mismatches: a value that names a `providerId` that is not an active instance, and — on the
+automation surface — one that names a provider other than the automation's own bound instance
 (which the gate above would otherwise make match nothing with no visible signal).
 
 The client (`MediaFilterBar`) mirrors this: when a rule's owning content type has more than one active
 instance (`useMediaSources()`), its dropdown renders options grouped into labeled per-instance sections
-and, if every currently-selected option resolves to exactly one instance, emits a qualified entry; a
+and, if every currently-selected option resolves to exactly one instance, saves a value that names it; a
 selection spanning instances (or none) falls back to the unqualified interpretation. With exactly one
-active instance the control renders flat and emits unqualified entries — the wire shape of a
-single-instance deployment is unchanged.
+active instance the control renders flat and saves unqualified values — the stored shape of a
+single-instance deployment carries no `providerId`.
 
 ## Remaining limitations
 

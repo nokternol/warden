@@ -29,7 +29,7 @@ resolve, don't resolve it here.
   OMDB's central open question (title-search reliability) resolves using an id already surfaced by
   Radarr, and several fields (certification, genres, runtime, country, ratings) now join the same
   shared fields TMDB also joins.
-- Correction carried from research, not re-litigated: `imdbRating`'s `filterRegistry.ts` entry does
+- Correction carried from research, not re-litigated: `imdbRating`'s `ruleRegistry.ts` entry does
   **not** list OMDB today (Radarr-only) — only `certification` had the stale listed-but-unpopulated
   gap.
 

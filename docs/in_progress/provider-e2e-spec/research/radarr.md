@@ -23,29 +23,29 @@ lines 10–39). Normalization: `server/modules/media/normalizeMedia.ts:12-27`
 | Radarr field | Wired? | Detail |
 |---|---|---|
 | `id` | wired | `radarrProvider.ts:11`, used as `_sourceIds.radarr` (`normalizeMedia.ts:14`) |
-| `title` | wired | `radarrProvider.ts:12` → `NormalizedMovie.title`, filter rule `title` (`filterRegistry.ts:123`) |
-| `year` | wired | `radarrProvider.ts:13` → filter rule `year` (`filterRegistry.ts:136`) |
-| `hasFile` | wired | `radarrProvider.ts:14` → filter rule `hasFile` (`filterRegistry.ts:222`) |
-| `monitored` | **not-wired for movies** | `radarrProvider.ts:15` field exists on `RadarrMovie` and is copied in `normalizeMedia.ts:18` onto `NormalizedMovie.monitored`, but the `monitored` filter rule (`filterRegistry.ts:296`) is **series-only** (`contentTypes: ['series']`, `sourceProviders: [SONARR]`) — Radarr populates the same-named domain field with no movie-side filter rule reading it. Layer: UI filter, query engine (movie-scoped rule needed) |
+| `title` | wired | `radarrProvider.ts:12` → `NormalizedMovie.title`, filter rule `title` (`ruleRegistry.ts:123`) |
+| `year` | wired | `radarrProvider.ts:13` → filter rule `year` (`ruleRegistry.ts:136`) |
+| `hasFile` | wired | `radarrProvider.ts:14` → filter rule `hasFile` (`ruleRegistry.ts:222`) |
+| `monitored` | **not-wired for movies** | `radarrProvider.ts:15` field exists on `RadarrMovie` and is copied in `normalizeMedia.ts:18` onto `NormalizedMovie.monitored`, but the `monitored` filter rule (`ruleRegistry.ts:296`) is **series-only** (`contentTypes: ['series']`, `providers: [SONARR]`) — Radarr populates the same-named domain field with no movie-side filter rule reading it. Layer: UI filter, query engine (movie-scoped rule needed) |
 | `tmdbId` | wired | `radarrProvider.ts:16` → `_sourceIds.tmdb` (`normalizeMedia.ts:14`), identity matching |
 | `imdbId` | wired | `radarrProvider.ts:17` → `_sourceIds.imdb` (`normalizeMedia.ts:14`) |
 | `profileId` | not-wired | present on `RadarrMovie` (`radarrProvider.ts:18`) but never read anywhere else in the codebase — appears to be a legacy/duplicate of `qualityProfileId`. Layer: none needed if truly dead; flag for decision ticket |
-| `qualityProfileId` | wired | `radarrProvider.ts:19` → filter rule `qualityProfileIds` (`filterRegistry.ts:256`), also the `changeQualityProfile` task's target |
-| `tags` | wired | `radarrProvider.ts:20` → `radarrTagsFieldSource` (`mediaFieldProvider.ts:61-63`) → filter rule `tagIds` (`filterRegistry.ts:237`) |
+| `qualityProfileId` | wired | `radarrProvider.ts:19` → filter rule `qualityProfileIds` (`ruleRegistry.ts:256`), also the `changeQualityProfile` task's target |
+| `tags` | wired | `radarrProvider.ts:20` → `radarrTagsFieldSource` (`mediaFieldProvider.ts:61-63`) → filter rule `tagIds` (`ruleRegistry.ts:237`) |
 | `folderName` | not-wired | `radarrProvider.ts:21`. Layer: provider field, UI filter (path/folder filter), query engine |
 | `path` | not-wired | `radarrProvider.ts:22`. Same as `folderName` — full filesystem path. Layer: provider field, UI filter, query engine |
 | `images` | not-wired | `radarrProvider.ts:23` (`RadarrImage[]`: `coverType`, `remoteUrl`). No poster/fanart display anywhere in the media pipeline today. Layer: provider field, UI (display, not filter) |
-| `genres` | wired | `radarrProvider.ts:24` → filter rule `genres` (movie-only, `filterRegistry.ts:269`) |
-| `added` | wired, **naming collision — see §4** | `radarrProvider.ts:25` → `NormalizedMovie.addedDate` (`normalizeMedia.ts:22`) → filter rule `addedDaysAgo` (`filterRegistry.ts:163`, shared across Radarr/Sonarr/Plex) |
-| `certification` | wired | `radarrProvider.ts:26` → filter rule `certification` (`filterRegistry.ts:204`, shared with Sonarr/TMDB/OMDB as declared-but-not-all-populated `sourceProviders`) |
-| `ratings.imdb.value` | wired | `radarrProvider.ts:27-33` → `NormalizedMovie.imdbRating` (`normalizeMedia.ts:25`) → filter rule `imdbRating` (`filterRegistry.ts:281`) |
+| `genres` | wired | `radarrProvider.ts:24` → filter rule `genres` (movie-only, `ruleRegistry.ts:269`) |
+| `added` | wired, **naming collision — see §4** | `radarrProvider.ts:25` → `NormalizedMovie.addedDate` (`normalizeMedia.ts:22`) → filter rule `addedDaysAgo` (`ruleRegistry.ts:163`, shared across Radarr/Sonarr/Plex) |
+| `certification` | wired | `radarrProvider.ts:26` → filter rule `certification` (`ruleRegistry.ts:204`, shared with Sonarr/TMDB/OMDB as declared-but-not-all-populated `providers`) |
+| `ratings.imdb.value` | wired | `radarrProvider.ts:27-33` → `NormalizedMovie.imdbRating` (`normalizeMedia.ts:25`) → filter rule `imdbRating` (`ruleRegistry.ts:281`) |
 | `ratings.imdb.votes` | not-wired | typed on `RadarrMovie` but vote count never extracted. Layer: provider field, UI filter, query engine |
 | `ratings.tmdb.value`/`.votes` | not-wired | typed (`radarrProvider.ts:29`) but never read. `NormalizedMovie.tmdbRating` exists as a field name (`movie.ts:33`) but nothing populates it from Radarr (TMDB rating currently only reachable via the separate TMDB enricher's `tmdbStatus`, not a numeric rating). Layer: enrichment, UI filter, query engine — **note existing `tmdbRating` field on the domain type is itself currently orphaned/unpopulated from any source** |
 | `ratings.metacritic.value`/`.votes` | not-wired | typed (`radarrProvider.ts:30`), never read. Layer: provider field, UI filter, query engine |
 | `ratings.rottenTomatoes.value`/`.votes` | not-wired | typed (`radarrProvider.ts:31`), never read. Radarr can source RT scores when configured with a custom metadata agent; OMDB also returns RT scores (`docs/architecture/media-providers.md`'s OMDB section) — **two potential producers for one field name, flag for precedence ticket** |
 | `ratings.trakt.value`/`.votes` | not-wired | typed (`radarrProvider.ts:32`), never read. Layer: provider field, UI filter, query engine |
 | `statistics.movieFileCount` | not-wired | typed (`radarrProvider.ts:35`), never read. Layer: provider field, UI filter, query engine |
-| `statistics.sizeOnDisk` | wired | `radarrProvider.ts:36` → `NormalizedMovie.sizeOnDiskBytes` (`normalizeMedia.ts:23`) → filter rule `sizeOnDiskGb` (`filterRegistry.ts:192`) |
+| `statistics.sizeOnDisk` | wired | `radarrProvider.ts:36` → `NormalizedMovie.sizeOnDiskBytes` (`normalizeMedia.ts:23`) → filter rule `sizeOnDiskGb` (`ruleRegistry.ts:192`) |
 | `statistics.releaseGroups` | not-wired | typed (`radarrProvider.ts:37`), never read. Layer: provider field, UI filter, query engine |
 
 ### Movie fields Radarr's real API exposes that this codebase's `RadarrMovie` interface doesn't even type (confirmed via pycliarr/DeepWiki cross-reference against Radarr v3's actual `MovieResource`)
@@ -102,27 +102,27 @@ Two fields named similarly across providers carry **different meanings** and mus
 when the precedence ticket resolves cross-provider field names:
 
 - **Radarr's `added`** (`radarrProvider.ts:25`, → `NormalizedMovie.addedDate`,
-  `filterRegistry.ts:163` `addedDaysAgo` rule): **addedAt-to-source** — the timestamp Radarr itself
+  `ruleRegistry.ts:163` `addedDaysAgo` rule): **addedAt-to-source** — the timestamp Radarr itself
   added the movie to *its own* database/catalog. This is a source-system bookkeeping timestamp, not
   a user-facing "when did I get this" timestamp. Shared filter rule `addedDaysAgo` currently lists
-  `sourceProviders: [RADARR, SONARR, PLEX]` — meaning Plex's own `addedDate` contribution (if any)
+  `providers: [RADARR, SONARR, PLEX]` — meaning Plex's own `addedDate` contribution (if any)
   and Radarr's are treated as the same rule today (see next point).
 - **Plex's `plexAddedAt`** (`plexProvider.ts` — sourced from Plex's `addedAt` field on library items,
   wired via `plexEnricher`/`plexFieldProvider`, `docs/architecture/media-providers.md` line 102-104):
   **addedAt-to-library** — the timestamp the item entered the *Plex library* (i.e., when Plex's
   scanner picked it up), which normally lags Radarr's `added` by however long the download/import
   took. This is already wired as a **separate** filter rule, `plexAddedDaysAgo`
-  (`filterRegistry.ts:179`, `sourceField: 'plexAddedAt'`, single-producer, no precedence entry) —
+  (`ruleRegistry.ts:179`, `sourceField: 'plexAddedAt'`, single-producer, no precedence entry) —
   the codebase already keeps these two timestamps distinct as two different rules/fields
   (`addedDate` vs `plexAddedAt`), which is the correct disambiguation, but the *generic* rule name
-  `addedDaysAgo` (fed by Radarr **and** Sonarr **and** Plex per its `sourceProviders` list) invites
+  `addedDaysAgo` (fed by Radarr **and** Sonarr **and** Plex per its `providers` list) invites
   confusion: Plex's actual library-native `addedAt` already has its own dedicated rule
   (`plexAddedDaysAgo`), so what is Plex contributing to the shared `addedDaysAgo` rule today?
-  **Verify in decision ticket**: grep shows `plexAddedDaysAgo`'s `sourceProviders` derives from
-  `plexAddedAt` only (`deriveSourceProviders('plexAddedAt')`), while `addedDaysAgo`'s
-  `sourceProviders` is hand-listed as `[RADARR, SONARR, PLEX]` (`filterRegistry.ts:167-171`) even
+  **Verify in decision ticket**: grep shows `plexAddedDaysAgo`'s `providers` derives from
+  `plexAddedAt` only (`deriveProviders('plexAddedAt')`), while `addedDaysAgo`'s
+  `providers` is hand-listed as `[RADARR, SONARR, PLEX]` (`ruleRegistry.ts:167-171`) even
   though no code path shows Plex populating `NormalizedMovie.addedDate`/`addedDate` — this looks like
-  a **stale/incorrect `sourceProviders` listing**, not a live third meaning of "added." Flag for the
+  a **stale/incorrect `providers` listing**, not a live third meaning of "added." Flag for the
   decision ticket, not resolved here.
 
 ## 5. Actuator tasks / commands

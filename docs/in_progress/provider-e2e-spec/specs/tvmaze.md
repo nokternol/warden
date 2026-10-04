@@ -35,7 +35,7 @@ site. This flips several of the research doc's tentative conclusions:
 
 ## Headline field gap: `network`, merged with `webChannel`
 
-`filterRegistry.ts`'s `network` rule already lists TVMaze in `sourceProviders` alongside Sonarr;
+`ruleRegistry.ts`'s `network` rule already lists TVMaze in `providers` alongside Sonarr;
 `NormalizedSeries.network` already exists as a field; `TvMazeProvider.getShow()` genuinely returns
 per-show network data. The only missing piece is the enricher. **Must read both `network` and
 `webChannel`** — streaming-exclusive shows (Netflix/Hulu/etc. originals) populate `webChannel`
@@ -71,7 +71,7 @@ precedence order flagged for the final ticket.
 ## Ratings — extracted to a dedicated intent doc
 
 `rating.average` stays exactly as it is today: consumed only by `ratingsAggregation.ts`'s blended
-average alongside TMDB/OMDB, **not** added to `filterRegistry`/`EnrichmentFields`. Full reasoning,
+average alongside TMDB/OMDB, **not** added to `ruleRegistry`/`EnrichmentFields`. Full reasoning,
 the per-provider ratings inventory (now consolidated across every provider's spec, not just
 TVMaze's), and the proposed `MediaRatingsProvider` role live in
 [`docs/intent/media-ratings-provider.md`](../../../intent/media-ratings-provider.md) — written as a
@@ -128,7 +128,7 @@ plausible — a read-only public metadata API with no request/download/library-m
 
 | Domain field | Filter key | dataType | Notes |
 |---|---|---|---|
-| `network` | `network` | `csv-strings` | Joins the existing show-only `network` rule in `filterRegistry.ts` — TVMaze already listed alongside Sonarr in `sourceProviders`; no new rule needed. |
+| `network` | `network` | `csv-strings` | Joins the existing show-only `network` rule in `ruleRegistry.ts` — TVMaze already listed alongside Sonarr in `providers`; no new rule needed. |
 | `genres` | `genres` | `csv-strings` | Joins the existing show-only `genres` rule — TVMaze becomes a third producer alongside Sonarr/TMDB; no new rule needed. |
 | `status` | `seriesStatus` | `string` | Mapped onto the existing vocabulary (`Ended`→`ended`, `Running`→`continuing`, `To Be Determined`→`upcoming`) and joins the existing `seriesStatus` rule — TVMaze becomes an additional producer; no new rule needed. |
 | `releaseDate` | `releaseDaysAgo` | `range` | **Reconciled**: joins the same `releaseDaysAgo` rule Plex/Jellyfin independently minted for their own `releaseDate` fields (see `specs/plex.md`/`specs/jellyfin.md`) — release date is a general concept, not content-type-specific, so this is a third producer rather than a separate show-only rule. `premiered` is a past date, fits the "days ago" convention. |
@@ -159,7 +159,7 @@ All five join existing shared rules as additional producers (`network`/`genres` 
 already resolved through `lookups.networks`/`lookups.genres.series`; `seriesStatus` is the existing
 `ENUM_OPTIONS` string picker; `releaseDaysAgo`/`runtimeMinutes` are the existing `NumberRangeFilter`
 ranges). No control decision to make — `RuleControl` already renders these; TVMaze just adds to
-`sourceProviders`. `runtimeMinutes`'s movie/show-rule-unification question stays flagged for
+`providers`. `runtimeMinutes`'s movie/show-rule-unification question stays flagged for
 `99-precedence`, not decided here (per the spec's own "Naming-collision notes").
 
 ### `tvmazeType` — closed enum confirmed; new `ENUM_OPTIONS` entry (not the third free-text-gap occurrence)
