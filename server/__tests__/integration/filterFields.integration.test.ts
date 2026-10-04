@@ -153,7 +153,7 @@ describe('GET /api/filter-fields', () => {
         field.dataType
       );
       expect(Array.isArray(field.contentTypes)).toBe(true);
-      expect(Array.isArray(field.sourceProviders)).toBe(true);
+      expect(Array.isArray(field.providers)).toBe(true);
       expect(typeof field.required).toBe('boolean');
       expect(field.predicate).toBeUndefined();
     }

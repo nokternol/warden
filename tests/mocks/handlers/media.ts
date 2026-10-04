@@ -118,7 +118,7 @@ export const mediaHandlers = [
       label: 'Title',
       contentTypes: ['movie', 'series'],
       dataType: 'string',
-      sourceProviders: ['RADARR', 'SONARR', 'PLEX'],
+      providers: ['RADARR', 'SONARR', 'PLEX'],
       required: false,
     },
     {
@@ -126,7 +126,7 @@ export const mediaHandlers = [
       label: 'Year',
       contentTypes: ['movie', 'series'],
       dataType: 'range',
-      sourceProviders: ['RADARR', 'SONARR', 'PLEX', 'TMDB'],
+      providers: ['RADARR', 'SONARR', 'PLEX', 'TMDB'],
       required: false,
     },
     {
@@ -134,7 +134,7 @@ export const mediaHandlers = [
       label: 'Watched',
       contentTypes: ['movie', 'series'],
       dataType: 'boolean',
-      sourceProviders: ['TAUTULLI', 'PLEX'],
+      providers: ['TAUTULLI', 'PLEX'],
       required: false,
     },
     {
@@ -142,7 +142,7 @@ export const mediaHandlers = [
       label: 'Added (days ago)',
       contentTypes: ['movie', 'series'],
       dataType: 'range',
-      sourceProviders: ['RADARR', 'SONARR', 'PLEX'],
+      providers: ['RADARR', 'SONARR', 'PLEX'],
       required: false,
     },
     {
@@ -150,7 +150,7 @@ export const mediaHandlers = [
       label: 'Size on disk (GB)',
       contentTypes: ['movie', 'series'],
       dataType: 'range',
-      sourceProviders: ['RADARR', 'SONARR'],
+      providers: ['RADARR', 'SONARR'],
       required: false,
     },
     {
@@ -158,7 +158,7 @@ export const mediaHandlers = [
       label: 'Certification',
       contentTypes: ['movie', 'series'],
       dataType: 'csv-strings',
-      sourceProviders: ['RADARR', 'SONARR', 'TMDB', 'OMDB'],
+      providers: ['RADARR', 'SONARR', 'TMDB', 'OMDB'],
       required: false,
     },
     {
@@ -166,7 +166,7 @@ export const mediaHandlers = [
       label: 'Has file',
       contentTypes: ['movie', 'series'],
       dataType: 'boolean',
-      sourceProviders: ['RADARR', 'SONARR', 'PLEX'],
+      providers: ['RADARR', 'SONARR', 'PLEX'],
       required: false,
     },
     {
@@ -174,7 +174,7 @@ export const mediaHandlers = [
       label: 'Tags',
       contentTypes: ['movie'],
       dataType: 'csv-ids',
-      sourceProviders: ['RADARR'],
+      providers: ['RADARR'],
       required: false,
     },
     {
@@ -182,7 +182,7 @@ export const mediaHandlers = [
       label: 'Quality profile',
       contentTypes: ['movie'],
       dataType: 'csv-ids',
-      sourceProviders: ['RADARR'],
+      providers: ['RADARR'],
       required: false,
     },
     {
@@ -190,7 +190,7 @@ export const mediaHandlers = [
       label: 'Genres',
       contentTypes: ['movie'],
       dataType: 'csv-strings',
-      sourceProviders: ['RADARR', 'TMDB'],
+      providers: ['RADARR', 'TMDB'],
       required: false,
     },
     {
@@ -198,7 +198,7 @@ export const mediaHandlers = [
       label: 'IMDB rating',
       contentTypes: ['movie'],
       dataType: 'range',
-      sourceProviders: ['RADARR', 'OMDB'],
+      providers: ['RADARR', 'OMDB'],
       required: false,
     },
     {
@@ -206,7 +206,7 @@ export const mediaHandlers = [
       label: 'Monitored',
       contentTypes: ['series'],
       dataType: 'boolean',
-      sourceProviders: ['SONARR'],
+      providers: ['SONARR'],
       required: false,
     },
     {
@@ -214,7 +214,7 @@ export const mediaHandlers = [
       label: 'Series status',
       contentTypes: ['series'],
       dataType: 'string',
-      sourceProviders: ['SONARR'],
+      providers: ['SONARR'],
       required: false,
     },
     {
@@ -222,7 +222,7 @@ export const mediaHandlers = [
       label: 'Tags',
       contentTypes: ['series'],
       dataType: 'csv-ids',
-      sourceProviders: ['SONARR'],
+      providers: ['SONARR'],
       required: false,
     },
     {
@@ -230,7 +230,7 @@ export const mediaHandlers = [
       label: 'Quality profile',
       contentTypes: ['series'],
       dataType: 'csv-ids',
-      sourceProviders: ['SONARR'],
+      providers: ['SONARR'],
       required: false,
     },
     {
@@ -238,7 +238,7 @@ export const mediaHandlers = [
       label: 'Genres',
       contentTypes: ['series'],
       dataType: 'csv-strings',
-      sourceProviders: ['SONARR', 'TMDB'],
+      providers: ['SONARR', 'TMDB'],
       required: false,
     },
     {
@@ -246,7 +246,7 @@ export const mediaHandlers = [
       label: 'Series type',
       contentTypes: ['series'],
       dataType: 'string',
-      sourceProviders: ['SONARR'],
+      providers: ['SONARR'],
       required: false,
     },
     {
@@ -254,7 +254,7 @@ export const mediaHandlers = [
       label: 'Network',
       contentTypes: ['series'],
       dataType: 'csv-strings',
-      sourceProviders: ['SONARR', 'TVMAZE'],
+      providers: ['SONARR', 'TVMAZE'],
       required: false,
     },
     {
@@ -262,7 +262,7 @@ export const mediaHandlers = [
       label: 'Community rating',
       contentTypes: ['series'],
       dataType: 'range',
-      sourceProviders: ['SONARR', 'TMDB'],
+      providers: ['SONARR', 'TMDB'],
       required: false,
     },
     {
@@ -270,7 +270,7 @@ export const mediaHandlers = [
       label: 'Ended',
       contentTypes: ['series'],
       dataType: 'boolean',
-      sourceProviders: ['SONARR'],
+      providers: ['SONARR'],
       required: false,
     },
     {
@@ -278,7 +278,7 @@ export const mediaHandlers = [
       label: 'Last aired (days ago)',
       contentTypes: ['series'],
       dataType: 'range',
-      sourceProviders: ['SONARR'],
+      providers: ['SONARR'],
       required: false,
     },
     {
@@ -286,7 +286,7 @@ export const mediaHandlers = [
       label: 'Episode completion (%)',
       contentTypes: ['series'],
       dataType: 'range',
-      sourceProviders: ['SONARR'],
+      providers: ['SONARR'],
       required: false,
     },
     {
@@ -294,7 +294,7 @@ export const mediaHandlers = [
       label: 'TMDB status',
       contentTypes: ['movie', 'series'],
       dataType: 'string',
-      sourceProviders: ['TMDB'],
+      providers: ['TMDB'],
       required: false,
     },
     {
@@ -302,7 +302,7 @@ export const mediaHandlers = [
       label: 'Overseerr request status',
       contentTypes: ['movie', 'series'],
       dataType: 'number',
-      sourceProviders: ['OVERSEERR'],
+      providers: ['OVERSEERR'],
       required: false,
     },
     {
@@ -310,7 +310,7 @@ export const mediaHandlers = [
       label: 'Overseerr has issue',
       contentTypes: ['movie', 'series'],
       dataType: 'boolean',
-      sourceProviders: ['OVERSEERR'],
+      providers: ['OVERSEERR'],
       required: false,
     },
     {
@@ -318,7 +318,7 @@ export const mediaHandlers = [
       label: 'Last watched (days ago)',
       contentTypes: ['movie', 'series'],
       dataType: 'range',
-      sourceProviders: ['TAUTULLI', 'PLEX'],
+      providers: ['TAUTULLI', 'PLEX'],
       required: false,
     },
   ]),

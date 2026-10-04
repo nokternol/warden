@@ -802,7 +802,7 @@ function toStringCsvOrUndefined(values: string[]): string | undefined {
   return values.length > 0 ? values.join(',') : undefined;
 }
 
-// ─── Rule grouping — derived from scope + sourceProviders, not a hand-kept table ──
+// ─── Rule grouping — derived from scope + providers, not a hand-kept table ──
 //
 // 'title' and 'year' are the two universal controls, rendered outside any
 // FilterGroup. Every other rule groups by content-type scope (movie/series), or
@@ -814,7 +814,7 @@ function toStringCsvOrUndefined(values: string[]): string | undefined {
 //
 // `configuredTypes` disambiguates a shared rule sourced from *both*
 // RADARR and SONARR when only one is actually active: `rules` is already
-// server-gated (a rule appears if *any* of its sourceProviders is
+// server-gated (a rule appears if *any* of its providers is
 // configured), so a rule naming both would otherwise render in both groups
 // even with only one of the two providers present.
 
@@ -834,7 +834,7 @@ function groupsFor(rule: MediaRuleDescriptor, configuredTypes: Set<string>): Fil
   if (scope === 'movie') return ['movies'];
   if (scope === 'series') return ['series'];
 
-  const providers = new Set(rule.sourceProviders.filter((sp) => configuredTypes.has(sp)));
+  const providers = new Set(rule.providers.filter((sp) => configuredTypes.has(sp)));
   const groups: FilterGroupId[] = [];
   if (providers.has('OVERSEERR')) groups.push('requests');
   if (providers.has('TMDB') && !providers.has('RADARR') && !providers.has('SONARR')) {

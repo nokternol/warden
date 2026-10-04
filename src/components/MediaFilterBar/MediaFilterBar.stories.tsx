@@ -166,7 +166,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Title',
     contentTypes: ['movie', 'series'],
     dataType: 'string',
-    sourceProviders: ['RADARR', 'SONARR'],
+    providers: ['RADARR', 'SONARR'],
     required: false,
   },
   {
@@ -174,7 +174,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Year',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    sourceProviders: ['RADARR', 'SONARR'],
+    providers: ['RADARR', 'SONARR'],
     required: false,
   },
   {
@@ -182,7 +182,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Watched',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
-    sourceProviders: ['TAUTULLI'],
+    providers: ['TAUTULLI'],
     required: false,
   },
   {
@@ -190,7 +190,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Added (days ago)',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    sourceProviders: ['RADARR', 'SONARR'],
+    providers: ['RADARR', 'SONARR'],
     required: false,
   },
   {
@@ -198,7 +198,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Size on disk (GB)',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    sourceProviders: ['RADARR', 'SONARR'],
+    providers: ['RADARR', 'SONARR'],
     required: false,
   },
   {
@@ -206,7 +206,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Has file',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
-    sourceProviders: ['RADARR', 'SONARR'],
+    providers: ['RADARR', 'SONARR'],
     required: false,
   },
   {
@@ -214,7 +214,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Tags',
     contentTypes: ['movie'],
     dataType: 'csv-ids',
-    sourceProviders: ['RADARR'],
+    providers: ['RADARR'],
     required: false,
     instanceScoped: true,
   },
@@ -223,7 +223,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Quality profile',
     contentTypes: ['movie'],
     dataType: 'csv-ids',
-    sourceProviders: ['RADARR'],
+    providers: ['RADARR'],
     required: false,
     instanceScoped: true,
   },
@@ -232,7 +232,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Genres',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
-    sourceProviders: ['RADARR'],
+    providers: ['RADARR'],
     required: false,
   },
   {
@@ -240,7 +240,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'IMDB rating',
     contentTypes: ['movie'],
     dataType: 'range',
-    sourceProviders: ['RADARR'],
+    providers: ['RADARR'],
     required: false,
   },
   {
@@ -248,7 +248,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Movie file count',
     contentTypes: ['movie'],
     dataType: 'range',
-    sourceProviders: ['RADARR'],
+    providers: ['RADARR'],
     required: false,
   },
   {
@@ -256,7 +256,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Release group',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
-    sourceProviders: ['RADARR'],
+    providers: ['RADARR'],
     required: false,
   },
   {
@@ -264,7 +264,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'In cinemas (days ago)',
     contentTypes: ['movie'],
     dataType: 'range',
-    sourceProviders: ['RADARR'],
+    providers: ['RADARR'],
     required: false,
   },
   {
@@ -272,7 +272,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Physical release (days ago)',
     contentTypes: ['movie'],
     dataType: 'range',
-    sourceProviders: ['RADARR'],
+    providers: ['RADARR'],
     required: false,
   },
   {
@@ -280,7 +280,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Digital release (days ago)',
     contentTypes: ['movie'],
     dataType: 'range',
-    sourceProviders: ['RADARR'],
+    providers: ['RADARR'],
     required: false,
   },
   {
@@ -288,7 +288,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Collection',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
-    sourceProviders: ['RADARR'],
+    providers: ['RADARR'],
     required: false,
   },
   {
@@ -296,7 +296,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Available',
     contentTypes: ['movie'],
     dataType: 'boolean',
-    sourceProviders: ['RADARR'],
+    providers: ['RADARR'],
     required: false,
   },
   {
@@ -304,7 +304,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Radarr status',
     contentTypes: ['movie'],
     dataType: 'string',
-    sourceProviders: ['RADARR'],
+    providers: ['RADARR'],
     required: false,
   },
   {
@@ -312,7 +312,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Studio',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
-    sourceProviders: ['PLEX', 'JELLYFIN'],
+    providers: ['PLEX', 'JELLYFIN'],
     required: false,
   },
   {
@@ -320,7 +320,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Monitored',
     contentTypes: ['series'],
     dataType: 'boolean',
-    sourceProviders: ['SONARR'],
+    providers: ['SONARR'],
     required: false,
   },
   {
@@ -328,7 +328,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Series status',
     contentTypes: ['series'],
     dataType: 'string',
-    sourceProviders: ['SONARR'],
+    providers: ['SONARR'],
     required: false,
   },
   {
@@ -336,7 +336,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Tags',
     contentTypes: ['series'],
     dataType: 'csv-ids',
-    sourceProviders: ['SONARR'],
+    providers: ['SONARR'],
     required: false,
     instanceScoped: true,
   },
@@ -345,7 +345,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Quality profile',
     contentTypes: ['series'],
     dataType: 'csv-ids',
-    sourceProviders: ['SONARR'],
+    providers: ['SONARR'],
     required: false,
     instanceScoped: true,
   },
@@ -354,7 +354,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Genres',
     contentTypes: ['series'],
     dataType: 'csv-strings',
-    sourceProviders: ['SONARR'],
+    providers: ['SONARR'],
     required: false,
   },
   {
@@ -362,7 +362,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Language profile',
     contentTypes: ['series'],
     dataType: 'csv-ids',
-    sourceProviders: ['SONARR'],
+    providers: ['SONARR'],
     required: false,
     instanceScoped: true,
   },
@@ -371,7 +371,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Series type',
     contentTypes: ['series'],
     dataType: 'string',
-    sourceProviders: ['SONARR'],
+    providers: ['SONARR'],
     required: false,
   },
   {
@@ -379,7 +379,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Network',
     contentTypes: ['series'],
     dataType: 'csv-strings',
-    sourceProviders: ['SONARR'],
+    providers: ['SONARR'],
     required: false,
   },
   {
@@ -387,7 +387,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Studio',
     contentTypes: ['series'],
     dataType: 'csv-strings',
-    sourceProviders: ['PLEX', 'JELLYFIN'],
+    providers: ['PLEX', 'JELLYFIN'],
     required: false,
   },
   {
@@ -395,7 +395,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Community rating',
     contentTypes: ['series'],
     dataType: 'range',
-    sourceProviders: ['SONARR'],
+    providers: ['SONARR'],
     required: false,
   },
   {
@@ -403,7 +403,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Ended',
     contentTypes: ['series'],
     dataType: 'boolean',
-    sourceProviders: ['SONARR'],
+    providers: ['SONARR'],
     required: false,
   },
   {
@@ -411,7 +411,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Last aired (days ago)',
     contentTypes: ['series'],
     dataType: 'range',
-    sourceProviders: ['SONARR'],
+    providers: ['SONARR'],
     required: false,
   },
   {
@@ -419,7 +419,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Episode completion (%)',
     contentTypes: ['series'],
     dataType: 'range',
-    sourceProviders: ['SONARR'],
+    providers: ['SONARR'],
     required: false,
   },
   {
@@ -427,7 +427,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Last watched (days ago)',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    sourceProviders: ['TAUTULLI', 'PLEX', 'JELLYFIN'],
+    providers: ['TAUTULLI', 'PLEX', 'JELLYFIN'],
     required: false,
   },
   {
@@ -435,7 +435,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Runtime (minutes)',
     contentTypes: ['movie'],
     dataType: 'range',
-    sourceProviders: ['PLEX', 'JELLYFIN'],
+    providers: ['PLEX', 'JELLYFIN'],
     required: false,
   },
   {
@@ -443,7 +443,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'File size (bytes)',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    sourceProviders: ['PLEX', 'JELLYFIN'],
+    providers: ['PLEX', 'JELLYFIN'],
     required: false,
   },
   {
@@ -451,7 +451,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Release date (days ago)',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    sourceProviders: ['PLEX', 'JELLYFIN'],
+    providers: ['PLEX', 'JELLYFIN'],
     required: false,
   },
   {
@@ -459,7 +459,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'File container',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
-    sourceProviders: ['PLEX', 'JELLYFIN'],
+    providers: ['PLEX', 'JELLYFIN'],
     required: false,
   },
   {
@@ -467,7 +467,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Video codec',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
-    sourceProviders: ['PLEX', 'JELLYFIN'],
+    providers: ['PLEX', 'JELLYFIN'],
     required: false,
   },
   {
@@ -475,7 +475,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Audio codec',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
-    sourceProviders: ['PLEX', 'JELLYFIN'],
+    providers: ['PLEX', 'JELLYFIN'],
     required: false,
   },
   {
@@ -483,7 +483,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'File resolution',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
-    sourceProviders: ['PLEX', 'JELLYFIN'],
+    providers: ['PLEX', 'JELLYFIN'],
     required: false,
   },
   {
@@ -491,7 +491,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Labels',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
-    sourceProviders: ['PLEX', 'JELLYFIN'],
+    providers: ['PLEX', 'JELLYFIN'],
     required: false,
   },
   {
@@ -499,7 +499,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Jellyfin added (days ago)',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    sourceProviders: ['JELLYFIN'],
+    providers: ['JELLYFIN'],
     required: false,
   },
   {
@@ -507,13 +507,13 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Jellyfin favorite',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
-    sourceProviders: ['JELLYFIN'],
+    providers: ['JELLYFIN'],
     required: false,
   },
 ];
 
 function rulesFor(configuredTypes: Set<string>): MediaRuleDescriptor[] {
-  return ALL_RULES.filter((rule) => rule.sourceProviders.some((sp) => configuredTypes.has(sp)));
+  return ALL_RULES.filter((rule) => rule.providers.some((sp) => configuredTypes.has(sp)));
 }
 
 const EMPTY_FILTER_STATE: FilterState = {

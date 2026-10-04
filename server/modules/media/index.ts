@@ -87,6 +87,6 @@ export {
 export type { ContestedFieldPrecedence } from './enrichment/precedence';
 
 // Field ownership — which provider type produces which EnrichmentFields key,
-// and the cache the composition root derives sourceProviders/gating from.
+// and the cache the composition root derives providers/gating from.
 export { fieldsByProviderType, ActiveFieldSetCache } from './activeFieldSet';
 export type { EnrichmentFields } from './mediaFieldProvider';

@@ -3,7 +3,7 @@ import {
   MEDIA_RULES,
   type NormalizedMovie,
   type NormalizedSeries,
-  deriveSourceProviders,
+  deriveProviders,
   getRule,
 } from '@server/modules/media/ruleRegistry';
 import { describe, expect, it } from 'vitest';
@@ -73,7 +73,7 @@ describe('MEDIA_RULES', () => {
       expect(['boolean', 'number', 'string', 'csv-ids', 'csv-strings', 'range']).toContain(
         rule.dataType
       );
-      expect(rule.sourceProviders.length).toBeGreaterThan(0);
+      expect(rule.providers.length).toBeGreaterThan(0);
       expect(typeof rule.required).toBe('boolean');
       expect(typeof rule.predicate).toBe('function');
     }
@@ -134,22 +134,22 @@ describe('dataType classification', () => {
   });
 });
 
-// ─── sourceProviders accuracy ───────────────────────────────────────────────
-// sourceProviders must reflect the real owner of a field, confirmed against
+// ─── providers accuracy ───────────────────────────────────────────────
+// providers must reflect the real owner of a field, confirmed against
 // docs/architecture/media-providers.md — a stale entry implies an integration
 // that doesn't exist in this deployment.
 
-describe('sourceProviders accuracy', () => {
+describe('providers accuracy', () => {
   it('tagIds (movie) lists only Radarr — Sonarr cannot produce a movie tag', () => {
-    expect(getRule('tagIds', 'movie')!.sourceProviders).toEqual([MetadataProviderType.RADARR]);
+    expect(getRule('tagIds', 'movie')!.providers).toEqual([MetadataProviderType.RADARR]);
   });
 
   it('tagIds (series) lists only Sonarr — Radarr cannot produce a series tag', () => {
-    expect(getRule('tagIds', 'series')!.sourceProviders).toEqual([MetadataProviderType.SONARR]);
+    expect(getRule('tagIds', 'series')!.providers).toEqual([MetadataProviderType.SONARR]);
   });
 
   it('watched is derived from playCount — Tautulli, Plex, and Jellyfin all produce it', () => {
-    expect(getRule('watched', 'movie')!.sourceProviders).toEqual([
+    expect(getRule('watched', 'movie')!.providers).toEqual([
       MetadataProviderType.TAUTULLI,
       MetadataProviderType.PLEX,
       MetadataProviderType.JELLYFIN,
@@ -157,47 +157,45 @@ describe('sourceProviders accuracy', () => {
   });
 
   it('genres (movie) is Radarr-only — no TMDB genres call is wired', () => {
-    expect(getRule('genres', 'movie')!.sourceProviders).toEqual([MetadataProviderType.RADARR]);
+    expect(getRule('genres', 'movie')!.providers).toEqual([MetadataProviderType.RADARR]);
   });
 
   it('imdbRating is Radarr-only — no OMDB integration exists in this deployment', () => {
-    expect(getRule('imdbRating', 'movie')!.sourceProviders).toEqual([MetadataProviderType.RADARR]);
+    expect(getRule('imdbRating', 'movie')!.providers).toEqual([MetadataProviderType.RADARR]);
   });
 
   it('communityRating is Sonarr-only — Sonarr ratings is a single aggregate, no TMDB key configured', () => {
-    expect(getRule('communityRating', 'series')!.sourceProviders).toEqual([
-      MetadataProviderType.SONARR,
-    ]);
+    expect(getRule('communityRating', 'series')!.providers).toEqual([MetadataProviderType.SONARR]);
   });
 
   it('addedDaysAgo (movie) lists only Radarr/Sonarr — nothing populates addedDate from Plex', () => {
-    expect(getRule('addedDaysAgo', 'movie')!.sourceProviders).toEqual([
+    expect(getRule('addedDaysAgo', 'movie')!.providers).toEqual([
       MetadataProviderType.RADARR,
       MetadataProviderType.SONARR,
     ]);
   });
 
   it('addedDaysAgo (series) lists only Radarr/Sonarr — nothing populates addedDate from Plex', () => {
-    expect(getRule('addedDaysAgo', 'series')!.sourceProviders).toEqual([
+    expect(getRule('addedDaysAgo', 'series')!.providers).toEqual([
       MetadataProviderType.RADARR,
       MetadataProviderType.SONARR,
     ]);
   });
 });
 
-// ─── deriveSourceProviders ─────────────────────────────────────────────────
-// For a rule backed by an EnrichmentFields-tracked field, sourceProviders is
+// ─── deriveProviders ─────────────────────────────────────────────────
+// For a rule backed by an EnrichmentFields-tracked field, providers is
 // derived from fieldsByProviderType (the same declaration MediaFieldProvider/
 // MediaFieldSource adapters are checked against) instead of hand-listed —
 // a provider rename/removal there can't silently leave a rule's gating stale.
 
-describe('deriveSourceProviders', () => {
+describe('deriveProviders', () => {
   it('derives tmdbStatus to [TMDB]', () => {
-    expect(deriveSourceProviders('tmdbStatus')).toEqual([MetadataProviderType.TMDB]);
+    expect(deriveProviders('tmdbStatus')).toEqual([MetadataProviderType.TMDB]);
   });
 
   it('derives playCount to Tautulli, Plex, and Jellyfin — a contested field', () => {
-    expect(deriveSourceProviders('playCount')).toEqual([
+    expect(deriveProviders('playCount')).toEqual([
       MetadataProviderType.TAUTULLI,
       MetadataProviderType.PLEX,
       MetadataProviderType.JELLYFIN,
@@ -205,7 +203,7 @@ describe('deriveSourceProviders', () => {
   });
 
   it('derives tags to both Radarr and Sonarr — each owns tags on its own kind', () => {
-    expect(deriveSourceProviders('tags')).toEqual([
+    expect(deriveProviders('tags')).toEqual([
       MetadataProviderType.RADARR,
       MetadataProviderType.SONARR,
     ]);
@@ -457,7 +455,7 @@ describe('Radarr movie-only predicates', () => {
       const rule = getRule(key, 'movie')!;
       expect(rule).toBeDefined();
       expect(rule.contentTypes).toEqual(['movie']);
-      expect(rule.sourceProviders).toEqual([MetadataProviderType.RADARR]);
+      expect(rule.providers).toEqual([MetadataProviderType.RADARR]);
     }
   });
 });
@@ -532,7 +530,7 @@ describe('series predicates', () => {
     expect(rule).toBeDefined();
     expect(rule.predicate(baseMovie, true)).toBe(true); // baseMovie.monitored = true
     expect(rule.predicate(baseMovie, false)).toBe(false);
-    expect(rule.sourceProviders).toEqual(
+    expect(rule.providers).toEqual(
       expect.arrayContaining([MetadataProviderType.RADARR, MetadataProviderType.SONARR])
     );
   });
@@ -803,7 +801,7 @@ describe('Sonarr-only predicates', () => {
     const rule = getRule('languageProfileIds', 'series')!;
     expect(rule.dataType).toBe('csv-ids');
     expect(rule.instanceScoped).toBe(true);
-    expect(rule.sourceProviders).toEqual([MetadataProviderType.SONARR]);
+    expect(rule.providers).toEqual([MetadataProviderType.SONARR]);
   });
 
   it('languageProfileIds — series: passes when item languageProfileId is in the csv list', () => {

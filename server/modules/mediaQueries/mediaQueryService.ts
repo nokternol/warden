@@ -102,7 +102,7 @@ function computeHealth(
   for (const { key } of filterEntries) {
     const rule = getRule(key, contentType);
     if (!rule) continue;
-    for (const pt of rule.sourceProviders) {
+    for (const pt of rule.providers) {
       const existing = providerMap.get(pt);
       if (existing) {
         existing.keys.push(key);

@@ -43,7 +43,7 @@ const RULES: MediaRuleDescriptor[] = [
     label: 'Title',
     contentTypes: ['movie', 'series'],
     dataType: 'string',
-    sourceProviders: ['RADARR'],
+    providers: ['RADARR'],
     required: false,
   },
   {
@@ -51,7 +51,7 @@ const RULES: MediaRuleDescriptor[] = [
     label: 'Year',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    sourceProviders: ['RADARR'],
+    providers: ['RADARR'],
     required: false,
   },
   {
@@ -59,7 +59,7 @@ const RULES: MediaRuleDescriptor[] = [
     label: 'Has file',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
-    sourceProviders: ['RADARR'],
+    providers: ['RADARR'],
     required: false,
   },
   {
@@ -67,7 +67,7 @@ const RULES: MediaRuleDescriptor[] = [
     label: 'Tags',
     contentTypes: ['movie'],
     dataType: 'csv-ids',
-    sourceProviders: ['RADARR'],
+    providers: ['RADARR'],
     required: false,
   },
   {
@@ -75,7 +75,7 @@ const RULES: MediaRuleDescriptor[] = [
     label: 'Tags',
     contentTypes: ['series'],
     dataType: 'csv-ids',
-    sourceProviders: ['SONARR'],
+    providers: ['SONARR'],
     required: false,
   },
   {
@@ -83,7 +83,7 @@ const RULES: MediaRuleDescriptor[] = [
     label: 'IMDB rating',
     contentTypes: ['movie'],
     dataType: 'range',
-    sourceProviders: ['RADARR'],
+    providers: ['RADARR'],
     required: false,
   },
 ];
