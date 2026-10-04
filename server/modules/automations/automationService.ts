@@ -1,5 +1,6 @@
 import type { AutomationStatus } from '@contract/schemas';
 import type { ContentType } from '@contract/schemas';
+import { type Scope, isOfferedTask, scope } from '@contract/scope';
 import { Cron } from 'croner';
 import { type SQL, eq, inArray } from 'drizzle-orm';
 import {
@@ -127,9 +128,12 @@ function rowToDto(
 
 export class AutomationService {
   private readonly db: DrizzleDb;
+  private readonly scope: Scope;
 
-  constructor({ db }: { db: DrizzleDb }) {
+  /** `scope` is the scope declaration create() checks a task against; the cradle supplies it. */
+  constructor({ db, scope: declared = scope }: { db: DrizzleDb; scope?: Scope }) {
     this.db = db;
+    this.scope = declared;
   }
 
   async getById(id: number): Promise<AutomationDto> {
@@ -269,6 +273,10 @@ export class AutomationService {
       .from(metadataProviders)
       .where(eq(metadataProviders.id, draft.providerId));
     const providerType = providerRow?.type as MetadataProviderType | undefined;
+
+    if (providerRow && providerType && !isOfferedTask(this.scope, providerType, draft.taskId)) {
+      throw new ValidationError(`Task "${draft.taskId}" is not offered for ${providerType}`);
+    }
 
     if (providerRow) {
       const settings = providerRow.settings

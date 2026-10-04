@@ -1,3 +1,4 @@
+import { type Scope, scope } from '@contract/scope';
 import { MetadataProviderType, automations } from '@server/database/schema';
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
@@ -146,6 +147,28 @@ describe('AutomationService', () => {
           schedule: '0 * * * *',
         })
       ).rejects.toThrow(/not enabled/i);
+    });
+
+    it('rejects a task the scope declaration defers, even when it is enabled', async () => {
+      const deferringRadarrSearch: Scope = {
+        deferred: {
+          ...scope.deferred,
+          tasks: [{ providerType: 'RADARR', taskId: 'triggerSearch' }],
+        },
+      };
+      const scoped = new AutomationService({ db: getDb(), scope: deferringRadarrSearch });
+      const provider = await seedProvider(providerSettingsService);
+      const query = await seedQuery(mediaQueryService);
+
+      await expect(
+        scoped.create({
+          name: 'Search',
+          queries: [{ queryId: query.id, role: 'include' }],
+          providerId: provider.id,
+          taskId: 'triggerSearch',
+          schedule: '0 * * * *',
+        })
+      ).rejects.toThrow(ValidationError);
     });
   });
 
