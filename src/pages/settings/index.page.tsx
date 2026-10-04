@@ -9,20 +9,18 @@ import type { CreateProviderParams, ProviderSummary } from '@app/hooks/useProvid
 import { useProviderSettings } from '@app/hooks/useProviderSettings';
 import { tasksForProvider, useProviderTasks } from '@app/hooks/useProviderTasks';
 import { useProviderTypes } from '@app/hooks/useProviderTypes';
-import { getProviderOrder } from '@app/lib/provider-registry';
 import { requireAuth } from '@app/lib/utils/requireAuth';
+import type { ProviderType } from '@contract/providers';
 import { Plug } from 'lucide-react';
 import type { GetServerSideProps } from 'next';
 import { useState } from 'react';
 
-// ─── Provider metadata — derived from registry ────────────────────────────────
+// ─── Provider order — the served type order ──────────────────────────────────
 
-const GROUP_ORDER = getProviderOrder();
-
-function sortProviders(providers: ProviderSummary[]): ProviderSummary[] {
+function sortProviders(providers: ProviderSummary[], typeOrder: ProviderType[]): ProviderSummary[] {
   return [...providers].sort((a, b) => {
-    const ai = GROUP_ORDER.indexOf(a.type);
-    const bi = GROUP_ORDER.indexOf(b.type);
+    const ai = typeOrder.indexOf(a.type);
+    const bi = typeOrder.indexOf(b.type);
     const aIdx = ai === -1 ? 999 : ai;
     const bIdx = bi === -1 ? 999 : bi;
     return aIdx !== bIdx ? aIdx - bIdx : a.name.localeCompare(b.name);
@@ -50,7 +48,8 @@ export default function SettingsPage() {
     setShowAddForm(false);
   };
 
-  const sorted = providers ? sortProviders(providers) : [];
+  const typeOrder = (types ?? []).map((t) => t.type);
+  const sorted = providers ? sortProviders(providers, typeOrder) : [];
 
   return (
     <AppLayout
@@ -103,7 +102,7 @@ export default function SettingsPage() {
           <div className="space-y-2">
             {sorted.map((p, idx) => {
               const prev = idx > 0 ? sorted[idx - 1] : null;
-              const typeGroup = (t: string) => GROUP_ORDER.indexOf(t);
+              const typeGroup = (t: ProviderType) => typeOrder.indexOf(t);
               const showDivider = prev !== null && typeGroup(p.type) !== typeGroup(prev.type);
 
               return (
