@@ -163,20 +163,17 @@ export const providers = {
   // ─── Capabilities ────────────────────────────────────────────────────────
   /** Per configured actuator instance, the tasks it offers. Non-actuators are absent. */
   tasks: base
-    .meta({ public: true })
     .route({ method: 'GET', path: '/api/providers/tasks' })
     .output(z.array(ProviderTaskAvailabilitySchema)),
 
   /** Per configured instance, the live choices it offers for one options route. */
   taskOptions: base
-    .meta({ public: true })
     .route({ method: 'GET', path: '/api/providers/task-options/{route}' })
     .input(z.object({ route: TaskOptionsRouteSchema }))
     .output(z.array(ProviderTaskOptionsAvailabilitySchema)),
 
   /** A provider's raw catalogue data, fetched with ad-hoc connection details. */
   metadata: base
-    .meta({ public: true })
     .route({ method: 'GET', path: '/api/providers/metadata' })
     .input(
       z.object({
@@ -201,7 +198,6 @@ export const providers = {
 
   /** A title's ratings aggregated across TMDB, OMDb and TVmaze. */
   ratings: base
-    .meta({ public: true })
     .route({ method: 'GET', path: '/api/providers/ratings' })
     .input(
       z.object({
