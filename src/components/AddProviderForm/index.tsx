@@ -5,8 +5,8 @@ import type { CreateProviderParams } from '@app/hooks/useProviderSettings';
 import { descriptorFor } from '@app/hooks/useProviderTypes';
 import { api } from '@app/lib/api/client';
 import { apiUrlOf } from '@contract/providerUrl';
-import type { ProviderTypeDescriptor } from '@contract/providers';
-import { type ProviderType, ProviderTypeSchema } from '@contract/schemas';
+import type { ProviderType, ProviderTypeDescriptor } from '@contract/providers';
+import { ProviderTypeSchema } from '@contract/schemas';
 import { useRef, useState } from 'react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────

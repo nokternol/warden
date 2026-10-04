@@ -32,7 +32,8 @@ import { NAV_ITEMS } from '@app/lib/navigation';
 import { cn } from '@app/lib/utils/cn';
 import { requireAuth } from '@app/lib/utils/requireAuth';
 import type { MediaRuleDescriptor } from '@contract/media';
-import type { ContentType, ProviderType } from '@contract/schemas';
+import type { ProviderType } from '@contract/providers';
+import type { ContentType } from '@contract/schemas';
 import {
   ArrowDown,
   ArrowUp,
