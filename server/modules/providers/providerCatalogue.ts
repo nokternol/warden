@@ -62,7 +62,7 @@ export const PROVIDER_CATALOGUE: Record<MetadataProviderType, ProviderTypeEntry>
 };
 
 /** Each provider type with its catalogue entry, in display order. */
-export function describeProviderTypes(): (ProviderTypeEntry & { type: MetadataProviderType })[] {
+export function describeProviderTypes(): ProviderTypeDescriptor[] {
   return (Object.entries(PROVIDER_CATALOGUE) as [MetadataProviderType, ProviderTypeEntry][]).map(
     ([type, entry]) => ({ type, ...entry })
   );
