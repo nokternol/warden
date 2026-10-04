@@ -22,14 +22,16 @@ interface AddFormState {
 // ─── AddProviderForm ──────────────────────────────────────────────────────────
 
 export default function AddProviderForm({
-  types,
+  types: servedTypes,
   onSubmit,
   onCancel,
 }: {
-  types: ProviderTypeDescriptor[];
+  /** The served provider types; absent while they load. */
+  types: ProviderTypeDescriptor[] | undefined;
   onSubmit: (params: CreateProviderParams) => void;
   onCancel: () => void;
 }) {
+  const types = servedTypes ?? [];
   const [form, setForm] = useState<AddFormState>({
     name: '',
     url: '',
@@ -90,7 +92,10 @@ export default function AddProviderForm({
       className="p-4 border border-primary/30 rounded-lg bg-surface-panel space-y-4"
     >
       <div className="text-sm font-medium text-text-primary">Add provider</div>
-      {types.length === 0 && (
+      {servedTypes === undefined && (
+        <p className="text-xs text-text-muted">Loading provider types…</p>
+      )}
+      {servedTypes?.length === 0 && (
         <p className="text-xs text-text-muted">No provider types are available to add.</p>
       )}
       <div className="grid grid-cols-2 gap-4">

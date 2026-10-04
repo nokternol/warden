@@ -56,3 +56,17 @@ export const HostedTypeWithFixedUrl: Story = () => (
     />
   </div>
 );
+
+/** While the served types load: the form says so and Save is disabled. */
+export const LoadingTypes: Story = () => (
+  <div className="max-w-3xl p-6">
+    <AddProviderForm types={undefined} onSubmit={() => {}} onCancel={() => {}} />
+  </div>
+);
+
+/** No type is offered: the form says so and Save is disabled. */
+export const NoTypesOffered: Story = () => (
+  <div className="max-w-3xl p-6">
+    <AddProviderForm types={[]} onSubmit={() => {}} onCancel={() => {}} />
+  </div>
+);

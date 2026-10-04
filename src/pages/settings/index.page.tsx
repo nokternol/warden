@@ -74,7 +74,7 @@ export default function SettingsPage() {
       <div className="p-6 space-y-4 max-w-3xl">
         {showAddForm && (
           <AddProviderForm
-            types={types ?? []}
+            types={types}
             onSubmit={handleCreate}
             onCancel={() => setShowAddForm(false)}
           />

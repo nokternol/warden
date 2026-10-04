@@ -121,4 +121,11 @@ describe('AddProviderForm', () => {
     expect(screen.queryByText(/no provider types are available/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
   });
+
+  it('says the provider types are loading, and cannot be saved, until they arrive', () => {
+    render(<AddProviderForm types={undefined} onSubmit={vi.fn()} onCancel={vi.fn()} />);
+
+    expect(screen.queryByText(/loading provider types/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
+  });
 });
