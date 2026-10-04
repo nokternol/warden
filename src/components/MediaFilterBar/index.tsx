@@ -101,7 +101,7 @@ function ChipX() {
 
 // ─── TextFilter — a free-text rule (a `string` rule with no fixed options) ───
 
-function TextFilter({
+export function TextFilter({
   label,
   value,
   onChange,
@@ -129,7 +129,7 @@ function parseNumber(s: string): number | undefined {
   return s.trim() === '' || Number.isNaN(n) ? undefined : n;
 }
 
-function NumberRangeFilter({
+export function NumberRangeFilter({
   label,
   min,
   max,
@@ -332,7 +332,7 @@ function NumberRangeFilter({
 
 // ─── Mobile year inputs — better UX on touch than a 144px slider ──────────────
 
-function MobileYearInputs({
+export function MobileYearInputs({
   yearMin,
   yearMax,
   globalMin,
