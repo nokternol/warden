@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest';
-import { MobileYearInputs } from '@app/components/MediaFilterBar';
 import { fireEvent, render, screen } from '@tests/helpers/component';
 import { describe, expect, it, vi } from 'vitest';
+import { MobileYearInputs } from '../index';
 
 const setup = (props: Partial<Parameters<typeof MobileYearInputs>[0]> = {}) => {
   const setYearMin = vi.fn();
