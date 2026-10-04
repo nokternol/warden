@@ -22,7 +22,7 @@ owns it. A module is a vertical slice of the product, not an HTTP surface.
   [`automations/index.ts`](ref:path:server/modules/automations/index.ts),
   [`auth/index.ts`](ref:path:server/modules/auth/index.ts),
   [`system/index.ts`](ref:path:server/modules/system/index.ts),
-  [`settings/index.ts`](ref:path:server/modules/settings/index.ts)). This is *not* a barrel file — it
+  [`appSettings/index.ts`](ref:path:server/modules/appSettings/index.ts)). This is *not* a barrel file — it
   never wholesale re-exports the module's internals. It exports the minimal, intentionally designed
   surface other modules and the HTTP layer consume: the types, functions, and services that form the
   module's contract, chosen one by one. Anything not exported is private, and a growing export list is a
@@ -55,7 +55,7 @@ owns it. A module is a vertical slice of the product, not an HTTP surface.
 
 **Dependency direction follows the product loop** (providers unlock metadata → predicates → queries →
 automations): `automations → media, mediaQueries, providers`; `mediaQueries → media, providers`;
-`media → providers`; `auth → providers`; `settings → providers`; everyone → `kernel`; `system` and
+`media → providers`; `auth → providers`; everyone → `kernel`; `system`, `appSettings` and
 `providers` import no other module; `kernel` imports no module. Cycles between module interfaces are
 design errors. This graph is mechanically enforced — see "Enforcement" below — so it cannot silently
 drift from what's written here.
@@ -96,7 +96,8 @@ server/
   kernel/          # eventBus, logger, config, db, errors, cache, middleware, api (contract implementer)
   modules/
     providers/     # connections (BaseProviderConnection + per-system), roles (MediaActuator),
-                   # provider settings service, task enablement, identity-resolution job
+                   # provider settings service + instance CRUD and connection probe at
+                   # /api/providers, task enablement, identity-resolution job
     media/         # normalize + NormalizedMovie/NormalizedSeries shapes, filterRegistry,
                    # MediaSource/MediaEnricher role contracts + their provider adapters,
                    # mediaQueryEngine, enrichment job + merge, backdrops, search
@@ -106,7 +107,7 @@ server/
     auth/          # authService, session store (drizzleStore)
     system/        # health endpoints, systemHealthCheck, ensureSystemJobs,
                    # systemTaskRunner, failedStateMiddleware
-    settings/      # transport-only — no domain logic of its own
+    appSettings/   # system-wide settings that belong to no single provider
 ```
 
 Boundary decisions this inventory encodes:
@@ -144,7 +145,11 @@ The direction graph and the module-privacy rule above are not just prose — a r
 (`yarn depcruise:ci`, wired into `.github/workflows/quality-gate.yml`
 alongside `lint:ci`/`typecheck`/`test:run`): nothing outside a module may import a file inside it other
 than its `index.ts`, and cross-module imports are restricted to the edges declared above. A module
-omitted from another's allow-list is forbidden as a target by default. The same config also forbids
+omitted from another's allow-list is forbidden as a target by default, and every directory under
+`server/modules/` must have its own direction rule —
+[`boundaries.test.ts`](ref:path:server/__tests__/boundaries.test.ts) derives the module directories from
+the filesystem and fails on one the config doesn't cover, so a new module can't escape enforcement by
+being left out. The same config also forbids
 `server/` and `src/` from importing each other and `contract/` from importing either. This is the mechanism that keeps
 this doc's "current fact" status honest going forward — read the config and this doc as one design
 stated twice, once for humans and once for CI; a future direction change updates both in the same PR.

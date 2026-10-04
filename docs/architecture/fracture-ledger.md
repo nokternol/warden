@@ -311,6 +311,23 @@ is graphed, dated, and verified against code, not inferred from a plan.
   identities to `series` and rebuilds the tvdbId unique index under the new kind. Plex and Tautulli keep
   their own `show` as an external spelling translated at the boundary.
 
+### Providers and settings — three HTTP homes (recorded and healed 2026-10-04, MVP slice B3)
+
+- **Fracture:** one concept (a configured provider) had two HTTP homes and a third, unenforced module
+  beside them. Provider CRUD and the connection test lived at `/api/settings/providers` in a
+  transport-only `settings` module, while the same provider's tasks, task options, metadata and ratings
+  lived at `/api/providers` in the `providers` module, and the contract declared all of them under one
+  `providers` namespace anyway. System-wide settings lived in an `appSettings` module that
+  `.dependency-cruiser.cjs` never listed, so its imports were checked by no direction rule.
+- **How it misled:** a reader looking for "where providers are served" found half the namespace under
+  settings, and a module could be added under `server/modules/` without its boundaries being enforced,
+  with nothing failing.
+- **Healed by:** every `providers` procedure is implemented by one factory in the providers module and
+  served under `/api/providers` (CRUD at `/api/providers` and `/api/providers/{id}`, the probe at
+  `/api/providers/test`); the `settings` module is deleted and its former paths answer 404. `appSettings`
+  joined the direction graph with no allowed cross-module targets, its behaviour and route unchanged, and
+  a boundaries test fails when any directory under `server/modules/` has no direction rule.
+
 ## Open
 
 No fracture is currently open.

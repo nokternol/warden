@@ -17,8 +17,7 @@ server/
                      #   db (re-exports the DrizzleDb handle contract)
   database/          # Drizzle schema, migrations (session store moved to modules/auth/)
   modules/           # Feature modules: each implements its API contract procedures and owns its
-                     #   domain logic behind a crafted public interface (index.ts) — settings/ is
-                     #   the one transport-only module (no domain logic of its own)
+                     #   domain logic behind a crafted public interface (index.ts)
   types/             # Shared types and Express augmentations
   __tests__/         # Server unit + integration tests
 ```
