@@ -195,6 +195,11 @@ export const MediaRuleDescriptorSchema = z.object({
   sourceField: z.string().optional(),
   /** What a boolean rule's two values read as; absent means Yes / No. */
   valueLabels: z.object({ true: z.string(), false: z.string() }).optional(),
+  options: z
+    .array(z.object({ value: z.string(), label: z.string() }))
+    .readonly()
+    .optional(),
+  shortLabel: z.string().optional(),
 });
 
 /** One provider's answer to a cross-provider title search. */

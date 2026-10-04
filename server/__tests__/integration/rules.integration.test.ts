@@ -198,6 +198,16 @@ describe('GET /api/rules', () => {
       const monitored = rules.find((r) => r.key === 'monitored');
       expect(monitored?.valueLabels).toEqual({ true: 'Monitored', false: 'Unmonitored' });
     });
+
+    it('serves an enum-shaped rule with its own options and short label', async () => {
+      const rules = await rulesServedWith(MetadataProviderType.SONARR);
+      const seriesStatus = rules.find((r) => r.key === 'seriesStatus');
+      expect(seriesStatus?.options).toEqual([
+        { value: 'continuing', label: 'Continuing' },
+        { value: 'ended', label: 'Ended' },
+      ]);
+      expect(seriesStatus?.shortLabel).toBe('Status');
+    });
   });
 
   it('answers 404 at /api/filter-fields', async () => {

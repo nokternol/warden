@@ -48,6 +48,12 @@ export interface MediaRule<
   /** What a boolean rule's two values read as in the UI (*Monitored* / *Unmonitored*).
    *  Absent means the generic *Yes* / *No*. */
   valueLabels?: { true: string; false: string };
+  /** The fixed values an enum-shaped `string`/`number` rule accepts, each with its display
+   *  label. A `number` rule's values are its numbers as strings. */
+  options?: readonly { value: string; label: string }[];
+  /** A shorter label for places the rule's section heading already gives context
+   *  ("Status" under a "Series" heading). Absent means `label`. */
+  shortLabel?: string;
   predicate: Predicate<T>;
 }
 
@@ -538,6 +544,13 @@ export const MEDIA_RULES = [
     label: 'Radarr status',
     contentTypes: ['movie'],
     dataType: 'string',
+    options: [
+      { value: 'tba', label: 'TBA' },
+      { value: 'announced', label: 'Announced' },
+      { value: 'inCinemas', label: 'In Cinemas' },
+      { value: 'released', label: 'Released' },
+      { value: 'deleted', label: 'Deleted' },
+    ],
     providers: [MetadataProviderType.RADARR],
     required: false,
     predicate: (item, value) => {
@@ -553,6 +566,11 @@ export const MEDIA_RULES = [
     label: 'Series status',
     contentTypes: ['series'],
     dataType: 'string',
+    options: [
+      { value: 'continuing', label: 'Continuing' },
+      { value: 'ended', label: 'Ended' },
+    ],
+    shortLabel: 'Status',
     providers: [MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => {
@@ -606,6 +624,12 @@ export const MEDIA_RULES = [
     label: 'Series type',
     contentTypes: ['series'],
     dataType: 'string',
+    options: [
+      { value: 'standard', label: 'Standard' },
+      { value: 'anime', label: 'Anime' },
+      { value: 'daily', label: 'Daily' },
+    ],
+    shortLabel: 'Type',
     providers: [MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => {
@@ -751,6 +775,14 @@ export const MEDIA_RULES = [
     label: 'TMDB status',
     contentTypes: ['movie', 'series'],
     dataType: 'string',
+    options: [
+      { value: 'Released', label: 'Released' },
+      { value: 'In Production', label: 'In Production' },
+      { value: 'Ended', label: 'Ended' },
+      { value: 'Returning Series', label: 'Returning Series' },
+      { value: 'Canceled', label: 'Canceled' },
+    ],
+    shortLabel: 'Status',
     providers: deriveProviders('tmdbStatus'),
     sourceField: 'tmdbStatus',
     required: false,
@@ -764,6 +796,13 @@ export const MEDIA_RULES = [
     label: 'Overseerr request status',
     contentTypes: ['movie', 'series'],
     dataType: 'number',
+    options: [
+      { value: '1', label: 'Pending' },
+      { value: '2', label: 'Approved' },
+      { value: '3', label: 'Declined' },
+      { value: '4', label: 'Available' },
+    ],
+    shortLabel: 'Status',
     providers: deriveProviders('overseerrRequestStatus'),
     sourceField: 'overseerrRequestStatus',
     required: false,
