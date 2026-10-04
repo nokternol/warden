@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest';
-import { TextFilter } from '@app/components/MediaFilterBar';
 import { fireEvent, render, screen } from '@tests/helpers/component';
 import { describe, expect, it, vi } from 'vitest';
+import { TextFilter } from '../index';
 
 describe('TextFilter', () => {
   it('shows its label as the accessible name and placeholder, and the current value', () => {
