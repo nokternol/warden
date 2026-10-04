@@ -1,4 +1,5 @@
 import type { ProviderSummary } from '@app/hooks/useProviderSettings';
+import type { ProviderTypeDescriptor } from '@contract/providers';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -16,7 +17,28 @@ const mockProvider: ProviderSummary = {
   updatedAt: '2024-01-01T00:00:00Z',
 };
 
+const radarrType: ProviderTypeDescriptor = {
+  type: 'RADARR',
+  label: 'Radarr',
+  apiPath: '/api/v3',
+  capabilities: ['Films', 'Profiles'],
+};
+
 describe('ProviderCard', () => {
+  it("shows its type's served label and the filter data the type provides", () => {
+    render(
+      <ProviderCard
+        provider={mockProvider}
+        providerType={radarrType}
+        tasks={[]}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+      />
+    );
+    expect(screen.queryByText('Radarr')).toBeInTheDocument();
+    expect(screen.queryByText('Filter: Films · Profiles')).toBeInTheDocument();
+  });
+
   it('renders the provider name', () => {
     render(
       <ProviderCard provider={mockProvider} tasks={[]} onUpdate={vi.fn()} onDelete={vi.fn()} />

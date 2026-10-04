@@ -7,6 +7,7 @@ import type { ProviderSummary, UpdateProviderParams } from '@app/hooks/useProvid
 import type { ProviderTaskDescriptor } from '@app/hooks/useProviderTasks';
 import { api } from '@app/lib/api/client';
 import { cn } from '@app/lib/utils/cn';
+import type { ProviderTypeDescriptor } from '@contract/providers';
 import {
   BarChart2,
   Bell,
@@ -34,17 +35,6 @@ const API_SUFFIXES: Record<string, string> = {
   OVERSEERR: '',
   TMDB: '',
   OMDB: '',
-};
-
-const PROVIDER_FILTER_DATA: Record<string, string[]> = {
-  PLEX: ['Library contents', 'Item metadata'],
-  JELLYFIN: ['Library contents', 'Item metadata'],
-  RADARR: ['Movie library', 'Quality profiles', 'Tags'],
-  SONARR: ['Series library', 'Quality profiles', 'Tags'],
-  TAUTULLI: ['Watch history', 'Play statistics', 'User activity'],
-  OVERSEERR: ['Request queue'],
-  TMDB: ['Ratings', 'Metadata'],
-  OMDB: ['Ratings', 'Metadata'],
 };
 
 // ─── Local helpers ────────────────────────────────────────────────────────────
@@ -108,11 +98,14 @@ interface EditFormState {
 
 export default function ProviderCard({
   provider,
+  providerType,
   tasks,
   onUpdate,
   onDelete,
 }: {
   provider: ProviderSummary;
+  /** The served description of the provider's type; absent for a type that is not offered. */
+  providerType?: ProviderTypeDescriptor;
   tasks: ProviderTaskDescriptor[];
   onUpdate: (patch: UpdateProviderParams) => Promise<unknown>;
   onDelete: () => void;
@@ -140,7 +133,7 @@ export default function ProviderCard({
   const serverEnabledIds = tasks.filter((t) => t.enabled).map((t) => t.id);
   const enabledTasks = localEnabledTasks ?? serverEnabledIds;
   const allTasks = tasks;
-  const filterData = PROVIDER_FILTER_DATA[provider.type] ?? [];
+  const capabilities = providerType?.capabilities ?? [];
   const hasTasks = allTasks.length > 0;
 
   const runTest = async (url: string, apiKey: string) => {
@@ -222,9 +215,9 @@ export default function ProviderCard({
 
   const capabilitySummary = (() => {
     const parts: string[] = [];
-    if (filterData.length > 0) {
-      const labels = filterData.slice(0, 2).join(' · ');
-      parts.push(`Filter: ${labels}${filterData.length > 2 ? ' +more' : ''}`);
+    if (capabilities.length > 0) {
+      const labels = capabilities.slice(0, 2).join(' · ');
+      parts.push(`Filter: ${labels}${capabilities.length > 2 ? ' +more' : ''}`);
     }
     if (hasTasks) {
       parts.push(`Tasks: ${enabledTasks.length} of ${allTasks.length} enabled`);
@@ -260,7 +253,7 @@ export default function ProviderCard({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium text-sm text-text-primary">{provider.name}</span>
             <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full font-medium">
-              {provider.type}
+              {providerType?.label ?? provider.type}
             </span>
             <StatusIndicator isActive={provider.isActive} />
           </div>
@@ -414,13 +407,13 @@ export default function ProviderCard({
           {!editing && (
             <>
               {/* Filter data */}
-              {filterData.length > 0 && (
+              {capabilities.length > 0 && (
                 <section>
                   <div className="text-xs font-medium text-text-muted uppercase tracking-wide mb-2">
                     Filter data
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {filterData.map((label) => (
+                    {capabilities.map((label) => (
                       <span
                         key={label}
                         className="text-xs px-2 py-0.5 rounded-full bg-surface-elevated text-text-secondary"
