@@ -431,11 +431,13 @@ Earlier entries in this ledger use the names that were current when they healed 
   keyboard end to end, and has a clear action, pinned below the scrolling list, that empties the selection. Option grouping and the
   qualifying instance are worked out in `MediaFilterBar`, which converts between the stored value and
   the control's arrays at the call site. The bar's other controls (`TextFilter`, `NumberRangeFilter`,
-  `MobileYearInputs`) moved to `src/components/filters/` too, so the bar keeps only layout, the
-  rule-to-control mapping and change dispatch.
+  `MobileYearInputs`) moved to `src/components/filters/` too. The bar keeps layout, the rule-to-control
+  mapping (`RuleControl`), the active-condition chips, the option builders and the range helpers
+  (`readRangeBound`, `rangePatch`), and change dispatch.
   `MultiSelectDropdown`, `StringMultiSelectDropdown` and the bar's CSV helpers are deleted. Filter
   state still holds a multi-value selection as one comma-separated string; `multiValueFilter` in
-  `src/lib` is the only code that reads or writes it, shared by the bar and `toFilters`.
+  `src/lib` is the only client code that reads or writes it, shared by the bar and `toFilters`. The
+  server's `ruleRegistry.ts` keeps its own parser for the same value (tracked in #158).
 
 ## Open
 
