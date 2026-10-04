@@ -70,7 +70,7 @@ export { MEDIA_RULES, getRule, toDescriptor } from './ruleRegistry';
 
 // The query engine — matches a MediaSource against a MediaQuerySpec.
 export { MediaQueryEngine, matchItems } from './mediaQueryEngine';
-export type { MediaQuery, MediaQuerySource, MediaQuerySpec } from './mediaQueryEngine';
+export type { MediaQuery, MediaQueryClause, MediaQuerySpec } from './mediaQueryEngine';
 
 // Enrichment — the identity → media_enrichment materialization.
 export { mergeEnrichment } from './enrichmentMerge';

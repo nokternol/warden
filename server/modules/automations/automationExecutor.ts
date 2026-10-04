@@ -205,7 +205,7 @@ export class AutomationExecutor {
       const matched = await this.mediaQueryEngine.evaluate({
         source: mediaSource,
         contentType,
-        sources: querySpecs,
+        clauses: querySpecs,
       });
       const targetById = new Map(matched.map((item) => [mediaSource.idOf(item)!, item]));
       return {
@@ -234,7 +234,7 @@ export class AutomationExecutor {
     const matched = await this.mediaQueryEngine.evaluate({
       source: pooled,
       contentType,
-      sources: querySpecs,
+      clauses: querySpecs,
     });
     const { actuatorIds, addressed } = await resolveActuatorTargets(
       this.db,

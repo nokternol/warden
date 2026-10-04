@@ -550,7 +550,7 @@ export function createMediaProcedures(cradle: MediaCradle) {
       const matched = await mediaQueryEngine.evaluate({
         source,
         contentType: 'movie',
-        sources: [{ filterValues: toFilterValues(query, MOVIE_PARAM_TO_KEY), role: 'include' }],
+        clauses: [{ filterValues: toFilterValues(query, MOVIE_PARAM_TO_KEY), role: 'include' }],
       });
       const matchedKeys = new Set(matched.map((m) => itemKey(m)));
       const matchedRaw: Attributed<RadarrMovie>[] = sublists.flatMap(({ providerId, movies }) =>
@@ -582,7 +582,7 @@ export function createMediaProcedures(cradle: MediaCradle) {
       const matched = await mediaQueryEngine.evaluate({
         source,
         contentType: 'series',
-        sources: [{ filterValues: toFilterValues(query, SERIES_PARAM_TO_KEY), role: 'include' }],
+        clauses: [{ filterValues: toFilterValues(query, SERIES_PARAM_TO_KEY), role: 'include' }],
       });
       const matchedKeys = new Set(matched.map((s) => itemKey(s)));
       const matchedRaw: Attributed<SonarrSeries>[] = sublists.flatMap(({ providerId, series }) =>

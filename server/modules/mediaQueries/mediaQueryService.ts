@@ -39,10 +39,10 @@ export interface QueryHealth {
 }
 
 /**
- * A persisted query: a `MediaQuerySpec` (contentType + sources) given a database
+ * A persisted query: a `MediaQuerySpec` (contentType + clauses) given a database
  * identity and presentation metadata. The persisted form carries its single
  * include source as the `filterValues` convenience accessor
- * (`sources: [{ filterValues, role: 'include' }]`); the full multi-source
+ * (`clauses: [{ filterValues, role: 'include' }]`); the full multi-clause
  * projection is reserved for the client phase.
  */
 export interface MediaQueryRecord {
