@@ -254,4 +254,32 @@ describe('AutomationBuilder', () => {
     expect(screen.getByRole('checkbox', { name: /confirm/i })).not.toBeChecked();
     expect(screen.getByRole('button', { name: /create automation/i })).toBeDisabled();
   });
+
+  it('saves a destructive automation once its effect is confirmed', async () => {
+    mockApi([makeProvider()], [{ providerId: 1, type: 'RADARR', tasks: [ENABLED_DELETE] }]);
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    renderBuilder({ onSubmit });
+
+    await user.type(screen.getByLabelText('Name'), 'Purge');
+    await user.click(await screen.findByRole('radio', { name: /delete movie \+ files/i }));
+    await user.click(screen.getByRole('checkbox', { name: /confirm/i }));
+    await user.click(screen.getByRole('button', { name: /create automation/i }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ taskId: 'deleteMovieWithFiles' })
+    );
+  });
+
+  it('never asks a non-destructive task for confirmation', async () => {
+    mockApi([makeProvider()], [{ providerId: 1, type: 'RADARR', tasks: [ENABLED_UNMONITOR] }]);
+    const user = userEvent.setup();
+    renderBuilder();
+
+    await user.type(screen.getByLabelText('Name'), 'Quiet');
+    await user.click(await screen.findByRole('radio', { name: /unmonitor movie/i }));
+
+    expect(screen.queryByRole('checkbox', { name: /confirm/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /create automation/i })).toBeEnabled();
+  });
 });
