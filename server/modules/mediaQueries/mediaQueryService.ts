@@ -1,4 +1,4 @@
-import type { ContentType } from '@contract/schemas';
+import { type ContentType, isInstanceScopedValue, isRangeValue } from '@contract/schemas';
 import { eq } from 'drizzle-orm';
 import {
   type MetadataProviderType,
@@ -8,7 +8,7 @@ import {
 } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
 import { NotFoundError, ValidationError } from '../../kernel/errors';
-import { type Filter, type FilterValue, getRule, isInstanceScopedValue } from '../media';
+import { type Filter, type FilterValue, getRule } from '../media';
 
 export type { FilterValue, Filter };
 
@@ -65,10 +65,6 @@ function coerceValue(raw: string, dataType: string): FilterValue {
 
 function serializeValue(value: FilterValue): string {
   return typeof value === 'object' ? JSON.stringify(value) : String(value);
-}
-
-function isObjectShaped(value: FilterValue): boolean {
-  return typeof value === 'object' && value !== null;
 }
 
 function computeHealth(
@@ -212,7 +208,7 @@ export class MediaQueryService {
         );
       }
       const instanceScoped = isInstanceScopedValue(value);
-      const rangeShaped = isObjectShaped(value) && !instanceScoped;
+      const rangeShaped = isRangeValue(value);
       if (rule.dataType === 'csv-ids' && !instanceScoped) {
         throw new ValidationError(
           `Filter key '${ruleKey}' expects an { ids, providerId? } instance-scoped value`

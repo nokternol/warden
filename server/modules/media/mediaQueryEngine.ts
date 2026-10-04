@@ -1,4 +1,4 @@
-import type { ContentType } from '@contract/schemas';
+import { type ContentType, isInstanceScopedValue } from '@contract/schemas';
 import type { DrizzleDb } from '../../kernel/db';
 import { type QueryResult, evaluateCombination } from './combinationEvaluator';
 import type { EnrichmentQueries } from './enrichment/enrichment.queries';
@@ -8,7 +8,7 @@ import { itemKey } from './mediaItem';
 import type { MediaSource } from './mediaSource';
 import type { NormalizedMovie } from './movie';
 import type { Filter } from './ruleRegistry';
-import { getRule, isInstanceScopedValue } from './ruleRegistry';
+import { getRule } from './ruleRegistry';
 import type { NormalizedSeries } from './series';
 
 /** One clause of a query: a set of filters and the role it plays (an included or excluded query). */

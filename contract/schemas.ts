@@ -32,20 +32,37 @@ export const QueryIntSchema = z.union([
 export const ContentTypeSchema = z.enum(['movie', 'series']);
 export type ContentType = z.infer<typeof ContentTypeSchema>;
 
+export const RangeValueSchema = z
+  .object({ min: z.number().optional(), max: z.number().optional() })
+  .strict();
+export type RangeValue = z.infer<typeof RangeValueSchema>;
+
+// An instance-scoped rule's value (tags, quality and language profiles): ids minted by
+// one configured instance, which `providerId` names. Absent means unqualified.
+export const InstanceScopedValueSchema = z
+  .object({
+    providerId: z.number().int().positive().optional(),
+    ids: z.array(z.number().int().positive()),
+  })
+  .strict();
+export type InstanceScopedValue = z.infer<typeof InstanceScopedValueSchema>;
+
 export const FilterValueSchema = z.union([
   z.string(),
   z.number(),
   z.boolean(),
-  z.object({ min: z.number().optional(), max: z.number().optional() }).strict(),
-  // An instance-scoped rule's value (tags, quality and language profiles): ids minted by
-  // one configured instance, which `providerId` names. Absent means unqualified.
-  z
-    .object({
-      providerId: z.number().int().positive().optional(),
-      ids: z.array(z.number().int().positive()),
-    })
-    .strict(),
+  RangeValueSchema,
+  InstanceScopedValueSchema,
 ]);
+export type FilterValue = z.infer<typeof FilterValueSchema>;
+
+export function isInstanceScopedValue(value: FilterValue): value is InstanceScopedValue {
+  return typeof value === 'object' && 'ids' in value;
+}
+
+export function isRangeValue(value: FilterValue): value is RangeValue {
+  return typeof value === 'object' && !('ids' in value);
+}
 
 export const FilterSchema = z
   .object({

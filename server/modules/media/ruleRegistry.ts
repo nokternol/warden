@@ -1,4 +1,5 @@
-import type { ContentType } from '@contract/schemas';
+import type { ContentType, FilterValue, InstanceScopedValue, RangeValue } from '@contract/schemas';
+import { isInstanceScopedValue } from '@contract/schemas';
 import { MetadataProviderType } from '../../database/schema';
 import { fieldsByProviderType } from './activeFieldSet';
 import type { EnrichmentFields } from './mediaFieldProvider';
@@ -8,20 +9,7 @@ import type { NormalizedSeries } from './series';
 export type { NormalizedMovie } from './movie';
 export type { NormalizedSeries } from './series';
 
-export type RangeValue = { min?: number; max?: number };
-/**
- * The value of an instance-scoped rule (tags, quality and language profiles): ids minted
- * by one configured instance, so the value names that instance. `providerId` is the
- * configured instance the ids belong to — namespace qualification, not targeting (see
- * `automations.providerId` for that). Absent means unqualified: each id is read in its
- * item's own instance namespace.
- */
-export type InstanceScopedValue = { providerId?: number; ids: number[] };
-export type FilterValue = string | number | boolean | RangeValue | InstanceScopedValue;
-
-export function isInstanceScopedValue(value: FilterValue): value is InstanceScopedValue {
-  return typeof value === 'object' && 'ids' in value;
-}
+export type { FilterValue, InstanceScopedValue, RangeValue };
 
 /**
  * A filter: a rule's key paired with the value to test it against. Nothing here knows

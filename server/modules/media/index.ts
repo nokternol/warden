@@ -67,7 +67,7 @@ export type {
   RangeValue,
   SeriesRangeRuleKey,
 } from './ruleRegistry';
-export { MEDIA_RULES, getRule, isInstanceScopedValue, toDescriptor } from './ruleRegistry';
+export { MEDIA_RULES, getRule, toDescriptor } from './ruleRegistry';
 
 // The query engine — matches a MediaSource against a MediaQuerySpec.
 export { MediaQueryEngine, matchItems } from './mediaQueryEngine';

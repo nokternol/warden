@@ -1,4 +1,5 @@
 import type { Filter } from '@app/hooks/useMediaQueries';
+import { isInstanceScopedValue } from '@contract/schemas';
 
 const LABELS: Record<string, string> = {
   title: 'Title',
@@ -42,7 +43,7 @@ export function summarizeFilters(filters: Filter[]): string[] {
     if (typeof value === 'boolean') {
       return value ? label : `Not ${label.toLowerCase()}`;
     }
-    if (typeof value === 'object' && 'ids' in value) return `${label}: ${value.ids.join(',')}`;
+    if (isInstanceScopedValue(value)) return `${label}: ${value.ids.join(',')}`;
     return `${label}: ${value}`;
   });
 }
