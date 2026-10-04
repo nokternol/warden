@@ -118,4 +118,14 @@ describe('POST /api/automations/preview', () => {
 
     expect(res.status).toBe(400);
   });
+
+  it('answers 400 for a draft with no included query', async () => {
+    const res = await client.post('/api/automations/preview', {
+      providerId: radarrId,
+      taskId: 'deleteMovieWithFiles',
+      queries: [{ queryId: hasFileQueryId, role: 'exclude' }],
+    });
+
+    expect(res.status).toBe(400);
+  });
 });

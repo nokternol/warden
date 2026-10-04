@@ -51,7 +51,11 @@ export type CreateAutomationInput = z.input<typeof CreateAutomationInputSchema>;
 const AutomationPreviewInputSchema = z.object({
   providerId: z.number().int().positive(),
   taskId: z.string().min(1),
-  queries: z.array(AutomationQueryInputSchema).min(1),
+  queries: z
+    .array(AutomationQueryInputSchema)
+    .refine((queries) => queries.some((q) => q.role === 'include'), {
+      message: 'At least one query must be included',
+    }),
 });
 
 export type AutomationPreviewInput = z.input<typeof AutomationPreviewInputSchema>;
