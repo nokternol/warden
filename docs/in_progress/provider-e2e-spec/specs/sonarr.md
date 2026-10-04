@@ -146,7 +146,7 @@ the rule.
 Same generic-control survey as `specs/plex.md`'s "Per-field widget shapes" and `specs/radarr.md`'s
 mirror of it — **no field needed a `/prototype` session or a further `impeccable` pass.** Sonarr adds
 zero new widget shapes to `RuleControl`; every filterable field maps onto the four generic renderers
-already established (`range` → `NumberRangeFilter`, `csv-ids` → `MultiSelectDropdown`, `boolean` →
+already established (`range` → `NumberRangeFilter`, `csv-ids` → `MultiSelectFilter`, `boolean` →
 `OptionFilter`, `string`/`number` → `OptionFilter` with a fixed `ENUM_OPTIONS` entry — unused by any
 Sonarr field this pass). This closes out the items the ticket flagged for scrutiny:
 

@@ -141,7 +141,7 @@ Ratings fields (`ratings.imdb.votes`, `ratings.tmdb.*`, `ratings.metacritic.*`, 
 Same generic-control survey as `specs/plex.md`'s "Per-field widget shapes" and `specs/jellyfin.md`'s
 mirror of it — **no field needed a `/prototype` session or a further `impeccable` pass.** Radarr adds
 zero new widget shapes to `RuleControl`; every filterable field maps onto the four generic renderers
-already established (`range` → `NumberRangeFilter`, `csv-strings` → `StringMultiSelectDropdown`,
+already established (`range` → `NumberRangeFilter`, `csv-strings` → `MultiSelectFilter`,
 `boolean` → `OptionFilter` with `booleanOptions`, `string`/`number` → `OptionFilter` with a fixed
 `ENUM_OPTIONS` entry). This closes out the four items the ticket flagged for scrutiny:
 

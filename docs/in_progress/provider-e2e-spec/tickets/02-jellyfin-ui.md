@@ -23,7 +23,7 @@ than pasting them in.
 
 - **No field needed a `/prototype` session.** All 13 fields in the spec's "Filter type mapping"
   table map onto `RuleControl`'s existing generic renderers (`range` → `NumberRangeFilter`,
-  `csv-strings` → `StringMultiSelectDropdown`, `boolean` → the generic Yes/No toggle), same as
+  `csv-strings` → `MultiSelectFilter`, `boolean` → the generic Yes/No toggle), same as
   Plex's 13. No date picker, slider, or other bespoke widget surfaced.
 - **First genuinely new boolean rule this map has added**: `jellyfinIsFavorite` (Plex's booleans
   all joined existing rules). Only decision needed was copy, not a widget — add a

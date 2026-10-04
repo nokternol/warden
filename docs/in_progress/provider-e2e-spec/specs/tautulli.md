@@ -120,7 +120,7 @@ far, matching the decision ticket's narrow scope.
   (`specs/plex.md`'s "Per-field widget shapes") and Jellyfin's UI pass already confirmed as an
   additional-producer join rather than a new route (`specs/jellyfin.md`'s "Options sources").
   Tautulli joins as a third producer into those same routes/rules — `render via
-  StringMultiSelectDropdown`, options through `csvStringOptions(rule, scope, lookups)`, no new
+  MultiSelectFilter`, options through `csvStringOptions(rule, scope, lookups)`, no new
   control or route. Extending Jellyfin's aggregation note: `listStudios`-style dedupe+sort lookups
   should read from every configured provider's already-fetched library data (Radarr + Jellyfin +
   Tautulli), not just the first one wired.

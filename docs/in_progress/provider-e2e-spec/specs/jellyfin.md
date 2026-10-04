@@ -150,7 +150,7 @@ All 13 fields in the "Filter type mapping" table above map onto controls `RuleCo
   bounds decided, consistent with Plex's precedent.
 - **`csv-strings` fields** (`studio`, `fileContainer`, `videoCodec`, `audioCodec`,
   `fileResolution`, `labels`, plus `genres`/`certification` which join existing rules) render via
-  `StringMultiSelectDropdown`, options resolved through `csvStringOptions(rule, scope, lookups)`.
+  `MultiSelectFilter`, options resolved through `csvStringOptions(rule, scope, lookups)`.
   All six non-lookup-yet fields are the same fields Plex's UI pass already named for its 6 new
   routes (`studio`, `fileContainer`, `videoCodec`, `audioCodec`, `fileResolution`, `labels`) —
   Jellyfin doesn't add any *new* csv-strings field beyond what Plex already covers; see "Options

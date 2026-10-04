@@ -148,7 +148,7 @@ Biggest UI pass in the map so far — six new filter fields to resolve, plus thr
 parameter shapes don't fit anything `AutomationBuilder` or `useProviderTasks.ts` has seen. No field
 below needed a `/prototype` session: every filterable field maps onto the four generic `RuleControl`
 renderers already established across Plex/Jellyfin/Radarr/Sonarr/Tautulli's passes (`range` →
-`NumberRangeFilter`, `csv-strings` → `StringMultiSelectDropdown`, `boolean` → `OptionFilter`,
+`NumberRangeFilter`, `csv-strings` → `MultiSelectFilter`, `boolean` → `OptionFilter`,
 `string`/`number` → `OptionFilter` with a fixed `ENUM_OPTIONS` entry). The three complex task
 parameters are **not** prototyped here — characterized and deferred to
 [`11-automation-task-parameters`](../tickets/11-automation-task-parameters.md) per that ticket's own
@@ -181,7 +181,7 @@ separate "requester id" to preserve). So the fix isn't "defer, no control exists
 mapping table chose the wrong dataType for a field that already has a fitting one."
 
 **Decision: `overseerrRequestedBy` is `csv-strings`**, filter key unchanged
-(`overseerrRequestedBy`), rendering via `StringMultiSelectDropdown`/`csvStringOptions`. Needs a new
+(`overseerrRequestedBy`), rendering via `MultiSelectFilter`/`csvStringOptions`. Needs a new
 dedicated lookup: `Lookups` gains `overseerrRequesters: string[]`, `csvStringOptions` gets a new
 branch (`if (rule.key === 'overseerrRequestedBy') return lookups.overseerrRequesters;`), and
 `useMediaLookups.ts` gets a new `/api/media/overseerr-requesters` route returning the distinct set of
@@ -229,7 +229,7 @@ library data that grows per-instance) — the same category of thing `ENUM_OPTIO
 needed as a multi-select rather than single-value. Routing it through a `/api/media/*` fetch would
 be pure overhead: a network round-trip to return four values that never change and aren't specific
 to any instance's data, unlike `overseerrRequestedBy`'s genuinely per-instance requester list above.
-`StringMultiSelectDropdown`/`csvStringOptions`'s signature already accommodates this with zero
+`MultiSelectFilter`/`csvStringOptions`'s signature already accommodates this with zero
 changes to the renderer — only `csvStringOptions`'s body gets a new `if` arm, same footprint as
 `ENUM_OPTIONS` gaining an entry. No new `Lookups` field, no new route, no `useMediaLookups.ts` change.
 
