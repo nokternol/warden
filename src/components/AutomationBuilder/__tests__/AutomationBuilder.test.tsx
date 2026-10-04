@@ -5,10 +5,11 @@ import { contract } from '@contract/index';
 import type { ProviderTaskOptionsAvailability } from '@contract/providers';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import React from 'react';
 import { SWRConfig } from 'swr';
 import { describe, expect, it, vi } from 'vitest';
-import { mockProcedure } from '../../../../tests/mocks/contract';
+import { contractPath, mockProcedure } from '../../../../tests/mocks/contract';
 import { server } from '../../../../tests/mocks/server';
 import AutomationBuilder from '../index';
 
@@ -415,5 +416,28 @@ describe('AutomationBuilder', () => {
     await new Promise((settle) => setTimeout(settle, 50));
     expect(screen.queryByText(/will affect/i)).not.toBeInTheDocument();
     expect(previewed).not.toHaveBeenCalled();
+  });
+
+  it('says the count is unavailable when the preview fails, and save stays gated', async () => {
+    mockApi([makeProvider()], [{ providerId: 1, type: 'RADARR', tasks: [ENABLED_DELETE] }]);
+    server.use(
+      http.post(
+        contractPath(contract.automations.preview),
+        () => new HttpResponse(null, { status: 500 })
+      )
+    );
+    const user = userEvent.setup();
+    renderBuilder();
+
+    await user.type(screen.getByLabelText('Name'), 'Purge');
+    await user.click(await screen.findByRole('radio', { name: /delete movie \+ files/i }));
+
+    const confirmation = screen.getByRole('checkbox', { name: /confirm/i });
+    await waitFor(() =>
+      expect(confirmation).toHaveAccessibleName(
+        "Confirm: Delete movie + files · couldn't count the affected items"
+      )
+    );
+    expect(screen.getByRole('button', { name: /create automation/i })).toBeDisabled();
   });
 });

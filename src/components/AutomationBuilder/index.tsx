@@ -66,10 +66,16 @@ const ITEM_NOUNS: Record<AutomationPreview['contentType'], { one: string; many: 
   series: { one: 'series', many: 'series' },
 };
 
-/** The blast-radius phrase for a preview, e.g. "will affect 214 movies". */
-function affectedItems({ count, contentType }: AutomationPreview): string {
-  const nouns = ITEM_NOUNS[contentType];
-  return `will affect ${count} ${count === 1 ? nouns.one : nouns.many}`;
+/**
+ * The blast-radius phrase for a preview request, e.g. "will affect 214 movies".
+ * Until the count arrives, or if it cannot be had, it states that instead of a number.
+ */
+function blastRadius({ data, error }: { data?: AutomationPreview; error?: Error }): string {
+  if (data) {
+    const nouns = ITEM_NOUNS[data.contentType];
+    return `will affect ${data.count} ${data.count === 1 ? nouns.one : nouns.many}`;
+  }
+  return error ? "couldn't count the affected items" : 'counting affected items…';
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -196,7 +202,7 @@ export default function AutomationBuilder({
             .map((q) => ({ queryId: q.queryId, role: q.role })),
         }
       : null;
-  const { data: preview } = useAutomationPreview(previewDraft);
+  const preview = useAutomationPreview(previewDraft);
 
   const hasRequiredParameter = !selectedTask?.parameter || taskParameterValue.trim().length > 0;
 
@@ -392,8 +398,7 @@ export default function AutomationBuilder({
               className="mt-0.5 flex-shrink-0 text-primary focus:ring-primary focus:ring-offset-0"
             />
             <span>
-              Confirm: {selectedTask.label} ·{' '}
-              {preview ? affectedItems(preview) : 'counting affected items…'}
+              Confirm: {selectedTask.label} · {blastRadius(preview)}
             </span>
           </label>
         )}
