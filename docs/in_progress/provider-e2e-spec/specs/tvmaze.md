@@ -19,8 +19,10 @@ site. This flips several of the research doc's tentative conclusions:
 
 - TVMaze gets a **real `metadata_provider` row** (`settings.apiKey`), not a hardcoded no-config
   construction.
-- TVMaze gets a **`PROVIDER_REGISTRY` entry**, same full shape as other API-key providers
-  (`apiSuffix`/`defaultUrl` fields), not a stripped-down keyless variant.
+- TVMaze's entry in the server's provider-type catalogue
+  (`server/modules/providers/providerCatalogue.ts`) has the same full shape as other API-key
+  providers (`apiPath`/`defaultUrl`), not a stripped-down keyless variant, and `TVMAZE` is removed
+  from the deferred provider types in `contract/scope.ts` so it is offered.
 - `TvMazeProvider` is **folded into the standard `ProviderFactory` contract** — added to
   `AnyProvider`, `ProviderSet`, and `create()`'s switch, replacing the bespoke `createTvMaze()`
   method that currently sits outside it. Enrichment gets included via the same active-provider-row

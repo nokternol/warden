@@ -108,7 +108,10 @@ Array<{ providerId: number; type: MetadataProviderType; tasks: Array<ActuatorTas
 ```
 
 It lists configured providers, constructs each via `ProviderFactory`, keeps those for which
-`isMediaActuator(instance)` holds, and projects each instance's `tasks()` to descriptors tagged `enabled`.
+`isMediaActuator(instance)` holds, and projects each instance's `tasks()` to descriptors tagged `enabled`,
+leaving out any task the scope declaration defers (`isOfferedTask`, in
+[`contract/scope.ts`](ref:path:contract/scope.ts)). A deferred task names its provider type, because
+task ids are unique only within a type.
 Non-actuators and non-constructable types emit nothing — the surface advertises only what some configured
 instance can actually do.
 
@@ -172,6 +175,5 @@ The client reads the instance-keyed `GET /api/providers/tasks` and holds no task
 ([`src/components/AutomationBuilder`](ref:path:src/components/AutomationBuilder/index.tsx)) offers each configured instance's **enabled** tasks, joining the
 instance name from settings; [`ProviderCard`](ref:path:src/components/ProviderCard/index.tsx) lists an instance's tasks with their server `enabled` state to
 toggle (default off — the old client default-on heuristic is gone). The hand-maintained catalogue is
-retired: `src/lib/tasks.ts` is deleted and the `tasks` surface removed from [`src/lib/provider-registry.ts`](ref:path:src/lib/provider-registry.ts),
-so nothing client-side declares what tasks exist. The JSON-honest descriptor carries no `description`, so
+retired: `src/lib/tasks.ts` is deleted, so nothing client-side declares what tasks exist. The JSON-honest descriptor carries no `description`, so
 the UI does not show one.

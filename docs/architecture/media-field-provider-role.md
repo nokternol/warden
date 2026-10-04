@@ -249,7 +249,10 @@ aggregate, no TMDB key configured). `network`'s `TVMAZE` entry is deliberately u
 buildable, just not yet wired to an adapter.
 
 [`media.rules.procedures.ts`](ref:path:server/modules/media/media.rules.procedures.ts)'s
-`gatedDescriptors` reads `activeFieldSetCache.getActiveTypes()` instead of calling
+`gatedDescriptors` serves a rule only when it has a live producer: one of its `providers` is configured,
+active, and of a type the scope declaration ([`contract/scope.ts`](ref:path:contract/scope.ts)) offers.
+A deferred type is never a producer, so a rule only TMDB or TVmaze claim is not served even when a TMDB
+row exists. It reads `activeFieldSetCache.getActiveTypes()` instead of calling
 `providerSettingsService.activeTypes()` per request — one cache read instead of a live per-request DB
 query, invalidated the same way as the active field set above. The `media.rules` procedure's
 output (`MediaRuleDescriptor[]`) and the client (`MediaFilterBar`, `useMediaRules`, `useMediaFilters`)

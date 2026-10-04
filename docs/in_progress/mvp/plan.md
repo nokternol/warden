@@ -22,7 +22,8 @@ The MVP is done when all three of these hold for the deployed container:
    proved complete by typecheck.
 
 Exposure is decided by **one mechanism**: a single **scope declaration** (`contract/scope.ts`,
-created in S1) lists every deferred page, API procedure, provider type, rule and task. The server
+created in C5 with the deferred provider types, rules and tasks, and extended by S1 with pages and API
+procedures) lists every deferred page, API procedure, provider type, rule and task. The server
 refuses deferred procedures and leaves deferred types, rules and tasks out of its projections.
 The client hides deferred nav items and page sections, and a deferred page URL answers 404. Nothing
 else decides exposure, and un-deferring a feature is one line removed from that file.
@@ -54,6 +55,7 @@ code. Every path to them is blocked by the scope declaration.
 | Search page, `/api/search/metadata` | A second way to find a title beside the title filter (F11). Its role is decided when un-deferred. |
 | `/api/providers/metadata` | No MVP consumer. |
 | `/api/app-settings` (the `appSettings` module, `settingsAwarePrecedence.ts`) | No UI and no consumer yet. It is the input to the post-MVP precedence work. |
+| Provider type SEERR | Not buildable through `ProviderFactory`. The request manager is offered as `OVERSEERR` until D3 makes `SEERR` its one type and removes it from this list. |
 | Provider type TVMAZE | Not buildable through `ProviderFactory` yet (its API key is lost), so offering it is a reachable broken path (L1). |
 | Provider type OMDB | It feeds only the deferred ratings path. |
 | Provider type TMDB | Not in the verification stack (decision 9). Login-page backdrops keep using the `TMDB_API_KEY` environment setting, which is separate from the provider type. |
@@ -143,7 +145,7 @@ principles become these acceptance checks on every UI slice:
 | F6 | **"Saved queries"** in the live UI, a name `VOCABULARY.md` retired. | `pages/automations/index.page.tsx` |
 | F7 | **"Source" means four things:** the `MediaSource` role, an automation's include/exclude `MediaQuerySource`, `MediaQuerySpec.sources`, and a rule's `sourceProviders`. | `mediaQueryEngine.ts:27`, `filterRegistry.ts`. **Healed by B6:** "source" keeps the `MediaSource` role only. An automation has included and excluded `queries` (`AutomationQuery`, table `automation_queries` via migration 0028), a query spec holds `clauses`, and a rule lists its `providers`. |
 | F8 | **System automations are called "Tasks"** on the System page, while "Task" means a provider action everywhere else. Stories add "New Task" and "Active Tasks" for automations, plus "Collections". | `pages/system`, `*.stories.tsx` |
-| F9 | **The client re-declares the provider catalogue.** `PROVIDER_REGISTRY` lists 8 of the 10 types with hand-written labels and `filterCapabilities` strings, while the server's enum, factory and roles are the real authority. | `src/lib/provider-registry.ts` |
+| F9 | **The client re-declares the provider catalogue.** `PROVIDER_REGISTRY` lists 8 of the 10 types with hand-written labels and `filterCapabilities` strings, while the server's enum, factory and roles are the real authority. | `src/lib/provider-registry.ts`. **Healed by C5:** the server's provider-type catalogue (`providerCatalogue.ts`) is projected at `/api/providers/types`, the client derives the add-provider list, card labels, API paths, capability text and order from it, and `provider-registry.ts` plus the form's and card's per-type maps are deleted. |
 | F10 | **Ratings have two mechanisms**: rating filters via enrichment, and an ad-hoc `/api/providers/ratings` aggregation feeding a separate page and panel. | `ratingsAggregation.ts`, `pages/ratings` |
 | F11 | **Title lookup has two mechanisms**: the title filter, and the Search page's cross-provider metadata search. | `pages/search`, `media.search.*` |
 | F13 | **The rule descriptor leaks engine concerns to the client.** It is `Omit<MediaRule, 'predicate'>`, so `sourceField` and `sourceProviders` cross the wire, and the client's `groupsFor` derives section headings from providers. The client also re-declares `MediaRuleDescriptor` itself. The rule/filter split is load-bearing: precedence and production are engine concerns. | `filterRegistry.ts:57`, `MediaFilterBar/index.tsx:830`, `src/hooks/useMediaRules.ts:7`. **Healed by C2:** the descriptor is the contract's presentation allowlist, built by `toDescriptor`; headings come from each rule's `group`, and the client imports the type from `@contract/media`. |
@@ -164,7 +166,7 @@ principles become these acceptance checks on every UI slice:
 
 | # | Loose end | Evidence |
 |---|---|---|
-| L1 | Creating a SEERR or TVMAZE provider passes validation, then throws in `ProviderFactory`. | `settings.schemas.ts:4` (`nativeEnum`), `providerFactory.ts:72` |
+| L1 | Creating a SEERR or TVMAZE provider passes validation, then throws in `ProviderFactory`. | `settings.schemas.ts:4` (`nativeEnum`), `providerFactory.ts:72`. **Healed by C5:** provider create and the connection test answer 400 for a type `contract/scope.ts` defers, before anything is stored or contacted. |
 | L2 | `/api/providers/metadata` and `/api/app-settings` have no consumer. | route grep |
 | L3 | Rules in the API that the UI can never render, such as `certification`. | `ruleRendersControl`. **Healed by C2:** the descriptor's shape gives every served rule a control, and `/api/rules` leaves out a rule that cannot be described, so `ruleRendersControl` is gone. |
 
@@ -291,10 +293,11 @@ names, so nothing is renamed twice.
   - Every entry in the scope declaration names something that exists, so a stale entry fails the
     build.
   - Un-deferring is removing one entry: the surface is then reachable with no other change.
-- **Expected end state:** `contract/scope.ts`, the single declaration, read by the contract
-  implementer (refuses deferred procedures), by C5's projections (provider types, rules, tasks),
-  and by the client's nav, page guard and section guard. Deferred code and its tests stay as they
-  are.
+- **Expected end state:** `contract/scope.ts`, the single declaration. C5 created it with the
+  deferred provider types, rules and tasks, injected into the server as the kernel cradle's `scope`
+  and read by C5's projections. S1 extends the same `Scope` with the deferred pages and API
+  procedures, read by the contract implementer (refuses deferred procedures) and by the client's
+  nav, page guard and section guard. Deferred code and its tests stay as they are.
 - **Docs:** `docs/architecture/` gains the scope mechanism; architecture docs describing deferred
   surfaces note that they're deferred.
 
@@ -537,15 +540,36 @@ names, so nothing is renamed twice.
 - **Why:** F9, L1, and Definition of done item 2.
 - **Behaviours:**
   - The add-provider list shows exactly the offered types (decision 9), with labels and defaults
-    from the server.
+    from the server. Until D3, the offered request manager is `OVERSEERR` (labelled Overseerr), and
+    `SEERR` is declared deferred.
   - Creating a non-offered type is rejected before any connection is attempted.
   - A rule is offered only if it has at least one live producer among offered types, so the stale
     TMDB/TVMAZE claims disappear until fixed. (A rule with no control is already left out by C2.)
   - Only the offered tasks (decision 10) are offered for enablement or automation.
-- **Expected end state:** offered types, rules and tasks are each declared once on the server. The client
-  derives the add-provider list from `/api/providers/types`.
-- **Deletes:** `src/lib/provider-registry.ts` as a client-side catalogue. Its labels, defaults and
-  capability text move to the server projection, so nothing is lost.
+- **Expected end state (as built):** `contract/scope.ts` exports the scope declaration (`Scope`,
+  `scope`) with `deferred.providerTypes` (SEERR, TMDB, OMDB, TVMAZE), `deferred.rules` (`certification`,
+  `tmdbStatus`) and `deferred.tasks` (empty; a task is `{ providerType, taskId }`), plus
+  `isOfferedProviderType` and `isOfferedTask`, which take the declaration as an argument. The kernel
+  container registers it as `scope`, and procedures read it from their cradle, so a test can inject its
+  own. Against it:
+  - `GET /api/providers/types` serves the offered types from the server's provider-type catalogue
+    (`providerCatalogue.ts`, a `Record` keyed by type in display order, holding each type's `label`,
+    `apiPath`, `defaultUrl` and `capabilities`). The connection probe and `ProviderFactory` read their
+    API path and TVmaze URL from that catalogue.
+  - Provider create and the connection test answer 400 for a deferred type. The probe's SEERR and
+    TVMAZE cases are tested against `probeConnection` directly.
+  - `/api/rules` serves a rule only with a live producer: configured, active and of an offered type.
+    A test keeps `deferred.rules` equal to exactly the rules with no control or no offered producer.
+  - `/api/providers/tasks` leaves out deferred tasks. A regression guard pins the 32 offered tasks.
+
+  The client reads the projection via `useProviderTypes`/`descriptorFor`: the add-provider form
+  (served types by label, starting on the first, with API path and fixed URL), the provider card
+  (label, capability text, API path), the Providers page order and the media page's owner name.
+- **Deletes:** `src/lib/provider-registry.ts` (and its test) as a client-side catalogue,
+  `PROVIDER_TYPES`/`API_SUFFIXES`/`PROVIDER_DEFAULT_URLS` in `AddProviderForm`,
+  `API_SUFFIXES`/`PROVIDER_FILTER_DATA` in `ProviderCard`, and the suffix map in `connectionProbe.ts`.
+  Their labels, defaults, API paths and capability text move to the server catalogue and its
+  projection, so nothing is lost.
 
 ### Track D — Finish the in-scope features
 
@@ -612,7 +636,8 @@ names, so nothing is renamed twice.
     after migration with no loss.
   - The add-provider list offers Seerr and no Overseerr type.
 - **Expected end state:** `MetadataProviderType.SEERR` is the only request-manager type, built by
-  `ProviderFactory`. The connection class is `SeerrProvider`. Rule keys become `seerrRequestStatus`
+  `ProviderFactory`. `SEERR` is removed from `contract/scope.ts`'s deferred provider types, which C5
+  declared while `OVERSEERR` was the offered request manager. The connection class is `SeerrProvider`. Rule keys become `seerrRequestStatus`
   and `seerrHasIssue`. The migration rewrites provider rows, `media_query_filter_values` keys and
   enrichment rows. The `OVERSEERR` names join `VOCABULARY.md`'s retired names.
 - **Deletes:** the `seerrProvider.ts` re-export alias. The single class now carries the one name.
@@ -724,7 +749,7 @@ names, so nothing is renamed twice.
 | 6 | Product and DB name | **Decided: Warden**, with default DB file `warden.db`. The NAS deployment renames its file once or pins `DB_PATH`. |
 | 7 | What "hidden" means | **Decided: blocked, not removed.** Deferred code stays compiled, typechecked and tested. Every path to it (page, nav, section, API procedure, provider type, filter, task) is blocked by the one scope declaration (S1). |
 | 8a–8g | Glossary names | **Decided:** Rule (definition) and Filter (a rule with a chosen value); MediaQuery, shown as Query; included/excluded queries; Source only for the owning provider; series; System automations, with task meaning a provider action; Runs. See the [Glossary](#glossary). |
-| 9 | Offered provider types | **Decided: Radarr, Sonarr, Seerr, Plex, Jellyfin, Tautulli**, the stack running on the NAS where G1 verifies them. TMDB, OMDB and TVMAZE are deferred. Plex and Jellyfin both active exercises the contested-field precedence (`playCount`, `lastWatchedAt`) in G1. |
+| 9 | Offered provider types | **Decided: Radarr, Sonarr, Seerr, Plex, Jellyfin, Tautulli**, the stack running on the NAS where G1 verifies them. TMDB, OMDB and TVMAZE are deferred. Until D3 consolidates the request manager, Seerr is offered as the buildable `OVERSEERR` type (labelled Overseerr) and `SEERR` is declared deferred. Plex and Jellyfin both active exercises the contested-field precedence (`playCount`, `lastWatchedAt`) in G1. |
 | 9a | Overseerr vs Seerr | **Decided: one provider type, Seerr** (D3). Development continues against the NAS's current Overseerr, since the APIs match. The NAS upgrades to Seerr before G1, so acceptance verifies the offered type against the real target; the Seerr spec flagged its live compatibility as unverified. |
 | 10 | Offered tasks | **Decided: all 32 offered**, each run once in G1 against a sacrificial item, so destructive ones are proven on throwaway media. The offered types declare 32 tasks, all wired, with parameterized ones backed by options routes. (D) marks destructive. **Radarr:** unmonitorMovie, triggerSearch, deleteMovieWithFiles (D), deleteMovieKeepFiles (D), refreshMovie, rescanMovie, renameMovies, refreshCollection, changeQualityProfile, addTag, removeTag. **Sonarr:** unmonitorSeries, triggerSearch, deleteSeriesWithFiles (D), deleteSeriesKeepFiles (D), refreshSeries, rescanSeries, renameSeries, changeQualityProfile, addTag, removeTag. **Plex:** deleteFromLibrary (D), refreshMetadata, markPlayed, markUnplayed. **Jellyfin:** deleteItem (D), refreshMetadata, markPlayed, markUnplayed, addToCollection, removeFromCollection. **Tautulli:** deleteWatchHistory (D). **Seerr:** none (enrichment only). |
 | 11 | Client/server contract mechanism | **Decided: oRPC contract-first** (C0). On the wire it stays plain HTTP/JSON at the same `/api/...` URLs via oRPC's OpenAPI handler; client and server ship in one image, so there is no client/server version skew to manage. Checked on npm 2026-10-03: oRPC 1.15.4 (released 2026-10-01, schema-agnostic, Zod 4 compatible); ts-rest 3.52.1 (last release 2025-06, peer `zod ^3`, incompatible with this repo's Zod 4.3); Zodios 10.9.6 (last release 2023-08, peer `zod ^3`, axios-based, unmaintained). The alternative is tightening the current bridge by hand (add method/path to the shared schemas, write our own typed client), which builds a homegrown second version of what oRPC already is. |

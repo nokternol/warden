@@ -25,8 +25,9 @@ what changes once Seerr is wired, not a parallel field-by-field spec.
   spec extends that pattern rather than replacing it.
 - Implementation-time work this implies (not decided further here): add a `SEERR` case to
   `ProviderFactory.create()` alongside the existing `OVERSEERR` case (both constructing the shared
-  provider class), and add a `SEERR` entry to `PROVIDER_REGISTRY`
-  (`src/lib/provider-registry.ts`) so it's visible/configurable in the UI.
+  provider class), and remove `SEERR` from the deferred provider types in `contract/scope.ts` so it's
+  offered and configurable in the UI (its entry in the server's provider-type catalogue,
+  `server/modules/providers/providerCatalogue.ts`, already exists).
 - Because both types write into the same `overseerr`-prefixed fields, running Overseerr and Seerr
   simultaneously against two different instances would have one overwrite the other's enrichment
   data with no way to distinguish which provider a value came from. Not a concern today (nobody runs
