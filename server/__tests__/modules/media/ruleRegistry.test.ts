@@ -1,10 +1,12 @@
 import { MetadataProviderType } from '@server/database/schema';
 import {
   MEDIA_RULES,
+  type MediaRule,
   type NormalizedMovie,
   type NormalizedSeries,
   deriveProviders,
   getRule,
+  toDescriptor,
 } from '@server/modules/media/ruleRegistry';
 import { MOCK_RULES } from '@tests/mocks/handlers/media';
 import { describe, expect, it } from 'vitest';
@@ -71,7 +73,7 @@ describe('MEDIA_RULES', () => {
       expect(rule.key).toBeTruthy();
       expect(rule.label).toBeTruthy();
       expect(rule.contentTypes.length).toBeGreaterThan(0);
-      expect(['boolean', 'number', 'string', 'csv-ids', 'csv-strings', 'range']).toContain(
+      expect(['boolean', 'number', 'string', 'instance-ids', 'csv-strings', 'range']).toContain(
         rule.dataType
       );
       expect(rule.providers.length).toBeGreaterThan(0);
@@ -82,7 +84,7 @@ describe('MEDIA_RULES', () => {
 });
 
 // ─── dataType classification ───────────────────────────────────────────────────
-// The dataType is the contract the client reads to choose an input widget: `csv-ids`
+// The dataType is the contract the client reads to choose an input widget: `instance-ids`
 // means numeric ids, `csv-strings` means free-text tokens. It must match what the
 // predicate parses, otherwise the UI offers the wrong control.
 
@@ -100,9 +102,9 @@ describe('dataType classification', () => {
     expect(getRule('network', 'series')!.dataType).toBe('csv-strings');
   });
 
-  it('tagIds / qualityProfileIds compare numeric ids — csv-ids', () => {
-    expect(getRule('tagIds', 'movie')!.dataType).toBe('csv-ids');
-    expect(getRule('qualityProfileIds', 'movie')!.dataType).toBe('csv-ids');
+  it('tagIds / qualityProfileIds compare numeric ids — instance-ids', () => {
+    expect(getRule('tagIds', 'movie')!.dataType).toBe('instance-ids');
+    expect(getRule('qualityProfileIds', 'movie')!.dataType).toBe('instance-ids');
   });
 
   it('year / addedDaysAgo / imdbRating are bounded — range', () => {
@@ -798,9 +800,9 @@ describe('Sonarr-only predicates', () => {
     expect(rule.predicate(baseSeries, { min: 0 })).toBe(false); // no nextAiring
   });
 
-  it('languageProfileIds is csv-ids, instance-scoped — same shape as qualityProfileIds', () => {
+  it('languageProfileIds is instance-ids, instance-scoped — same shape as qualityProfileIds', () => {
     const rule = getRule('languageProfileIds', 'series')!;
-    expect(rule.dataType).toBe('csv-ids');
+    expect(rule.dataType).toBe('instance-ids');
     expect(rule.instanceScoped).toBe(true);
     expect(rule.providers).toEqual([MetadataProviderType.SONARR]);
   });
@@ -826,5 +828,16 @@ describe('MSW media.rules mock', () => {
         );
       }
     }
+  });
+});
+
+// ─── Descriptors ───────────────────────────────────────────────────────────────
+
+describe('toDescriptor', () => {
+  it('describes every rule that has a control — only certification, with no lookup, has none', () => {
+    const undescribed = (MEDIA_RULES as readonly MediaRule[])
+      .filter((rule) => toDescriptor(rule) === undefined)
+      .map((rule) => rule.key);
+    expect(undescribed).toEqual(['certification']);
   });
 });

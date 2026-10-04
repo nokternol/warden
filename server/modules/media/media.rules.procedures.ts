@@ -25,7 +25,7 @@ export function createRulesProcedures(cradle: RulesCradle) {
       (rule) => contentType === undefined || rule.contentTypes.includes(contentType)
     )
       .filter((rule) => rule.providers.some((providerType) => configuredTypes.has(providerType)))
-      .map(toDescriptor);
+      .flatMap((rule) => toDescriptor(rule) ?? []);
   }
 
   return {

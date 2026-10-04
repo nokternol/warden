@@ -19,13 +19,11 @@ import { useMediaFilters } from '@app/hooks/useMediaFilters';
 import { useMediaLookups } from '@app/hooks/useMediaLookups';
 import type { MediaQualityProfile, MediaTag } from '@app/hooks/useMediaLookups';
 import { useMediaQueries } from '@app/hooks/useMediaQueries';
-import type { MediaRuleDescriptor } from '@app/hooks/useMediaRules';
 import { useMediaRules } from '@app/hooks/useMediaRules';
 import type { MediaSourceDescriptor } from '@app/hooks/useMediaSources';
 import { useMediaSources } from '@app/hooks/useMediaSources';
 import type { ManagedMovie } from '@app/hooks/useMovies';
 import { useMovies } from '@app/hooks/useMovies';
-import { useProviderSettings } from '@app/hooks/useProviderSettings';
 import type { ManagedSeries } from '@app/hooks/useSeries';
 import { useSeries } from '@app/hooks/useSeries';
 import { toBrowseParams, toSaveValues } from '@app/lib/mediaQueryAdapters';
@@ -33,6 +31,7 @@ import { NAV_ITEMS } from '@app/lib/navigation';
 import { PROVIDER_REGISTRY } from '@app/lib/provider-registry';
 import { cn } from '@app/lib/utils/cn';
 import { requireAuth } from '@app/lib/utils/requireAuth';
+import type { MediaRuleDescriptor } from '@contract/media';
 import type { ContentType } from '@contract/schemas';
 import {
   ArrowDown,
@@ -455,7 +454,6 @@ export interface MediaContentProps {
   movies: MediaSlice<ManagedMovie>;
   series: MediaSlice<ManagedSeries>;
   lookups: Lookups;
-  configuredTypes: Set<string>;
   sources: Record<ContentType, MediaSourceDescriptor> | undefined;
   // card density
   density: CardDensity;
@@ -483,7 +481,6 @@ export function MediaContent({
   movies,
   series,
   lookups,
-  configuredTypes,
   sources,
   density,
   onDensityChange,
@@ -507,7 +504,6 @@ export function MediaContent({
         movieYearRange={movies.yearRange}
         seriesYearRange={series.yearRange}
         lookups={lookups}
-        configuredTypes={configuredTypes}
         sources={sources}
         activeTab={activeTab}
         mobileOpen={filtersOpen}
@@ -733,13 +729,7 @@ export default function MediaPage() {
     sort: values.seriesSort,
   });
   const lookups = useMediaLookups();
-  const { providers } = useProviderSettings();
   const { sources } = useMediaSources();
-
-  const configuredTypes = useMemo(
-    () => new Set((providers ?? []).filter((p) => p.isActive).map((p) => p.type)),
-    [providers]
-  );
 
   const { save: saveQuery } = useMediaQueries();
   const [density, setDensity] = useCardDensity();
@@ -838,7 +828,6 @@ export default function MediaPage() {
           movies={movies}
           series={series}
           lookups={lookups}
-          configuredTypes={configuredTypes}
           sources={sources}
           density={density}
           onDensityChange={setDensity}

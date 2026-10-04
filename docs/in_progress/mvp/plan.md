@@ -146,7 +146,7 @@ principles become these acceptance checks on every UI slice:
 | F9 | **The client re-declares the provider catalogue.** `PROVIDER_REGISTRY` lists 8 of the 10 types with hand-written labels and `filterCapabilities` strings, while the server's enum, factory and roles are the real authority. | `src/lib/provider-registry.ts` |
 | F10 | **Ratings have two mechanisms**: rating filters via enrichment, and an ad-hoc `/api/providers/ratings` aggregation feeding a separate page and panel. | `ratingsAggregation.ts`, `pages/ratings` |
 | F11 | **Title lookup has two mechanisms**: the title filter, and the Search page's cross-provider metadata search. | `pages/search`, `media.search.*` |
-| F13 | **The rule descriptor leaks engine concerns to the client.** It is `Omit<MediaRule, 'predicate'>`, so `sourceField` and `sourceProviders` cross the wire, and the client's `groupsFor` derives section headings from providers. The client also re-declares `MediaRuleDescriptor` itself. The rule/filter split is load-bearing: precedence and production are engine concerns. | `filterRegistry.ts:57`, `MediaFilterBar/index.tsx:830`, `src/hooks/useMediaRules.ts:7` |
+| F13 | **The rule descriptor leaks engine concerns to the client.** It is `Omit<MediaRule, 'predicate'>`, so `sourceField` and `sourceProviders` cross the wire, and the client's `groupsFor` derives section headings from providers. The client also re-declares `MediaRuleDescriptor` itself. The rule/filter split is load-bearing: precedence and production are engine concerns. | `filterRegistry.ts:57`, `MediaFilterBar/index.tsx:830`, `src/hooks/useMediaRules.ts:7`. **Healed by C2:** the descriptor is the contract's presentation allowlist, built by `toDescriptor`; headings come from each rule's `group`, and the client imports the type from `@contract/media`. |
 | F12 | **The client/server bridge is partial, so either side can grow alone.** 48 `defineRoute` routes, but only 21 declare a response schema and 5 server files share the client's schemas. The client hand-writes 43 `/api/...` URL strings, and 1 hook validates a response. MSW mocks are a third hand-kept copy. The dependency runs backwards (`server/` imports `src/lib/api/schemas.ts`), and the client imports server internals (`@server/modules/media/browseRangeKeys`). Nothing fails when a route is added on one side only. | `server/kernel/defineRoute.ts`, `src/lib/api/schemas.ts`, `src/hooks/*`, `tests/mocks/handlers/*`, `src/lib/mediaQueryAdapters.ts:31` |
 
 ### Duplication (one job, many copies)
@@ -154,7 +154,7 @@ principles become these acceptance checks on every UI slice:
 | # | Duplication | Evidence |
 |---|---|---|
 | D1 | **13 hand-rolled SWR fetchers.** Each has its own error string, an unchecked `json.data as T` cast, and inconsistent envelopes (`/api/filter-fields` returns a bare array). Server error messages are swallowed. | `src/hooks/use*.ts` |
-| D2 | **The client re-declares rule presentation:** `BOOLEAN_VALUE_LABELS`, `SEGMENT_LABEL_OVERRIDES`, `ENUM_OPTIONS`, and key-switched `csvIdOptions`/`csvStringOptions`. | `MediaFilterBar/index.tsx:855-1000` |
+| D2 | **The client re-declares rule presentation:** `BOOLEAN_VALUE_LABELS`, `SEGMENT_LABEL_OVERRIDES`, `ENUM_OPTIONS`, and key-switched `csvIdOptions`/`csvStringOptions`. | `MediaFilterBar/index.tsx:855-1000`. **Healed by C2:** each rule declares its own `valueLabels`, `options`, `shortLabel`, `lookup` and `group`, and the filter bar reads them from the descriptor. |
 | D3 | **Browse and save encode filter state two ways.** `MOVIE_PARAM_TO_KEY`/`SERIES_PARAM_TO_KEY` + `toFilterValues()`, a range satellite map and its coverage check, and the client mirror `toBrowseParams()`. | `media.handler.ts:169-345`, `src/lib/mediaQueryAdapters.ts:194` |
 | D4 | **Three multi-select controls** in one 1,829-line file. | `MediaFilterBar/index.tsx:136,342`, `filters/OptionFilter` |
 | D5 | **`'active' \| 'paused'` declared in four places**, and `z.enum(['movie','show'])` re-declared beside `ContentTypeSchema`. | F1 sites, `mediaQueries.schemas.ts:15` |
@@ -166,7 +166,7 @@ principles become these acceptance checks on every UI slice:
 |---|---|---|
 | L1 | Creating a SEERR or TVMAZE provider passes validation, then throws in `ProviderFactory`. | `settings.schemas.ts:4` (`nativeEnum`), `providerFactory.ts:72` |
 | L2 | `/api/providers/metadata` and `/api/app-settings` have no consumer. | route grep |
-| L3 | Rules in the API that the UI can never render, such as `certification`. | `ruleRendersControl` |
+| L3 | Rules in the API that the UI can never render, such as `certification`. | `ruleRendersControl`. **Healed by C2:** the descriptor's shape gives every served rule a control, and `/api/rules` leaves out a rule that cannot be described, so `ruleRendersControl` is gone. |
 
 ## Slice protocol
 
@@ -471,7 +471,7 @@ names, so nothing is renamed twice.
 
 **C2 · Rule presentation lives on the registry** (after B6)
 - **Model:** Opus 5.5 (registry contract every future provider builds on).
-- **Why:** D2, F13.
+- **Why:** D2, F13, L3's client half.
 - **Behaviours:**
   - A boolean rule carries its own value labels (for example *Monitored* / *Unmonitored*).
   - An enum-shaped rule carries its own options.
@@ -480,14 +480,29 @@ names, so nothing is renamed twice.
   - A rule's section heading comes from the descriptor, not from the client reading providers.
   - The descriptor exposes no engine concern: no predicate, field mapping, producer list or
     precedence.
-- **Expected end state:** `MediaRule` gains `valueLabels?`, `options?`, `shortLabel?`, `lookup?` and
-  `group`. The descriptor is an explicit allowlist of presentation fields (key, label, content
-  types, data type, instance scoping, and those five), built by `toDescriptor`, not `Omit`.
-  The `csv-ids` data type is renamed for what its value is (`{ providerId?, ids }` since B6, not a
-  CSV string), once, while the descriptor's data types are being reshaped.
-- **Deletes:** `BOOLEAN_VALUE_LABELS`, `SEGMENT_LABEL_OVERRIDES`, `ENUM_OPTIONS`, `groupsFor`, the key
-  switches in `csvIdOptions`/`csvStringOptions`, the client's own `MediaRuleDescriptor` declaration, and `ruleRendersControl` (C5 makes renderability a server
-  fact).
+  - A rule with no control (today `certification`: multi-value with no lookup) is not served, because
+    the descriptor's shape makes it undescribable.
+- **Expected end state (as built):** `MediaRule` gains `valueLabels?`, `options?`, `shortLabel?`,
+  `lookup?` and `group?` (absent only for the universal title and year). `group` is the section heading
+  text: Movies, Series, Library, Media server, Play History, Requests or TMDB (typed `RuleGroup` on the
+  server, a plain string on the wire). `lookup` names the `media` procedure serving the options, checked
+  at compile time. The descriptor is the contract's `MediaRuleDescriptorSchema`, an allowlist of
+  presentation fields (key, label, content types, data type, instance scoping, and those five) that is a
+  discriminated union on `dataType`:
+  - a `boolean` may carry `valueLabels` (absent means Yes / No);
+  - a `string` may carry `options` (without them it is free text, rendered as a text input);
+  - a `number` must carry `options`;
+  - `csv-strings` must name a string lookup;
+  - `instance-ids` (renamed from `csv-ids`) must name an id lookup.
+
+  `toDescriptor` projects a rule through the schema and returns nothing for a rule that cannot satisfy
+  its variant, so `/api/rules` leaves it out. The filter bar builds its sections from `group` in
+  first-appearance order. The mobile sheet renders every section, and the active tab hides rules by
+  content type, so shared rules show on both tabs. The client imports `MediaRuleDescriptor` from
+  `@contract/media`.
+- **Deletes:** `BOOLEAN_VALUE_LABELS`, `SEGMENT_LABEL_OVERRIDES`, `ENUM_OPTIONS`, `groupsFor` (and the
+  `configuredTypes` prop it needed), the key switches in `csvIdOptions`/`csvStringOptions`, the client's
+  re-export of `MediaRuleDescriptor`, and `ruleRendersControl` (a rule has a control by construction).
 
 **C3 · Browse speaks the registry** (after B2, C0)
 - **Model:** Opus 5.5 (deletes a translator without changing results).
@@ -519,13 +534,13 @@ names, so nothing is renamed twice.
 
 **C5 · The server decides exposure** (after C2, B3; decisions 9, 10)
 - **Model:** Opus 5.5 (one exposure mechanism across three authorities).
-- **Why:** F9, L1, L3, and Definition of done item 2.
+- **Why:** F9, L1, and Definition of done item 2.
 - **Behaviours:**
   - The add-provider list shows exactly the offered types (decision 9), with labels and defaults
     from the server.
   - Creating a non-offered type is rejected before any connection is attempted.
-  - A rule is offered only if it has a control and at least one live producer among offered
-    types, so `certification` and the stale TMDB/TVMAZE claims disappear until fixed.
+  - A rule is offered only if it has at least one live producer among offered types, so the stale
+    TMDB/TVMAZE claims disappear until fixed. (A rule with no control is already left out by C2.)
   - Only the offered tasks (decision 10) are offered for enablement or automation.
 - **Expected end state:** offered types, rules and tasks are each declared once on the server. The client
   derives the add-provider list from `/api/providers/types`.

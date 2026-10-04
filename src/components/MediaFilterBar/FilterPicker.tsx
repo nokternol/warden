@@ -1,6 +1,6 @@
 import type { ContentScope } from '@app/hooks/useMediaFilters';
-import type { MediaRuleDescriptor } from '@app/hooks/useMediaRules';
 import { cn } from '@app/lib/utils/cn';
+import type { MediaRuleDescriptor } from '@contract/media';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
 // ─── FilterPicker ───────────────────────────────────────────────────────────

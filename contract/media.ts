@@ -181,19 +181,80 @@ export const MediaSourceDescriptorSchema = z.object({
   instances: z.array(z.object({ id: z.number(), name: z.string() })),
 });
 
-/** A filterable rule as the client sees it: everything but its predicate. */
-export const MediaRuleDescriptorSchema = z.object({
+/**
+ * The lookup a multi-value rule's selectable values come from. Each name is the
+ * `media` procedure that serves that lookup (checked below `media`). Id lookups
+ * hold provider-minted ids for `instance-ids` rules; string lookups hold library
+ * values for `csv-strings` rules.
+ */
+export const InstanceIdLookupSchema = z.enum(['tags', 'qualityProfiles', 'languageProfiles']);
+export const StringLookupSchema = z.enum([
+  'genres',
+  'networks',
+  'studio',
+  'releaseGroups',
+  'collectionNames',
+  'fileContainers',
+  'videoCodecs',
+  'audioCodecs',
+  'fileResolutions',
+  'labels',
+]);
+
+const ruleOptionSchema = z.object({ value: z.string(), label: z.string() });
+
+/** The presentation every rule carries, whatever its data type. */
+const ruleDescriptorBase = {
   key: z.string(),
   label: z.string(),
   contentTypes: z.array(ContentTypeSchema).readonly(),
-  dataType: z.enum(['boolean', 'number', 'string', 'csv-ids', 'csv-strings', 'range']),
-  providers: z.array(ProviderTypeSchema).readonly(),
-  required: z.boolean(),
   /** True for rules whose values are a provider-defined id space (quality profiles, tags) —
    *  the client must qualify these per instance when more than one is active. */
   instanceScoped: z.boolean().optional(),
-  sourceField: z.string().optional(),
-});
+  /** A shorter label for where the section heading already gives context; absent means `label`. */
+  shortLabel: z.string().optional(),
+  /** The section heading the rule is shown under; absent for the universal title and year. */
+  group: z.string().optional(),
+};
+
+/**
+ * A filterable rule as the client sees it: an allowlist of presentation fields,
+ * with no predicate, producing providers, field mapping or precedence.
+ *
+ * Each data type states what its control needs, so every valid descriptor has a
+ * control: a boolean may name its value labels (absent means Yes / No), a string
+ * with options is an enum and without them is free text, a number is always an
+ * enum, and a multi-value rule names the lookup its options come from. A rule
+ * that cannot satisfy its variant cannot be described, and is not offered.
+ */
+export const MediaRuleDescriptorSchema = z.discriminatedUnion('dataType', [
+  z.object({
+    ...ruleDescriptorBase,
+    dataType: z.literal('boolean'),
+    valueLabels: z.object({ true: z.string(), false: z.string() }).optional(),
+  }),
+  z.object({ ...ruleDescriptorBase, dataType: z.literal('range') }),
+  z.object({
+    ...ruleDescriptorBase,
+    dataType: z.literal('string'),
+    options: z.array(ruleOptionSchema).readonly().optional(),
+  }),
+  z.object({
+    ...ruleDescriptorBase,
+    dataType: z.literal('number'),
+    options: z.array(ruleOptionSchema).readonly(),
+  }),
+  z.object({
+    ...ruleDescriptorBase,
+    dataType: z.literal('csv-strings'),
+    lookup: StringLookupSchema,
+  }),
+  z.object({
+    ...ruleDescriptorBase,
+    dataType: z.literal('instance-ids'),
+    lookup: InstanceIdLookupSchema,
+  }),
+]);
 
 /** One provider's answer to a cross-provider title search. */
 export const SearchResultSchema = z.object({
@@ -276,12 +337,20 @@ export const media = {
     .output(z.object({ deletedIdentities: z.number() })),
 };
 
+const _everyLookupIsAProcedure: readonly (keyof typeof media)[] = [
+  ...InstanceIdLookupSchema.options,
+  ...StringLookupSchema.options,
+];
+
 export type ManagedMovie = z.infer<typeof ManagedMovieSchema>;
 export type ManagedSeries = z.infer<typeof ManagedSeriesSchema>;
 export type MediaTag = z.infer<typeof MediaTagSchema>;
 export type MediaProfile = z.infer<typeof MediaProfileSchema>;
 export type MediaSourceDescriptor = z.infer<typeof MediaSourceDescriptorSchema>;
 export type MediaRuleDescriptor = z.infer<typeof MediaRuleDescriptorSchema>;
+export type InstanceIdLookup = z.infer<typeof InstanceIdLookupSchema>;
+export type StringLookup = z.infer<typeof StringLookupSchema>;
+export type MediaLookup = InstanceIdLookup | StringLookup;
 export type SearchResult = z.infer<typeof SearchResultSchema>;
 export type MoviesBrowseQuery = z.input<typeof MoviesBrowseQuerySchema>;
 export type SeriesBrowseQuery = z.input<typeof SeriesBrowseQuerySchema>;

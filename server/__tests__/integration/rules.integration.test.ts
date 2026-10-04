@@ -136,7 +136,7 @@ describe('GET /api/rules', () => {
     expect(keys).not.toContain('imdbRating');
   });
 
-  it('each field is a full MediaRuleDescriptor', async () => {
+  it('each rule has a key, label, data type and content types', async () => {
     await providerSettingsService.create({
       type: MetadataProviderType.RADARR,
       name: 'Test Radarr',
@@ -149,13 +149,10 @@ describe('GET /api/rules', () => {
     for (const field of res.body.data) {
       expect(field.key).toBeTruthy();
       expect(field.label).toBeTruthy();
-      expect(['boolean', 'number', 'string', 'csv-ids', 'csv-strings', 'range']).toContain(
+      expect(['boolean', 'number', 'string', 'instance-ids', 'csv-strings', 'range']).toContain(
         field.dataType
       );
       expect(Array.isArray(field.contentTypes)).toBe(true);
-      expect(Array.isArray(field.providers)).toBe(true);
-      expect(typeof field.required).toBe('boolean');
-      expect(field.predicate).toBeUndefined();
     }
   });
 
@@ -178,6 +175,89 @@ describe('GET /api/rules', () => {
 
     const after = await supertest(app).get('/api/rules');
     expect(after.body.data.map((f: { key: string }) => f.key)).toContain('monitored');
+  });
+
+  describe('rule presentation', () => {
+    async function rulesServedWith(...types: MetadataProviderType[]) {
+      for (const type of types) {
+        await providerSettingsService.create({
+          type,
+          name: `Test ${type}`,
+          url: 'http://localhost:1234/api',
+          apiKey: 'test-api-key',
+        });
+      }
+      const res = await supertest(app).get('/api/rules');
+      expect(res.status).toBe(200);
+      return res.body.data as Array<Record<string, unknown>>;
+    }
+
+    it('serves a boolean rule with its own value labels', async () => {
+      const rules = await rulesServedWith(MetadataProviderType.SONARR);
+      const monitored = rules.find((r) => r.key === 'monitored');
+      expect(monitored?.valueLabels).toEqual({ true: 'Monitored', false: 'Unmonitored' });
+    });
+
+    it('serves an enum-shaped rule with its own options and short label', async () => {
+      const rules = await rulesServedWith(MetadataProviderType.SONARR);
+      const seriesStatus = rules.find((r) => r.key === 'seriesStatus');
+      expect(seriesStatus?.options).toEqual([
+        { value: 'continuing', label: 'Continuing' },
+        { value: 'ended', label: 'Ended' },
+      ]);
+      expect(seriesStatus?.shortLabel).toBe('Status');
+    });
+
+    it('serves a multi-value rule naming the lookup its options come from', async () => {
+      const rules = await rulesServedWith(MetadataProviderType.RADARR);
+      expect(rules.find((r) => r.key === 'genres')?.lookup).toBe('genres');
+      expect(rules.find((r) => r.key === 'tagIds')?.lookup).toBe('tags');
+    });
+
+    it("serves each rule's section heading, and none for the universal title and year", async () => {
+      const rules = await rulesServedWith(MetadataProviderType.RADARR, MetadataProviderType.PLEX);
+      const groupOf = (key: string) => rules.find((r) => r.key === key)?.group;
+      expect(groupOf('videoCodec')).toBe('Media server');
+      expect(groupOf('hasFile')).toBe('Library');
+      expect(groupOf('watched')).toBe('Play History');
+      expect(groupOf('imdbRating')).toBe('Movies');
+      expect(groupOf('title')).toBeUndefined();
+      expect(groupOf('year')).toBeUndefined();
+    });
+
+    it('exposes presentation only — no predicate, producers, field mapping or required flag', async () => {
+      const rules = await rulesServedWith(
+        MetadataProviderType.RADARR,
+        MetadataProviderType.SONARR,
+        MetadataProviderType.PLEX,
+        MetadataProviderType.JELLYFIN,
+        MetadataProviderType.TAUTULLI,
+        MetadataProviderType.OVERSEERR,
+        MetadataProviderType.TMDB
+      );
+      const presentationFields = [
+        'key',
+        'label',
+        'contentTypes',
+        'dataType',
+        'instanceScoped',
+        'valueLabels',
+        'options',
+        'shortLabel',
+        'lookup',
+        'group',
+      ];
+      for (const rule of rules) {
+        expect(Object.keys(rule).filter((f) => !presentationFields.includes(f))).toEqual([]);
+      }
+    });
+
+    it('leaves out a rule the filter bar has no control for', async () => {
+      const rules = await rulesServedWith(MetadataProviderType.RADARR);
+      // `certification` is multi-value but names no lookup to draw its options from.
+      expect(rules.map((r) => r.key)).not.toContain('certification');
+      expect(rules.map((r) => r.key)).toContain('genres');
+    });
   });
 
   it('answers 404 at /api/filter-fields', async () => {

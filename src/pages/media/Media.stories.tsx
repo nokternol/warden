@@ -1,7 +1,7 @@
 import type { ContentScope, FilterState, FilterValue } from '@app/hooks/useMediaFilters';
-import type { MediaRuleDescriptor } from '@app/hooks/useMediaRules';
 import type { ManagedMovie } from '@app/hooks/useMovies';
 import type { ManagedSeries } from '@app/hooks/useSeries';
+import type { MediaRuleDescriptor } from '@contract/media';
 import type { Story } from '@ladle/react';
 import { useState } from 'react';
 import { MediaContent } from './index.page';
@@ -20,183 +20,181 @@ const EMPTY_FILTER_STATE: FilterState = {
 };
 
 // Mirrors GET /api/rules' provider-gated MediaRuleDescriptor projection
-// for a RADARR + SONARR + TAUTULLI library — matches ALL_PROVIDERS below.
+// for a RADARR + SONARR + TAUTULLI library.
 const FIXTURE_RULES: MediaRuleDescriptor[] = [
   {
     key: 'title',
     label: 'Title',
     contentTypes: ['movie', 'series'],
     dataType: 'string',
-    providers: ['RADARR', 'SONARR'],
-    required: false,
   },
   {
     key: 'year',
     label: 'Year',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    providers: ['RADARR', 'SONARR'],
-    required: false,
   },
   {
     key: 'watched',
     label: 'Watched',
+    group: 'Play History',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
-    providers: ['TAUTULLI'],
-    required: false,
+    valueLabels: { true: 'Watched', false: 'Unwatched' },
   },
   {
     key: 'addedDaysAgo',
     label: 'Added (days ago)',
+    group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    providers: ['RADARR', 'SONARR'],
-    required: false,
   },
   {
     key: 'sizeOnDiskGb',
     label: 'Size on disk (GB)',
+    group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    providers: ['RADARR', 'SONARR'],
-    required: false,
   },
   {
     key: 'hasFile',
     label: 'Has file',
+    group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
-    providers: ['RADARR', 'SONARR'],
-    required: false,
+    valueLabels: { true: 'Downloaded', false: 'Missing' },
   },
   {
     key: 'tagIds',
     label: 'Tags',
+    group: 'Movies',
     contentTypes: ['movie'],
-    dataType: 'csv-ids',
-    providers: ['RADARR'],
-    required: false,
+    dataType: 'instance-ids',
+    lookup: 'tags',
   },
   {
     key: 'qualityProfileIds',
     label: 'Quality profile',
+    group: 'Movies',
     contentTypes: ['movie'],
-    dataType: 'csv-ids',
-    providers: ['RADARR'],
-    required: false,
+    dataType: 'instance-ids',
+    lookup: 'qualityProfiles',
   },
   {
     key: 'genres',
     label: 'Genres',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
-    providers: ['RADARR'],
-    required: false,
+    lookup: 'genres',
   },
   {
     key: 'imdbRating',
     label: 'IMDB rating',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'range',
-    providers: ['RADARR'],
-    required: false,
   },
   {
     key: 'monitored',
     label: 'Monitored',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'boolean',
-    providers: ['SONARR'],
-    required: false,
+    valueLabels: { true: 'Monitored', false: 'Unmonitored' },
   },
   {
     key: 'seriesStatus',
     label: 'Series status',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'string',
-    providers: ['SONARR'],
-    required: false,
+    options: [
+      { value: 'continuing', label: 'Continuing' },
+      { value: 'ended', label: 'Ended' },
+    ],
+    shortLabel: 'Status',
   },
   {
     key: 'tagIds',
     label: 'Tags',
+    group: 'Series',
     contentTypes: ['series'],
-    dataType: 'csv-ids',
-    providers: ['SONARR'],
-    required: false,
+    dataType: 'instance-ids',
+    lookup: 'tags',
   },
   {
     key: 'qualityProfileIds',
     label: 'Quality profile',
+    group: 'Series',
     contentTypes: ['series'],
-    dataType: 'csv-ids',
-    providers: ['SONARR'],
-    required: false,
+    dataType: 'instance-ids',
+    lookup: 'qualityProfiles',
   },
   {
     key: 'genres',
     label: 'Genres',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'csv-strings',
-    providers: ['SONARR'],
-    required: false,
+    lookup: 'genres',
   },
   {
     key: 'seriesType',
     label: 'Series type',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'string',
-    providers: ['SONARR'],
-    required: false,
+    options: [
+      { value: 'standard', label: 'Standard' },
+      { value: 'anime', label: 'Anime' },
+      { value: 'daily', label: 'Daily' },
+    ],
+    shortLabel: 'Type',
   },
   {
     key: 'network',
     label: 'Network',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'csv-strings',
-    providers: ['SONARR'],
-    required: false,
+    lookup: 'networks',
   },
   {
     key: 'communityRating',
     label: 'Community rating',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
-    providers: ['SONARR'],
-    required: false,
   },
   {
     key: 'ended',
     label: 'Ended',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'boolean',
-    providers: ['SONARR'],
-    required: false,
+    valueLabels: { true: 'Finished', false: 'Running' },
   },
   {
     key: 'lastAiredDaysAgo',
     label: 'Last aired (days ago)',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
-    providers: ['SONARR'],
-    required: false,
   },
   {
     key: 'episodePercentage',
     label: 'Episode completion (%)',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
-    providers: ['SONARR'],
-    required: false,
   },
   {
     key: 'lastWatchedDaysAgo',
     label: 'Last watched (days ago)',
+    group: 'Play History',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    providers: ['TAUTULLI'],
-    required: false,
   },
 ];
 
@@ -253,8 +251,6 @@ const LOOKUPS = {
   ],
 };
 
-const ALL_PROVIDERS = new Set(['RADARR', 'SONARR', 'TAUTULLI']);
-
 // ─── Controlled wrapper ───────────────────────────────────────────────────────
 
 function isBucketActive(bucket: Record<string, FilterValue>, skipEmptyTitle = false): boolean {
@@ -308,7 +304,6 @@ function Controlled({
       movies={emptySlice<ManagedMovie>()}
       series={emptySlice<ManagedSeries>()}
       lookups={LOOKUPS}
-      configuredTypes={ALL_PROVIDERS}
       sources={{
         movie: {
           contentType: 'movie',

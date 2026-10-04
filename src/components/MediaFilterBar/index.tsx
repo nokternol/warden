@@ -7,9 +7,9 @@ import type {
 } from '@app/hooks/useMediaFilters';
 import { scopeOf } from '@app/hooks/useMediaFilters';
 import type { MediaQualityProfile, MediaTag } from '@app/hooks/useMediaLookups';
-import type { MediaRuleDescriptor } from '@app/hooks/useMediaRules';
 import type { MediaSourceDescriptor } from '@app/hooks/useMediaSources';
 import { cn } from '@app/lib/utils/cn';
+import type { InstanceIdLookup, MediaRuleDescriptor, StringLookup } from '@contract/media';
 import type { ContentType } from '@contract/schemas';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { OptionFilter } from '../filters/OptionFilter';
@@ -53,8 +53,6 @@ export interface MediaFilterBarProps {
   movieYearRange: YearRange | null;
   seriesYearRange: YearRange | null;
   lookups: Lookups;
-  /** Disambiguates which group(s) a shared, multi-provider rule renders in (see `groupsFor`) — not used for gating, which `rules` already handles. */
-  configuredTypes: Set<string>;
   /** Active-instance counts per content type — drives grouped, instance-qualified rendering
    *  for `instanceScoped` rules (§10). With zero or one instance every rule renders exactly
    *  as it did before this existed. */
@@ -69,10 +67,8 @@ export interface MediaFilterBarProps {
 
 // ─── FilterGroup ──────────────────────────────────────────────────────────────
 //
-// Labeled container that clusters one provider source's filters. The small
-// uppercase label answers "which source does this filter belong to?" at a
-// glance, mirroring the provider grouping used in AutomationBuilder. Replaces
-// the old free-floating dividers, which broke apart when the row wrapped.
+// Labeled container for one section of rules, headed by the section heading the
+// rules' descriptors name. Keeps a section's controls together when the bar wraps.
 
 function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -511,6 +507,29 @@ function StringMultiSelectDropdown({
   );
 }
 
+// ─── TextFilter — a free-text rule (a `string` rule with no fixed options) ───
+
+function TextFilter({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string | undefined;
+  onChange: (value: string | undefined) => void;
+}) {
+  return (
+    <input
+      type="text"
+      aria-label={label}
+      placeholder={label}
+      value={value ?? ''}
+      onChange={(e) => onChange(e.target.value || undefined)}
+      className="px-2.5 py-1 rounded-md text-xs bg-surface-bg border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary w-36"
+    />
+  );
+}
+
 // ─── NumberRangeFilter ────────────────────────────────────────────────────────
 
 function parseNumber(s: string): number | undefined {
@@ -802,171 +821,84 @@ function toStringCsvOrUndefined(values: string[]): string | undefined {
   return values.length > 0 ? values.join(',') : undefined;
 }
 
-// ─── Rule grouping — derived from scope + providers, not a hand-kept table ──
+// ─── Rule grouping — the descriptor names its section heading ───────────────
 //
-// 'title' and 'year' are the two universal controls, rendered outside any
-// FilterGroup. Every other rule groups by content-type scope (movie/series), or
-// — for shared rules — by which provider(s) it's sourced from: a shared rule
-// sourced partly from RADARR/SONARR (addedDaysAgo, sizeOnDiskGb, hasFile)
-// appears in both the Movies and Series groups, matching how those groups
-// already rendered a repeated set of shared fields pre-Stage-2d. A rule can
-// belong to more than one group.
-//
-// `configuredTypes` disambiguates a shared rule sourced from *both*
-// RADARR and SONARR when only one is actually active: `rules` is already
-// server-gated (a rule appears if *any* of its providers is
-// configured), so a rule naming both would otherwise render in both groups
-// even with only one of the two providers present.
+// Each rule renders under its descriptor's `group` heading, in the order the
+// headings first appear in `rules`. Rules with no group ('title', 'year') are
+// the universal controls rendered outside every section. The active tab hides
+// rules scoped to the other content type; shared rules show on both tabs.
 
-type FilterGroupId = 'movies' | 'series' | 'playHistory' | 'requests' | 'tmdb';
-
-const GROUP_LABELS: Record<FilterGroupId, string> = {
-  movies: 'Movies',
-  series: 'Series',
-  playHistory: 'Play History',
-  requests: 'Requests',
-  tmdb: 'TMDB',
-};
-
-function groupsFor(rule: MediaRuleDescriptor, configuredTypes: Set<string>): FilterGroupId[] {
-  if (rule.key === 'title' || rule.key === 'year') return [];
-  const scope = scopeOf(rule);
-  if (scope === 'movie') return ['movies'];
-  if (scope === 'series') return ['series'];
-
-  const providers = new Set(
-    rule.providers.filter((providerType) => configuredTypes.has(providerType))
-  );
-  const groups: FilterGroupId[] = [];
-  if (providers.has('OVERSEERR')) groups.push('requests');
-  if (providers.has('TMDB') && !providers.has('RADARR') && !providers.has('SONARR')) {
-    groups.push('tmdb');
-  }
-  if (
-    (providers.has('TAUTULLI') || providers.has('PLEX') || providers.has('JELLYFIN')) &&
-    !providers.has('RADARR') &&
-    !providers.has('SONARR')
-  ) {
-    groups.push('playHistory');
-  }
-  if (providers.has('RADARR')) groups.push('movies');
-  if (providers.has('SONARR')) groups.push('series');
-  return groups;
+interface ScopedRule {
+  rule: MediaRuleDescriptor;
+  scope: ContentScope;
 }
 
-// ─── Per-value display — the registry owns dataType/label/gating; these small
-// tables own only *value-level* display text a MediaRuleDescriptor doesn't
-// (and structurally can't) carry. Any dataType: 'boolean' rule not listed
-// here still renders correctly with a generic Yes/No pair.
+type RuleSection = [heading: string, entries: ScopedRule[]];
 
-const BOOLEAN_VALUE_LABELS: Record<string, [true: string, false: string]> = {
-  hasFile: ['Downloaded', 'Missing'],
-  monitored: ['Monitored', 'Unmonitored'],
-  watched: ['Watched', 'Unwatched'],
-  ended: ['Finished', 'Running'],
-  overseerrHasIssue: ['Has Issue', 'No Issue'],
-  isAvailable: ['Available', 'Unavailable'],
-  jellyfinIsFavorite: ['Favorited', 'Not Favorited'],
-};
+function tabShows(scope: ContentScope, activeTab: MediaFilterBarProps['activeTab']): boolean {
+  if (activeTab === undefined || scope === 'shared') return true;
+  return activeTab === (scope === 'movie' ? 'movies' : 'series');
+}
 
-function booleanOptions(rule: MediaRuleDescriptor) {
-  const [trueLabel, falseLabel] = BOOLEAN_VALUE_LABELS[rule.key] ?? ['Yes', 'No'];
+function sectionsOf(
+  rules: MediaRuleDescriptor[],
+  activeTab: MediaFilterBarProps['activeTab']
+): RuleSection[] {
+  const sections = new Map<string, ScopedRule[]>();
+  for (const rule of rules) {
+    const scope = scopeOf(rule);
+    if (!rule.group || !tabShows(scope, activeTab)) continue;
+    if (!sections.has(rule.group)) sections.set(rule.group, []);
+    sections.get(rule.group)!.push({ rule, scope });
+  }
+  return Array.from(sections.entries());
+}
+
+// ─── Per-value display — read from the descriptor ─────────────────────────────
+
+type DescriptorOf<D extends MediaRuleDescriptor['dataType']> = Extract<
+  MediaRuleDescriptor,
+  { dataType: D }
+>;
+
+function booleanOptions(rule: DescriptorOf<'boolean'>) {
+  const labels = rule.valueLabels ?? { true: 'Yes', false: 'No' };
   return [
-    { value: 'true' as const, label: trueLabel },
-    { value: 'false' as const, label: falseLabel },
+    { value: 'true' as const, label: labels.true },
+    { value: 'false' as const, label: labels.false },
   ];
 }
 
-// The segment label shown beside an enum control's options. Defaults to the
-// registry's own `label`, which reads fine standalone but is occasionally
-// redundant next to the FilterGroup it renders inside (e.g. "TMDB status"
-// under a "TMDB" heading) — override only where that's the case.
-const SEGMENT_LABEL_OVERRIDES: Partial<Record<string, string | undefined>> = {
-  seriesStatus: 'Status',
-  seriesType: 'Type',
-  overseerrRequestStatus: 'Status',
-  tmdbStatus: undefined,
-};
+// instance-ids / csv-strings rules need an option *list*. The values are library
+// data (tags, profiles, genres, codecs …), so the descriptor names the `lookup`
+// they come from rather than carrying them. Lookups served once per source type
+// (Radarr for movies, Sonarr for series) are picked by the rule's content scope.
 
-function segmentLabel(rule: MediaRuleDescriptor): string | undefined {
-  return rule.key in SEGMENT_LABEL_OVERRIDES ? SEGMENT_LABEL_OVERRIDES[rule.key] : rule.label;
+function bySource<T>(pair: { radarr: T; sonarr: T }, scope: ContentScope): T {
+  return scope === 'movie' ? pair.radarr : pair.sonarr;
 }
 
-// Fixed option sets for the enum-shaped string/number rules. A string/number
-// rule outside this table has no known enum and no free-text/number control
-// is rendered for it yet (matches pre-Stage-2d: `certification`, a
-// csv-strings rule with no lookup source either, rendered nothing).
-const ENUM_OPTIONS: Record<string, { value: string; label: string }[]> = {
-  seriesStatus: [
-    { value: 'continuing', label: 'Continuing' },
-    { value: 'ended', label: 'Ended' },
-  ],
-  seriesType: [
-    { value: 'standard', label: 'Standard' },
-    { value: 'anime', label: 'Anime' },
-    { value: 'daily', label: 'Daily' },
-  ],
-  tmdbStatus: [
-    { value: 'Released', label: 'Released' },
-    { value: 'In Production', label: 'In Production' },
-    { value: 'Ended', label: 'Ended' },
-    { value: 'Returning Series', label: 'Returning Series' },
-    { value: 'Canceled', label: 'Canceled' },
-  ],
-  overseerrRequestStatus: [
-    { value: '1', label: 'Pending' },
-    { value: '2', label: 'Approved' },
-    { value: '3', label: 'Declined' },
-    { value: '4', label: 'Available' },
-  ],
-  radarrStatus: [
-    { value: 'tba', label: 'TBA' },
-    { value: 'announced', label: 'Announced' },
-    { value: 'inCinemas', label: 'In Cinemas' },
-    { value: 'released', label: 'Released' },
-    { value: 'deleted', label: 'Deleted' },
-  ],
-};
+function tagOption(t: MediaTag): QualifiableOption {
+  return { id: t.id, displayName: t.label, providerId: t.providerId, providerName: t.providerName };
+}
 
-// csv-ids / csv-strings rules need an option *list*, sourced from `lookups`
-// rather than the registry (tag/quality-profile/genre/network values are
-// library data, not part of the rule vocabulary). Only the handful of keys
-// with a known lookup source render a control; others are skipped, same as
-// `certification` today.
+function profileOption(p: MediaQualityProfile): QualifiableOption {
+  return { id: p.id, displayName: p.name, providerId: p.providerId, providerName: p.providerName };
+}
 
-function csvIdOptions(
-  rule: MediaRuleDescriptor,
+function idOptions(
+  lookup: InstanceIdLookup,
   scope: ContentScope,
   lookups: Lookups
-): Array<{ id: number; displayName: string; providerId: number; providerName: string }> | null {
-  if (rule.key === 'tagIds') {
-    const list = scope === 'movie' ? lookups.tags.radarr : lookups.tags.sonarr;
-    return list.map((t) => ({
-      id: t.id,
-      displayName: t.label,
-      providerId: t.providerId,
-      providerName: t.providerName,
-    }));
+): QualifiableOption[] {
+  switch (lookup) {
+    case 'tags':
+      return bySource(lookups.tags, scope).map(tagOption);
+    case 'qualityProfiles':
+      return bySource(lookups.qualityProfiles, scope).map(profileOption);
+    case 'languageProfiles':
+      return lookups.languageProfiles.map(profileOption);
   }
-  if (rule.key === 'qualityProfileIds') {
-    const list =
-      scope === 'movie' ? lookups.qualityProfiles.radarr : lookups.qualityProfiles.sonarr;
-    return list.map((p) => ({
-      id: p.id,
-      displayName: p.name,
-      providerId: p.providerId,
-      providerName: p.providerName,
-    }));
-  }
-  if (rule.key === 'languageProfileIds') {
-    return lookups.languageProfiles.map((p) => ({
-      id: p.id,
-      displayName: p.name,
-      providerId: p.providerId,
-      providerName: p.providerName,
-    }));
-  }
-  return null;
 }
 
 /** Whether the rule's owning content type currently has more than one active
@@ -979,49 +911,9 @@ function hasMultipleInstances(
   return (sources?.[scope]?.instances.length ?? 0) > 1;
 }
 
-function csvStringOptions(
-  rule: MediaRuleDescriptor,
-  scope: ContentScope,
-  lookups: Lookups
-): string[] | null {
-  if (rule.key === 'genres')
-    return scope === 'movie' ? lookups.genres.movies : lookups.genres.series;
-  if (rule.key === 'network') return lookups.networks;
-  if (rule.key === 'studio') return lookups.studio;
-  if (rule.key === 'fileContainer') return lookups.fileContainers;
-  if (rule.key === 'videoCodec') return lookups.videoCodecs;
-  if (rule.key === 'audioCodec') return lookups.audioCodecs;
-  if (rule.key === 'fileResolution') return lookups.fileResolutions;
-  if (rule.key === 'labels') return lookups.labels;
-  if (rule.key === 'releaseGroups') return lookups.releaseGroups;
-  if (rule.key === 'collectionName') return lookups.collectionNames;
-  return null;
-}
-
-/** Mirrors RuleControl's switch: true only for a rule/scope RuleControl would
- *  actually render something for. `string`/`number` rules with no ENUM_OPTIONS
- *  entry and `csv-ids`/`csv-strings` rules with no lookup source (e.g.
- *  `certification` today) render null — FilterPicker must not offer those, or
- *  "adding" one produces a labeled group with nothing inside it. */
-function ruleRendersControl(
-  rule: MediaRuleDescriptor,
-  scope: ContentScope,
-  lookups: Lookups
-): boolean {
-  switch (rule.dataType) {
-    case 'range':
-    case 'boolean':
-      return true;
-    case 'string':
-    case 'number':
-      return ENUM_OPTIONS[rule.key] !== undefined;
-    case 'csv-ids':
-      return csvIdOptions(rule, scope, lookups) !== null;
-    case 'csv-strings':
-      return csvStringOptions(rule, scope, lookups) !== null;
-    default:
-      return false;
-  }
+function stringOptions(lookup: StringLookup, scope: ContentScope, lookups: Lookups): string[] {
+  if (lookup === 'genres') return scope === 'movie' ? lookups.genres.movies : lookups.genres.series;
+  return lookups[lookup];
 }
 
 // ─── Value access + range collapse ────────────────────────────────────────────
@@ -1062,11 +954,11 @@ function conditionLabel(rule: MediaRuleDescriptor, value: FilterValue): string |
     }
     case 'string':
     case 'number': {
-      const options = ENUM_OPTIONS[rule.key];
+      const options = rule.options;
       const strValue = String(value);
       return options ? (options.find((o) => o.value === strValue)?.label ?? null) : strValue;
     }
-    case 'csv-ids':
+    case 'instance-ids':
     case 'csv-strings': {
       const count = String(value)
         .split(',')
@@ -1146,9 +1038,18 @@ function RuleControl({
 
     case 'string':
     case 'number': {
-      const options = ENUM_OPTIONS[rule.key];
+      const options = rule.options;
+      if (!options && rule.dataType === 'string') {
+        return (
+          <TextFilter
+            label={rule.label}
+            value={value !== undefined ? String(value) : undefined}
+            onChange={(v) => onRuleChange(scope, rule.key, v)}
+          />
+        );
+      }
       if (!options) return null;
-      const label = segmentLabel(rule);
+      const label = rule.shortLabel ?? rule.label;
       const control = (
         <OptionFilter
           variant={variant}
@@ -1176,9 +1077,8 @@ function RuleControl({
       );
     }
 
-    case 'csv-ids': {
-      const options = csvIdOptions(rule, scope, lookups);
-      if (!options) return null;
+    case 'instance-ids': {
+      const options = idOptions(rule.lookup, scope, lookups);
       const grouped = rule.instanceScoped === true && hasMultipleInstances(scope, sources);
       return (
         <MultiSelectDropdown
@@ -1197,8 +1097,7 @@ function RuleControl({
     }
 
     case 'csv-strings': {
-      const options = csvStringOptions(rule, scope, lookups);
-      if (!options) return null;
+      const options = stringOptions(rule.lookup, scope, lookups);
       return (
         <StringMultiSelectDropdown
           label={rule.label}
@@ -1227,7 +1126,6 @@ export function MediaFilterBar({
   movieYearRange,
   seriesYearRange,
   lookups,
-  configuredTypes,
   sources,
   activeTab,
   mobileOpen = false,
@@ -1247,25 +1145,7 @@ export function MediaFilterBar({
   const titleRule = rules.find((r) => r.key === 'title');
   const yearRule = rules.find((r) => r.key === 'year');
 
-  const groupedRules = useMemo(() => {
-    const groups: Record<
-      FilterGroupId,
-      Array<{ rule: MediaRuleDescriptor; scope: ContentScope }>
-    > = {
-      movies: [],
-      series: [],
-      playHistory: [],
-      requests: [],
-      tmdb: [],
-    };
-    for (const rule of rules) {
-      const scope = scopeOf(rule);
-      for (const group of groupsFor(rule, configuredTypes)) {
-        groups[group].push({ rule, scope });
-      }
-    }
-    return groups;
-  }, [rules, configuredTypes]);
+  const sections = useMemo(() => sectionsOf(rules, activeTab), [rules, activeTab]);
 
   // ─── Add-filter visibility ──────────────────────────────────────────────
   //
@@ -1295,40 +1175,31 @@ export function MediaFilterBar({
     [values, visibleKeys]
   );
 
-  const visibleGroupedRules = useMemo(() => {
-    const filterGroup = (entries: Array<{ rule: MediaRuleDescriptor; scope: ContentScope }>) =>
-      entries.filter(({ rule, scope }) => isRuleVisible(rule, scope));
-    return {
-      movies: filterGroup(groupedRules.movies),
-      series: filterGroup(groupedRules.series),
-      playHistory: filterGroup(groupedRules.playHistory),
-      requests: filterGroup(groupedRules.requests),
-      tmdb: filterGroup(groupedRules.tmdb),
-    };
-  }, [groupedRules, isRuleVisible]);
+  const visibleSections = useMemo(
+    () =>
+      sections
+        .map(
+          ([heading, entries]): RuleSection => [
+            heading,
+            entries.filter(({ rule, scope }) => isRuleVisible(rule, scope)),
+          ]
+        )
+        .filter(([, entries]) => entries.length > 0),
+    [sections, isRuleVisible]
+  );
 
-  const pickerEntries = useMemo(() => {
-    const byGroup = new Map<string, PickerEntry[]>();
-    for (const group of Object.keys(groupedRules) as FilterGroupId[]) {
-      if (
-        (group === 'movies' || group === 'series') &&
-        activeTab !== undefined &&
-        activeTab !== group
-      )
-        continue;
-      for (const { rule, scope } of groupedRules[group]) {
-        if (isRuleVisible(rule, scope)) continue;
-        if (!ruleRendersControl(rule, scope, lookups)) continue;
-        const label = GROUP_LABELS[group];
-        if (!byGroup.has(label)) byGroup.set(label, []);
-        // A shared rule can land in multiple groups; only offer it once.
-        const existing = byGroup.get(label)!;
-        if (existing.some((e) => e.scope === scope && e.rule.key === rule.key)) continue;
-        existing.push({ rule, scope, group: label });
-      }
-    }
-    return Array.from(byGroup.entries());
-  }, [groupedRules, isRuleVisible, activeTab, lookups]);
+  const pickerEntries = useMemo(
+    () =>
+      sections
+        .map(([heading, entries]): [string, PickerEntry[]] => [
+          heading,
+          entries
+            .filter(({ rule, scope }) => !isRuleVisible(rule, scope))
+            .map(({ rule, scope }) => ({ rule, scope, group: heading })),
+        ])
+        .filter(([, entries]) => entries.length > 0),
+    [sections, isRuleVisible]
+  );
 
   const handlePick = (entry: PickerEntry) => {
     setVisibleKeys((prev) => new Set(prev).add(`${entry.scope}:${entry.rule.key}`));
@@ -1392,15 +1263,6 @@ export function MediaFilterBar({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [mobileOpen]);
 
-  const tabAllows = (group: 'movies' | 'series'): boolean =>
-    activeTab === undefined || activeTab === (group === 'movies' ? 'movies' : 'series');
-
-  const hasMovieSection = visibleGroupedRules.movies.length > 0 && tabAllows('movies');
-  const hasSeriesSection = visibleGroupedRules.series.length > 0 && tabAllows('series');
-  const hasPlayHistorySection = visibleGroupedRules.playHistory.length > 0;
-  const hasOverseerrSection = visibleGroupedRules.requests.length > 0;
-  const hasTmdbSection = visibleGroupedRules.tmdb.length > 0;
-
   // ─── Shared sub-elements ─────────────────────────────────────────────────
 
   const searchInput = titleRule ? (
@@ -1444,11 +1306,11 @@ export function MediaFilterBar({
     />
   ) : null;
 
-  const movieGroup = hasMovieSection ? (
-    <FilterGroup label="Movies">
-      {visibleGroupedRules.movies.map(({ rule, scope }) => (
+  const desktopSections = visibleSections.map(([heading, entries]) => (
+    <FilterGroup key={heading} label={heading}>
+      {entries.map(({ rule, scope }) => (
         <RuleControl
-          key={rule.key}
+          key={`${scope}:${rule.key}`}
           rule={rule}
           scope={scope}
           values={values}
@@ -1459,75 +1321,7 @@ export function MediaFilterBar({
         />
       ))}
     </FilterGroup>
-  ) : null;
-
-  const seriesGroup = hasSeriesSection ? (
-    <FilterGroup label="Series">
-      {visibleGroupedRules.series.map(({ rule, scope }) => (
-        <RuleControl
-          key={rule.key}
-          rule={rule}
-          scope={scope}
-          values={values}
-          onRuleChange={handleRuleChange}
-          onQualifierChange={onQualifierChange}
-          sources={sources}
-          lookups={lookups}
-        />
-      ))}
-    </FilterGroup>
-  ) : null;
-
-  const playHistoryFilter = hasPlayHistorySection ? (
-    <FilterGroup label="Play History">
-      {visibleGroupedRules.playHistory.map(({ rule, scope }) => (
-        <RuleControl
-          key={rule.key}
-          rule={rule}
-          scope={scope}
-          values={values}
-          onRuleChange={handleRuleChange}
-          onQualifierChange={onQualifierChange}
-          sources={sources}
-          lookups={lookups}
-        />
-      ))}
-    </FilterGroup>
-  ) : null;
-
-  const overseerrFilter = hasOverseerrSection ? (
-    <FilterGroup label="Requests">
-      {visibleGroupedRules.requests.map(({ rule, scope }) => (
-        <RuleControl
-          key={rule.key}
-          rule={rule}
-          scope={scope}
-          values={values}
-          onRuleChange={handleRuleChange}
-          onQualifierChange={onQualifierChange}
-          sources={sources}
-          lookups={lookups}
-        />
-      ))}
-    </FilterGroup>
-  ) : null;
-
-  const tmdbFilter = hasTmdbSection ? (
-    <FilterGroup label="TMDB">
-      {visibleGroupedRules.tmdb.map(({ rule, scope }) => (
-        <RuleControl
-          key={rule.key}
-          rule={rule}
-          scope={scope}
-          values={values}
-          onRuleChange={handleRuleChange}
-          onQualifierChange={onQualifierChange}
-          sources={sources}
-          lookups={lookups}
-        />
-      ))}
-    </FilterGroup>
-  ) : null;
+  ));
 
   // ─── Active conditions — drives the saved-query summary row ───────────────
   // Each active filter becomes one removable chip. The chips are exactly the
@@ -1642,11 +1436,7 @@ export function MediaFilterBar({
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2">
           {searchInput}
           {yearFilter}
-          {movieGroup}
-          {seriesGroup}
-          {playHistoryFilter}
-          {overseerrFilter}
-          {tmdbFilter}
+          {desktopSections}
           {filterPicker}
         </div>
         {summaryRow}
@@ -1709,36 +1499,13 @@ export function MediaFilterBar({
               </div>
             )}
 
-            {/* Movies section */}
-            {hasMovieSection && (
-              <div>
-                <h3 className="text-sm font-semibold text-text-secondary mb-3">Movies</h3>
+            {visibleSections.map(([heading, entries]) => (
+              <div key={heading}>
+                <h3 className="text-sm font-semibold text-text-secondary mb-3">{heading}</h3>
                 <div className="space-y-3">
-                  {visibleGroupedRules.movies.map(({ rule, scope }) => (
+                  {entries.map(({ rule, scope }) => (
                     <RuleControl
-                      key={rule.key}
-                      rule={rule}
-                      scope={scope}
-                      values={values}
-                      onRuleChange={handleRuleChange}
-                      onQualifierChange={onQualifierChange}
-                      sources={sources}
-                      lookups={lookups}
-                      variant={rule.dataType === 'boolean' ? 'chips' : 'segment'}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Series section */}
-            {hasSeriesSection && (
-              <div>
-                <h3 className="text-sm font-semibold text-text-secondary mb-3">Series</h3>
-                <div className="space-y-3">
-                  {visibleGroupedRules.series.map(({ rule, scope }) => (
-                    <RuleControl
-                      key={rule.key}
+                      key={`${scope}:${rule.key}`}
                       rule={rule}
                       scope={scope}
                       values={values}
@@ -1747,7 +1514,9 @@ export function MediaFilterBar({
                       sources={sources}
                       lookups={lookups}
                       variant={
-                        rule.dataType === 'boolean' || rule.dataType === 'string'
+                        rule.dataType === 'boolean' ||
+                        rule.dataType === 'string' ||
+                        rule.dataType === 'number'
                           ? 'chips'
                           : 'segment'
                       }
@@ -1755,29 +1524,7 @@ export function MediaFilterBar({
                   ))}
                 </div>
               </div>
-            )}
-
-            {/* Play History section */}
-            {hasPlayHistorySection && (
-              <div>
-                <h3 className="text-sm font-semibold text-text-secondary mb-3">Play History</h3>
-                <div className="space-y-3">
-                  {visibleGroupedRules.playHistory.map(({ rule, scope }) => (
-                    <RuleControl
-                      key={rule.key}
-                      rule={rule}
-                      scope={scope}
-                      values={values}
-                      onRuleChange={handleRuleChange}
-                      onQualifierChange={onQualifierChange}
-                      sources={sources}
-                      lookups={lookups}
-                      variant={rule.dataType === 'boolean' ? 'chips' : 'segment'}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+            ))}
 
             {/* Add filter */}
             {filterPicker && (
