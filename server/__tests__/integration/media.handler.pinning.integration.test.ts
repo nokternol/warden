@@ -186,7 +186,7 @@ describe('Media browse — Phase 2 pinning net', () => {
 
   // ─── Genres ────────────────────────────────────────────────────────────────
 
-  describe('movieGenres filter (OR over genre strings)', () => {
+  describe('movie genres filter (OR over genre strings)', () => {
     it('returns movies having any of the requested genres', async () => {
       const res = await client.get(
         browsePath('movie', [{ ruleKey: 'genres', value: 'Action' }], { pageSize: 100 })
@@ -207,9 +207,11 @@ describe('Media browse — Phase 2 pinning net', () => {
     });
   });
 
-  describe('seriesGenres filter', () => {
+  describe('series genres filter', () => {
     it('returns series having the requested genre', async () => {
-      const res = await client.get('/api/media/series?seriesGenres=Drama&pageSize=100');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'genres', value: 'Drama' }], { pageSize: 100 })
+      );
       const data = expectSuccessResponse(res);
       expect(data.items.map((s: { title: string }) => s.title).sort()).toEqual([
         'Show A',
@@ -222,7 +224,9 @@ describe('Media browse — Phase 2 pinning net', () => {
 
   describe('seriesType filter', () => {
     it('returns only series of the requested type', async () => {
-      const res = await client.get('/api/media/series?seriesType=anime&pageSize=100');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'seriesType', value: 'anime' }], { pageSize: 100 })
+      );
       const data = expectSuccessResponse(res);
       expect(data.items.map((s: { title: string }) => s.title)).toEqual(['Show B']);
     });
@@ -230,7 +234,9 @@ describe('Media browse — Phase 2 pinning net', () => {
 
   describe('network filter', () => {
     it('returns only series on the requested network', async () => {
-      const res = await client.get('/api/media/series?network=HBO&pageSize=100');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'network', value: 'HBO' }], { pageSize: 100 })
+      );
       const data = expectSuccessResponse(res);
       expect(data.items.map((s: { title: string }) => s.title).sort()).toEqual([
         'Show A',
@@ -273,7 +279,7 @@ describe('Media browse — Phase 2 pinning net', () => {
     });
 
     it('sorts series by status_asc (monitored false first)', async () => {
-      const res = await client.get('/api/media/series?sort=status_asc&pageSize=100');
+      const res = await client.get(browsePath('series', [], { sort: 'status_asc', pageSize: 100 }));
       const data = expectSuccessResponse(res);
       expect(data.items[0]).toMatchObject({ title: 'Show B', monitored: false });
     });

@@ -66,7 +66,7 @@ describe('MediaPage', () => {
   it('shows empty library message on movies tab when movies API returns empty', async () => {
     server.use(
       mockProcedure(contract.media.browse.movie, () => EMPTY_PAGE),
-      mockProcedure(contract.media.series, () => EMPTY_PAGE)
+      mockProcedure(contract.media.browse.series, () => EMPTY_PAGE)
     );
     render(<MediaPage />, { wrapper: Wrapper });
     // Active tab defaults to 'movies'; default provider mock has RADARR active

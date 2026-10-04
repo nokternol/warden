@@ -6,7 +6,7 @@ import { server } from '@tests/mocks/server';
 import { SWRConfig } from 'swr';
 import { describe, expect, it } from 'vitest';
 import type { useMovies } from '../useMovies';
-import { usePaginatedMedia } from '../usePaginatedMedia';
+import { type BrowseRequest, usePaginatedMedia } from '../usePaginatedMedia';
 
 const EMPTY_PAGE = {
   items: [],
@@ -57,7 +57,7 @@ describe('usePaginatedMedia', () => {
   });
 
   it('is generic — works with the series endpoint', async () => {
-    const { result } = renderHook(() => usePaginatedMedia(api.media.series), {
+    const { result } = renderHook(() => usePaginatedMedia(api.media.browse.series), {
       wrapper,
     });
 
@@ -112,7 +112,7 @@ describe('usePaginatedMedia', () => {
     expect(result.current.hasMore).toBe(false);
   });
 
-  it('appends filter entries as query params in the request URL', async () => {
+  it('sends the filter entries as the JSON filters param', async () => {
     const capturedUrl = { value: '' };
     server.use(
       mockProcedure(contract.media.browse.movie, ({ request }) => {
@@ -120,62 +120,37 @@ describe('usePaginatedMedia', () => {
         return EMPTY_PAGE;
       })
     );
+    const filters = [
+      { ruleKey: 'hasFile', value: true },
+      { ruleKey: 'year', value: { min: 2010 } },
+    ];
 
     const { result } = renderHook(
-      () =>
-        usePaginatedMedia(api.media.browse.movie, {
-          hasFile: 'true',
-          yearMin: 2010,
-        }),
+      () => usePaginatedMedia(api.media.browse.movie, { filters, sort: 'year_desc' }),
       { wrapper }
     );
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     const url = new URL(capturedUrl.value);
-    expect(url.searchParams.get('hasFile')).toBe('true');
-    expect(url.searchParams.get('yearMin')).toBe('2010');
-  });
-
-  it('undefined filter values are not appended to the URL', async () => {
-    const capturedUrl = { value: '' };
-    server.use(
-      mockProcedure(contract.media.browse.movie, ({ request }) => {
-        capturedUrl.value = request.url;
-        return EMPTY_PAGE;
-      })
-    );
-
-    const { result } = renderHook(
-      () =>
-        usePaginatedMedia(api.media.browse.movie, {
-          hasFile: undefined,
-          title: 'foo',
-        }),
-      { wrapper }
-    );
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-
-    const url = new URL(capturedUrl.value);
-    expect(url.searchParams.has('hasFile')).toBe(false);
-    expect(url.searchParams.get('title')).toBe('foo');
+    expect(JSON.parse(url.searchParams.get('filters') ?? '')).toEqual(filters);
+    expect(url.searchParams.get('sort')).toBe('year_desc');
   });
 
   it('resets to page 1 when filters change', async () => {
     const { result, rerender } = renderHook<
       ReturnType<typeof useMovies>,
-      { filters?: Record<string, string> }
-    >(({ filters }) => usePaginatedMedia(api.media.browse.movie, filters), {
+      { request?: BrowseRequest }
+    >(({ request }) => usePaginatedMedia(api.media.browse.movie, request), {
       wrapper,
-      initialProps: { filters: undefined },
+      initialProps: { request: undefined },
     });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     result.current.fetchMore();
     await waitFor(() => expect(result.current.items.length).toBe(96));
 
-    rerender({ filters: { status: 'monitored' } });
+    rerender({ request: { filters: [{ ruleKey: 'monitored', value: true }] } });
 
     await waitFor(() => {
       expect(result.current.items.length).toBeLessThanOrEqual(48);

@@ -8,7 +8,7 @@ import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { type Filter, createMediaProcedures } from '@server/modules/media';
 import { createMediaQueryProcedures } from '@server/modules/mediaQueries';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
-import { createMockConfig, createRadarrMovie } from '@tests/factories';
+import { createMockConfig, createRadarrMovie, createSonarrSeries } from '@tests/factories';
 import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
@@ -16,11 +16,24 @@ import { http, HttpResponse } from 'msw';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 const RADARR_URL = 'http://localhost:7878';
+const SONARR_URL = 'http://localhost:8989';
 
 const MOVIES = [
   createRadarrMovie({ id: 1, title: 'Batman Begins', year: 2005, hasFile: true, tmdbId: 272 }),
   createRadarrMovie({ id: 2, title: 'Batman Returns', year: 1992, hasFile: false, tmdbId: 364 }),
   createRadarrMovie({ id: 3, title: 'The Matrix', year: 1999, hasFile: true, tmdbId: 603 }),
+];
+
+const SERIES = [
+  createSonarrSeries({ id: 1, title: 'Breaking Bad', year: 2008, monitored: true, tvdbId: 81189 }),
+  createSonarrSeries({
+    id: 2,
+    title: 'Better Call Saul',
+    year: 2015,
+    monitored: false,
+    tvdbId: 273181,
+  }),
+  createSonarrSeries({ id: 3, title: 'Succession', year: 2018, monitored: true, tvdbId: 320785 }),
 ];
 
 /**
@@ -53,6 +66,12 @@ describe('Browse speaks the save encoding', () => {
       url: `${RADARR_URL}/api/v3`,
       apiKey: 'test-api-key',
     });
+    await container.cradle.providerSettingsService.create({
+      type: MetadataProviderType.SONARR,
+      name: 'Sonarr',
+      url: `${SONARR_URL}/api/v3`,
+      apiKey: 'test-api-key',
+    });
 
     const app: Express = express();
     app.use(express.json());
@@ -76,7 +95,10 @@ describe('Browse speaks the save encoding', () => {
   });
 
   beforeEach(() => {
-    server.use(http.get(`${RADARR_URL}/api/v3/movie`, () => HttpResponse.json(MOVIES)));
+    server.use(
+      http.get(`${RADARR_URL}/api/v3/movie`, () => HttpResponse.json(MOVIES)),
+      http.get(`${SONARR_URL}/api/v3/series`, () => HttpResponse.json(SERIES))
+    );
   });
 
   async function browse(contentType: 'movie' | 'series', filters: Filter[]) {
@@ -101,6 +123,19 @@ describe('Browse speaks the save encoding', () => {
     const { count } = await preview('movie', filters);
 
     expect(page.items.map((m) => m.title)).toEqual(['Batman Begins']);
+    expect(page.totalCount).toBe(count);
+  });
+
+  it('browses series to exactly what a query saved with the same entries previews', async () => {
+    const filters: Filter[] = [
+      { ruleKey: 'monitored', value: true },
+      { ruleKey: 'title', value: 'b' },
+    ];
+
+    const page = await browse('series', filters);
+    const { count } = await preview('series', filters);
+
+    expect(page.items.map((s) => s.title)).toEqual(['Breaking Bad']);
     expect(page.totalCount).toBe(count);
   });
 });

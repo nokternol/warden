@@ -278,7 +278,7 @@ export const mediaHandlers = [
     browsePage(MOCK_MOVIES, request, { min: 2000, max: 2029 })
   ),
 
-  mockProcedure(contract.media.series, ({ request }) =>
+  mockProcedure(contract.media.browse.series, ({ request }) =>
     browsePage(MOCK_SERIES, request, { min: 2008, max: 2017 })
   ),
 

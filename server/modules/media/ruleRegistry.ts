@@ -930,51 +930,12 @@ export const MEDIA_RULES = [
 // ─── Lookup ───────────────────────────────────────────────────────────────────
 
 export function getRule(key: string, contentType: ContentType): MediaRule | undefined {
-  // Widened for iteration — see the comment on the derived range-param types below for why.
+  // Widened for iteration: `as const` keeps each rule's literal `key` and `contentTypes`, which a
+  // plain `find` over the union of rule shapes cannot call `includes` on with a `ContentType`.
   return (MEDIA_RULES as readonly MediaRule[]).find(
     (d) => d.key === key && d.contentTypes.includes(contentType)
   );
 }
-
-// ─── Range-rule keys, by content type — checked against the API contract ──────
-// The browse-path param translators (server `*_PARAM_TO_KEY`, client
-// `BROWSE_PARAM_BINDINGS`) are checked against `MovieRangeRuleKey`/`SeriesRangeRuleKey`
-// — declared in the API contract (`contract/browseRangeKeys.ts`), not derived here,
-// because the contract depends on nothing in `server/`. `_ActualXRangeKey` below is
-// the real derivation, used only to assert the contract's list hasn't drifted from
-// `MEDIA_RULES`. A range rule added to, removed from, or re-scoped in `MEDIA_RULES`
-// without a matching update to `contract/browseRangeKeys.ts` fails to compile right
-// here, naming the mismatched key (caught the hard way once already:
-// `plexAddedDaysAgo` shipped in the registry with no entry in any of the five
-// browse-path translators, and nothing failed to compile).
-export type { MovieRangeRuleKey, SeriesRangeRuleKey } from '@contract/browseRangeKeys';
-import type { MovieRangeRuleKey, SeriesRangeRuleKey } from '@contract/browseRangeKeys';
-
-type RangeRule = Extract<(typeof MEDIA_RULES)[number], { dataType: 'range' }>;
-
-/** Every range rule whose `contentTypes` includes the given content type. */
-type _ActualRangeRuleFor<CT extends ContentType> = RangeRule extends infer R
-  ? R extends { contentTypes: readonly (infer U)[] }
-    ? CT extends U
-      ? R
-      : never
-    : never
-  : never;
-
-type _ActualMovieRangeKey = _ActualRangeRuleFor<'movie'>['key'];
-type _ActualSeriesRangeKey = _ActualRangeRuleFor<'series'>['key'];
-
-/** Symmetric difference — non-`never` in either direction means the two lists disagree. */
-type _SymmetricDiff<A extends string, B extends string> = Exclude<A, B> | Exclude<B, A>;
-
-const _movieRangeKeysMatchContract: Record<
-  _SymmetricDiff<_ActualMovieRangeKey, MovieRangeRuleKey>,
-  never
-> = {};
-const _seriesRangeKeysMatchContract: Record<
-  _SymmetricDiff<_ActualSeriesRangeKey, SeriesRangeRuleKey>,
-  never
-> = {};
 
 // ─── Every EnrichmentFields key must be reachable through at least one rule ────
 // `sourceField` is declared per rule, not inferred (a predicate body isn't

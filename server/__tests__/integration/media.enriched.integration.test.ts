@@ -193,7 +193,7 @@ describe('Media browse — enriched predicates', () => {
     });
   });
 
-  describe('lastWatchedDaysAgoGte', () => {
+  describe('lastWatchedDaysAgo min', () => {
     it('returns only movies last watched at least N days ago', async () => {
       const daysAgoIso = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString();
       await seedEnrichment(1, { lastWatchedAt: daysAgoIso(10) });
@@ -209,7 +209,7 @@ describe('Media browse — enriched predicates', () => {
     });
   });
 
-  describe('lastWatchedDaysAgoLte', () => {
+  describe('lastWatchedDaysAgo max', () => {
     it('returns only movies last watched at most N days ago', async () => {
       const daysAgoIso = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString();
       await seedEnrichment(1, { lastWatchedAt: daysAgoIso(10) });
@@ -225,7 +225,7 @@ describe('Media browse — enriched predicates', () => {
     });
   });
 
-  describe('plexAddedDaysAgoGte', () => {
+  describe('plexAddedDaysAgo min', () => {
     it('returns only movies added to Plex at least N days ago', async () => {
       const daysAgoIso = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString();
       await seedEnrichment(1, { plexAddedAt: daysAgoIso(10) });
@@ -239,8 +239,8 @@ describe('Media browse — enriched predicates', () => {
     });
   });
 
-  describe('tautulliWatched (migrated to enrichment playCount)', () => {
-    it('returns only movies with enriched playCount > 0 when tautulliWatched=true', async () => {
+  describe('watched (from enrichment playCount)', () => {
+    it('returns only movies with enriched playCount > 0 when watched is true', async () => {
       await seedEnrichment(1, { playCount: 3 });
       await seedEnrichment(2, { playCount: 0 });
 
@@ -251,7 +251,7 @@ describe('Media browse — enriched predicates', () => {
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Requested']);
     });
 
-    it('returns the complement (incl. movies with no enrichment) when tautulliWatched=false', async () => {
+    it('returns the complement (incl. movies with no enrichment) when watched is false', async () => {
       await seedEnrichment(1, { playCount: 3 });
 
       const res = await client.get(

@@ -2,89 +2,40 @@ import { z } from 'zod';
 import { base } from './base';
 import { type ContentType, ContentTypeSchema, FilterSchema, ProviderTypeSchema } from './schemas';
 
-// ─── Browse query (the content-prefixed param encoding the browse path reads) ──
+// ─── Browse query ───────────────────────────────────────────────────────────────
 
 const paginationQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional().default(1),
   pageSize: z.coerce.number().int().positive().optional().default(48),
 });
 
-// Query-param coercion helpers (browse params arrive as strings).
-const num = () => z.coerce.number().optional();
-const intNum = () => z.coerce.number().int().optional();
-const bool3 = () =>
-  z
-    .enum(['true', 'false'])
-    .transform((v) => v === 'true')
-    .optional();
 const sortField = z
   .enum(['title_asc', 'title_desc', 'year_asc', 'year_desc', 'status_asc', 'status_desc'])
   .optional()
   .default('title_asc');
 
-// Fields valid for both content types — including the enriched predicates.
-const sharedFilterFields = {
-  title: z.string().optional(),
-  yearMin: intNum(),
-  yearMax: intNum(),
-  certification: z.string().optional(),
-  addedDaysAgoGte: intNum(),
-  addedDaysAgoLte: intNum(),
-  sizeOnDiskGbGte: num(),
-  sizeOnDiskGbLte: num(),
-  overseerrRequestStatus: intNum(),
-  overseerrHasIssue: bool3(),
-  tmdbStatus: z.string().optional(),
-  lastWatchedDaysAgoGte: intNum(),
-  lastWatchedDaysAgoLte: intNum(),
-  plexAddedDaysAgoGte: intNum(),
-  plexAddedDaysAgoLte: intNum(),
-  jellyfinAddedDaysAgoGte: intNum(),
-  jellyfinAddedDaysAgoLte: intNum(),
-  fileSizeBytesGte: num(),
-  fileSizeBytesLte: num(),
-  releaseDaysAgoGte: intNum(),
-  releaseDaysAgoLte: intNum(),
-  fileContainer: z.string().optional(),
-  videoCodec: z.string().optional(),
-  audioCodec: z.string().optional(),
-  fileResolution: z.string().optional(),
-  labels: z.string().optional(),
-  jellyfinIsFavorite: bool3(),
+/**
+ * A query-string value holding JSON, parsed and then validated by `schema`.
+ * Bracket-encoded query values arrive as strings, so a structured value that
+ * must keep its types (booleans, numbers, nested objects) travels as JSON.
+ */
+const jsonQuery = <T extends z.ZodType>(schema: T) =>
+  z
+    .string()
+    .transform((raw, ctx) => {
+      try {
+        return JSON.parse(raw) as unknown;
+      } catch {
+        ctx.addIssue({ code: 'custom', message: 'must be JSON' });
+        return z.NEVER;
+      }
+    })
+    .pipe(schema);
+
+/** A browse request: the saved-query `Filter` entries, plus sort and page. */
+export const BrowseQuerySchema = paginationQuerySchema.extend({
+  filters: jsonQuery(z.array(FilterSchema)).optional(),
   sort: sortField,
-  tautulliWatched: z.enum(['true', 'false']).optional(),
-};
-
-// Positive-int qualifier for an instance-scoped rule's sibling `*ProviderId` param —
-// which instance's namespace the paired id list belongs to (§10). Absent means unqualified.
-const providerIdParam = () => z.coerce.number().int().positive().optional();
-
-export const SeriesBrowseQuerySchema = paginationQuerySchema.extend({
-  ...sharedFilterFields,
-  monitored: bool3(),
-  seriesStatus: z.string().optional(),
-  seriesTagIds: z.string().optional(),
-  seriesTagIdsProviderId: providerIdParam(),
-  seriesQualityProfileIds: z.string().optional(),
-  seriesQualityProfileIdsProviderId: providerIdParam(),
-  seriesGenres: z.string().optional(),
-  seriesType: z.string().optional(),
-  network: z.string().optional(),
-  sonarrRatingGte: num(),
-  sonarrRatingLte: num(),
-  sonarrEnded: bool3(),
-  sonarrLastAiredDaysAgoGte: intNum(),
-  sonarrLastAiredDaysAgoLte: intNum(),
-  sonarrPercentEpisodesGte: num(),
-  sonarrPercentEpisodesLte: num(),
-  seasonCountGte: intNum(),
-  seasonCountLte: intNum(),
-  episodeCountGte: intNum(),
-  episodeCountLte: intNum(),
-  nextAiringInDaysGte: intNum(),
-  nextAiringInDaysLte: intNum(),
-  seriesLanguageProfileIds: z.string().optional(),
-  seriesLanguageProfileIdsProviderId: providerIdParam(),
 });
 
 // ─── Outputs ──────────────────────────────────────────────────────────────────
@@ -240,30 +191,6 @@ export const SearchResultSchema = z.object({
   error: z.string().optional(),
 });
 
-/**
- * A query-string value holding JSON, parsed and then validated by `schema`.
- * Bracket-encoded query values arrive as strings, so a structured value that
- * must keep its types (booleans, numbers, nested objects) travels as JSON.
- */
-const jsonQuery = <T extends z.ZodType>(schema: T) =>
-  z
-    .string()
-    .transform((raw, ctx) => {
-      try {
-        return JSON.parse(raw) as unknown;
-      } catch {
-        ctx.addIssue({ code: 'custom', message: 'must be JSON' });
-        return z.NEVER;
-      }
-    })
-    .pipe(schema);
-
-/** A browse request: the saved-query `Filter` entries, plus sort and page. */
-export const BrowseQuerySchema = paginationQuerySchema.extend({
-  filters: jsonQuery(z.array(FilterSchema)).optional(),
-  sort: sortField,
-});
-
 /** One page of a content type's library matching the filters, grouped across instances. */
 const browse = <T extends z.ZodType>(contentType: ContentType, item: T) =>
   base
@@ -284,13 +211,8 @@ export const media = {
   /** Browse, per content type: `GET /api/media/{movie|series}`. Movies group by TMDB id, series by TVDB id. */
   browse: {
     movie: browse('movie', ManagedMovieSchema),
+    series: browse('series', ManagedSeriesSchema),
   },
-
-  /** One page of series matching the browse filters, grouped by TVDB id across instances. */
-  series: base
-    .route({ method: 'GET', path: '/api/media/series' })
-    .input(SeriesBrowseQuerySchema)
-    .output(browsePage(ManagedSeriesSchema)),
 
   tags: base
     .route({ method: 'GET', path: '/api/media/tags' })
@@ -356,4 +278,4 @@ export type InstanceIdLookup = z.infer<typeof InstanceIdLookupSchema>;
 export type StringLookup = z.infer<typeof StringLookupSchema>;
 export type MediaLookup = InstanceIdLookup | StringLookup;
 export type SearchResult = z.infer<typeof SearchResultSchema>;
-export type SeriesBrowseQuery = z.input<typeof SeriesBrowseQuerySchema>;
+export type BrowseQuery = z.input<typeof BrowseQuerySchema>;

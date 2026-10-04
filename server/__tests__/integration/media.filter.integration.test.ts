@@ -276,7 +276,7 @@ describe('Media Filter API', () => {
 
   describe('GET /api/media/series — monitored filter (A02)', () => {
     it('returns only monitored series when monitored=true', async () => {
-      const res = await client.get('/api/media/series?monitored=true');
+      const res = await client.get(browsePath('series', [{ ruleKey: 'monitored', value: true }]));
       const data = expectSuccessResponse(res);
 
       expect(data.totalCount).toBe(3);
@@ -284,7 +284,7 @@ describe('Media Filter API', () => {
     });
 
     it('returns only unmonitored series when monitored=false', async () => {
-      const res = await client.get('/api/media/series?monitored=false');
+      const res = await client.get(browsePath('series', [{ ruleKey: 'monitored', value: false }]));
       const data = expectSuccessResponse(res);
 
       expect(data.totalCount).toBe(1);
@@ -294,7 +294,9 @@ describe('Media Filter API', () => {
 
   describe('GET /api/media/series — seriesStatus filter', () => {
     it('returns only ended series when seriesStatus=ended', async () => {
-      const res = await client.get('/api/media/series?seriesStatus=ended');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'seriesStatus', value: 'ended' }])
+      );
       const data = expectSuccessResponse(res);
 
       expect(data.totalCount).toBe(3);
@@ -302,7 +304,9 @@ describe('Media Filter API', () => {
     });
 
     it('returns only continuing series when seriesStatus=continuing', async () => {
-      const res = await client.get('/api/media/series?seriesStatus=continuing');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'seriesStatus', value: 'continuing' }])
+      );
       const data = expectSuccessResponse(res);
 
       expect(data.totalCount).toBe(1);
@@ -428,9 +432,11 @@ describe('Media Filter API', () => {
     });
   });
 
-  describe('GET /api/media/series — seriesTagIds filter', () => {
+  describe('GET /api/media/series — tagIds filter', () => {
     it('returns only series with the specified tag', async () => {
-      const res = await client.get('/api/media/series?seriesTagIds=1');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'tagIds', value: { ids: [1] } }])
+      );
       const data = expectSuccessResponse(res);
 
       // Breaking Bad [1], Succession [1]
@@ -464,9 +470,11 @@ describe('Media Filter API', () => {
     });
   });
 
-  describe('GET /api/media/series — seriesQualityProfileIds filter', () => {
+  describe('GET /api/media/series — qualityProfileIds filter', () => {
     it('returns only series on the specified profile', async () => {
-      const res = await client.get('/api/media/series?seriesQualityProfileIds=2');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'qualityProfileIds', value: { ids: [2] } }])
+      );
       const data = expectSuccessResponse(res);
 
       // Better Call Saul (profile 2), The Boys (profile 2)
@@ -528,7 +536,7 @@ describe('Media Filter API', () => {
     });
 
     it('includes yearRange in series response', async () => {
-      const res = await client.get('/api/media/series?page=1&pageSize=2');
+      const res = await client.get(browsePath('series', [], { page: 1, pageSize: 2 }));
       const data = expectSuccessResponse(res);
 
       // Series: 2008, 2015, 2018, 2019 → min=2008, max=2019

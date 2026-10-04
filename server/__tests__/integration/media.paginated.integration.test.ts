@@ -199,12 +199,12 @@ describe('Paginated Media API', () => {
 
   describe('GET /api/media/series', () => {
     it('returns 401 when unauthenticated', async () => {
-      const res = await unauthedClient.get('/api/media/series');
+      const res = await unauthedClient.get(browsePath('series'));
       expectErrorResponse(res, 401);
     });
 
     it('returns paginated result shape', async () => {
-      const res = await authedClient.get('/api/media/series?page=1&pageSize=48');
+      const res = await authedClient.get(browsePath('series', [], { page: 1, pageSize: 48 }));
       const data = expectSuccessResponse(res);
 
       expect(data).toHaveProperty('items');
@@ -215,7 +215,7 @@ describe('Paginated Media API', () => {
     });
 
     it('returns series items from provider', async () => {
-      const res = await authedClient.get('/api/media/series?page=1&pageSize=48');
+      const res = await authedClient.get(browsePath('series', [], { page: 1, pageSize: 48 }));
       const data = expectSuccessResponse(res);
 
       expect(data.items[0]).toMatchObject({ title: 'Breaking Bad' });
@@ -223,7 +223,7 @@ describe('Paginated Media API', () => {
     });
 
     it('defaults to page=1 and pageSize=48 when params are absent', async () => {
-      const res = await authedClient.get('/api/media/series');
+      const res = await authedClient.get(browsePath('series'));
       const data = expectSuccessResponse(res);
 
       expect(data.page).toBe(1);
@@ -284,7 +284,7 @@ describe('Paginated Media API', () => {
       const client = buildErrorClient(
         serveApi({ media: createMediaProcedures(cradle).procedures })
       );
-      const res = await client.get('/api/media/series');
+      const res = await client.get(browsePath('series'));
       const data = expectSuccessResponse(res);
 
       expect(data.items).toEqual([]);
@@ -330,7 +330,7 @@ describe('Paginated Media API', () => {
       const client = buildErrorClient(
         serveApi({ media: createMediaProcedures(cradle).procedures })
       );
-      const res = await client.get('/api/media/series');
+      const res = await client.get(browsePath('series'));
       const data = expectSuccessResponse(res);
 
       expect(Array.isArray(data.errors)).toBe(true);

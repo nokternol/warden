@@ -1,5 +1,6 @@
+import type { Filter } from '@app/hooks/useMediaQueries';
 import { apiKey } from '@app/lib/api/useApi';
-import type { MediaFilters } from '@app/types/media';
+import type { BrowseQuery } from '@contract/media';
 import { useCallback, useLayoutEffect, useRef } from 'react';
 import useSWRInfinite from 'swr/infinite';
 
@@ -11,17 +12,25 @@ interface PaginatedPage<T> {
   yearRange?: { min: number | null; max: number | null };
 }
 
+/** What to browse: the saved-query `Filter` entries and the sort order. */
+export interface BrowseRequest {
+  filters: Filter[];
+  sort?: string;
+}
+
 const PAGE_SIZE = 48;
 
 /**
- * Pages through a browse procedure (`api.media.movies` or `api.media.series`).
- * `filters` are browse params as `toBrowseParams` encodes them.
+ * Pages through a browse procedure (`api.media.browse.movie` or
+ * `api.media.browse.series`), sending the request's filters as the JSON
+ * `filters` param the browse input schema parses.
  */
-export function usePaginatedMedia<TInput, T>(
-  browse: (input: TInput) => Promise<PaginatedPage<T>>,
-  filters?: MediaFilters
+export function usePaginatedMedia<T>(
+  browse: (input: BrowseQuery) => Promise<PaginatedPage<T>>,
+  { filters, sort }: BrowseRequest = { filters: [] }
 ) {
-  const filtersKey = JSON.stringify(filters ?? null);
+  const encodedFilters = JSON.stringify(filters);
+  const filtersKey = `${encodedFilters}|${sort ?? ''}`;
 
   const getKey = (pageIndex: number, prev: PaginatedPage<T> | null) => {
     // Do not key page N until page N-1 has loaded. When filters change, the
@@ -32,15 +41,18 @@ export function usePaginatedMedia<TInput, T>(
     if (pageIndex > 0 && !prev) return null;
     if (prev && prev.items.length === 0) return null;
 
-    // Browse params use the content-prefixed browse encoding, which the browse
-    // procedure's input schema parses server-side.
-    const input = { ...filters, page: pageIndex + 1, pageSize: PAGE_SIZE } as TInput;
-    return apiKey(browse, input);
+    return apiKey(browse, {
+      filters: encodedFilters,
+      // Sort state is held as a free string client-side; the server validates it.
+      sort: sort as BrowseQuery['sort'],
+      page: pageIndex + 1,
+      pageSize: PAGE_SIZE,
+    });
   };
 
   const { data, isLoading, isValidating, setSize, error } = useSWRInfinite<PaginatedPage<T>>(
     getKey,
-    ([procedure, input]: ReturnType<typeof apiKey<TInput>>) =>
+    ([procedure, input]: ReturnType<typeof apiKey<BrowseQuery>>) =>
       procedure(input) as Promise<PaginatedPage<T>>,
     {
       // Don't re-fetch page 1 every time a new page is appended. The default

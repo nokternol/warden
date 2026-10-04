@@ -258,7 +258,7 @@ describe('Media browse — registry-delegated predicates', () => {
     });
   });
 
-  describe('radarrImdbRating range', () => {
+  describe('imdbRating range', () => {
     const ratedMovies = [
       {
         id: 1,

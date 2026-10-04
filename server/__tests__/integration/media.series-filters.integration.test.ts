@@ -27,7 +27,7 @@ import { createMediaProcedures } from '@server/modules/media';
 import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.queries';
 import type { EnrichmentFields } from '@server/modules/media/mediaFieldProvider';
 import { createMockConfig } from '@tests/factories';
-import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
+import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import { server } from '@tests/mocks/server';
 import { eq } from 'drizzle-orm';
 import express, { type Express } from 'express';
@@ -147,7 +147,9 @@ describe('Media browse — series registry predicates', () => {
         series(1, 'TV-MA Show', { certification: 'TV-MA' }),
         series(2, 'TV-14 Show', { certification: 'TV-14' }),
       ]);
-      const res = await client.get('/api/media/series?certification=TV-MA&pageSize=100');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'certification', value: 'TV-MA' }], { pageSize: 100 })
+      );
       const data = expectSuccessResponse(res);
       expect(data.items.map((s: { title: string }) => s.title)).toEqual(['TV-MA Show']);
     });
@@ -160,14 +162,18 @@ describe('Media browse — series registry predicates', () => {
     ];
     it('filters by added at least N days ago', async () => {
       const client = clientWithSeries(list);
-      const res = await client.get('/api/media/series?addedDaysAgoGte=7&pageSize=100');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'addedDaysAgo', value: { min: 7 } }], { pageSize: 100 })
+      );
       expect(expectSuccessResponse(res).items.map((s: { title: string }) => s.title)).toEqual([
         'Old',
       ]);
     });
     it('filters by added at most N days ago', async () => {
       const client = clientWithSeries(list);
-      const res = await client.get('/api/media/series?addedDaysAgoLte=7&pageSize=100');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'addedDaysAgo', value: { max: 7 } }], { pageSize: 100 })
+      );
       expect(expectSuccessResponse(res).items.map((s: { title: string }) => s.title)).toEqual([
         'New',
       ]);
@@ -181,90 +187,116 @@ describe('Media browse — series registry predicates', () => {
     ];
     it('filters by at least N GB', async () => {
       const client = clientWithSeries(list);
-      const res = await client.get('/api/media/series?sizeOnDiskGbGte=10&pageSize=100');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'sizeOnDiskGb', value: { min: 10 } }], { pageSize: 100 })
+      );
       expect(expectSuccessResponse(res).items.map((s: { title: string }) => s.title)).toEqual([
         'Large',
       ]);
     });
     it('filters by at most N GB', async () => {
       const client = clientWithSeries(list);
-      const res = await client.get('/api/media/series?sizeOnDiskGbLte=10&pageSize=100');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'sizeOnDiskGb', value: { max: 10 } }], { pageSize: 100 })
+      );
       expect(expectSuccessResponse(res).items.map((s: { title: string }) => s.title)).toEqual([
         'Small',
       ]);
     });
   });
 
-  describe('sonarrRating range (→ communityRating)', () => {
+  describe('communityRating range', () => {
     const list = [
       series(1, 'Low', { ratings: { votes: 100, value: 4.5 } }),
       series(2, 'High', { ratings: { votes: 100, value: 8.5 } }),
     ];
     it('filters by community rating at least N', async () => {
       const client = clientWithSeries(list);
-      const res = await client.get('/api/media/series?sonarrRatingGte=7&pageSize=100');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'communityRating', value: { min: 7 } }], { pageSize: 100 })
+      );
       expect(expectSuccessResponse(res).items.map((s: { title: string }) => s.title)).toEqual([
         'High',
       ]);
     });
     it('filters by community rating at most N', async () => {
       const client = clientWithSeries(list);
-      const res = await client.get('/api/media/series?sonarrRatingLte=7&pageSize=100');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'communityRating', value: { max: 7 } }], { pageSize: 100 })
+      );
       expect(expectSuccessResponse(res).items.map((s: { title: string }) => s.title)).toEqual([
         'Low',
       ]);
     });
   });
 
-  describe('sonarrEnded (→ ended)', () => {
+  describe('ended', () => {
     it('filters to ended series', async () => {
       const client = clientWithSeries([
         series(1, 'Ended', { ended: true }),
         series(2, 'Running', { ended: false }),
       ]);
-      const res = await client.get('/api/media/series?sonarrEnded=true&pageSize=100');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'ended', value: true }], { pageSize: 100 })
+      );
       expect(expectSuccessResponse(res).items.map((s: { title: string }) => s.title)).toEqual([
         'Ended',
       ]);
     });
   });
 
-  describe('sonarrLastAiredDaysAgo range (→ lastAiredDaysAgo)', () => {
+  describe('lastAiredDaysAgo range', () => {
     const list = [
       series(1, 'StaleAir', { previousAiring: daysAgoIso(40) }),
       series(2, 'FreshAir', { previousAiring: daysAgoIso(3) }),
     ];
     it('filters by last aired at least N days ago', async () => {
       const client = clientWithSeries(list);
-      const res = await client.get('/api/media/series?sonarrLastAiredDaysAgoGte=30&pageSize=100');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'lastAiredDaysAgo', value: { min: 30 } }], {
+          pageSize: 100,
+        })
+      );
       expect(expectSuccessResponse(res).items.map((s: { title: string }) => s.title)).toEqual([
         'StaleAir',
       ]);
     });
     it('filters by last aired at most N days ago', async () => {
       const client = clientWithSeries(list);
-      const res = await client.get('/api/media/series?sonarrLastAiredDaysAgoLte=30&pageSize=100');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'lastAiredDaysAgo', value: { max: 30 } }], {
+          pageSize: 100,
+        })
+      );
       expect(expectSuccessResponse(res).items.map((s: { title: string }) => s.title)).toEqual([
         'FreshAir',
       ]);
     });
   });
 
-  describe('sonarrPercentEpisodes range (→ episodePercentage)', () => {
+  describe('episodePercentage range', () => {
     const list = [
       series(1, 'Partial', { statistics: { sizeOnDisk: 0, percentOfEpisodes: 40 } }),
       series(2, 'Complete', { statistics: { sizeOnDisk: 0, percentOfEpisodes: 100 } }),
     ];
     it('filters by episode completion at least N%', async () => {
       const client = clientWithSeries(list);
-      const res = await client.get('/api/media/series?sonarrPercentEpisodesGte=90&pageSize=100');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'episodePercentage', value: { min: 90 } }], {
+          pageSize: 100,
+        })
+      );
       expect(expectSuccessResponse(res).items.map((s: { title: string }) => s.title)).toEqual([
         'Complete',
       ]);
     });
     it('filters by episode completion at most N%', async () => {
       const client = clientWithSeries(list);
-      const res = await client.get('/api/media/series?sonarrPercentEpisodesLte=90&pageSize=100');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'episodePercentage', value: { max: 90 } }], {
+          pageSize: 100,
+        })
+      );
       expect(expectSuccessResponse(res).items.map((s: { title: string }) => s.title)).toEqual([
         'Partial',
       ]);
@@ -276,7 +308,9 @@ describe('Media browse — series registry predicates', () => {
       const client = clientWithSeries([series(1, 'Requested', {}), series(2, 'Other', {})]);
       await seedEnrichment(1, { overseerrRequestStatus: 2 });
       await seedEnrichment(2, { overseerrRequestStatus: 1 });
-      const res = await client.get('/api/media/series?overseerrRequestStatus=2&pageSize=100');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'overseerrRequestStatus', value: 2 }], { pageSize: 100 })
+      );
       expect(expectSuccessResponse(res).items.map((s: { title: string }) => s.title)).toEqual([
         'Requested',
       ]);
@@ -286,7 +320,9 @@ describe('Media browse — series registry predicates', () => {
       const client = clientWithSeries([series(1, 'Ended TV', {}), series(2, 'Returning TV', {})]);
       await seedEnrichment(1, { tmdbStatus: 'Ended' });
       await seedEnrichment(2, { tmdbStatus: 'Returning Series' });
-      const res = await client.get('/api/media/series?tmdbStatus=Ended&pageSize=100');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'tmdbStatus', value: 'Ended' }], { pageSize: 100 })
+      );
       expect(expectSuccessResponse(res).items.map((s: { title: string }) => s.title)).toEqual([
         'Ended TV',
       ]);
@@ -294,7 +330,9 @@ describe('Media browse — series registry predicates', () => {
 
     it('returns 0 series when an enriched filter has no enrichment data', async () => {
       const client = clientWithSeries([series(1, 'A', {}), series(2, 'B', {})]);
-      const res = await client.get('/api/media/series?overseerrRequestStatus=2&pageSize=100');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'overseerrRequestStatus', value: 2 }], { pageSize: 100 })
+      );
       expect(expectSuccessResponse(res).totalCount).toBe(0);
     });
   });
@@ -304,7 +342,9 @@ describe('Media browse — series registry predicates', () => {
       const client = clientWithSeries([series(1, 'Watched', {}), series(2, 'Unwatched', {})]);
       await seedEnrichment(1, { playCount: 5 });
       await seedEnrichment(2, { playCount: 0 });
-      const res = await client.get('/api/media/series?tautulliWatched=true&pageSize=100');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'watched', value: true }], { pageSize: 100 })
+      );
       expect(expectSuccessResponse(res).items.map((s: { title: string }) => s.title)).toEqual([
         'Watched',
       ]);

@@ -2,7 +2,7 @@ import type { MediaImage } from '@app/types/media';
 import { renderHook, waitFor } from '@testing-library/react';
 import { SWRConfig } from 'swr';
 import { describe, expect, it } from 'vitest';
-import { useMovies } from '../useMovies';
+import { type BrowseRequest, useMovies } from '../useMovies';
 
 // Isolate SWR cache per test
 const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -81,15 +81,15 @@ describe('useMovies', () => {
   it('resets to page 1 when filters change', async () => {
     const { result, rerender } = renderHook<
       ReturnType<typeof useMovies>,
-      { filters?: Record<string, string> }
-    >(({ filters }) => useMovies(filters), { wrapper, initialProps: { filters: undefined } });
+      { request?: BrowseRequest }
+    >(({ request }) => useMovies(request), { wrapper, initialProps: { request: undefined } });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     result.current.fetchMore();
     await waitFor(() => expect(result.current.items.length).toBe(96));
 
-    rerender({ filters: { status: 'monitored' } });
+    rerender({ request: { filters: [{ ruleKey: 'monitored', value: true }] } });
 
     await waitFor(() => {
       expect(result.current.items.length).toBeLessThanOrEqual(48);
