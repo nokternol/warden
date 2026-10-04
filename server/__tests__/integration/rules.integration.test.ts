@@ -81,6 +81,20 @@ describe('GET /api/rules', () => {
     expect(keys).not.toContain('monitored');
   });
 
+  it('serves no rule whose only configured producers are types that are not offered', async () => {
+    // A TMDB row can exist from before TMDB was deferred; it produces nothing offered.
+    await providerSettingsService.create({
+      type: MetadataProviderType.TMDB,
+      name: 'Legacy TMDB',
+      url: 'https://api.themoviedb.org/3',
+      apiKey: 'test-api-key',
+    });
+
+    const res = await supertest(app).get('/api/rules');
+    expect(res.status).toBe(200);
+    expect(res.body.data.map((r: { key: string }) => r.key)).toEqual([]);
+  });
+
   it('returns only movie-compatible fields when contentType=movie', async () => {
     await providerSettingsService.create({
       type: MetadataProviderType.RADARR,
