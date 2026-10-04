@@ -864,45 +864,38 @@ function booleanOptions(rule: MediaRuleDescriptor) {
   ];
 }
 
-// instance-ids / csv-strings rules need an option *list*, sourced from `lookups`
-// rather than the registry (tag/quality-profile/genre/network values are
-// library data, not part of the rule vocabulary). Only the handful of keys
-// with a known lookup source render a control; others are skipped, same as
-// `certification` today.
+// instance-ids / csv-strings rules need an option *list*. The values are library
+// data (tags, profiles, genres, codecs …), so the descriptor names the `lookup`
+// they come from rather than carrying them. Lookups served once per source type
+// (Radarr for movies, Sonarr for series) are picked by the rule's content scope.
 
-function csvIdOptions(
+function bySource<T>(pair: { radarr: T; sonarr: T }, scope: ContentScope): T {
+  return scope === 'movie' ? pair.radarr : pair.sonarr;
+}
+
+function tagOption(t: MediaTag): QualifiableOption {
+  return { id: t.id, displayName: t.label, providerId: t.providerId, providerName: t.providerName };
+}
+
+function profileOption(p: MediaQualityProfile): QualifiableOption {
+  return { id: p.id, displayName: p.name, providerId: p.providerId, providerName: p.providerName };
+}
+
+function idOptions(
   rule: MediaRuleDescriptor,
   scope: ContentScope,
   lookups: Lookups
-): Array<{ id: number; displayName: string; providerId: number; providerName: string }> | null {
-  if (rule.key === 'tagIds') {
-    const list = scope === 'movie' ? lookups.tags.radarr : lookups.tags.sonarr;
-    return list.map((t) => ({
-      id: t.id,
-      displayName: t.label,
-      providerId: t.providerId,
-      providerName: t.providerName,
-    }));
+): QualifiableOption[] | null {
+  switch (rule.lookup) {
+    case 'tags':
+      return bySource(lookups.tags, scope).map(tagOption);
+    case 'qualityProfiles':
+      return bySource(lookups.qualityProfiles, scope).map(profileOption);
+    case 'languageProfiles':
+      return lookups.languageProfiles.map(profileOption);
+    default:
+      return null;
   }
-  if (rule.key === 'qualityProfileIds') {
-    const list =
-      scope === 'movie' ? lookups.qualityProfiles.radarr : lookups.qualityProfiles.sonarr;
-    return list.map((p) => ({
-      id: p.id,
-      displayName: p.name,
-      providerId: p.providerId,
-      providerName: p.providerName,
-    }));
-  }
-  if (rule.key === 'languageProfileIds') {
-    return lookups.languageProfiles.map((p) => ({
-      id: p.id,
-      displayName: p.name,
-      providerId: p.providerId,
-      providerName: p.providerName,
-    }));
-  }
-  return null;
 }
 
 /** Whether the rule's owning content type currently has more than one active
@@ -915,23 +908,22 @@ function hasMultipleInstances(
   return (sources?.[scope]?.instances.length ?? 0) > 1;
 }
 
-function csvStringOptions(
+function stringOptions(
   rule: MediaRuleDescriptor,
   scope: ContentScope,
   lookups: Lookups
 ): string[] | null {
-  if (rule.key === 'genres')
-    return scope === 'movie' ? lookups.genres.movies : lookups.genres.series;
-  if (rule.key === 'network') return lookups.networks;
-  if (rule.key === 'studio') return lookups.studio;
-  if (rule.key === 'fileContainer') return lookups.fileContainers;
-  if (rule.key === 'videoCodec') return lookups.videoCodecs;
-  if (rule.key === 'audioCodec') return lookups.audioCodecs;
-  if (rule.key === 'fileResolution') return lookups.fileResolutions;
-  if (rule.key === 'labels') return lookups.labels;
-  if (rule.key === 'releaseGroups') return lookups.releaseGroups;
-  if (rule.key === 'collectionName') return lookups.collectionNames;
-  return null;
+  switch (rule.lookup) {
+    case undefined:
+    case 'tags':
+    case 'qualityProfiles':
+    case 'languageProfiles':
+      return null;
+    case 'genres':
+      return scope === 'movie' ? lookups.genres.movies : lookups.genres.series;
+    default:
+      return lookups[rule.lookup];
+  }
 }
 
 /** Mirrors RuleControl's switch: true only for a rule/scope RuleControl would
@@ -951,9 +943,9 @@ function ruleRendersControl(
     case 'number':
       return rule.options !== undefined;
     case 'instance-ids':
-      return csvIdOptions(rule, scope, lookups) !== null;
+      return idOptions(rule, scope, lookups) !== null;
     case 'csv-strings':
-      return csvStringOptions(rule, scope, lookups) !== null;
+      return stringOptions(rule, scope, lookups) !== null;
     default:
       return false;
   }
@@ -1112,7 +1104,7 @@ function RuleControl({
     }
 
     case 'instance-ids': {
-      const options = csvIdOptions(rule, scope, lookups);
+      const options = idOptions(rule, scope, lookups);
       if (!options) return null;
       const grouped = rule.instanceScoped === true && hasMultipleInstances(scope, sources);
       return (
@@ -1132,7 +1124,7 @@ function RuleControl({
     }
 
     case 'csv-strings': {
-      const options = csvStringOptions(rule, scope, lookups);
+      const options = stringOptions(rule, scope, lookups);
       if (!options) return null;
       return (
         <StringMultiSelectDropdown

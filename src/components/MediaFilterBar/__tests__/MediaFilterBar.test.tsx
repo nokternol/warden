@@ -66,6 +66,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Movie Tags',
     contentTypes: ['movie'],
     dataType: 'instance-ids',
+    lookup: 'tags',
     providers: ['RADARR'],
     required: false,
   },
@@ -74,6 +75,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Movie Quality',
     contentTypes: ['movie'],
     dataType: 'instance-ids',
+    lookup: 'qualityProfiles',
     providers: ['RADARR'],
     required: false,
   },
@@ -82,6 +84,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Movie Genres',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
+    lookup: 'genres',
     providers: ['RADARR'],
     required: false,
   },
@@ -98,6 +101,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Movie Studio',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
+    lookup: 'studio',
     providers: ['PLEX'],
     required: false,
   },
@@ -128,6 +132,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Series Tags',
     contentTypes: ['series'],
     dataType: 'instance-ids',
+    lookup: 'tags',
     providers: ['SONARR'],
     required: false,
   },
@@ -136,6 +141,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Series Quality',
     contentTypes: ['series'],
     dataType: 'instance-ids',
+    lookup: 'qualityProfiles',
     providers: ['SONARR'],
     required: false,
   },
@@ -144,6 +150,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Series Genres',
     contentTypes: ['series'],
     dataType: 'csv-strings',
+    lookup: 'genres',
     providers: ['SONARR'],
     required: false,
   },
@@ -166,6 +173,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Network',
     contentTypes: ['series'],
     dataType: 'csv-strings',
+    lookup: 'networks',
     providers: ['SONARR'],
     required: false,
   },
@@ -174,6 +182,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Series Studio',
     contentTypes: ['series'],
     dataType: 'csv-strings',
+    lookup: 'studio',
     providers: ['PLEX'],
     required: false,
   },
@@ -274,6 +283,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'File container',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
+    lookup: 'fileContainers',
     providers: ['PLEX'],
     required: false,
   },
@@ -282,6 +292,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Video codec',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
+    lookup: 'videoCodecs',
     providers: ['PLEX'],
     required: false,
   },
@@ -290,6 +301,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Audio codec',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
+    lookup: 'audioCodecs',
     providers: ['PLEX'],
     required: false,
   },
@@ -298,6 +310,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'File resolution',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
+    lookup: 'fileResolutions',
     providers: ['PLEX'],
     required: false,
   },
@@ -306,6 +319,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Labels',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
+    lookup: 'labels',
     providers: ['PLEX', 'JELLYFIN'],
     required: false,
   },
@@ -346,6 +360,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Release group',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
+    lookup: 'releaseGroups',
     providers: ['RADARR'],
     required: false,
   },
@@ -378,6 +393,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Collection',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
+    lookup: 'collectionNames',
     providers: ['RADARR'],
     required: false,
   },
@@ -419,6 +435,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Language profile',
     contentTypes: ['series'],
     dataType: 'instance-ids',
+    lookup: 'languageProfiles',
     providers: ['SONARR'],
     required: false,
     instanceScoped: true,
@@ -1355,5 +1372,40 @@ describe('MediaFilterBar — renders a rule it has never seen', () => {
     expect(screen.getByText('HDR')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Dolby Vision' }));
     expect(onRuleChange).toHaveBeenCalledWith('movie', 'hdrFormat', 'dolbyVision');
+  });
+
+  it("offers a multi-value rule's options from the lookup its descriptor names", async () => {
+    const user = setupUser();
+    const codecFamily: MediaRuleDescriptor = {
+      key: 'codecFamily',
+      label: 'Codec family',
+      contentTypes: ['movie'],
+      dataType: 'csv-strings',
+      providers: ['RADARR'],
+      required: false,
+      lookup: 'videoCodecs',
+    };
+    const preferredProfile: MediaRuleDescriptor = {
+      key: 'preferredProfileIds',
+      label: 'Preferred profile',
+      contentTypes: ['movie'],
+      dataType: 'instance-ids',
+      providers: ['RADARR'],
+      required: false,
+      instanceScoped: true,
+      lookup: 'qualityProfiles',
+    };
+    render(
+      <MediaFilterBar
+        {...makeProps({ rules: [codecFamily, preferredProfile], lookups: RICH_LOOKUPS })}
+      />
+    );
+    await addFilter(user, 'Codec family');
+    await user.click(screen.getByRole('button', { name: /codec family/i }));
+    expect(screen.getByRole('menuitemcheckbox', { name: /hevc/i })).toBeInTheDocument();
+
+    await addFilter(user, 'Preferred profile');
+    await user.click(screen.getByRole('button', { name: /preferred profile/i }));
+    expect(screen.getByRole('menuitemcheckbox', { name: /HD-1080p/i })).toBeInTheDocument();
   });
 });

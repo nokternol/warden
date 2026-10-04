@@ -44,6 +44,7 @@ describe('useMediaRules', () => {
                 label: 'Tags',
                 contentTypes: ['movie'],
                 dataType: 'instance-ids',
+                lookup: 'tags',
                 providers: ['RADARR'],
                 required: false,
               },
