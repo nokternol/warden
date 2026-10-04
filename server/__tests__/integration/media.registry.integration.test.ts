@@ -16,7 +16,7 @@ import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createMediaProcedures } from '@server/modules/media';
 import { createMockConfig } from '@tests/factories';
-import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
+import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
@@ -125,7 +125,9 @@ describe('Media browse — registry-delegated predicates', () => {
   describe('certification (previously stripped by the browse schema)', () => {
     it('returns only movies whose certification matches (case-insensitive)', async () => {
       const client = clientWithMovies(REG_MOVIES);
-      const res = await client.get('/api/media/movies?certification=PG-13&pageSize=100');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'certification', value: 'PG-13' }], { pageSize: 100 })
+      );
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Rated PG13']);
     });
@@ -163,7 +165,9 @@ describe('Media browse — registry-delegated predicates', () => {
           path: '/m/2',
         },
       ]);
-      const res = await client.get('/api/media/movies?addedDaysAgoGte=7&pageSize=100');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'addedDaysAgo', value: { min: 7 } }], { pageSize: 100 })
+      );
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Old']);
     });
@@ -197,7 +201,9 @@ describe('Media browse — registry-delegated predicates', () => {
           path: '/m/2',
         },
       ]);
-      const res = await client.get('/api/media/movies?addedDaysAgoLte=7&pageSize=100');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'addedDaysAgo', value: { max: 7 } }], { pageSize: 100 })
+      );
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['New']);
     });
@@ -235,14 +241,18 @@ describe('Media browse — registry-delegated predicates', () => {
 
     it('returns only movies at least N GB on disk', async () => {
       const client = clientWithMovies(sizedMovies);
-      const res = await client.get('/api/media/movies?sizeOnDiskGbGte=10&pageSize=100');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'sizeOnDiskGb', value: { min: 10 } }], { pageSize: 100 })
+      );
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Large']);
     });
 
     it('returns only movies at most N GB on disk', async () => {
       const client = clientWithMovies(sizedMovies);
-      const res = await client.get('/api/media/movies?sizeOnDiskGbLte=10&pageSize=100');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'sizeOnDiskGb', value: { max: 10 } }], { pageSize: 100 })
+      );
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Small']);
     });
@@ -280,14 +290,18 @@ describe('Media browse — registry-delegated predicates', () => {
 
     it('returns only movies with IMDB rating at least N', async () => {
       const client = clientWithMovies(ratedMovies);
-      const res = await client.get('/api/media/movies?radarrImdbRatingGte=7&pageSize=100');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'imdbRating', value: { min: 7 } }], { pageSize: 100 })
+      );
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['High']);
     });
 
     it('returns only movies with IMDB rating at most N', async () => {
       const client = clientWithMovies(ratedMovies);
-      const res = await client.get('/api/media/movies?radarrImdbRatingLte=7&pageSize=100');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'imdbRating', value: { max: 7 } }], { pageSize: 100 })
+      );
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Low']);
     });

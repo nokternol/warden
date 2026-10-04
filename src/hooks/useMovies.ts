@@ -5,4 +5,5 @@ import { usePaginatedMedia } from './usePaginatedMedia';
 
 export type { MediaFilters, ManagedMovie };
 
-export const useMovies = (filters?: MediaFilters) => usePaginatedMedia(api.media.movies, filters);
+export const useMovies = (filters?: MediaFilters) =>
+  usePaginatedMedia(api.media.browse.movie, filters);

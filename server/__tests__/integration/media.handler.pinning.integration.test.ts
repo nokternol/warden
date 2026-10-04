@@ -19,7 +19,7 @@ import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createMediaProcedures } from '@server/modules/media';
 import { createMockConfig } from '@tests/factories';
-import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
+import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
@@ -188,7 +188,9 @@ describe('Media browse — Phase 2 pinning net', () => {
 
   describe('movieGenres filter (OR over genre strings)', () => {
     it('returns movies having any of the requested genres', async () => {
-      const res = await client.get('/api/media/movies?movieGenres=Action&pageSize=100');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'genres', value: 'Action' }], { pageSize: 100 })
+      );
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title).sort()).toEqual([
         'Alpha',
@@ -197,7 +199,9 @@ describe('Media browse — Phase 2 pinning net', () => {
     });
 
     it('narrows to a single genre', async () => {
-      const res = await client.get('/api/media/movies?movieGenres=Drama&pageSize=100');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'genres', value: 'Drama' }], { pageSize: 100 })
+      );
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Bravo']);
     });
@@ -239,7 +243,7 @@ describe('Media browse — Phase 2 pinning net', () => {
 
   describe('sort ordering', () => {
     it('defaults to title_asc', async () => {
-      const res = await client.get('/api/media/movies?pageSize=100');
+      const res = await client.get(browsePath('movie', [], { pageSize: 100 }));
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual([
         'Alpha',
@@ -249,7 +253,7 @@ describe('Media browse — Phase 2 pinning net', () => {
     });
 
     it('sorts movies by year_desc', async () => {
-      const res = await client.get('/api/media/movies?sort=year_desc&pageSize=100');
+      const res = await client.get(browsePath('movie', [], { sort: 'year_desc', pageSize: 100 }));
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual([
         'Charlie',
@@ -259,7 +263,7 @@ describe('Media browse — Phase 2 pinning net', () => {
     });
 
     it('sorts movies by status_asc (hasFile false first, stable within equal)', async () => {
-      const res = await client.get('/api/media/movies?sort=status_asc&pageSize=100');
+      const res = await client.get(browsePath('movie', [], { sort: 'status_asc', pageSize: 100 }));
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual([
         'Bravo',
@@ -279,7 +283,7 @@ describe('Media browse — Phase 2 pinning net', () => {
 
   describe('pagination', () => {
     it('returns the first page sized to pageSize with full totalCount', async () => {
-      const res = await client.get('/api/media/movies?page=1&pageSize=2');
+      const res = await client.get(browsePath('movie', [], { page: 1, pageSize: 2 }));
       const data = expectSuccessResponse(res);
       expect(data.totalCount).toBe(3);
       expect(data.items).toHaveLength(2);
@@ -287,7 +291,7 @@ describe('Media browse — Phase 2 pinning net', () => {
     });
 
     it('returns the remainder on the second page', async () => {
-      const res = await client.get('/api/media/movies?page=2&pageSize=2');
+      const res = await client.get(browsePath('movie', [], { page: 2, pageSize: 2 }));
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Charlie']);
     });
@@ -297,7 +301,7 @@ describe('Media browse — Phase 2 pinning net', () => {
 
   describe('yearRange', () => {
     it('reflects the full unfiltered library even when a filter narrows results', async () => {
-      const res = await client.get('/api/media/movies?title=alpha');
+      const res = await client.get(browsePath('movie', [{ ruleKey: 'title', value: 'alpha' }]));
       const data = expectSuccessResponse(res);
       expect(data.items).toHaveLength(1);
       expect(data.yearRange).toMatchObject({ min: 1995, max: 2010 });
@@ -308,7 +312,7 @@ describe('Media browse — Phase 2 pinning net', () => {
 
   describe('response item shape', () => {
     it('returns the raw provider item (not a normalized projection)', async () => {
-      const res = await client.get('/api/media/movies?title=alpha');
+      const res = await client.get(browsePath('movie', [{ ruleKey: 'title', value: 'alpha' }]));
       const data = expectSuccessResponse(res);
       // Raw RadarrMovie fields must survive — the swap filters on Normalized* but
       // must map matched ids back to the raw item for the response.

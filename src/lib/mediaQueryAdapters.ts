@@ -208,14 +208,14 @@ function parseCsvIds(csv: string): number[] {
 }
 
 export function toSaveValues(
-  filterState: FilterState,
+  filterState: ScopedBuckets,
   contentType: ContentType,
   rules: MediaRuleDescriptor[]
 ): Filter[] {
   const scoped = contentType === 'movie' ? filterState.movie : filterState.series;
   const qualifiers =
-    contentType === 'movie' ? filterState.movieQualifiers : filterState.seriesQualifiers;
-  const merged: Record<string, FilterValue> = { ...filterState.shared, ...scoped };
+    (contentType === 'movie' ? filterState.movieQualifiers : filterState.seriesQualifiers) ?? {};
+  const merged: Record<string, FilterValue | undefined> = { ...filterState.shared, ...scoped };
   const instanceScoped = new Set(rules.filter((r) => r.instanceScoped).map((r) => r.key));
   return Object.entries(merged)
     .filter((entry): entry is [string, FilterValue] => entry[1] !== undefined)

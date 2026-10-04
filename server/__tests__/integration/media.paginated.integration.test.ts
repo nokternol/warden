@@ -3,7 +3,7 @@ import { MetadataProviderType } from '@server/database/schema';
 /**
  * Paginated Media API integration tests.
  *
- * Covers /api/media/movies and /api/media/series paginated endpoints.
+ * Covers the paginated /api/media/movie and /api/media/series browse endpoints.
  * MSW intercepts Radarr/Sonarr HTTP calls; per-test overrides supply
  * a larger dataset for meaningful pagination assertions.
  *
@@ -16,7 +16,12 @@ import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createMediaProcedures } from '@server/modules/media';
 import { createMockConfig } from '@tests/factories';
-import { createApiClient, expectErrorResponse, expectSuccessResponse } from '@tests/helpers/api';
+import {
+  browsePath,
+  createApiClient,
+  expectErrorResponse,
+  expectSuccessResponse,
+} from '@tests/helpers/api';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
@@ -125,16 +130,16 @@ describe('Paginated Media API', () => {
     );
   });
 
-  // ─── /api/media/movies ──────────────────────────────────────────────────────
+  // ─── /api/media/movie ───────────────────────────────────────────────────────
 
-  describe('GET /api/media/movies', () => {
+  describe('GET /api/media/movie', () => {
     it('returns 401 when unauthenticated', async () => {
-      const res = await unauthedClient.get('/api/media/movies');
+      const res = await unauthedClient.get(browsePath('movie'));
       expectErrorResponse(res, 401);
     });
 
     it('returns paginated result shape', async () => {
-      const res = await authedClient.get('/api/media/movies?page=1&pageSize=2');
+      const res = await authedClient.get(browsePath('movie', [], { page: 1, pageSize: 2 }));
       const data = expectSuccessResponse(res);
 
       expect(data).toHaveProperty('items');
@@ -145,7 +150,7 @@ describe('Paginated Media API', () => {
     });
 
     it('returns first page correctly', async () => {
-      const res = await authedClient.get('/api/media/movies?page=1&pageSize=2');
+      const res = await authedClient.get(browsePath('movie', [], { page: 1, pageSize: 2 }));
       const data = expectSuccessResponse(res);
 
       expect(data.items).toHaveLength(2);
@@ -155,7 +160,7 @@ describe('Paginated Media API', () => {
     });
 
     it('returns second page correctly', async () => {
-      const res = await authedClient.get('/api/media/movies?page=2&pageSize=2');
+      const res = await authedClient.get(browsePath('movie', [], { page: 2, pageSize: 2 }));
       const data = expectSuccessResponse(res);
 
       expect(data.items).toHaveLength(2);
@@ -164,7 +169,7 @@ describe('Paginated Media API', () => {
     });
 
     it('returns last partial page', async () => {
-      const res = await authedClient.get('/api/media/movies?page=3&pageSize=2');
+      const res = await authedClient.get(browsePath('movie', [], { page: 3, pageSize: 2 }));
       const data = expectSuccessResponse(res);
 
       expect(data.items).toHaveLength(1);
@@ -173,7 +178,7 @@ describe('Paginated Media API', () => {
     });
 
     it('returns empty items for out-of-range page', async () => {
-      const res = await authedClient.get('/api/media/movies?page=99&pageSize=2');
+      const res = await authedClient.get(browsePath('movie', [], { page: 99, pageSize: 2 }));
       const data = expectSuccessResponse(res);
 
       expect(data.items).toHaveLength(0);
@@ -181,7 +186,7 @@ describe('Paginated Media API', () => {
     });
 
     it('defaults to page=1 and pageSize=48 when params are absent', async () => {
-      const res = await authedClient.get('/api/media/movies');
+      const res = await authedClient.get(browsePath('movie'));
       const data = expectSuccessResponse(res);
 
       expect(data.page).toBe(1);
@@ -247,7 +252,7 @@ describe('Paginated Media API', () => {
       return createApiClient(app);
     }
 
-    it('GET /api/media/movies includes errors when Radarr returns 500', async () => {
+    it('GET /api/media/movie includes errors when Radarr returns 500', async () => {
       server.use(
         http.get(
           'http://localhost:7878/api/v3/movie',
@@ -258,7 +263,7 @@ describe('Paginated Media API', () => {
       const client = buildErrorClient(
         serveApi({ media: createMediaProcedures(cradle).procedures })
       );
-      const res = await client.get('/api/media/movies');
+      const res = await client.get(browsePath('movie'));
       const data = expectSuccessResponse(res);
 
       expect(data.items).toEqual([]);
@@ -289,7 +294,7 @@ describe('Paginated Media API', () => {
       expect(data.errors[0]).toMatchObject({ provider: 'Sonarr' });
     });
 
-    it('GET /api/media/movies has errors: [] when Radarr is healthy', async () => {
+    it('GET /api/media/movie has errors: [] when Radarr is healthy', async () => {
       server.use(
         http.get('http://localhost:7878/api/v3/movie', () => HttpResponse.json(makeMovies(2)))
       );
@@ -297,7 +302,7 @@ describe('Paginated Media API', () => {
       const client = buildErrorClient(
         serveApi({ media: createMediaProcedures(cradle).procedures })
       );
-      const res = await client.get('/api/media/movies');
+      const res = await client.get(browsePath('movie'));
       const data = expectSuccessResponse(res);
 
       expect(Array.isArray(data.errors)).toBe(true);

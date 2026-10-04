@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { base } from './base';
-import { ContentTypeSchema, ProviderTypeSchema } from './schemas';
+import { type ContentType, ContentTypeSchema, FilterSchema, ProviderTypeSchema } from './schemas';
 
 // ─── Browse query (the content-prefixed param encoding the browse path reads) ──
 
@@ -58,32 +58,6 @@ const sharedFilterFields = {
 // Positive-int qualifier for an instance-scoped rule's sibling `*ProviderId` param —
 // which instance's namespace the paired id list belongs to (§10). Absent means unqualified.
 const providerIdParam = () => z.coerce.number().int().positive().optional();
-
-export const MoviesBrowseQuerySchema = paginationQuerySchema.extend({
-  ...sharedFilterFields,
-  hasFile: bool3(),
-  movieTagIds: z.string().optional(),
-  movieTagIdsProviderId: providerIdParam(),
-  movieQualityProfileIds: z.string().optional(),
-  movieQualityProfileIdsProviderId: providerIdParam(),
-  movieGenres: z.string().optional(),
-  radarrImdbRatingGte: num(),
-  radarrImdbRatingLte: num(),
-  runtimeMinutesGte: intNum(),
-  runtimeMinutesLte: intNum(),
-  movieFileCountGte: intNum(),
-  movieFileCountLte: intNum(),
-  inCinemasDaysAgoGte: intNum(),
-  inCinemasDaysAgoLte: intNum(),
-  physicalReleaseDaysAgoGte: intNum(),
-  physicalReleaseDaysAgoLte: intNum(),
-  digitalReleaseDaysAgoGte: intNum(),
-  digitalReleaseDaysAgoLte: intNum(),
-  releaseGroups: z.string().optional(),
-  collectionName: z.string().optional(),
-  isAvailable: bool3(),
-  radarrStatus: z.string().optional(),
-});
 
 export const SeriesBrowseQuerySchema = paginationQuerySchema.extend({
   ...sharedFilterFields,
@@ -266,6 +240,37 @@ export const SearchResultSchema = z.object({
   error: z.string().optional(),
 });
 
+/**
+ * A query-string value holding JSON, parsed and then validated by `schema`.
+ * Bracket-encoded query values arrive as strings, so a structured value that
+ * must keep its types (booleans, numbers, nested objects) travels as JSON.
+ */
+const jsonQuery = <T extends z.ZodType>(schema: T) =>
+  z
+    .string()
+    .transform((raw, ctx) => {
+      try {
+        return JSON.parse(raw) as unknown;
+      } catch {
+        ctx.addIssue({ code: 'custom', message: 'must be JSON' });
+        return z.NEVER;
+      }
+    })
+    .pipe(schema);
+
+/** A browse request: the saved-query `Filter` entries, plus sort and page. */
+export const BrowseQuerySchema = paginationQuerySchema.extend({
+  filters: jsonQuery(z.array(FilterSchema)).optional(),
+  sort: sortField,
+});
+
+/** One page of a content type's library matching the filters, grouped across instances. */
+const browse = <T extends z.ZodType>(contentType: ContentType, item: T) =>
+  base
+    .route({ method: 'GET', path: `/api/media/${contentType}` })
+    .input(BrowseQuerySchema)
+    .output(browsePage(item));
+
 const lookup = (path: string) =>
   base.route({ method: 'GET', path: `/api/media/${path}` }).output(z.array(z.string()));
 
@@ -276,11 +281,10 @@ export const media = {
     .input(z.object({ contentType: ContentTypeSchema.optional() }))
     .output(z.array(MediaRuleDescriptorSchema)),
 
-  /** One page of movies matching the browse filters, grouped by TMDB id across instances. */
-  movies: base
-    .route({ method: 'GET', path: '/api/media/movies' })
-    .input(MoviesBrowseQuerySchema)
-    .output(browsePage(ManagedMovieSchema)),
+  /** Browse, per content type: `GET /api/media/{movie|series}`. Movies group by TMDB id, series by TVDB id. */
+  browse: {
+    movie: browse('movie', ManagedMovieSchema),
+  },
 
   /** One page of series matching the browse filters, grouped by TVDB id across instances. */
   series: base
@@ -352,5 +356,4 @@ export type InstanceIdLookup = z.infer<typeof InstanceIdLookupSchema>;
 export type StringLookup = z.infer<typeof StringLookupSchema>;
 export type MediaLookup = InstanceIdLookup | StringLookup;
 export type SearchResult = z.infer<typeof SearchResultSchema>;
-export type MoviesBrowseQuery = z.input<typeof MoviesBrowseQuerySchema>;
 export type SeriesBrowseQuery = z.input<typeof SeriesBrowseQuerySchema>;

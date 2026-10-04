@@ -65,7 +65,7 @@ describe('MediaPage', () => {
 
   it('shows empty library message on movies tab when movies API returns empty', async () => {
     server.use(
-      mockProcedure(contract.media.movies, () => EMPTY_PAGE),
+      mockProcedure(contract.media.browse.movie, () => EMPTY_PAGE),
       mockProcedure(contract.media.series, () => EMPTY_PAGE)
     );
     render(<MediaPage />, { wrapper: Wrapper });
@@ -83,7 +83,7 @@ describe('MediaPage', () => {
         { contentType: 'movie', ownerType: 'JELLYFIN', configured: false, instances: [] },
         { contentType: 'series', ownerType: 'SONARR', configured: false, instances: [] },
       ]),
-      mockProcedure(contract.media.movies, () => EMPTY_PAGE)
+      mockProcedure(contract.media.browse.movie, () => EMPTY_PAGE)
     );
     render(<MediaPage />, { wrapper: Wrapper });
     await waitFor(() => {
@@ -97,7 +97,7 @@ describe('MediaPage', () => {
         { contentType: 'movie', ownerType: 'RADARR', configured: false, instances: [] },
         { contentType: 'series', ownerType: 'SONARR', configured: false, instances: [] },
       ]),
-      mockProcedure(contract.media.movies, () => EMPTY_PAGE)
+      mockProcedure(contract.media.browse.movie, () => EMPTY_PAGE)
     );
     render(<MediaPage />, { wrapper: Wrapper });
     await waitFor(() => {
@@ -111,7 +111,7 @@ describe('MediaPage', () => {
         { contentType: 'movie', ownerType: 'RADARR', configured: false, instances: [] },
         { contentType: 'series', ownerType: 'SONARR', configured: false, instances: [] },
       ]),
-      mockProcedure(contract.media.movies, () => EMPTY_PAGE),
+      mockProcedure(contract.media.browse.movie, () => EMPTY_PAGE),
       mockProcedure(contract.providers.types, (): ProviderTypeDescriptor[] => [
         { type: 'RADARR', label: 'Radarr 4K', apiPath: '/api/v3', filterData: [] },
       ])

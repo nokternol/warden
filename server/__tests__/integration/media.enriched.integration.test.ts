@@ -25,7 +25,7 @@ import { createMediaProcedures } from '@server/modules/media';
 import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.queries';
 import type { EnrichmentFields } from '@server/modules/media/mediaFieldProvider';
 import { createMockConfig } from '@tests/factories';
-import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
+import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import { server } from '@tests/mocks/server';
 import { eq } from 'drizzle-orm';
 import express, { type Express } from 'express';
@@ -151,13 +151,17 @@ describe('Media browse — enriched predicates', () => {
       await seedEnrichment(1, { overseerrRequestStatus: 2 });
       await seedEnrichment(2, { overseerrRequestStatus: 1 });
 
-      const res = await client.get('/api/media/movies?overseerrRequestStatus=2&pageSize=100');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'overseerrRequestStatus', value: 2 }], { pageSize: 100 })
+      );
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Requested']);
     });
 
     it('returns 0 items when there is no enrichment data (corrected from "keep all")', async () => {
-      const res = await client.get('/api/media/movies?overseerrRequestStatus=2&pageSize=100');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'overseerrRequestStatus', value: 2 }], { pageSize: 100 })
+      );
       const data = expectSuccessResponse(res);
       expect(data.totalCount).toBe(0);
     });
@@ -168,7 +172,9 @@ describe('Media browse — enriched predicates', () => {
       await seedEnrichment(1, { overseerrHasIssue: true });
       await seedEnrichment(2, { overseerrHasIssue: false });
 
-      const res = await client.get('/api/media/movies?overseerrHasIssue=true&pageSize=100');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'overseerrHasIssue', value: true }], { pageSize: 100 })
+      );
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Requested']);
     });
@@ -179,7 +185,9 @@ describe('Media browse — enriched predicates', () => {
       await seedEnrichment(1, { tmdbStatus: 'Released' });
       await seedEnrichment(2, { tmdbStatus: 'In Production' });
 
-      const res = await client.get('/api/media/movies?tmdbStatus=Released&pageSize=100');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'tmdbStatus', value: 'Released' }], { pageSize: 100 })
+      );
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Requested']);
     });
@@ -191,7 +199,11 @@ describe('Media browse — enriched predicates', () => {
       await seedEnrichment(1, { lastWatchedAt: daysAgoIso(10) });
       await seedEnrichment(2, { lastWatchedAt: daysAgoIso(2) });
 
-      const res = await client.get('/api/media/movies?lastWatchedDaysAgoGte=7&pageSize=100');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'lastWatchedDaysAgo', value: { min: 7 } }], {
+          pageSize: 100,
+        })
+      );
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Requested']);
     });
@@ -203,7 +215,11 @@ describe('Media browse — enriched predicates', () => {
       await seedEnrichment(1, { lastWatchedAt: daysAgoIso(10) });
       await seedEnrichment(2, { lastWatchedAt: daysAgoIso(2) });
 
-      const res = await client.get('/api/media/movies?lastWatchedDaysAgoLte=7&pageSize=100');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'lastWatchedDaysAgo', value: { max: 7 } }], {
+          pageSize: 100,
+        })
+      );
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Pending']);
     });
@@ -215,7 +231,9 @@ describe('Media browse — enriched predicates', () => {
       await seedEnrichment(1, { plexAddedAt: daysAgoIso(10) });
       await seedEnrichment(2, { plexAddedAt: daysAgoIso(2) });
 
-      const res = await client.get('/api/media/movies?plexAddedDaysAgoGte=7&pageSize=100');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'plexAddedDaysAgo', value: { min: 7 } }], { pageSize: 100 })
+      );
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Requested']);
     });
@@ -226,7 +244,9 @@ describe('Media browse — enriched predicates', () => {
       await seedEnrichment(1, { playCount: 3 });
       await seedEnrichment(2, { playCount: 0 });
 
-      const res = await client.get('/api/media/movies?tautulliWatched=true&pageSize=100');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'watched', value: true }], { pageSize: 100 })
+      );
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Requested']);
     });
@@ -234,7 +254,9 @@ describe('Media browse — enriched predicates', () => {
     it('returns the complement (incl. movies with no enrichment) when tautulliWatched=false', async () => {
       await seedEnrichment(1, { playCount: 3 });
 
-      const res = await client.get('/api/media/movies?tautulliWatched=false&pageSize=100');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'watched', value: false }], { pageSize: 100 })
+      );
       const data = expectSuccessResponse(res);
       const titles = data.items.map((m: { title: string }) => m.title);
       expect(titles).not.toContain('Requested');
@@ -243,7 +265,9 @@ describe('Media browse — enriched predicates', () => {
     });
 
     it('returns 0 watched movies when there is no enrichment data', async () => {
-      const res = await client.get('/api/media/movies?tautulliWatched=true&pageSize=100');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'watched', value: true }], { pageSize: 100 })
+      );
       const data = expectSuccessResponse(res);
       expect(data.totalCount).toBe(0);
     });

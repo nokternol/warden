@@ -274,7 +274,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
 ];
 
 export const mediaHandlers = [
-  mockProcedure(contract.media.movies, ({ request }) =>
+  mockProcedure(contract.media.browse.movie, ({ request }) =>
     browsePage(MOCK_MOVIES, request, { min: 2000, max: 2029 })
   ),
 

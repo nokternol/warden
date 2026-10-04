@@ -723,7 +723,7 @@ export default function MediaPage() {
   const { rules = [] } = useMediaRules();
 
   const movies = useMovies({
-    ...toBrowseParams(debouncedFilters, 'movie'),
+    filters: JSON.stringify(toSaveValues(debouncedFilters, 'movie', rules)),
     sort: values.movieSort,
   });
   const series = useSeries({

@@ -12,7 +12,7 @@ import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createMediaProcedures } from '@server/modules/media';
 import { createMockConfig } from '@tests/factories';
-import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
+import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import { http, HttpResponse } from 'msw';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -93,7 +93,7 @@ describe('MediaHandler cache lifecycle', () => {
     await closeDatabase();
   });
 
-  it('two concurrent GET /api/media/movies requests coalesce into one Radarr call', async () => {
+  it('two concurrent GET /api/media/movie requests coalesce into one Radarr call', async () => {
     let radarrCallCount = 0;
     server.use(
       http.get('http://localhost:7878/api/v3/movie', async () => {
@@ -108,8 +108,8 @@ describe('MediaHandler cache lifecycle', () => {
     const client = createApiClient(buildAuthedApp(routes));
 
     const [res1, res2] = await Promise.all([
-      client.get('/api/media/movies'),
-      client.get('/api/media/movies'),
+      client.get(browsePath('movie')),
+      client.get(browsePath('movie')),
     ]);
 
     expect(radarrCallCount).toBe(1);
@@ -134,12 +134,12 @@ describe('MediaHandler cache lifecycle', () => {
     const clientA = createApiClient(buildAuthedApp(routesA));
     const clientB = createApiClient(buildAuthedApp(routesB));
 
-    const resA = await clientA.get('/api/media/movies');
+    const resA = await clientA.get(browsePath('movie'));
     expect(expectSuccessResponse(resA).items[0].title).toBe('The Matrix');
     expect(radarrCallCount).toBe(1);
 
     // Handler B must NOT read from handler A's cache; it must do its own fetch.
-    const resB = await clientB.get('/api/media/movies');
+    const resB = await clientB.get(browsePath('movie'));
     expect(expectSuccessResponse(resB).items[0].title).toBe('Inception');
     expect(radarrCallCount).toBe(2);
   });
