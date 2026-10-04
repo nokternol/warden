@@ -10,7 +10,8 @@ import { useRef, useState } from 'react';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface AddFormState {
-  type: ProviderType;
+  /** The type the user picked; absent until they pick one. */
+  type?: ProviderType;
   name: string;
   url: string;
   apiKey: string;
@@ -29,7 +30,6 @@ export default function AddProviderForm({
   onCancel: () => void;
 }) {
   const [form, setForm] = useState<AddFormState>({
-    type: 'RADARR',
     name: '',
     url: '',
     apiKey: '',
@@ -65,16 +65,18 @@ export default function AddProviderForm({
   };
 
   const descriptorOf = (type: ProviderType) => types.find((t) => t.type === type);
-  const chosen = descriptorOf(form.type);
+  const chosen = form.type ? descriptorOf(form.type) : types[0];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!chosen) return;
     const host = form.url.replace(/\/+$/, '');
-    const fullUrl = `${host}${chosen?.apiPath ?? ''}`;
-    const settings = form.type === 'JELLYFIN' && form.userId ? { userId: form.userId } : undefined;
+    const fullUrl = `${host}${chosen.apiPath}`;
+    const settings =
+      chosen.type === 'JELLYFIN' && form.userId ? { userId: form.userId } : undefined;
 
     onSubmit({
-      type: form.type,
+      type: chosen.type,
       name: form.name,
       url: fullUrl,
       apiKey: form.apiKey || undefined,
@@ -95,7 +97,7 @@ export default function AddProviderForm({
           </label>
           <select
             id="add-type"
-            value={form.type}
+            value={chosen?.type}
             onChange={(e) => {
               const newType = ProviderTypeSchema.parse(e.target.value);
               const defaultUrl = descriptorOf(newType)?.defaultUrl;
@@ -151,7 +153,7 @@ export default function AddProviderForm({
                 setForm((f) => ({ ...f, url: e.target.value }));
                 setTestStatus('idle');
               }}
-              onBlur={() => runTest(form.url, form.apiKey, form.type)}
+              onBlur={() => chosen && runTest(form.url, form.apiKey, chosen.type)}
               placeholder="http://localhost:7878"
               className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
               required
@@ -170,12 +172,12 @@ export default function AddProviderForm({
               setForm((f) => ({ ...f, apiKey: e.target.value }));
               setTestStatus('idle');
             }}
-            onBlur={() => runTest(form.url, form.apiKey, form.type)}
+            onBlur={() => chosen && runTest(form.url, form.apiKey, chosen.type)}
             placeholder="Optional"
             className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
           />
         </div>
-        {form.type === 'JELLYFIN' && (
+        {chosen?.type === 'JELLYFIN' && (
           <div>
             <label htmlFor="add-userid" className="block text-xs text-text-secondary mb-1">
               User ID

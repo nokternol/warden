@@ -97,4 +97,21 @@ describe('AddProviderForm', () => {
     expect(host.value).toBe('https://tautulli.example');
     expect(host.readOnly).toBe(true);
   });
+
+  it('starts on the first served type', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    server.use(mockProcedure(contract.providers.test, () => ({ ok: true })));
+    const served: ProviderTypeDescriptor[] = [
+      { type: 'PLEX', label: 'Plex', apiPath: '', capabilities: [] },
+      { type: 'RADARR', label: 'Radarr', apiPath: '/api/v3', capabilities: [] },
+    ];
+
+    render(<AddProviderForm types={served} onSubmit={onSubmit} onCancel={vi.fn()} />);
+    await user.type(screen.getByLabelText('Name'), 'My Plex');
+    await user.type(screen.getByLabelText(/host url/i), 'http://localhost:32400');
+    await user.click(screen.getByRole('button', { name: /save/i }));
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ type: 'PLEX' }));
+  });
 });
