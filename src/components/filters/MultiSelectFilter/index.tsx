@@ -13,7 +13,9 @@ import { useEffect, useId, useRef, useState } from 'react';
 // Keyboard: ArrowDown on the trigger opens the menu and focuses the first
 // option; ArrowDown/ArrowUp move between options across groups; Space/Enter
 // toggle the focused option; ArrowUp from the first option or Escape returns
-// focus to the trigger (Escape also closes the menu).
+// focus to the trigger (Escape also closes the menu). Focus leaving the control,
+// by Tab or otherwise, closes it too; the menu itself is focusable so a press on
+// its non-option areas (headings, the note) keeps focus inside.
 //
 // When the selection reaches into more than one group, `spanNote` is shown in
 // the menu footer so the caller can explain how such a selection is read.
@@ -148,7 +150,13 @@ export function MultiSelectFilter<T extends string | number>({
   };
 
   return (
-    <div ref={containerRef} className="relative">
+    <div
+      ref={containerRef}
+      className="relative"
+      onBlur={(e) => {
+        if (!containerRef.current?.contains(e.relatedTarget as Node | null)) setIsOpen(false);
+      }}
+    >
       <button
         ref={triggerRef}
         type="button"
@@ -187,7 +195,8 @@ export function MultiSelectFilter<T extends string | number>({
           role="menu"
           id={menuId}
           aria-label={label}
-          className="absolute top-full left-0 mt-1 min-w-40 max-h-60 flex flex-col overflow-hidden bg-surface-panel border border-border rounded-lg shadow-lg py-1 z-20"
+          tabIndex={-1}
+          className="absolute top-full left-0 mt-1 min-w-40 max-h-60 focus:outline-none flex flex-col overflow-hidden bg-surface-panel border border-border rounded-lg shadow-lg py-1 z-20"
         >
           <div className="min-h-0 flex-1 overflow-y-auto">
             {groups.map(([group, members]) => (

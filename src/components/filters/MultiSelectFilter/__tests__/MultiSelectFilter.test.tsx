@@ -221,3 +221,36 @@ describe('MultiSelectFilter — footer stays in view', () => {
     expect(scrollingAncestor(screen.getByRole('menuitem', { name: /clear/i }))).toBeNull();
   });
 });
+
+describe('MultiSelectFilter — focus leaving the menu', () => {
+  const renderWithNeighbour = () =>
+    render(
+      <div>
+        <MultiSelectFilter label="Tags" options={TAGS} selected={[]} onChange={vi.fn()} />
+        <button type="button">next control</button>
+      </div>
+    );
+
+  it('closes when Tab moves focus past the last item', async () => {
+    const user = setupUser();
+    renderWithNeighbour();
+    await user.click(screen.getByRole('button', { name: /tags/i }));
+    await user.keyboard('{ArrowDown}{ArrowDown}');
+    await user.tab();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'next control' })).toHaveFocus();
+  });
+
+  it('stays open while focus moves between the trigger and the items', async () => {
+    const user = setupUser();
+    renderWithNeighbour();
+    const trigger = screen.getByRole('button', { name: /tags/i });
+    await user.click(trigger);
+    await user.keyboard('{ArrowUp}');
+    expect(trigger).toHaveFocus();
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('menuitemcheckbox', { name: '4K' })).toHaveFocus();
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+  });
+});
