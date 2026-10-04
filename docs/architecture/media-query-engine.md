@@ -11,7 +11,8 @@ specification against live source data.
 - **`MediaQuery`** — the specification: a **bound provider instance**, a `contentType`
   (`'movie' | 'series'`), and one-or-more **clauses** (`MediaQueryClause`), each `{ filters, role: 'include' | 'exclude' }`
   where `filters` is a list of `Filter { ruleKey, value }`. A query is a single-clause include
-  `MediaQuery`; the browse view is the same with URL-derived `filters`.
+  `MediaQuery`; the browse view is the same, with the `filters` its request carries as JSON-encoded
+  `Filter` entries (the encoding a saved query stores; see `api-contract.md`).
 - **`MediaQueryEngine.evaluate(query): Promise<MediaItemSet>`** — the owner. Fetches the bound provider's
   items, normalizes them, merges DB enrichment, applies the rule registry per clause (`matchItems`),
   and combines include/exclude across clauses (`evaluateCombination`).
@@ -29,10 +30,10 @@ builds the provider once, hands the instance to `evaluate`, and reuses the *same
 |---|---|---|
 | `AutomationExecutor.planRun` | `providerFactory.create(providerSettings)` | the run's target items and their actuator ids; `execute` passes the ids to `task.run` |
 | `GET /media-queries/:id/preview` | one active instance per `MediaSourceFactory.sourcesFor(contentType)` entry — no longer single-active for `movie`/`series` | `{ count, instances: [{ providerId, name, count }] }`, summed across instances |
-| `media.handler` browse (`listMovies`/`listSeries`) | a thin adapter over the cached per-instance sublists (`{ getMediaItems: async () => sublists.flatMap(...) }`, each item self-describing its `providerId`) | id set → live display-grouping → sort/paginate |
+| `media.browse.movie`/`media.browse.series` (`browseMovies`/`browseSeries` in `media.procedures.ts`) | a thin adapter over the cached per-instance sublists (`{ getMediaItems: async () => sublists.flatMap(...) }`, each item self-describing its `providerId`) | id set → live display-grouping → sort/paginate |
 
-The browse adapter lets the handler keep its cached multi-instance fetch (and per-instance `yearRange`/
-error aggregation) while the engine owns normalize → enrich → match → combine; the handler's own
+The browse adapter lets the procedure keep its cached multi-instance fetch (and per-instance `yearRange`/
+error aggregation) while the engine owns normalize → enrich → match → combine; the procedure's own
 post-match step then groups the surviving items into one row per title (see
 `docs/architecture/provider-roles-and-identity.md`'s browse section).
 
@@ -50,7 +51,7 @@ post-match step then groups the surviving items into one row per title (see
 ## Registration
 
 `mediaQueryEngine` is registered in the awilix container ([`server/container.ts`](ref:path:server/container.ts)) and injected into the
-executor, the saved-query preview handler, and the media browse handler. The executor falls back to
+executor, the saved-query preview handler, and the media browse procedures. The executor falls back to
 `new MediaQueryEngine({ db })` when no engine is injected (unit tests).
 
 ## Convergence achieved
