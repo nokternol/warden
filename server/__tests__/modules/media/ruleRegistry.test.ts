@@ -281,16 +281,16 @@ describe('movie predicates', () => {
     expect(rule.predicate(baseMovie, false)).toBe(false);
   });
 
-  it('tagIds — passes when item has any of the csv tag ids', () => {
+  it('tagIds — passes when item has any of the tag ids', () => {
     const rule = getRule('tagIds', 'movie')!;
-    expect(rule.predicate(baseMovie, '10,30')).toBe(true);
-    expect(rule.predicate(baseMovie, '99,100')).toBe(false);
+    expect(rule.predicate(baseMovie, { ids: [10, 30] })).toBe(true);
+    expect(rule.predicate(baseMovie, { ids: [99, 100] })).toBe(false);
   });
 
-  it('qualityProfileIds — passes when item profile is in csv list', () => {
+  it('qualityProfileIds — passes when item profile is in the ids', () => {
     const rule = getRule('qualityProfileIds', 'movie')!;
-    expect(rule.predicate(baseMovie, '1,2')).toBe(true);
-    expect(rule.predicate(baseMovie, '5,6')).toBe(false);
+    expect(rule.predicate(baseMovie, { ids: [1, 2] })).toBe(true);
+    expect(rule.predicate(baseMovie, { ids: [5, 6] })).toBe(false);
   });
 
   it('genres — passes when item has any of the csv genres', () => {
@@ -413,7 +413,7 @@ describe('Radarr movie-only predicates', () => {
     expect(rule.predicate({ ...baseMovie, digitalReleaseDate: undefined }, { min: 5 })).toBe(false);
   });
 
-  it('collectionName — passes when item collection is in the csv list', () => {
+  it('collectionName — passes when item collection is in the ids', () => {
     const rule = getRule('collectionName', 'movie')!;
     expect(
       rule.predicate(
@@ -463,7 +463,7 @@ describe('Radarr movie-only predicates', () => {
 // ─── Series predicates ────────────────────────────────────────────────────────
 
 describe('studio predicates', () => {
-  it('movie — passes when item studio is in the csv list', () => {
+  it('movie — passes when item studio is in the ids', () => {
     const rule = getRule('studio', 'movie')!;
     expect(
       rule.predicate({ ...baseMovie, studio: 'Legendary Pictures' }, 'Legendary Pictures')
@@ -474,7 +474,7 @@ describe('studio predicates', () => {
     expect(rule.predicate(baseMovie, 'Legendary Pictures')).toBe(false);
   });
 
-  it('series — passes when item studio is in the csv list', () => {
+  it('series — passes when item studio is in the ids', () => {
     const rule = getRule('studio', 'series')!;
     expect(rule.predicate({ ...baseSeries, studio: 'AMC Studios' }, 'AMC Studios')).toBe(true);
     expect(rule.predicate({ ...baseSeries, studio: 'AMC Studios' }, 'HBO')).toBe(false);
@@ -503,14 +503,14 @@ describe('series predicates', () => {
 
   it('tagIds — series', () => {
     const rule = getRule('tagIds', 'series')!;
-    expect(rule.predicate(baseSeries, '5,99')).toBe(true);
-    expect(rule.predicate(baseSeries, '99')).toBe(false);
+    expect(rule.predicate(baseSeries, { ids: [5, 99] })).toBe(true);
+    expect(rule.predicate(baseSeries, { ids: [99] })).toBe(false);
   });
 
   it('qualityProfileIds — series', () => {
     const rule = getRule('qualityProfileIds', 'series')!;
-    expect(rule.predicate(baseSeries, '2,3')).toBe(true);
-    expect(rule.predicate(baseSeries, '99')).toBe(false);
+    expect(rule.predicate(baseSeries, { ids: [2, 3] })).toBe(true);
+    expect(rule.predicate(baseSeries, { ids: [99] })).toBe(false);
   });
 
   it('genres — series', () => {
@@ -682,26 +682,26 @@ describe('file-tech and release-date predicates', () => {
     expect(rule.predicate({ ...baseMovie, releaseDate: undefined }, { min: 5 })).toBe(false);
   });
 
-  it('fileContainer — movie: passes when item container is in the csv list', () => {
+  it('fileContainer — movie: passes when item container is in the ids', () => {
     const rule = getRule('fileContainer', 'movie')!;
     expect(rule.predicate({ ...baseMovie, fileContainer: 'mkv' }, 'mkv,mp4')).toBe(true);
     expect(rule.predicate({ ...baseMovie, fileContainer: 'avi' }, 'mkv,mp4')).toBe(false);
     expect(rule.predicate(baseMovie, 'mkv')).toBe(false);
   });
 
-  it('videoCodec — movie: passes when item codec is in the csv list', () => {
+  it('videoCodec — movie: passes when item codec is in the ids', () => {
     const rule = getRule('videoCodec', 'movie')!;
     expect(rule.predicate({ ...baseMovie, videoCodec: 'h264' }, 'h264,hevc')).toBe(true);
     expect(rule.predicate({ ...baseMovie, videoCodec: 'mpeg2video' }, 'h264,hevc')).toBe(false);
   });
 
-  it('audioCodec — movie: passes when item codec is in the csv list', () => {
+  it('audioCodec — movie: passes when item codec is in the ids', () => {
     const rule = getRule('audioCodec', 'movie')!;
     expect(rule.predicate({ ...baseMovie, audioCodec: 'aac' }, 'aac,dts')).toBe(true);
     expect(rule.predicate({ ...baseMovie, audioCodec: 'mp3' }, 'aac,dts')).toBe(false);
   });
 
-  it('fileResolution — movie: passes when item resolution is in the csv list', () => {
+  it('fileResolution — movie: passes when item resolution is in the ids', () => {
     const rule = getRule('fileResolution', 'movie')!;
     expect(rule.predicate({ ...baseMovie, fileResolution: '1080' }, '1080,4k')).toBe(true);
     expect(rule.predicate({ ...baseMovie, fileResolution: '720' }, '1080,4k')).toBe(false);
@@ -804,10 +804,10 @@ describe('Sonarr-only predicates', () => {
     expect(rule.providers).toEqual([MetadataProviderType.SONARR]);
   });
 
-  it('languageProfileIds — series: passes when item languageProfileId is in the csv list', () => {
+  it('languageProfileIds — series: passes when item languageProfileId is in the ids', () => {
     const rule = getRule('languageProfileIds', 'series')!;
-    expect(rule.predicate({ ...baseSeries, languageProfileId: 3 }, '3,4')).toBe(true);
-    expect(rule.predicate({ ...baseSeries, languageProfileId: 3 }, '99')).toBe(false);
-    expect(rule.predicate(baseSeries, '3')).toBe(false); // no languageProfileId
+    expect(rule.predicate({ ...baseSeries, languageProfileId: 3 }, { ids: [3, 4] })).toBe(true);
+    expect(rule.predicate({ ...baseSeries, languageProfileId: 3 }, { ids: [99] })).toBe(false);
+    expect(rule.predicate(baseSeries, { ids: [3] })).toBe(false); // no languageProfileId
   });
 });

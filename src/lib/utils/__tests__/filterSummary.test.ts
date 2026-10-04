@@ -10,4 +10,10 @@ describe('summarizeFilters', () => {
 
     expect(parts).toEqual(['Plex added ≥ days: 5', 'Plex added ≤ days: 15']);
   });
+
+  it('lists the ids of an instance-scoped value', () => {
+    const parts = summarizeFilters([{ ruleKey: 'tagIds', value: { providerId: 3, ids: [1, 2] } }]);
+
+    expect(parts).toEqual(['Tags: 1,2']);
+  });
 });

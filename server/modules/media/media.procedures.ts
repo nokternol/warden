@@ -34,6 +34,7 @@ import { normalizeRadarrMovie, normalizeSonarrSeries } from './normalizeMedia';
 import type {
   Filter,
   FilterValue,
+  InstanceScopedValue,
   MovieRangeRuleKey,
   NormalizedMovie,
   NormalizedSeries,
@@ -249,6 +250,13 @@ const _seriesSchemaCoversParams: SeriesSchemaShape & Record<SeriesSchemaMissing,
 // Project a browse query's content-prefixed params onto registry-keyed filter
 // values — the include source the MediaQueryEngine evaluates for the browse view.
 // Gte/Lte param pairs targeting the same range rule merge into one `{ min?, max? }` entry.
+function parseCsvIds(raw: unknown): number[] {
+  return String(raw)
+    .split(',')
+    .map((s) => Number(s.trim()))
+    .filter((n) => !Number.isNaN(n) && n > 0);
+}
+
 function toFilterValues(
   query: Record<string, unknown>,
   paramMap: Record<string, ParamMapping>
@@ -264,10 +272,14 @@ function toFilterValues(
       range[bound] = Number(raw);
       ranges.set(key, range);
     } else {
-      const entry: Filter = { ruleKey: key, value: raw as FilterValue };
-      const rawProviderId = providerIdParam ? query[providerIdParam] : undefined;
-      if (rawProviderId !== undefined) entry.providerId = Number(rawProviderId);
-      entries.push(entry);
+      if (providerIdParam) {
+        const rawProviderId = query[providerIdParam];
+        const value: InstanceScopedValue = { ids: parseCsvIds(raw) };
+        if (rawProviderId !== undefined) value.providerId = Number(rawProviderId);
+        entries.push({ ruleKey: key, value });
+      } else {
+        entries.push({ ruleKey: key, value: raw as FilterValue });
+      }
     }
   }
   for (const [key, value] of ranges) {

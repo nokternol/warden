@@ -58,15 +58,16 @@ export {
 
 // The rule vocabulary and its client-facing projection.
 export type {
-  FilterValue,
   Filter,
+  FilterValue,
+  InstanceScopedValue,
   MediaRule,
   MediaRuleDescriptor,
   MovieRangeRuleKey,
   RangeValue,
   SeriesRangeRuleKey,
 } from './ruleRegistry';
-export { MEDIA_RULES, getRule, toDescriptor } from './ruleRegistry';
+export { MEDIA_RULES, getRule, isInstanceScopedValue, toDescriptor } from './ruleRegistry';
 
 // The query engine — matches a MediaSource against a MediaQuerySpec.
 export { MediaQueryEngine, matchItems } from './mediaQueryEngine';

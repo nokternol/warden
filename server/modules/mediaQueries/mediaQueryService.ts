@@ -8,7 +8,7 @@ import {
 } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
 import { NotFoundError, ValidationError } from '../../kernel/errors';
-import { type Filter, type FilterValue, getRule } from '../media';
+import { type Filter, type FilterValue, getRule, isInstanceScopedValue } from '../media';
 
 export type { FilterValue, Filter };
 
@@ -59,7 +59,7 @@ export interface MediaQueryRecord {
 function coerceValue(raw: string, dataType: string): FilterValue {
   if (dataType === 'boolean') return raw === 'true' || raw === '1';
   if (dataType === 'number') return Number(raw);
-  if (dataType === 'range') return JSON.parse(raw) as FilterValue;
+  if (dataType === 'range' || dataType === 'csv-ids') return JSON.parse(raw) as FilterValue;
   return raw;
 }
 
@@ -67,7 +67,7 @@ function serializeValue(value: FilterValue): string {
   return typeof value === 'object' ? JSON.stringify(value) : String(value);
 }
 
-function isRangeShaped(value: FilterValue): boolean {
+function isObjectShaped(value: FilterValue): boolean {
   return typeof value === 'object' && value !== null;
 }
 
@@ -79,8 +79,9 @@ function computeHealth(
   automationProviderId?: number
 ): QueryHealth {
   const qualificationIssues: QualificationIssue[] = [];
-  for (const { ruleKey, providerId } of filterEntries) {
-    if (providerId === undefined) continue;
+  for (const { ruleKey, value } of filterEntries) {
+    if (!isInstanceScopedValue(value) || value.providerId === undefined) continue;
+    const { providerId } = value;
     if (!activeProviderIds.has(providerId)) {
       qualificationIssues.push({ filterKey: ruleKey, providerId, reason: 'not_active' });
     } else if (automationProviderId !== undefined && providerId !== automationProviderId) {
@@ -173,7 +174,6 @@ export class MediaQueryService {
       const rule = contentType ? getRule(fv.filterKey, contentType) : undefined;
       const dataType = rule?.dataType ?? 'string';
       const entry: Filter = { ruleKey: fv.filterKey, value: coerceValue(fv.value, dataType) };
-      if (fv.providerId !== null) entry.providerId = fv.providerId;
       const arr = fvByQueryId.get(fv.mediaQueryId) ?? [];
       arr.push(entry);
       fvByQueryId.set(fv.mediaQueryId, arr);
@@ -202,7 +202,8 @@ export class MediaQueryService {
     // Validate all filter keys exist in the registry for this contentType, and that
     // each value's shape matches the rule's dataType (a bare scalar destructures to
     // `{ min: undefined, max: undefined }` for a range rule, so `inRange` would
-    // silently match every item instead of rejecting or filtering correctly).
+    // silently match every item instead of rejecting or filtering correctly; a bare
+    // csv string for an instance-scoped rule carries no instance and no parsed ids).
     for (const { ruleKey, value } of draft.filterValues) {
       const rule = getRule(ruleKey, draft.contentType);
       if (!rule) {
@@ -210,7 +211,18 @@ export class MediaQueryService {
           `Filter key '${ruleKey}' is not valid for contentType '${draft.contentType}'`
         );
       }
-      const rangeShaped = isRangeShaped(value);
+      const instanceScoped = isInstanceScopedValue(value);
+      const rangeShaped = isObjectShaped(value) && !instanceScoped;
+      if (rule.dataType === 'csv-ids' && !instanceScoped) {
+        throw new ValidationError(
+          `Filter key '${ruleKey}' expects an { ids, providerId? } instance-scoped value`
+        );
+      }
+      if (rule.dataType !== 'csv-ids' && instanceScoped) {
+        throw new ValidationError(
+          `Filter key '${ruleKey}' does not accept an instance-scoped value`
+        );
+      }
       if (rule.dataType === 'range' && !rangeShaped) {
         throw new ValidationError(`Filter key '${ruleKey}' expects a { min?, max? } range value`);
       }
@@ -226,11 +238,10 @@ export class MediaQueryService {
 
     if (draft.filterValues.length > 0) {
       await this.db.insert(mediaQueryFilterValues).values(
-        draft.filterValues.map(({ ruleKey, value, providerId }) => ({
+        draft.filterValues.map(({ ruleKey, value }) => ({
           mediaQueryId: row.id,
           filterKey: ruleKey,
           value: serializeValue(value),
-          providerId: providerId ?? null,
         }))
       );
     }
@@ -268,9 +279,7 @@ export class MediaQueryService {
     const filterValues: Filter[] = fvRows.map((fv) => {
       const rule = getRule(fv.filterKey, row.contentType as ContentType);
       const dataType = rule?.dataType ?? 'string';
-      const entry: Filter = { ruleKey: fv.filterKey, value: coerceValue(fv.value, dataType) };
-      if (fv.providerId !== null) entry.providerId = fv.providerId;
-      return entry;
+      return { ruleKey: fv.filterKey, value: coerceValue(fv.value, dataType) };
     });
 
     const health = computeHealth(

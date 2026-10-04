@@ -1119,7 +1119,7 @@ describe('AutomationExecutor', () => {
       ]);
       // exclude: qualityProfileId 20 → [3]
       const excludeQuery = await seedMediaQuery(mediaQueryService, [
-        { ruleKey: 'qualityProfileIds', value: '20' },
+        { ruleKey: 'qualityProfileIds', value: { ids: [20] } },
       ]);
 
       const automation = await automationService.create({

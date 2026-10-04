@@ -37,15 +37,20 @@ export const FilterValueSchema = z.union([
   z.number(),
   z.boolean(),
   z.object({ min: z.number().optional(), max: z.number().optional() }).strict(),
+  // An instance-scoped rule's value (tags, quality and language profiles): ids minted by
+  // one configured instance, which `providerId` names. Absent means unqualified.
+  z
+    .object({
+      providerId: z.number().int().positive().optional(),
+      ids: z.array(z.number().int().positive()),
+    })
+    .strict(),
 ]);
 
 export const FilterSchema = z
   .object({
     ruleKey: z.string(),
     value: FilterValueSchema,
-    // Namespace qualification for provider-defined id spaces (quality profiles, tags) —
-    // not targeting (see automations.providerId for that). Undefined means unqualified.
-    providerId: z.number().int().positive().optional(),
   })
   .strict();
 

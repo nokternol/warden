@@ -116,7 +116,9 @@ describe('MediaQueryService', () => {
     await service.create({
       name: 'Dangling',
       contentType: 'movie',
-      filterValues: [{ ruleKey: 'qualityProfileIds', value: '5', providerId: provider.id }],
+      filterValues: [
+        { ruleKey: 'qualityProfileIds', value: { providerId: provider.id, ids: [5] } },
+      ],
     });
 
     const [dto] = await service.list();
@@ -136,7 +138,9 @@ describe('MediaQueryService', () => {
     await service.create({
       name: 'Qualified',
       contentType: 'movie',
-      filterValues: [{ ruleKey: 'qualityProfileIds', value: '5', providerId: provider.id }],
+      filterValues: [
+        { ruleKey: 'qualityProfileIds', value: { providerId: provider.id, ids: [5] } },
+      ],
     });
 
     const [dto] = await service.list();
@@ -157,7 +161,9 @@ describe('MediaQueryService', () => {
     const query = await service.create({
       name: 'Bound elsewhere',
       contentType: 'movie',
-      filterValues: [{ ruleKey: 'qualityProfileIds', value: '5', providerId: providerA.id }],
+      filterValues: [
+        { ruleKey: 'qualityProfileIds', value: { providerId: providerA.id, ids: [5] } },
+      ],
     });
 
     const health = await service.getHealthForAutomation(query.id, providerB.id);
@@ -181,7 +187,9 @@ describe('MediaQueryService', () => {
     const query = await service.create({
       name: 'Bound correctly',
       contentType: 'movie',
-      filterValues: [{ ruleKey: 'qualityProfileIds', value: '5', providerId: provider.id }],
+      filterValues: [
+        { ruleKey: 'qualityProfileIds', value: { providerId: provider.id, ids: [5] } },
+      ],
     });
 
     const health = await service.getHealthForAutomation(query.id, provider.id);
@@ -191,37 +199,42 @@ describe('MediaQueryService', () => {
 
   // ── create ────────────────────────────────────────────────────────────────
 
-  it('persists and round-trips a providerId qualification on a filter value entry', async () => {
+  it('an instance-scoped value names its instance and reads back identical', async () => {
     const db = getDb();
     const [provider] = await db
       .insert(metadataProviders)
       .values({ type: MetadataProviderType.RADARR, name: 'Radarr', url: 'http://radarr' })
       .returning();
+    const filter = {
+      ruleKey: 'qualityProfileIds',
+      value: { providerId: provider.id, ids: [5, 6] },
+    };
 
     const created = await service.create({
       name: 'Qualified',
       contentType: 'movie',
-      filterValues: [{ ruleKey: 'qualityProfileIds', value: '5', providerId: provider.id }],
+      filterValues: [filter],
     });
-    expect(created.filterValues[0].providerId).toBe(provider.id);
+    expect(created.filterValues).toEqual([filter]);
 
     const [listed] = await service.list();
-    expect(listed.filterValues[0].providerId).toBe(provider.id);
+    expect(listed.filterValues).toEqual([filter]);
 
     const fetched = await service.getById(created.id);
-    expect(fetched.filterValues[0].providerId).toBe(provider.id);
+    expect(fetched.filterValues).toEqual([filter]);
   });
 
-  it('leaves providerId undefined for an unqualified entry', async () => {
+  it('an unqualified instance-scoped value reads back as just its ids', async () => {
+    const filter = { ruleKey: 'tagIds', value: { ids: [5] } };
     const created = await service.create({
       name: 'Unqualified',
       contentType: 'movie',
-      filterValues: [{ ruleKey: 'hasFile', value: true }],
+      filterValues: [filter],
     });
-    expect(created.filterValues[0].providerId).toBeUndefined();
+    expect(created.filterValues).toEqual([filter]);
 
     const [listed] = await service.list();
-    expect(listed.filterValues[0].providerId).toBeUndefined();
+    expect(listed.filterValues).toEqual([filter]);
   });
 
   it('inserts and returns a DTO with correct fields', async () => {
@@ -286,6 +299,18 @@ describe('MediaQueryService', () => {
         filterValues: [{ ruleKey: 'hasFile', value: { min: 1 } }],
       })
     ).rejects.toThrow('hasFile');
+  });
+
+  it('throws ValidationError when an instance-scoped rule is not given { providerId?, ids }', async () => {
+    for (const value of ['5', { min: 1 }]) {
+      await expect(
+        service.create({
+          name: 'Wrong shape',
+          contentType: 'movie',
+          filterValues: [{ ruleKey: 'tagIds', value }],
+        })
+      ).rejects.toThrow('tagIds');
+    }
   });
 
   // ── delete ────────────────────────────────────────────────────────────────

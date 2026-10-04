@@ -49,7 +49,10 @@ describe('MediaQueryEngine', () => {
         contentType: 'movie',
         clauses: [
           { filterValues: [{ ruleKey: 'hasFile', value: true }], role: 'include' },
-          { filterValues: [{ ruleKey: 'qualityProfileIds', value: '20' }], role: 'exclude' },
+          {
+            filterValues: [{ ruleKey: 'qualityProfileIds', value: { ids: [20] } }],
+            role: 'exclude',
+          },
         ],
       });
 
@@ -88,25 +91,29 @@ describe('matchItems — per-entry provider gate', () => {
     ),
   ];
 
-  it('an unqualified entry (no providerId) matches items regardless of instance', () => {
-    const result = matchItems(items, [{ ruleKey: 'qualityProfileIds', value: '5' }], 'movie');
+  it('an unqualified value (no providerId) matches items regardless of instance', () => {
+    const result = matchItems(
+      items,
+      [{ ruleKey: 'qualityProfileIds', value: { ids: [5] } }],
+      'movie'
+    );
     expect(result).toHaveLength(2);
   });
 
-  it('a qualified entry matches only the items from that provider', () => {
+  it('a qualified value matches only the items from that provider', () => {
     const result = matchItems(
       items,
-      [{ ruleKey: 'qualityProfileIds', value: '5', providerId: 1 }],
+      [{ ruleKey: 'qualityProfileIds', value: { providerId: 1, ids: [5] } }],
       'movie'
     );
     expect(result).toHaveLength(1);
     expect(result[0]._sourceIds.providerId).toBe(1);
   });
 
-  it('a qualified entry rejects an item from another instance even when the predicate would pass', () => {
+  it('a qualified value rejects an item from another instance even when the predicate would pass', () => {
     const result = matchItems(
       items,
-      [{ ruleKey: 'qualityProfileIds', value: '5', providerId: 999 }],
+      [{ ruleKey: 'qualityProfileIds', value: { providerId: 999, ids: [5] } }],
       'movie'
     );
     expect(result).toHaveLength(0);

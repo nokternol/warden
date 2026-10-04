@@ -9,7 +9,19 @@ export type { NormalizedMovie } from './movie';
 export type { NormalizedSeries } from './series';
 
 export type RangeValue = { min?: number; max?: number };
-export type FilterValue = string | number | boolean | RangeValue;
+/**
+ * The value of an instance-scoped rule (tags, quality and language profiles): ids minted
+ * by one configured instance, so the value names that instance. `providerId` is the
+ * configured instance the ids belong to — namespace qualification, not targeting (see
+ * `automations.providerId` for that). Absent means unqualified: each id is read in its
+ * item's own instance namespace.
+ */
+export type InstanceScopedValue = { providerId?: number; ids: number[] };
+export type FilterValue = string | number | boolean | RangeValue | InstanceScopedValue;
+
+export function isInstanceScopedValue(value: FilterValue): value is InstanceScopedValue {
+  return typeof value === 'object' && 'ids' in value;
+}
 
 /**
  * A filter: a rule's key paired with the value to test it against. Nothing here knows
@@ -18,7 +30,6 @@ export type FilterValue = string | number | boolean | RangeValue;
 export interface Filter {
   ruleKey: string;
   value: FilterValue;
-  providerId?: number;
 }
 
 export type Predicate<
@@ -59,12 +70,8 @@ export function toDescriptor(rule: MediaRule): MediaRuleDescriptor {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function parseCsvIds(value: FilterValue): number[] {
-  const csv = String(value);
-  return csv
-    .split(',')
-    .map((s) => Number(s.trim()))
-    .filter((n) => !Number.isNaN(n) && n > 0);
+function instanceIds(value: FilterValue): number[] {
+  return isInstanceScopedValue(value) ? value.ids : [];
 }
 
 function parseCsvStrings(value: FilterValue): string[] {
@@ -371,7 +378,7 @@ export const MEDIA_RULES = [
     required: false,
     instanceScoped: true,
     predicate: (item, value) => {
-      const ids = parseCsvIds(value);
+      const ids = instanceIds(value);
       return ids.some((id) => (item.tags ?? []).includes(id));
     },
   },
@@ -384,7 +391,7 @@ export const MEDIA_RULES = [
     required: false,
     instanceScoped: true,
     predicate: (item, value) => {
-      const ids = parseCsvIds(value);
+      const ids = instanceIds(value);
       return item.qualityProfileId !== undefined && ids.includes(item.qualityProfileId);
     },
   },
@@ -569,7 +576,7 @@ export const MEDIA_RULES = [
     required: false,
     instanceScoped: true,
     predicate: (item, value) => {
-      const ids = parseCsvIds(value);
+      const ids = instanceIds(value);
       return ids.some((id) => (item.tags ?? []).includes(id));
     },
   },
@@ -582,7 +589,7 @@ export const MEDIA_RULES = [
     required: false,
     instanceScoped: true,
     predicate: (item, value) => {
-      const ids = parseCsvIds(value);
+      const ids = instanceIds(value);
       return item.qualityProfileId !== undefined && ids.includes(item.qualityProfileId);
     },
   },
@@ -738,7 +745,7 @@ export const MEDIA_RULES = [
     instanceScoped: true,
     predicate: (item, value) => {
       const series = item as NormalizedSeries;
-      const ids = parseCsvIds(value);
+      const ids = instanceIds(value);
       return series.languageProfileId !== undefined && ids.includes(series.languageProfileId);
     },
   },

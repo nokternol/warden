@@ -42,6 +42,7 @@ export function summarizeFilters(filterValues: Filter[]): string[] {
     if (typeof value === 'boolean') {
       return value ? label : `Not ${label.toLowerCase()}`;
     }
+    if (typeof value === 'object' && 'ids' in value) return `${label}: ${value.ids.join(',')}`;
     return `${label}: ${value}`;
   });
 }

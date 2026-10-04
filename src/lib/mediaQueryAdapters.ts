@@ -6,6 +6,7 @@ import type {
   RangeValue,
 } from '@app/hooks/useMediaFilters';
 import type { Filter } from '@app/hooks/useMediaQueries';
+import type { MediaRuleDescriptor } from '@app/hooks/useMediaRules';
 import type { MediaFilters } from '@app/types/media';
 import type { MovieRangeRuleKey, SeriesRangeRuleKey } from '@contract/browseRangeKeys';
 /**
@@ -199,15 +200,29 @@ export function toBrowseParams(buckets: ScopedBuckets, contentType: ContentType)
   return params;
 }
 
-export function toSaveValues(filterState: FilterState, contentType: ContentType): Filter[] {
+function parseCsvIds(csv: string): number[] {
+  return csv
+    .split(',')
+    .map((part) => Number(part.trim()))
+    .filter((n) => Number.isInteger(n) && n > 0);
+}
+
+export function toSaveValues(
+  filterState: FilterState,
+  contentType: ContentType,
+  rules: MediaRuleDescriptor[]
+): Filter[] {
   const scoped = contentType === 'movie' ? filterState.movie : filterState.series;
   const qualifiers =
     contentType === 'movie' ? filterState.movieQualifiers : filterState.seriesQualifiers;
   const merged: Record<string, FilterValue> = { ...filterState.shared, ...scoped };
+  const instanceScoped = new Set(rules.filter((r) => r.instanceScoped).map((r) => r.key));
   return Object.entries(merged)
     .filter((entry): entry is [string, FilterValue] => entry[1] !== undefined)
     .map(([ruleKey, value]) => {
+      if (!instanceScoped.has(ruleKey)) return { ruleKey, value };
       const providerId = qualifiers[ruleKey];
-      return providerId === undefined ? { ruleKey, value } : { ruleKey, value, providerId };
+      const ids = parseCsvIds(String(value));
+      return { ruleKey, value: providerId === undefined ? { ids } : { providerId, ids } };
     });
 }

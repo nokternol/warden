@@ -70,7 +70,7 @@ describe('useMediaQueries — save', () => {
     });
   });
 
-  it('posts a providerId qualification through untouched', async () => {
+  it('posts an instance-scoped value through untouched', async () => {
     let body: unknown;
     server.use(
       mockProcedure(contract.mediaQueries.create, async ({ request }) => {
@@ -84,13 +84,13 @@ describe('useMediaQueries — save', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     await result.current.save('4k query', 'movie', [
-      { ruleKey: 'qualityProfileIds', value: '5', providerId: 3 },
+      { ruleKey: 'qualityProfileIds', value: { providerId: 3, ids: [5] } },
     ]);
 
     expect(body).toEqual({
       name: '4k query',
       contentType: 'movie',
-      filterValues: [{ ruleKey: 'qualityProfileIds', value: '5', providerId: 3 }],
+      filterValues: [{ ruleKey: 'qualityProfileIds', value: { providerId: 3, ids: [5] } }],
     });
   });
 });
