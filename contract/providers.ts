@@ -129,7 +129,7 @@ export const providers = {
   list: base.route({ method: 'GET', path: '/api/providers' }).output(z.array(ProviderSchema)),
 
   create: base
-    .route({ method: 'POST', path: '/api/settings/providers' })
+    .route({ method: 'POST', path: '/api/providers' })
     .input(ProviderDraftSchema)
     .output(ProviderSchema),
 

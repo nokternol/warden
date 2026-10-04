@@ -91,7 +91,7 @@ describe('Settings API Integration', () => {
     });
 
     it('POST /providers returns 401', async () => {
-      const res = await unauthedClient.post('/api/settings/providers', {
+      const res = await unauthedClient.post('/api/providers', {
         type: 'RADARR',
         name: 'Radarr',
         url: 'http://localhost:7878',
@@ -124,7 +124,7 @@ describe('Settings API Integration', () => {
 
   describe('POST /providers', () => {
     it('creates a provider and returns it with apiKey redacted', async () => {
-      const res = await authedClient.post('/api/settings/providers', {
+      const res = await authedClient.post('/api/providers', {
         type: MetadataProviderType.SONARR,
         name: 'Sonarr Main',
         url: 'http://localhost:8989/api/v3',
@@ -139,14 +139,14 @@ describe('Settings API Integration', () => {
     });
 
     it('returns 400 for missing required fields', async () => {
-      const res = await authedClient.post('/api/settings/providers', { name: 'No type' });
+      const res = await authedClient.post('/api/providers', { name: 'No type' });
       expectErrorResponse(res, 400);
     });
   });
 
   describe('PATCH /providers/:id', () => {
     it('updates name and url of an existing provider', async () => {
-      const created = await authedClient.post('/api/settings/providers', {
+      const created = await authedClient.post('/api/providers', {
         type: MetadataProviderType.RADARR,
         name: 'Old Name',
         url: 'http://localhost:7878/api/v3',
@@ -172,7 +172,7 @@ describe('Settings API Integration', () => {
 
   describe('DELETE /providers/:id', () => {
     it('removes a provider and it no longer appears in GET list', async () => {
-      const created = await authedClient.post('/api/settings/providers', {
+      const created = await authedClient.post('/api/providers', {
         type: MetadataProviderType.PLEX,
         name: 'Plex',
         url: 'http://localhost:32400',

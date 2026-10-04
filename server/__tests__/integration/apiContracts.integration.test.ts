@@ -155,8 +155,8 @@ describe('API shape contracts — real server responses', () => {
     expect(result.success, JSON.stringify(result.error?.format())).toBe(true);
   });
 
-  it('POST /api/settings/providers response matches ProviderSchema', async () => {
-    const res = await client.post('/api/settings/providers', {
+  it('POST /api/providers response matches ProviderSchema', async () => {
+    const res = await client.post('/api/providers', {
       type: 'SONARR',
       name: 'Contract test Sonarr',
       url: 'http://localhost:8989/api/v3',
