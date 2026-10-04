@@ -282,4 +282,27 @@ describe('AutomationBuilder', () => {
     expect(screen.queryByRole('checkbox', { name: /confirm/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /create automation/i })).toBeEnabled();
   });
+
+  it('asks again when the selected task changes after a confirmation', async () => {
+    const OTHER_DELETE = {
+      id: 'deleteMovieKeepFiles',
+      label: 'Delete movie (keep files)',
+      destructive: true,
+      enabled: true,
+    };
+    mockApi(
+      [makeProvider()],
+      [{ providerId: 1, type: 'RADARR', tasks: [ENABLED_DELETE, OTHER_DELETE] }]
+    );
+    const user = userEvent.setup();
+    renderBuilder();
+
+    await user.type(screen.getByLabelText('Name'), 'Purge');
+    await user.click(await screen.findByRole('radio', { name: /delete movie \+ files/i }));
+    await user.click(screen.getByRole('checkbox', { name: /confirm/i }));
+    await user.click(screen.getByRole('radio', { name: /keep files/i }));
+
+    expect(screen.getByRole('checkbox', { name: /confirm/i })).not.toBeChecked();
+    expect(screen.getByRole('button', { name: /create automation/i })).toBeDisabled();
+  });
 });

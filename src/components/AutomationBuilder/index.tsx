@@ -294,6 +294,7 @@ export default function AutomationBuilder({
                             onChange={() => {
                               setSelectedTask(bt);
                               setTaskParameterValue('');
+                              setEffectConfirmed(false);
                             }}
                             className="flex-shrink-0 text-primary focus:ring-primary focus:ring-offset-0"
                           />
