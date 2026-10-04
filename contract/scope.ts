@@ -9,6 +9,13 @@ export interface Scope {
   deferred: {
     /** Provider types that cannot be configured and are left out of the type catalogue. */
     providerTypes: readonly ProviderType[];
+    /**
+     * Rule keys that are never served, because each has no control or no producer of
+     * an offered type. /api/rules leaves them out by construction, and a test keeps
+     * this list equal to that set, so un-deferring a provider type shows which of
+     * these rules it brings back.
+     */
+    rules: readonly string[];
   };
 }
 
@@ -23,6 +30,12 @@ export const scope: Scope = {
       'OMDB',
       // Not buildable through ProviderFactory: its API key is lost.
       'TVMAZE',
+    ],
+    rules: [
+      // A multi-value rule with no lookup to choose values from, so it has no control.
+      'certification',
+      // Produced only by TMDB.
+      'tmdbStatus',
     ],
   },
 };
