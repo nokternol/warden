@@ -1,5 +1,5 @@
 import type { ContentType } from '@contract/schemas';
-import { isOfferedProviderType } from '@contract/scope';
+import { type Scope, isOfferedProviderType } from '@contract/scope';
 import { api } from '@server/kernel/api';
 import type { ActiveFieldSetCache } from './activeFieldSet';
 import { MEDIA_RULES, toDescriptor } from './ruleRegistry';
@@ -14,16 +14,19 @@ const RULES: readonly MediaRule[] = MEDIA_RULES;
 
 interface RulesCradle {
   activeFieldSetCache: ActiveFieldSetCache;
+  scope: Scope;
 }
 
 export function createRulesProcedures(cradle: RulesCradle) {
-  const { activeFieldSetCache } = cradle;
+  const { activeFieldSetCache, scope } = cradle;
 
   async function gatedDescriptors(contentType?: ContentType): Promise<MediaRuleDescriptor[]> {
     const configuredTypes = await activeFieldSetCache.getActiveTypes();
     // A live producer is configured and active, and of a type that is offered.
     const hasLiveProducer = (rule: MediaRule) =>
-      rule.providers.some((type) => configuredTypes.has(type) && isOfferedProviderType(type));
+      rule.providers.some(
+        (type) => configuredTypes.has(type) && isOfferedProviderType(scope, type)
+      );
 
     return RULES.filter(
       (rule) => contentType === undefined || rule.contentTypes.includes(contentType)

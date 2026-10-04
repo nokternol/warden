@@ -1,3 +1,4 @@
+import { type Scope, scope } from '@contract/scope';
 import { type AwilixContainer, InjectionMode, asClass, asValue, createContainer } from 'awilix';
 import type { AppConfig } from './config';
 import type { DrizzleDb } from './db';
@@ -12,6 +13,8 @@ export interface KernelCradle {
   config: AppConfig;
   db: DrizzleDb;
   eventBus: DomainEventBus;
+  /** The scope declaration: what Warden does not expose. */
+  scope: Scope;
 }
 
 /**
@@ -35,6 +38,7 @@ export function createKernelContainer<TCradle extends KernelCradle>(deps: {
     config: asValue(deps.config),
     db: asValue(deps.db),
     eventBus: asClass(DomainEventBus).singleton(),
+    scope: asValue(scope),
   });
 
   // The remaining TCradle keys are filled by module registrations before the

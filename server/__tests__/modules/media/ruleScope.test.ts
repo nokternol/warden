@@ -6,7 +6,10 @@ const RULES: readonly MediaRule[] = MEDIA_RULES;
 
 /** A rule the server can never serve: it has no control, or no producer of an offered type. */
 function cannotBeOffered(rule: MediaRule): boolean {
-  return toDescriptor(rule) === undefined || !rule.providers.some(isOfferedProviderType);
+  return (
+    toDescriptor(rule) === undefined ||
+    !rule.providers.some((type) => isOfferedProviderType(scope, type))
+  );
 }
 
 describe('the scope declaration of deferred rules', () => {

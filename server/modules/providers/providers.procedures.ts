@@ -1,5 +1,5 @@
 import type { ProviderType, TaskOptionsRoute } from '@contract/providers';
-import { isOfferedProviderType } from '@contract/scope';
+import { type Scope, isOfferedProviderType, isOfferedTask } from '@contract/scope';
 import { MetadataProviderType } from '@server/database/schema';
 import type { MetadataProvider } from '@server/database/schema';
 import { api } from '@server/kernel/api';
@@ -41,6 +41,7 @@ interface ProvidersCradle {
   providerSettingsService: ProviderSettingsService;
   providerFactory: ProviderFactory;
   config: AppConfig;
+  scope: Scope;
 }
 
 interface TaskOption {
@@ -101,19 +102,19 @@ export function createProvidersProcedures(
   cradle: ProvidersCradle,
   invalidateMediaCaches: () => void
 ) {
-  const { providerSettingsService, providerFactory, config } = cradle;
+  const { providerSettingsService, providerFactory, config, scope } = cradle;
 
   return {
     // ─── Catalogue ─────────────────────────────────────────────────────────
     types: api.providers.types.handler(async () =>
-      describeProviderTypes().filter((entry) => isOfferedProviderType(entry.type))
+      describeProviderTypes().filter((entry) => isOfferedProviderType(scope, entry.type))
     ),
 
     // ─── Configured instances ──────────────────────────────────────────────
     list: api.providers.list.handler(async () => providerSettingsService.list()),
 
     create: api.providers.create.handler(async ({ input }) => {
-      if (!isOfferedProviderType(input.type)) {
+      if (!isOfferedProviderType(scope, input.type)) {
         throw new ValidationError(`Provider type ${input.type} is not offered`);
       }
       return providerSettingsService.create({ ...input, type: input.type as MetadataProviderType });
@@ -133,7 +134,7 @@ export function createProvidersProcedures(
     }),
 
     test: api.providers.test.handler(async ({ input }) => {
-      if (!isOfferedProviderType(input.type)) {
+      if (!isOfferedProviderType(scope, input.type)) {
         throw new ValidationError(`Provider type ${input.type} is not offered`);
       }
       try {
@@ -163,10 +164,13 @@ export function createProvidersProcedures(
           {
             providerId: p.id,
             type: p.type,
-            tasks: instance.tasks().map(({ run: _run, ...descriptor }) => ({
-              ...descriptor,
-              enabled: enabled.includes(descriptor.id),
-            })),
+            tasks: instance
+              .tasks()
+              .filter((task) => isOfferedTask(scope, p.type, task.id))
+              .map(({ run: _run, ...descriptor }) => ({
+                ...descriptor,
+                enabled: enabled.includes(descriptor.id),
+              })),
           },
         ];
       });

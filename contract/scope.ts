@@ -1,9 +1,16 @@
 import type { ProviderType } from './schemas';
 
+/** A task of one provider type; task ids are unique only within a type. */
+export interface DeferredTask {
+  providerType: ProviderType;
+  taskId: string;
+}
+
 /**
- * What Warden does not expose. Deferred features stay in the codebase,
- * compiled and tested; every path to them is blocked by consulting this one
- * declaration, so un-deferring a feature is removing its entry here.
+ * The scope declaration: what Warden does not expose. Deferred features stay
+ * in the codebase, compiled and tested; every path to them is blocked by
+ * consulting this one declaration, so un-deferring a feature is removing its
+ * entry here.
  */
 export interface Scope {
   deferred: {
@@ -16,6 +23,8 @@ export interface Scope {
      * these rules it brings back.
      */
     rules: readonly string[];
+    /** Provider tasks that are not offered for enablement or automation. */
+    tasks: readonly DeferredTask[];
   };
 }
 
@@ -24,7 +33,7 @@ export const scope: Scope = {
     providerTypes: [
       // Unbuildable through ProviderFactory; the request manager is offered as OVERSEERR.
       'SEERR',
-      // Not in the verification stack (decision 9).
+      // Not in the stack the offered types are verified against.
       'TMDB',
       // Feeds only the deferred ratings path.
       'OMDB',
@@ -37,10 +46,22 @@ export const scope: Scope = {
       // Produced only by TMDB.
       'tmdbStatus',
     ],
+    tasks: [],
   },
 };
 
-/** Whether `type` can be configured: it is not a deferred provider type. */
-export function isOfferedProviderType(type: ProviderType): boolean {
-  return !scope.deferred.providerTypes.includes(type);
+/** Whether `type` can be configured: `declared` does not defer it. */
+export function isOfferedProviderType(declared: Scope, type: ProviderType): boolean {
+  return !declared.deferred.providerTypes.includes(type);
+}
+
+/** Whether a provider type's task is offered for enablement and automation. */
+export function isOfferedTask(
+  declared: Scope,
+  providerType: ProviderType,
+  taskId: string
+): boolean {
+  return !declared.deferred.tasks.some(
+    (task) => task.providerType === providerType && task.taskId === taskId
+  );
 }
