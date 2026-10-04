@@ -15,12 +15,14 @@ import { useEffect, useId, useRef, useState } from 'react';
 // toggle the focused option; ArrowUp from the first option or Escape returns
 // focus to the trigger (Escape also closes the menu).
 //
-// When the selection reaches into more than one group, `spanNote` is shown at
-// the foot of the options so the caller can explain how such a selection is read.
+// When the selection reaches into more than one group, `spanNote` is shown in
+// the menu footer so the caller can explain how such a selection is read.
 //
 // While anything is selected the menu ends with a "Clear selection" item, the
-// last stop in the same keyboard order. It emits an empty selection and
-// returns focus to the trigger.
+// last stop in the same keyboard order; choosing it emits an empty selection
+// and returns focus to the trigger. The note and the clear item sit in a footer
+// outside the scrolling option list, so they stay in view however long the
+// list is.
 
 export interface MultiSelectOption<T extends string | number> {
   value: T;
@@ -185,68 +187,70 @@ export function MultiSelectFilter<T extends string | number>({
           role="menu"
           id={menuId}
           aria-label={label}
-          className="absolute top-full left-0 mt-1 min-w-40 max-h-60 overflow-y-auto bg-surface-panel border border-border rounded-lg shadow-lg py-1 z-20"
+          className="absolute top-full left-0 mt-1 min-w-40 max-h-60 flex flex-col overflow-hidden bg-surface-panel border border-border rounded-lg shadow-lg py-1 z-20"
         >
-          {groups.map(([group, members]) => (
-            <div
-              key={group ?? ''}
-              role={group === undefined ? undefined : 'group'}
-              aria-label={group}
-            >
-              {group !== undefined && (
-                <div
-                  className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-text-muted select-none first:pt-1.5"
-                  aria-hidden="true"
-                >
-                  {group}
-                </div>
-              )}
-              {members.map((option) => {
-                const index = indexOf.get(option.value) ?? 0;
-                const checked = selected.includes(option.value);
-                return (
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {groups.map(([group, members]) => (
+              <div
+                key={group ?? ''}
+                role={group === undefined ? undefined : 'group'}
+                aria-label={group}
+              >
+                {group !== undefined && (
                   <div
-                    key={`${id}-${option.value}`}
-                    ref={(el) => {
-                      itemRefs.current[index] = el;
-                    }}
-                    role="menuitemcheckbox"
-                    aria-checked={checked}
-                    tabIndex={-1}
-                    onClick={() => toggle(option.value)}
-                    onKeyDown={(e) => onItemKeyDown(e, index, () => toggle(option.value))}
-                    className="flex items-center gap-2 px-3 py-2.5 text-xs text-text-secondary hover:bg-surface-hover focus:bg-surface-hover focus:outline-none cursor-pointer select-none"
+                    className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-text-muted select-none first:pt-1.5"
+                    aria-hidden="true"
                   >
-                    <span
-                      aria-hidden="true"
-                      className={cn(
-                        'w-3.5 h-3.5 flex-shrink-0 rounded-sm border flex items-center justify-center',
-                        checked ? 'bg-primary border-primary' : 'border-border bg-surface-bg'
-                      )}
-                    >
-                      {checked && (
-                        <svg
-                          viewBox="0 0 12 12"
-                          fill="none"
-                          className="w-full h-full p-0.5"
-                          aria-hidden="true"
-                        >
-                          <path
-                            d="M2 6l3 3 5-5"
-                            stroke="white"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      )}
-                    </span>
-                    {option.label}
+                    {group}
                   </div>
-                );
-              })}
-            </div>
-          ))}
+                )}
+                {members.map((option) => {
+                  const index = indexOf.get(option.value) ?? 0;
+                  const checked = selected.includes(option.value);
+                  return (
+                    <div
+                      key={`${id}-${option.value}`}
+                      ref={(el) => {
+                        itemRefs.current[index] = el;
+                      }}
+                      role="menuitemcheckbox"
+                      aria-checked={checked}
+                      tabIndex={-1}
+                      onClick={() => toggle(option.value)}
+                      onKeyDown={(e) => onItemKeyDown(e, index, () => toggle(option.value))}
+                      className="flex items-center gap-2 px-3 py-2.5 text-xs text-text-secondary hover:bg-surface-hover focus:bg-surface-hover focus:outline-none cursor-pointer select-none"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          'w-3.5 h-3.5 flex-shrink-0 rounded-sm border flex items-center justify-center',
+                          checked ? 'bg-primary border-primary' : 'border-border bg-surface-bg'
+                        )}
+                      >
+                        {checked && (
+                          <svg
+                            viewBox="0 0 12 12"
+                            fill="none"
+                            className="w-full h-full p-0.5"
+                            aria-hidden="true"
+                          >
+                            <path
+                              d="M2 6l3 3 5-5"
+                              stroke="white"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        )}
+                      </span>
+                      {option.label}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
           {spansGroups && spanNote && (
             <div
               role="note"

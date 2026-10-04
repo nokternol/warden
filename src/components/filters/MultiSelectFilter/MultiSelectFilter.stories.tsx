@@ -58,6 +58,15 @@ const TAGS_TWO_INSTANCES = [
   { value: 21, label: 'Anime', group: 'Radarr Standard' },
 ];
 
+const TAGS_FOUR_INSTANCES = ['Radarr 4K', 'Radarr Standard', 'Radarr Kids', 'Radarr Anime'].flatMap(
+  (group, g) =>
+    ['4K', 'Remux', 'HDR', 'Kids'].map((label, i) => ({
+      value: g * 10 + i,
+      label,
+      group,
+    }))
+);
+
 const SPANS_NOTE = "Spans multiple instances — matches within each item's own instance.";
 
 // ─── Stories ──────────────────────────────────────────────────────────────────
@@ -88,6 +97,18 @@ export const GroupedByInstance: Story = () => (
       label="Movie Tags"
       options={TAGS_TWO_INSTANCES}
       initial={[10, 20]}
+      spanNote={SPANS_NOTE}
+    />
+  </div>
+);
+
+/** A grouped list long enough to scroll: the note and "Clear selection" stay pinned below it. */
+export const GroupedScrollingFooter: Story = () => (
+  <div className="bg-surface-bg p-8 min-h-96">
+    <Controlled
+      label="Movie Tags"
+      options={TAGS_FOUR_INSTANCES}
+      initial={[0, 10]}
       spanNote={SPANS_NOTE}
     />
   </div>

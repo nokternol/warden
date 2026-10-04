@@ -195,3 +195,29 @@ describe('MultiSelectFilter — selections that span groups', () => {
     expect(screen.queryByRole('note')).not.toBeInTheDocument();
   });
 });
+
+describe('MultiSelectFilter — footer stays in view', () => {
+  const scrollingAncestor = (el: HTMLElement) => el.closest('.overflow-y-auto');
+
+  it('keeps the note and the clear action outside the scrolling option list', async () => {
+    const user = setupUser();
+    render(
+      <MultiSelectFilter
+        label="Tags"
+        options={[
+          { value: 10, label: 'Remux', group: 'Radarr 4K' },
+          { value: 20, label: 'Kids', group: 'Radarr Standard' },
+        ]}
+        selected={[10, 20]}
+        onChange={vi.fn()}
+        spanNote="Spans multiple instances."
+      />
+    );
+    await user.click(screen.getByRole('button', { name: /tags/i }));
+    expect(
+      scrollingAncestor(screen.getByRole('menuitemcheckbox', { name: 'Remux' }))
+    ).not.toBeNull();
+    expect(scrollingAncestor(screen.getByRole('note'))).toBeNull();
+    expect(scrollingAncestor(screen.getByRole('menuitem', { name: /clear/i }))).toBeNull();
+  });
+});
