@@ -1408,4 +1408,23 @@ describe('MediaFilterBar — renders a rule it has never seen', () => {
     await user.click(screen.getByRole('button', { name: /preferred profile/i }));
     expect(screen.getByRole('menuitemcheckbox', { name: /HD-1080p/i })).toBeInTheDocument();
   });
+
+  it('renders a string rule with no options as a free-text input', async () => {
+    const user = setupUser();
+    const edition: MediaRuleDescriptor = {
+      key: 'edition',
+      label: 'Edition',
+      contentTypes: ['movie'],
+      dataType: 'string',
+      providers: ['RADARR'],
+      required: false,
+    };
+    const onRuleChange = vi.fn();
+    render(<MediaFilterBar {...makeProps({ rules: [edition], onRuleChange })} />);
+    await addFilter(user, 'Edition');
+    fireEvent.change(screen.getByRole('textbox', { name: 'Edition' }), {
+      target: { value: "Director's Cut" },
+    });
+    expect(onRuleChange).toHaveBeenCalledWith('movie', 'edition', "Director's Cut");
+  });
 });

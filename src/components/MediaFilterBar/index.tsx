@@ -511,6 +511,29 @@ function StringMultiSelectDropdown({
   );
 }
 
+// ─── TextFilter — a free-text rule (a `string` rule with no fixed options) ───
+
+function TextFilter({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string | undefined;
+  onChange: (value: string | undefined) => void;
+}) {
+  return (
+    <input
+      type="text"
+      aria-label={label}
+      placeholder={label}
+      value={value ?? ''}
+      onChange={(e) => onChange(e.target.value || undefined)}
+      className="px-2.5 py-1 rounded-md text-xs bg-surface-bg border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary w-36"
+    />
+  );
+}
+
 // ─── NumberRangeFilter ────────────────────────────────────────────────────────
 
 function parseNumber(s: string): number | undefined {
@@ -940,6 +963,7 @@ function ruleRendersControl(
     case 'boolean':
       return true;
     case 'string':
+      return true;
     case 'number':
       return rule.options !== undefined;
     case 'instance-ids':
@@ -1074,6 +1098,15 @@ function RuleControl({
     case 'string':
     case 'number': {
       const options = rule.options;
+      if (!options && rule.dataType === 'string') {
+        return (
+          <TextFilter
+            label={rule.label}
+            value={value !== undefined ? String(value) : undefined}
+            onChange={(v) => onRuleChange(scope, rule.key, v)}
+          />
+        );
+      }
       if (!options) return null;
       const label = rule.shortLabel ?? rule.label;
       const control = (
