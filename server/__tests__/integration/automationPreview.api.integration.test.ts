@@ -98,4 +98,14 @@ describe('POST /api/automations/preview', () => {
     expect(res.status).toBe(200);
     expect(res.body.data).toEqual({ count: 2, contentType: 'movie' });
   });
+
+  it('answers 404 for an unknown provider', async () => {
+    const res = await client.post('/api/automations/preview', {
+      providerId: 999999,
+      taskId: 'deleteMovieWithFiles',
+      queries: [{ queryId: hasFileQueryId, role: 'include' }],
+    });
+
+    expect(res.status).toBe(404);
+  });
 });
