@@ -3,6 +3,7 @@ import { contract } from '@contract/index';
 import '@testing-library/jest-dom/vitest';
 import { render, screen, setupUser, waitFor } from '@tests/helpers/component';
 import { mockProcedure } from '@tests/mocks/contract';
+import { MOCK_RULES } from '@tests/mocks/handlers/media';
 import { server } from '@tests/mocks/server';
 import { SWRConfig } from 'swr';
 import { describe, expect, it, vi } from 'vitest';
@@ -74,5 +75,35 @@ describe('MediaPage browse encoding', () => {
 
     await waitFor(() => expect(saved).toBeDefined());
     await waitFor(() => expect(browsed.at(-1)).toEqual(saved));
+  });
+
+  it('browses an instance-scoped value only in its scoped form, even when the rules load late', async () => {
+    const browsed: Filter[][] = [];
+    let rulesServed = false;
+    server.use(
+      mockProcedure(contract.media.rules, async () => {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        rulesServed = true;
+        return MOCK_RULES;
+      }),
+      mockProcedure(contract.media.browse.movie, ({ request }) => {
+        const filters = new URL(request.url).searchParams.get('filters');
+        browsed.push(filters === null ? [] : (JSON.parse(filters) as Filter[]));
+        return EMPTY_PAGE;
+      })
+    );
+    render(<MediaPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(rulesServed).toBe(true), { timeout: 3000 });
+    await waitFor(() =>
+      expect(browsed.at(-1)).toContainEqual({
+        ruleKey: 'tagIds',
+        value: { providerId: 1, ids: [1, 2] },
+      })
+    );
+    const tagEntries = browsed.flat().filter((f) => f.ruleKey === 'tagIds');
+    for (const entry of tagEntries) {
+      expect(entry.value).toEqual({ providerId: 1, ids: [1, 2] });
+    }
   });
 });

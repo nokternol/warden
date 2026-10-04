@@ -1,8 +1,7 @@
-import type { ContentType, FilterSchema } from '@contract/schemas';
+import type { ContentType, Filter } from '@contract/schemas';
 import type { Express } from 'express';
 import request from 'supertest';
 import { expect } from 'vitest';
-import type { z } from 'zod';
 
 /**
  * Test helper for making authenticated API requests
@@ -106,8 +105,6 @@ export function expectValidationError(
 
   return error.errors;
 }
-
-type Filter = z.infer<typeof FilterSchema>;
 
 /**
  * The browse URL for a content type: the saved-query `Filter` entries as the

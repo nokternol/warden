@@ -30,7 +30,7 @@ export function usePaginatedMedia<T>(
   { filters, sort }: BrowseRequest = { filters: [] }
 ) {
   const encodedFilters = JSON.stringify(filters);
-  const filtersKey = `${encodedFilters}|${sort ?? ''}`;
+  const requestKey = `${encodedFilters}|${sort ?? ''}`;
 
   const getKey = (pageIndex: number, prev: PaginatedPage<T> | null) => {
     // Do not key page N until page N-1 has loaded. When filters change, the
@@ -64,16 +64,16 @@ export function usePaginatedMedia<T>(
     }
   );
 
-  // Reset size to 1 when filters change. useLayoutEffect fires before paint and
+  // Reset size to 1 when the filters or sort change. useLayoutEffect fires before paint and
   // before the next useEffect pass, closing the window where SWR's own layout
   // effect could start a sequential page waterfall for the new filter key.
-  const prevFiltersKeyRef = useRef(filtersKey);
+  const prevRequestKeyRef = useRef(requestKey);
   useLayoutEffect(() => {
-    if (prevFiltersKeyRef.current !== filtersKey) {
-      prevFiltersKeyRef.current = filtersKey;
+    if (prevRequestKeyRef.current !== requestKey) {
+      prevRequestKeyRef.current = requestKey;
       void setSize(1);
     }
-  }, [filtersKey, setSize]);
+  }, [requestKey, setSize]);
 
   // Synchronous in-flight guard. `isValidatingRef` is always the current
   // isValidating value so the callback closure never goes stale. `isFetchingRef`
