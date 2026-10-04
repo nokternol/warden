@@ -693,7 +693,7 @@ describe('MediaFilterBar — activeTab prop', () => {
 
 // ─── Multi-select dropdowns ───────────────────────────────────────────────────
 
-describe('MediaFilterBar — MultiSelectDropdown', () => {
+describe('MediaFilterBar — multi-value controls', () => {
   it('renders movie tags dropdown when radarr tags are present', async () => {
     const user = setupUser();
     render(<MediaFilterBar {...makeProps({ lookups: RICH_LOOKUPS })} />);
