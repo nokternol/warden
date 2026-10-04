@@ -204,6 +204,13 @@
       "when": 1785800000000,
       "tag": "0028_automation_queries",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1785900000000,
+      "tag": "0029_filter_instance_scope",
+      "breakpoints": true
     }
   ]
 }
