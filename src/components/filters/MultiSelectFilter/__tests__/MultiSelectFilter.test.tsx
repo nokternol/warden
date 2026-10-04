@@ -89,3 +89,44 @@ describe('MultiSelectFilter — keyboard', () => {
     expect(trigger).toHaveFocus();
   });
 });
+
+describe('MultiSelectFilter — boundaries', () => {
+  it('renders nothing when there are no options', () => {
+    const { container } = render(
+      <MultiSelectFilter label="Tags" options={[]} selected={[]} onChange={vi.fn()} />
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('keeps string and numeric values as given, never coercing one to the other', async () => {
+    const onChange = vi.fn();
+    const user = setupUser();
+    render(
+      <MultiSelectFilter
+        label="Genre"
+        options={[
+          { value: 'Drama', label: 'Drama' },
+          { value: 'Sci-Fi', label: 'Sci-Fi' },
+        ]}
+        selected={['Drama']}
+        onChange={onChange}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: /genre, 1 selected/i }));
+    await user.click(screen.getByRole('menuitemcheckbox', { name: 'Sci-Fi' }));
+    expect(onChange).toHaveBeenCalledWith(['Drama', 'Sci-Fi']);
+  });
+
+  it('closes when the user presses outside it', async () => {
+    const user = setupUser();
+    render(
+      <div>
+        <MultiSelectFilter label="Tags" options={TAGS} selected={[]} onChange={vi.fn()} />
+        <p>elsewhere</p>
+      </div>
+    );
+    await user.click(screen.getByRole('button', { name: /tags/i }));
+    await user.click(screen.getByText('elsewhere'));
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+});
