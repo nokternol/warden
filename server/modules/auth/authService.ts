@@ -1,4 +1,4 @@
-import { and, eq, or } from 'drizzle-orm';
+import { and, eq, isNull, or } from 'drizzle-orm';
 import { type PublicUser, UserType, users } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
 import { ForbiddenError, NotFoundError } from '../../kernel/errors';
@@ -23,6 +23,18 @@ const publicUserColumns = {
   updatedAt: users.updatedAt,
 } as const;
 
+/**
+ * The user row a Plex account signs in as. The Plex id is the account's
+ * identity; email identifies only a row stored before its Plex id was known,
+ * because an email can move between Plex accounts.
+ */
+function isAccountOf(account: PlexAccount) {
+  return or(
+    eq(users.plexId, account.id),
+    and(isNull(users.plexId), eq(users.email, account.email.toLowerCase()))
+  );
+}
+
 export class AuthService {
   private readonly db: DrizzleDb;
   private readonly plexService: PlexService;
@@ -38,12 +50,11 @@ export class AuthService {
    */
   async authenticateWithPlex(authToken: string): Promise<PublicUser> {
     const account = await this.plexService.getUserByToken(authToken);
-    const email = account.email.toLowerCase();
 
     const [known] = await this.db
       .select(publicUserColumns)
       .from(users)
-      .where(or(eq(users.plexId, account.id), eq(users.email, email)))
+      .where(isAccountOf(account))
       .limit(1);
 
     if (known) return this.refreshOwner(known, account, authToken);

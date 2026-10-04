@@ -9,6 +9,7 @@ import { users } from '@server/database/schema';
  */
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
+import { ForbiddenError } from '@server/kernel/errors';
 import { AuthService } from '@server/modules/auth/authService';
 import type { PlexService } from '@server/modules/providers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -128,7 +129,7 @@ describe('AuthService', () => {
       expect(stored.plexToken).toBe('rotated-token');
     });
 
-    it('sets plexId on an existing user matched by email when plexId was null', async () => {
+    it('binds the Plex id to an owner stored without one, matching them by email', async () => {
       const db = getDb();
       await db.insert(users).values({
         email: 'plex@example.com',
@@ -136,33 +137,29 @@ describe('AuthService', () => {
         plexUsername: 'plexuser',
         plexToken: 'old-token',
       });
-
       vi.mocked(plexService.getUserByToken).mockResolvedValue(makePlexUser({ id: 222 }));
 
       const user = await authService.authenticateWithPlex('new-token');
 
       expect(user.plexId).toBe(222);
+      expect(await db.select().from(users)).toHaveLength(1);
     });
 
-    it('matches existing user by email when plexId differs (email match wins)', async () => {
+    it("refuses an account presenting the owner's email under a different Plex id", async () => {
       const db = getDb();
-      await db.insert(users).values({
-        email: 'plex@example.com',
-        plexId: null,
-        plexUsername: 'existing',
-        plexToken: 'old-token',
-      });
+      await db
+        .insert(users)
+        .values({ email: 'plex@example.com', plexId: 111, plexToken: 'owner-token' });
+      vi.mocked(plexService.getUserByToken).mockResolvedValue(makePlexUser({ id: 999 }));
 
-      vi.mocked(plexService.getUserByToken).mockResolvedValue(
-        makePlexUser({ id: 333, email: 'plex@example.com' })
+      await expect(authService.authenticateWithPlex('other-token')).rejects.toBeInstanceOf(
+        ForbiddenError
       );
 
-      const user = await authService.authenticateWithPlex('new-token');
-
-      // Same user was found and updated, not a new one created
-      const allUsers = await db.select().from(users);
-      expect(allUsers).toHaveLength(1);
-      expect(user.plexId).toBe(333);
+      const stored = await db
+        .select({ plexId: users.plexId, plexToken: users.plexToken })
+        .from(users);
+      expect(stored).toEqual([{ plexId: 111, plexToken: 'owner-token' }]);
     });
 
     it('does not return plexToken in the result', async () => {
