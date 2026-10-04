@@ -29,7 +29,7 @@ describe('ProviderCard', () => {
     render(
       <ProviderCard
         provider={mockProvider}
-        providerType={radarrType}
+        typeDescriptor={radarrType}
         tasks={[]}
         onUpdate={vi.fn()}
         onDelete={vi.fn()}
@@ -168,7 +168,7 @@ describe('ProviderCard', () => {
     render(
       <ProviderCard
         provider={{ ...mockProvider, url: 'http://localhost:7878/api/v4' }}
-        providerType={{ ...radarrType, apiPath: '/api/v4' }}
+        typeDescriptor={{ ...radarrType, apiPath: '/api/v4' }}
         tasks={[]}
         onUpdate={onUpdate}
         onDelete={vi.fn()}

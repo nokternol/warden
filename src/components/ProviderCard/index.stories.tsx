@@ -52,7 +52,7 @@ export const Collapsed: Story = () => (
   <div className="max-w-3xl p-6">
     <ProviderCard
       provider={provider}
-      providerType={radarrType}
+      typeDescriptor={radarrType}
       tasks={tasks}
       onUpdate={noop}
       onDelete={() => {}}
@@ -65,7 +65,7 @@ export const ExpandedWithTasks: Story = () => (
     <Expanded>
       <ProviderCard
         provider={provider}
-        providerType={radarrType}
+        typeDescriptor={radarrType}
         tasks={tasks}
         onUpdate={noop}
         onDelete={() => {}}
@@ -84,7 +84,7 @@ export const ExpandedNoTasks: Story = () => (
           name: 'Overseerr',
           url: 'http://localhost:5055',
         }}
-        providerType={overseerrType}
+        typeDescriptor={overseerrType}
         tasks={[]}
         onUpdate={noop}
         onDelete={() => {}}

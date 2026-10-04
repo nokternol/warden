@@ -85,19 +85,19 @@ interface EditFormState {
 
 export default function ProviderCard({
   provider,
-  providerType,
+  typeDescriptor,
   tasks,
   onUpdate,
   onDelete,
 }: {
   provider: ProviderSummary;
   /** The served description of the provider's type; absent for a type that is not offered. */
-  providerType?: ProviderTypeDescriptor;
+  typeDescriptor?: ProviderTypeDescriptor;
   tasks: ProviderTaskDescriptor[];
   onUpdate: (patch: UpdateProviderParams) => Promise<unknown>;
   onDelete: () => void;
 }) {
-  const apiPath = providerType?.apiPath ?? '';
+  const apiPath = typeDescriptor?.apiPath ?? '';
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -121,7 +121,7 @@ export default function ProviderCard({
   const serverEnabledIds = tasks.filter((t) => t.enabled).map((t) => t.id);
   const enabledTasks = localEnabledTasks ?? serverEnabledIds;
   const allTasks = tasks;
-  const filterData = providerType?.filterData ?? [];
+  const filterData = typeDescriptor?.filterData ?? [];
   const hasTasks = allTasks.length > 0;
 
   const runTest = async (url: string, apiKey: string) => {
@@ -240,7 +240,7 @@ export default function ProviderCard({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium text-sm text-text-primary">{provider.name}</span>
             <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full font-medium">
-              {providerType?.label ?? provider.type}
+              {typeDescriptor?.label ?? provider.type}
             </span>
             <StatusIndicator isActive={provider.isActive} />
           </div>

@@ -110,7 +110,7 @@ export default function SettingsPage() {
                   {showDivider && <div className="h-px bg-border/40 my-1" />}
                   <ProviderCard
                     provider={p}
-                    providerType={descriptorFor(types, p.type)}
+                    typeDescriptor={descriptorFor(types, p.type)}
                     tasks={tasksForProvider(availability, p.id)}
                     onUpdate={(patch) => update(p.id, patch)}
                     onDelete={() => remove(p.id)}
