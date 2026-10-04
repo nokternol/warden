@@ -158,7 +158,7 @@ const MULTI_INSTANCE_LOOKUPS = {
   languageProfiles: LANGUAGE_PROFILES,
 };
 
-// The full rule set, unfiltered — mirrors `MEDIA_RULES` (server/modules/media/filterRegistry.ts).
+// The full rule set, unfiltered — mirrors `MEDIA_RULES` (server/modules/media/ruleRegistry.ts).
 // `rulesFor()` below applies the same provider-gating `GET /api/filter-fields` does.
 const ALL_RULES: MediaRuleDescriptor[] = [
   {

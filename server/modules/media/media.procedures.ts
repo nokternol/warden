@@ -22,15 +22,6 @@ import {
   type SonarrTag,
 } from '@server/modules/providers';
 import type { z } from 'zod';
-import type {
-  FilterValue,
-  FilterValueEntry,
-  MovieRangeRuleKey,
-  NormalizedMovie,
-  NormalizedSeries,
-  RangeValue,
-  SeriesRangeRuleKey,
-} from './filterRegistry';
 import { paginateItems } from './media.pagination';
 import { sortMedia } from './media.sort';
 import { resolutionTier } from './mediaFieldProvider';
@@ -40,13 +31,22 @@ import { resetMediaData } from './mediaReset';
 import type { MediaSource } from './mediaSource';
 import { sourceOwnership } from './mediaSourceFactory';
 import { normalizeRadarrMovie, normalizeSonarrSeries } from './normalizeMedia';
+import type {
+  FilterValue,
+  FilterValueEntry,
+  MovieRangeRuleKey,
+  NormalizedMovie,
+  NormalizedSeries,
+  RangeValue,
+  SeriesRangeRuleKey,
+} from './ruleRegistry';
 
 const log = getChildLogger('MediaProcedures');
 
 // ─── Registry delegation ───────────────────────────────────────────────────────
 // The browse contract uses content-prefixed param names; the registry uses bare
 // keys. These maps bridge URL param → registry key so a single engine
-// (filterRegistry) backs both the browse path and the automation executor.
+// (ruleRegistry) backs both the browse path and the automation executor.
 
 // A URL param maps onto a registry key directly, or (for a range rule) contributes
 // one bound (`min`/`max`) of that key's `{ min?, max? }` value.

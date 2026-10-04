@@ -1,7 +1,7 @@
 import { buildContainer } from '@server/container';
 import { MetadataProviderType } from '@server/database/schema';
 /**
- * Phase 2 — browse path delegated to the canonical filterRegistry.
+ * Phase 2 — browse path delegated to the canonical ruleRegistry.
  *
  * Covers predicates the browse Zod schema previously stripped (so they silently
  * did nothing) and the enriched predicates the parallel engine never declared.

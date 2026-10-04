@@ -8,7 +8,7 @@ import type { MediaFilterBarProps } from '../index';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
-// Mirrors MEDIA_RULES (server/modules/media/filterRegistry.ts). `rulesFor()` filters
+// Mirrors MEDIA_RULES (server/modules/media/ruleRegistry.ts). `rulesFor()` filters
 // it the same way GET /api/filter-fields provider-gates its projection.
 const ALL_RULES: MediaRuleDescriptor[] = [
   {
@@ -228,7 +228,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     required: false,
   },
   {
-    // csv-strings with no lookup source (matches filterRegistry.ts's real
+    // csv-strings with no lookup source (matches ruleRegistry.ts's real
     // shape) — RuleControl renders nothing for it. Regression coverage for
     // the picker offering a rule it can't actually render a control for.
     key: 'certification',

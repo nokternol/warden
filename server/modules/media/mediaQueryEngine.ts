@@ -3,12 +3,12 @@ import type { DrizzleDb } from '../../kernel/db';
 import { type QueryResult, evaluateCombination } from './combinationEvaluator';
 import type { EnrichmentQueries } from './enrichment/enrichment.queries';
 import { mergeEnrichment } from './enrichmentMerge';
-import type { FilterValueEntry } from './filterRegistry';
-import { getRule } from './filterRegistry';
 import type { MediaItemSet } from './mediaItem';
 import { itemKey } from './mediaItem';
 import type { MediaSource } from './mediaSource';
 import type { NormalizedMovie } from './movie';
+import type { FilterValueEntry } from './ruleRegistry';
+import { getRule } from './ruleRegistry';
 import type { NormalizedSeries } from './series';
 
 /** One source within a query: a set of predicates and the role it plays. */

@@ -110,7 +110,7 @@ export const mediaHandlers = [
   mockProcedure(contract.media.reset, () => ({ deletedIdentities: 0 })),
 
   // Mirrors media.rules' provider-gated MediaRuleDescriptor projection
-  // (server/modules/media/filterRegistry.ts) — the default set every RADARR+SONARR test
+  // (server/modules/media/ruleRegistry.ts) — the default set every RADARR+SONARR test
   // fixture implies is configured, per providers.ts's default handler.
   mockProcedure(contract.media.rules, (): MediaRuleDescriptor[] => [
     {

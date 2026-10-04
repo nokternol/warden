@@ -16,7 +16,7 @@ import { AutomationScheduler } from '@server/modules/automations/automationSched
 import { AutomationService } from '@server/modules/automations/automationService';
 import type { MediaItem } from '@server/modules/media';
 import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.queries';
-import type { FilterValueEntry } from '@server/modules/media/filterRegistry';
+import type { FilterValueEntry } from '@server/modules/media/ruleRegistry';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import {
   type IProviderFactory,

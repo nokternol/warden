@@ -5,7 +5,7 @@ import {
   type NormalizedSeries,
   deriveSourceProviders,
   getRule,
-} from '@server/modules/media/filterRegistry';
+} from '@server/modules/media/ruleRegistry';
 import { describe, expect, it } from 'vitest';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
