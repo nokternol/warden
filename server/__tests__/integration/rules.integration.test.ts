@@ -22,7 +22,7 @@ const testConfig: AppConfig = {
   SESSION_SECRET: 'test-secret',
 };
 
-describe('GET /api/filter-fields', () => {
+describe('GET /api/rules', () => {
   let app: express.Express;
   let providerSettingsService: ProviderSettingsService;
 
@@ -44,7 +44,7 @@ describe('GET /api/filter-fields', () => {
   });
 
   it('returns 200 with an empty array when no providers are configured', async () => {
-    const res = await supertest(app).get('/api/filter-fields');
+    const res = await supertest(app).get('/api/rules');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ status: 'ok', data: [] });
   });
@@ -57,7 +57,7 @@ describe('GET /api/filter-fields', () => {
       apiKey: 'test-api-key',
     });
 
-    const res = await supertest(app).get('/api/filter-fields');
+    const res = await supertest(app).get('/api/rules');
     expect(res.status).toBe(200);
     const keys: string[] = res.body.data.map((f: { key: string }) => f.key);
     // Radarr-sourced rule present
@@ -76,7 +76,7 @@ describe('GET /api/filter-fields', () => {
       isActive: false,
     });
 
-    const res = await supertest(app).get('/api/filter-fields');
+    const res = await supertest(app).get('/api/rules');
     const keys: string[] = res.body.data.map((f: { key: string }) => f.key);
     expect(keys).not.toContain('monitored');
   });
@@ -95,7 +95,7 @@ describe('GET /api/filter-fields', () => {
       apiKey: 'test-api-key',
     });
 
-    const res = await supertest(app).get('/api/filter-fields?contentType=movie');
+    const res = await supertest(app).get('/api/rules?contentType=movie');
     expect(res.status).toBe(200);
     const keys: string[] = res.body.data.map((f: { key: string }) => f.key);
     // shared fields present
@@ -123,7 +123,7 @@ describe('GET /api/filter-fields', () => {
       apiKey: 'test-api-key',
     });
 
-    const res = await supertest(app).get('/api/filter-fields?contentType=series');
+    const res = await supertest(app).get('/api/rules?contentType=series');
     expect(res.status).toBe(200);
     const keys: string[] = res.body.data.map((f: { key: string }) => f.key);
     // shared fields present
@@ -144,7 +144,7 @@ describe('GET /api/filter-fields', () => {
       apiKey: 'test-api-key',
     });
 
-    const res = await supertest(app).get('/api/filter-fields?contentType=movie');
+    const res = await supertest(app).get('/api/rules?contentType=movie');
     expect(res.status).toBe(200);
     for (const field of res.body.data) {
       expect(field.key).toBeTruthy();
@@ -160,13 +160,13 @@ describe('GET /api/filter-fields', () => {
   });
 
   it('returns 400 for invalid contentType', async () => {
-    const res = await supertest(app).get('/api/filter-fields?contentType=invalid');
+    const res = await supertest(app).get('/api/rules?contentType=invalid');
     expect(res.status).toBe(400);
     expect(res.body.error.type).toBe('VALIDATION_ERROR');
   });
 
   it('reflects a provider created between two requests — cache invalidates on provider:changed', async () => {
-    const before = await supertest(app).get('/api/filter-fields');
+    const before = await supertest(app).get('/api/rules');
     expect(before.body.data.map((f: { key: string }) => f.key)).not.toContain('monitored');
 
     await providerSettingsService.create({
@@ -176,7 +176,12 @@ describe('GET /api/filter-fields', () => {
       apiKey: 'test-api-key',
     });
 
-    const after = await supertest(app).get('/api/filter-fields');
+    const after = await supertest(app).get('/api/rules');
     expect(after.body.data.map((f: { key: string }) => f.key)).toContain('monitored');
+  });
+
+  it('no longer serves the retired /api/filter-fields path', async () => {
+    const res = await supertest(app).get('/api/filter-fields');
+    expect(res.status).toBe(404);
   });
 });

@@ -19,7 +19,7 @@ const EMPTY_FILTER_STATE: FilterState = {
   seriesSort: 'title_asc',
 };
 
-// Mirrors GET /api/filter-fields' provider-gated MediaRuleDescriptor projection
+// Mirrors GET /api/rules' provider-gated MediaRuleDescriptor projection
 // for a RADARR + SONARR + TAUTULLI library — matches ALL_PROVIDERS below.
 const FIXTURE_RULES: MediaRuleDescriptor[] = [
   {

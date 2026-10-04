@@ -159,7 +159,7 @@ const MULTI_INSTANCE_LOOKUPS = {
 };
 
 // The full rule set, unfiltered — mirrors `MEDIA_RULES` (server/modules/media/ruleRegistry.ts).
-// `rulesFor()` below applies the same provider-gating `GET /api/filter-fields` does.
+// `rulesFor()` below applies the same provider-gating `GET /api/rules` does.
 const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'title',

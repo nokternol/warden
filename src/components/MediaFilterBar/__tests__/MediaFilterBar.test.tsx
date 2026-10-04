@@ -9,7 +9,7 @@ import type { MediaFilterBarProps } from '../index';
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
 // Mirrors MEDIA_RULES (server/modules/media/ruleRegistry.ts). `rulesFor()` filters
-// it the same way GET /api/filter-fields provider-gates its projection.
+// it the same way GET /api/rules provider-gates its projection.
 const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'title',

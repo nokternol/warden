@@ -211,7 +211,7 @@ const lookup = (path: string) =>
 export const media = {
   /** The rules a configured, active provider can produce, optionally for one content type. */
   rules: base
-    .route({ method: 'GET', path: '/api/filter-fields' })
+    .route({ method: 'GET', path: '/api/rules' })
     .input(z.object({ contentType: ContentTypeSchema.optional() }))
     .output(z.array(MediaRuleDescriptorSchema)),
 
