@@ -1,5 +1,6 @@
 import type { FilterValue } from '@app/hooks/useMediaFilters';
 import type { Filter } from '@app/hooks/useMediaQueries';
+import { parseIds } from '@app/lib/multiValueFilter';
 import type { MediaRuleDescriptor } from '@contract/media';
 import type { ContentType } from '@contract/schemas';
 
@@ -14,13 +15,6 @@ export type ScopedFilterValues = Record<
   movieQualifiers?: Record<string, number>;
   seriesQualifiers?: Record<string, number>;
 };
-
-function parseCsvIds(csv: string): number[] {
-  return csv
-    .split(',')
-    .map((part) => Number(part.trim()))
-    .filter((n) => Number.isInteger(n) && n > 0);
-}
 
 /**
  * One content type's filter state as the `Filter` entries the API takes: both
@@ -47,7 +41,7 @@ export function toFilters(
     .map(([ruleKey, value]) => {
       if (!instanceScoped.has(ruleKey)) return { ruleKey, value };
       const providerId = qualifiers[ruleKey];
-      const ids = parseCsvIds(String(value));
+      const ids = parseIds(String(value));
       return { ruleKey, value: providerId === undefined ? { ids } : { providerId, ids } };
     });
 }
