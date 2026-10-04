@@ -4,8 +4,11 @@ import { MetadataProviderType } from '@server/database/schema';
 /** How a provider type is presented and reached when it is configured. */
 export type ProviderTypeEntry = Omit<ProviderTypeDescriptor, 'type'>;
 
-/** Every provider type Warden knows, in display order. */
-export const PROVIDER_CATALOGUE: Record<MetadataProviderType, ProviderTypeEntry> = {
+/**
+ * Every provider type Warden knows, in display order. `satisfies` keeps each
+ * entry's own shape, so a hosted type's `defaultUrl` is known to be present.
+ */
+export const PROVIDER_CATALOGUE = {
   [MetadataProviderType.PLEX]: {
     label: 'Plex',
     apiPath: '',
@@ -59,7 +62,7 @@ export const PROVIDER_CATALOGUE: Record<MetadataProviderType, ProviderTypeEntry>
     defaultUrl: 'https://api.tvmaze.com',
     filterData: ['Network'],
   },
-};
+} satisfies Record<MetadataProviderType, ProviderTypeEntry>;
 
 /** Each provider type with its catalogue entry, in display order. */
 export function describeProviderTypes(): ProviderTypeDescriptor[] {

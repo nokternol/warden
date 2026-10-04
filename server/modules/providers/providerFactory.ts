@@ -98,7 +98,7 @@ export class ProviderFactory implements IProviderFactory {
   createTvMaze(logger: Logger): TvMazeProvider {
     const { label, defaultUrl } = PROVIDER_CATALOGUE[MetadataProviderType.TVMAZE];
     return new TvMazeProvider(
-      { name: label, url: defaultUrl ?? '', apiKey: null, settings: null },
+      { name: label, url: defaultUrl, apiKey: null, settings: null },
       logger
     );
   }
