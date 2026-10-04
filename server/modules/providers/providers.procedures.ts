@@ -133,6 +133,9 @@ export function createProvidersProcedures(
     }),
 
     test: api.providers.test.handler(async ({ input }) => {
+      if (!isOfferedProviderType(input.type)) {
+        throw new ValidationError(`Provider type ${input.type} is not offered`);
+      }
       try {
         await probeConnection(input.type as MetadataProviderType, input.url, input.apiKey);
         return { ok: true };

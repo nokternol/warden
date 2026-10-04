@@ -1,13 +1,8 @@
 import { buildContainer } from '@server/container';
 import { MetadataProviderType } from '@server/database/schema';
 /**
- * Integration tests for GET /api/providers/test
- *
- * Covers the TVMAZE and SEERR connection probes:
- *   - TVMAZE: no auth, no outbound call — should return { ok: true } immediately
- *   - SEERR:  same auth pattern as OVERSEERR — GET {base}/api/v1/status with X-Api-Key header
- *
- * Run: yarn vitest run --project server server/__tests__/integration/providers.connectionProbe.integration.test.ts
+ * Integration tests for GET /api/providers/test: which provider types the API
+ * will probe. The probe itself is covered in modules/providers/connectionProbe.test.ts.
  */
 import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
@@ -21,9 +16,9 @@ import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { http, HttpResponse } from 'msw';
 import request from 'supertest';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-describe('GET /api/providers/test — TVMAZE and SEERR', () => {
+describe('GET /api/providers/test', () => {
   let authedApp: Express;
 
   beforeAll(async () => {
@@ -69,112 +64,29 @@ describe('GET /api/providers/test — TVMAZE and SEERR', () => {
     await closeDatabase();
   });
 
-  // afterEach MSW reset is handled by tests/setup/vitest.server.ts globally
-
   // ---------------------------------------------------------------------------
-  // TVMAZE
+  // A type that is not offered
   // ---------------------------------------------------------------------------
 
-  describe('TVMAZE', () => {
-    it('returns { ok: true } without making any outbound HTTP call', async () => {
-      // Track any request that MSW intercepts and attempts to forward to a TVMaze host.
-      // MSW in Node mode also intercepts supertest's loopback connections, so we filter
-      // to only care about requests aimed at the TVMaze URL we passed in.
-      const tvmazeRequests: string[] = [];
-      const listener = ({ request: req }: { request: globalThis.Request }) => {
-        // Only capture actual outbound requests to the TVMaze host,
-        // not the supertest loopback request (127.0.0.1) whose query string
-        // happens to contain the encoded TVMaze URL.
-        const parsed = new URL(req.url);
-        if (parsed.hostname.includes('tvmaze')) {
-          tvmazeRequests.push(req.url);
-        }
-      };
-      server.events.on('request:start', listener);
+  it('refuses to probe a type that is not offered, without contacting it', async () => {
+    const OMDB_URL = 'http://omdb.local';
+    let contacted = false;
+    server.use(
+      http.get(`${OMDB_URL}/*`, () => {
+        contacted = true;
+        return HttpResponse.json({});
+      }),
+      http.get(OMDB_URL, () => {
+        contacted = true;
+        return HttpResponse.json({});
+      })
+    );
 
-      const res = await request(authedApp)
-        .get('/api/providers/test')
-        .query({ type: MetadataProviderType.TVMAZE, url: 'https://api.tvmaze.com' });
+    const res = await request(authedApp)
+      .get('/api/providers/test')
+      .query({ type: MetadataProviderType.OMDB, url: OMDB_URL, apiKey: 'k' });
 
-      expect(res.status).toBe(200);
-      expect(res.body.data).toEqual({ ok: true });
-      // The TVMAZE probe answers without calling TVMaze
-      expect(tvmazeRequests).toHaveLength(0);
-
-      server.events.removeListener('request:start', listener);
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // SEERR
-  // ---------------------------------------------------------------------------
-
-  describe('SEERR', () => {
-    const SEERR_URL = 'http://seerr.local';
-
-    it('returns { ok: true } when the upstream /api/v1/status responds 200', async () => {
-      server.use(http.get(`${SEERR_URL}/api/v1/status`, () => HttpResponse.json({ status: 'ok' })));
-
-      const res = await request(authedApp)
-        .get('/api/providers/test')
-        .query({ type: MetadataProviderType.SEERR, url: SEERR_URL, apiKey: 'test-key' });
-
-      expect(res.status).toBe(200);
-      expect(res.body.data).toEqual({ ok: true });
-    });
-
-    it('returns { ok: false } when the upstream /api/v1/status responds 4xx', async () => {
-      server.use(
-        http.get(`${SEERR_URL}/api/v1/status`, () =>
-          HttpResponse.json({ message: 'Unauthorized' }, { status: 401 })
-        )
-      );
-
-      const res = await request(authedApp)
-        .get('/api/providers/test')
-        .query({ type: MetadataProviderType.SEERR, url: SEERR_URL, apiKey: 'bad-key' });
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.ok).toBe(false);
-    });
-
-    it('returns { ok: false } when the upstream /api/v1/status responds 5xx', async () => {
-      server.use(
-        http.get(`${SEERR_URL}/api/v1/status`, () =>
-          HttpResponse.json({ message: 'Internal Server Error' }, { status: 500 })
-        )
-      );
-
-      const res = await request(authedApp)
-        .get('/api/providers/test')
-        .query({ type: MetadataProviderType.SEERR, url: SEERR_URL, apiKey: 'any-key' });
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.ok).toBe(false);
-    });
-
-    it('sends the apiKey in the X-Api-Key header (not as a query param)', async () => {
-      const API_KEY = 'secret-seerr-key';
-      let capturedHeader: string | null = null;
-      let capturedSearchParams: string | null = null;
-
-      server.use(
-        http.get(`${SEERR_URL}/api/v1/status`, ({ request: req }) => {
-          capturedHeader = req.headers.get('X-Api-Key');
-          capturedSearchParams = new URL(req.url).searchParams.toString();
-          return HttpResponse.json({ status: 'ok' });
-        })
-      );
-
-      const res = await request(authedApp)
-        .get('/api/providers/test')
-        .query({ type: MetadataProviderType.SEERR, url: SEERR_URL, apiKey: API_KEY });
-
-      expect(res.status).toBe(200);
-      expect(res.body.data).toEqual({ ok: true });
-      expect(capturedHeader).toBe(API_KEY);
-      // The key must not appear in the query string
-      expect(capturedSearchParams).not.toContain(API_KEY);
-    });
+    expect(res.status).toBe(400);
+    expect(contacted).toBe(false);
   });
 });
