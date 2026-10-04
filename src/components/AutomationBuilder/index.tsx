@@ -392,7 +392,8 @@ export default function AutomationBuilder({
               className="mt-0.5 flex-shrink-0 text-primary focus:ring-primary focus:ring-offset-0"
             />
             <span>
-              Confirm: {selectedTask.label} · {preview && affectedItems(preview)}
+              Confirm: {selectedTask.label} ·{' '}
+              {preview ? affectedItems(preview) : 'counting affected items…'}
             </span>
           </label>
         )}

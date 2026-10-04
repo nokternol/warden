@@ -377,4 +377,29 @@ describe('AutomationBuilder', () => {
       )
     );
   });
+
+  it('shows no number while the count is loading, and save stays gated', async () => {
+    mockApi([makeProvider()], [{ providerId: 1, type: 'RADARR', tasks: [ENABLED_DELETE] }]);
+    let answer: (count: number) => void = () => {};
+    server.use(
+      mockProcedure(
+        contract.automations.preview,
+        () =>
+          new Promise((resolve) => {
+            answer = (count) => resolve({ count, contentType: 'movie' as const });
+          })
+      )
+    );
+    const user = userEvent.setup();
+    renderBuilder();
+
+    await user.type(screen.getByLabelText('Name'), 'Purge');
+    await user.click(await screen.findByRole('radio', { name: /delete movie \+ files/i }));
+
+    expect(screen.getByRole('checkbox', { name: /confirm/i })).toHaveAccessibleName(
+      'Confirm: Delete movie + files · counting affected items…'
+    );
+    expect(screen.getByRole('button', { name: /create automation/i })).toBeDisabled();
+    answer(214);
+  });
 });
