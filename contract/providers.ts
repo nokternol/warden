@@ -124,7 +124,19 @@ export const ProviderDraftSchema = ProviderSettingsInputSchema.extend({ type: Pr
 /** Changes to a configured provider instance. */
 export const ProviderPatchSchema = ProviderSettingsInputSchema.partial();
 
+/** A provider type Warden offers, as the add-provider list presents it. */
+export const ProviderTypeDescriptorSchema = z.object({
+  type: ProviderTypeSchema,
+  label: z.string(),
+});
+
 export const providers = {
+  // ─── Catalogue ───────────────────────────────────────────────────────────
+  /** The provider types that can be configured, in display order. */
+  types: base
+    .route({ method: 'GET', path: '/api/providers/types' })
+    .output(z.array(ProviderTypeDescriptorSchema)),
+
   // ─── Configured instances ────────────────────────────────────────────────
   list: base.route({ method: 'GET', path: '/api/providers' }).output(z.array(ProviderSchema)),
 
@@ -216,6 +228,7 @@ export const providers = {
 export type { ProviderType } from './schemas';
 export type ProviderDraft = z.input<typeof ProviderDraftSchema>;
 export type ProviderPatch = z.input<typeof ProviderPatchSchema>;
+export type ProviderTypeDescriptor = z.infer<typeof ProviderTypeDescriptorSchema>;
 export type TaskOptionsRoute = z.infer<typeof TaskOptionsRouteSchema>;
 export type TaskParameter = z.infer<typeof TaskParameterSchema>;
 export type ProviderTask = z.infer<typeof ProviderTaskSchema>;

@@ -1,4 +1,5 @@
 import type { ProviderType, TaskOptionsRoute } from '@contract/providers';
+import { scope } from '@contract/scope';
 import { MetadataProviderType } from '@server/database/schema';
 import type { MetadataProvider } from '@server/database/schema';
 import { api } from '@server/kernel/api';
@@ -15,6 +16,7 @@ import { TautulliProvider } from './connections/tautulliProvider';
 import { TmdbProvider } from './connections/tmdbProvider';
 import { TvMazeProvider } from './connections/tvmazeProvider';
 import { resolveApiKey } from './keyResolver';
+import { PROVIDER_CATALOGUE } from './providerCatalogue';
 import type { ProviderFactory } from './providerFactory';
 import type { ProviderSettingsService } from './providerSettingsService';
 import { aggregateRatings } from './ratingsAggregation';
@@ -101,6 +103,11 @@ export function createProvidersProcedures(
   const { providerSettingsService, providerFactory, config } = cradle;
 
   return {
+    // ─── Catalogue ─────────────────────────────────────────────────────────
+    types: api.providers.types.handler(async () =>
+      PROVIDER_CATALOGUE.filter((entry) => !scope.deferred.providerTypes.includes(entry.type))
+    ),
+
     // ─── Configured instances ──────────────────────────────────────────────
     list: api.providers.list.handler(async () => providerSettingsService.list()),
 
