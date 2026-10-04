@@ -440,4 +440,37 @@ describe('AutomationBuilder', () => {
     );
     expect(screen.getByRole('button', { name: /create automation/i })).toBeDisabled();
   });
+
+  it('counts again when the draft changes after a failed count', async () => {
+    const KEEP_FILES = {
+      id: 'deleteMovieKeepFiles',
+      label: 'Delete movie (keep files)',
+      destructive: true,
+      enabled: true,
+    };
+    mockApi(
+      [makeProvider()],
+      [{ providerId: 1, type: 'RADARR', tasks: [ENABLED_DELETE, KEEP_FILES] }]
+    );
+    server.use(
+      http.post(contractPath(contract.automations.preview), async ({ request }) => {
+        const draft = (await request.json()) as { taskId: string };
+        return draft.taskId === KEEP_FILES.id
+          ? HttpResponse.json({ status: 'ok', data: { count: 7, contentType: 'movie' } })
+          : new HttpResponse(null, { status: 500 });
+      })
+    );
+    const user = userEvent.setup();
+    renderBuilder();
+
+    await user.click(await screen.findByRole('radio', { name: /delete movie \+ files/i }));
+    await screen.findByText(/couldn't count/i);
+    await user.click(screen.getByRole('radio', { name: /keep files/i }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('checkbox', { name: /confirm/i })).toHaveAccessibleName(
+        'Confirm: Delete movie (keep files) · will affect 7 movies'
+      )
+    );
+  });
 });
