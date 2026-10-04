@@ -90,6 +90,17 @@ interface BuilderTask {
   parameter?: ProviderTaskParameter;
 }
 
+/**
+ * The chosen task with the answers that belong to it: its parameter value and
+ * whether its destructive effect is confirmed. Choosing a task starts a fresh
+ * selection, so neither answer carries over to a different task.
+ */
+interface TaskSelection {
+  task: BuilderTask;
+  parameterValue: string;
+  confirmed: boolean;
+}
+
 function SettingsLink() {
   return (
     <a
@@ -162,9 +173,10 @@ export default function AutomationBuilder({
   const [automationQueries, setAutomationQueries] = useState<AutomationQueryItem[]>(
     queries.length === 1 ? [{ queryId: queries[0].id, role: 'include', sortOrder: 0 }] : []
   );
-  const [selectedTask, setSelectedTask] = useState<BuilderTask | null>(null);
-  const [taskParameterValue, setTaskParameterValue] = useState('');
-  const [effectConfirmed, setEffectConfirmed] = useState(false);
+  const [selection, setSelection] = useState<TaskSelection | null>(null);
+  const selectedTask = selection?.task ?? null;
+  const taskParameterValue = selection?.parameterValue ?? '';
+  const effectConfirmed = selection?.confirmed ?? false;
 
   const selectParameter =
     selectedTask?.parameter?.type === 'select' ? selectedTask.parameter : undefined;
@@ -322,11 +334,9 @@ export default function AutomationBuilder({
                             type="radio"
                             name="task"
                             checked={selected}
-                            onChange={() => {
-                              setSelectedTask(bt);
-                              setTaskParameterValue('');
-                              setEffectConfirmed(false);
-                            }}
+                            onChange={() =>
+                              setSelection({ task: bt, parameterValue: '', confirmed: false })
+                            }
                             className="flex-shrink-0 text-primary focus:ring-primary focus:ring-offset-0"
                           />
                           <div className="flex flex-1 min-w-0 items-center gap-2">
@@ -372,7 +382,10 @@ export default function AutomationBuilder({
             <select
               id="task-parameter"
               value={taskParameterValue}
-              onChange={(e) => setTaskParameterValue(e.target.value)}
+              onChange={(e) => {
+                const parameterValue = e.target.value;
+                setSelection((current) => current && { ...current, parameterValue });
+              }}
               className="w-full max-w-md px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
               required
             >
@@ -394,7 +407,10 @@ export default function AutomationBuilder({
             <input
               type="checkbox"
               checked={effectConfirmed}
-              onChange={(e) => setEffectConfirmed(e.target.checked)}
+              onChange={(e) => {
+                const confirmed = e.target.checked;
+                setSelection((current) => current && { ...current, confirmed });
+              }}
               className="mt-0.5 flex-shrink-0 text-primary focus:ring-primary focus:ring-offset-0"
             />
             <span>
