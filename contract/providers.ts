@@ -152,7 +152,7 @@ export const providers = {
 
   /** Probes a provider's connection details before they are saved. */
   test: base
-    .route({ method: 'GET', path: '/api/settings/providers/test' })
+    .route({ method: 'GET', path: '/api/providers/test' })
     .input(
       z.object({ type: ProviderTypeSchema, url: z.string().url(), apiKey: z.string().optional() })
     )
