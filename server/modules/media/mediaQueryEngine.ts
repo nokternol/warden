@@ -31,7 +31,7 @@ export interface MediaQuerySpec {
 /**
  * A `MediaQuerySpec` bound to a `MediaSource` — the engine's input. The source is
  * what the engine reads items from; the spec says what to match. A query is
- * a single-source include spec; the browse view is the same with URL-derived
+ * a single-clause include spec; the browse view is the same with URL-derived
  * filterValues.
  */
 export interface MediaQuery extends MediaQuerySpec {

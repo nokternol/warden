@@ -6,7 +6,7 @@ import {
   type Automation as AutomationRow,
   MetadataProviderType,
   type NewAutomation,
-  automationQuerySources,
+  automationQueries,
   automations,
   mediaQueries,
   metadataProviders,
@@ -153,16 +153,16 @@ export class AutomationService {
 
     const sourceRows = await this.db
       .select({
-        queryId: automationQuerySources.queryId,
-        role: automationQuerySources.role,
-        sortOrder: automationQuerySources.sortOrder,
+        queryId: automationQueries.queryId,
+        role: automationQueries.role,
+        sortOrder: automationQueries.sortOrder,
         queryName: mediaQueries.name,
         queryContentType: mediaQueries.contentType,
       })
-      .from(automationQuerySources)
-      .leftJoin(mediaQueries, eq(mediaQueries.id, automationQuerySources.queryId))
-      .where(eq(automationQuerySources.automationId, id))
-      .orderBy(automationQuerySources.sortOrder);
+      .from(automationQueries)
+      .leftJoin(mediaQueries, eq(mediaQueries.id, automationQueries.queryId))
+      .where(eq(automationQueries.automationId, id))
+      .orderBy(automationQueries.sortOrder);
 
     const querySources: AutomationQuerySourceDto[] = sourceRows.map((s) => ({
       queryId: s.queryId,
@@ -202,17 +202,17 @@ export class AutomationService {
     const automationIds = rows.map((r) => r.automation.id);
     const sourceRows = await this.db
       .select({
-        automationId: automationQuerySources.automationId,
-        queryId: automationQuerySources.queryId,
-        role: automationQuerySources.role,
-        sortOrder: automationQuerySources.sortOrder,
+        automationId: automationQueries.automationId,
+        queryId: automationQueries.queryId,
+        role: automationQueries.role,
+        sortOrder: automationQueries.sortOrder,
         queryName: mediaQueries.name,
         queryContentType: mediaQueries.contentType,
       })
-      .from(automationQuerySources)
-      .leftJoin(mediaQueries, eq(mediaQueries.id, automationQuerySources.queryId))
-      .where(inArray(automationQuerySources.automationId, automationIds))
-      .orderBy(automationQuerySources.sortOrder);
+      .from(automationQueries)
+      .leftJoin(mediaQueries, eq(mediaQueries.id, automationQueries.queryId))
+      .where(inArray(automationQueries.automationId, automationIds))
+      .orderBy(automationQueries.sortOrder);
 
     const sourcesByAutomationId = new Map<number, typeof sourceRows>();
     for (const s of sourceRows) {
@@ -311,7 +311,7 @@ export class AutomationService {
     const [row] = await this.db.insert(automations).values(insert).returning();
 
     if (draft.querySources.length > 0) {
-      await this.db.insert(automationQuerySources).values(
+      await this.db.insert(automationQueries).values(
         draft.querySources.map((s, i) => ({
           automationId: row.id,
           queryId: s.queryId,
