@@ -52,6 +52,17 @@ function isRefusedUnauthenticated(res: request.Response) {
   return res.status === 401 && res.body?.error?.type === 'UNAUTHORIZED';
 }
 
+/** The names of the procedures that an unauthenticated call refuses. */
+async function refusedAnonymously(app: Express, entries: ContractEntry[]) {
+  const refused: string[] = [];
+  for (const entry of entries) {
+    if (isRefusedUnauthenticated(await callAnonymously(app, entry))) refused.push(entry.name);
+  }
+  return refused;
+}
+
+const isAllowlisted = ({ name }: ContractEntry) => PUBLIC_ALLOWLIST.includes(name);
+
 describe('default-deny API auth', () => {
   let app: Express;
 
@@ -69,16 +80,16 @@ describe('default-deny API auth', () => {
   });
 
   it('refuses an unauthenticated call to every contract procedure outside the public allowlist with 401', async () => {
-    const guarded = contractEntries(contract).filter(
-      ({ name }) => !PUBLIC_ALLOWLIST.includes(name)
-    );
-
-    const answered: string[] = [];
-    for (const entry of guarded) {
-      if (!isRefusedUnauthenticated(await callAnonymously(app, entry))) answered.push(entry.name);
-    }
+    const guarded = contractEntries(contract).filter((entry) => !isAllowlisted(entry));
 
     expect(guarded.length).toBeGreaterThan(0);
-    expect(answered).toEqual([]);
+    expect(await refusedAnonymously(app, guarded)).toEqual(guarded.map(({ name }) => name));
+  });
+
+  it('answers an unauthenticated call to every procedure on the public allowlist', async () => {
+    const allowlisted = contractEntries(contract).filter(isAllowlisted);
+
+    expect(allowlisted.map(({ name }) => name).sort()).toEqual(PUBLIC_ALLOWLIST);
+    expect(await refusedAnonymously(app, allowlisted)).toEqual([]);
   });
 });
