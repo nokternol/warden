@@ -402,4 +402,18 @@ describe('AutomationBuilder', () => {
     expect(screen.getByRole('button', { name: /create automation/i })).toBeDisabled();
     answer(214);
   });
+
+  it('does not count for a non-destructive task', async () => {
+    mockApi([makeProvider()], [{ providerId: 1, type: 'RADARR', tasks: [ENABLED_UNMONITOR] }]);
+    const previewed = vi.fn(() => ({ count: 5, contentType: 'movie' as const }));
+    server.use(mockProcedure(contract.automations.preview, previewed));
+    const user = userEvent.setup();
+    renderBuilder();
+
+    await user.click(await screen.findByRole('radio', { name: /unmonitor movie/i }));
+
+    await new Promise((settle) => setTimeout(settle, 50));
+    expect(screen.queryByText(/will affect/i)).not.toBeInTheDocument();
+    expect(previewed).not.toHaveBeenCalled();
+  });
 });
