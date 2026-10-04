@@ -79,6 +79,14 @@ describe('default-deny API auth', () => {
     await closeDatabase();
   });
 
+  it('marks exactly the public allowlist as public on the contract', () => {
+    const marked = contractEntries(contract)
+      .filter(({ procedure }) => procedure['~orpc'].meta.public)
+      .map(({ name }) => name);
+
+    expect(marked.sort()).toEqual(PUBLIC_ALLOWLIST);
+  });
+
   it('refuses an unauthenticated call to every contract procedure outside the public allowlist with 401', async () => {
     const guarded = contractEntries(contract).filter((entry) => !isAllowlisted(entry));
 
@@ -89,7 +97,6 @@ describe('default-deny API auth', () => {
   it('answers an unauthenticated call to every procedure on the public allowlist', async () => {
     const allowlisted = contractEntries(contract).filter(isAllowlisted);
 
-    expect(allowlisted.map(({ name }) => name).sort()).toEqual(PUBLIC_ALLOWLIST);
     expect(await refusedAnonymously(app, allowlisted)).toEqual([]);
   });
 });
