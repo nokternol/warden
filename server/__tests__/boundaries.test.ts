@@ -1,3 +1,4 @@
+import { readdirSync } from 'node:fs';
 import path from 'node:path';
 import { type IForbiddenRuleType, cruise } from 'dependency-cruiser';
 import { describe, expect, it } from 'vitest';
@@ -41,5 +42,22 @@ describe('client/server boundary', () => {
         ),
       ])
     );
+  });
+});
+
+describe('module boundaries', () => {
+  it('covers every module directory under server/modules/ with a direction rule', () => {
+    const moduleDirectories = readdirSync(path.join(__dirname, '../modules'), {
+      withFileTypes: true,
+    })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
+    const coveredModules = config.forbidden
+      .map((rule) => rule.name?.match(/^direction-(.+)$/)?.[1])
+      .filter((mod): mod is string => mod !== undefined);
+
+    const uncovered = moduleDirectories.filter((mod) => !coveredModules.includes(mod));
+
+    expect(uncovered).toEqual([]);
   });
 });

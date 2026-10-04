@@ -11,7 +11,10 @@
  * them.
  */
 
+// Every directory under server/modules/ is listed here, so each one gets a
+// direction rule; server/__tests__/boundaries.test.ts fails on one that isn't.
 const MODULES = [
+  'appSettings',
   'auth',
   'automations',
   'media',
@@ -30,6 +33,7 @@ const ALLOWED_TARGETS = {
   automations: ['media', 'mediaQueries', 'providers'],
   auth: ['providers'],
   system: [],
+  appSettings: [],
 };
 
 const directionRules = MODULES.map((mod) => {
