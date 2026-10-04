@@ -1255,6 +1255,30 @@ describe('AutomationExecutor', () => {
 
       expect(preview.count).toBe(3);
     });
+
+    it('never runs the task and records no run', async () => {
+      const db = getDb();
+      const radarr = radarrSource([createRadarrMovie({ id: 1, title: 'Alien', hasFile: true })]);
+      const deleteMovies = vi.spyOn(radarr, 'deleteMovies').mockResolvedValue(undefined);
+      const provider = await seedRadarrProvider(providerSettingsService);
+      const query = await seedMediaQuery(mediaQueryService);
+      const dryRunExecutor = new AutomationExecutor({
+        automationService,
+        providerSettingsService,
+        mediaQueryService,
+        providerFactory: { create: () => radarr },
+        automationRunService: new AutomationRunService({ db }),
+      });
+
+      await dryRunExecutor.preview({
+        providerId: provider.id,
+        taskId: 'deleteMovieWithFiles',
+        queries: [{ queryId: query.id, role: 'include' }],
+      });
+
+      expect(deleteMovies).not.toHaveBeenCalled();
+      expect(await db.select().from(automationRuns)).toHaveLength(0);
+    });
   });
 
   // ─── Provider creation hoist ─────────────────────────────────────────────
