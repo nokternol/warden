@@ -124,7 +124,7 @@ describe('Provider mutation cache invalidation', () => {
     expect(radarrCallCount).toBe(1);
 
     // Mutate the provider — should bust all media caches
-    await client.patch(`/api/settings/providers/${providerId}`, { name: 'Radarr Updated' });
+    await client.patch(`/api/providers/${providerId}`, { name: 'Radarr Updated' });
 
     // Next media fetch must bypass cache and hit Radarr again
     const res = await client.get('/api/media/movies');

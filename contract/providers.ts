@@ -134,7 +134,7 @@ export const providers = {
     .output(ProviderSchema),
 
   update: base
-    .route({ method: 'PATCH', path: '/api/settings/providers/{id}' })
+    .route({ method: 'PATCH', path: '/api/providers/{id}' })
     .input(
       ProviderPatchSchema.extend({ id: IdSchema }).refine(
         ({ id: _id, ...patch }) => Object.keys(patch).length > 0,

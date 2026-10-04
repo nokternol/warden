@@ -100,7 +100,7 @@ describe('Settings API Integration', () => {
     });
 
     it('PATCH /providers/:id returns 401', async () => {
-      const res = await unauthedClient.patch('/api/settings/providers/1', { name: 'X' });
+      const res = await unauthedClient.patch('/api/providers/1', { name: 'X' });
       expectErrorResponse(res, 401);
     });
 
@@ -153,7 +153,7 @@ describe('Settings API Integration', () => {
       });
       const createdData = expectSuccessResponse(created);
 
-      const res = await authedClient.patch(`/api/settings/providers/${createdData.id}`, {
+      const res = await authedClient.patch(`/api/providers/${createdData.id}`, {
         name: 'New Name',
         url: 'http://radarr:7878/api/v3',
       });
@@ -163,7 +163,7 @@ describe('Settings API Integration', () => {
     });
 
     it('returns 400 for an invalid id format', async () => {
-      const res = await authedClient.patch('/api/settings/providers/not-a-number', {
+      const res = await authedClient.patch('/api/providers/not-a-number', {
         name: 'X',
       });
       expectErrorResponse(res, 400);
