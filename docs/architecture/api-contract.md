@@ -57,10 +57,11 @@ The contract uses [oRPC](https://orpc.dev) in contract-first mode, with Zod 4 sc
   single conditional insert so two first sign-ins cannot both succeed. Every later sign-in must be that
   account. It is matched by Plex id, and by email only while the stored row has no Plex id yet. Any other
   account is refused with 403 `FORBIDDEN` and a reason, and no user row or session is created for it
-  ([`authService.ts`](ref:path:server/modules/auth/authService.ts)). The login page shows that reason as a
+  ([`authService.ts`](ref:path:server/modules/auth/authService.ts)). The login page classifies a 403 as a
+  refusal ([`index.page.tsx`](ref:path:src/pages/login/index.page.tsx)) and shows the server's reason as a
   "Sign-in refused" state, distinct from a generic failure
-  ([`index.page.tsx`](ref:path:src/pages/login/index.page.tsx)). Migration 0030 reduced instances that had
-  let several accounts sign in to their earliest user.
+  ([`LoginScreen.tsx`](ref:path:src/pages/login/LoginScreen.tsx)). Migration `0030_owner_only_users`
+  keeps only the earliest user on an instance upgraded from before sign-in was owner-only.
 - **Auth bypass (development only).** With `BYPASS_AUTH=true`, `serveApi` marks every request's context
   `authBypassed`, and the root middleware lets non-public procedures answer without a user. This is what
   lets browser tooling such as `playwright-cli` drive the app without a Plex sign-in; `requireAuth`

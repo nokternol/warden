@@ -28,7 +28,7 @@ const publicUserColumns = {
  * identity; email identifies only a row stored before its Plex id was known,
  * because an email can move between Plex accounts.
  */
-function isAccountOf(account: PlexAccount) {
+function matchesAccount(account: PlexAccount) {
   return or(
     eq(users.plexId, account.id),
     and(isNull(users.plexId), eq(users.email, account.email.toLowerCase()))
@@ -54,7 +54,7 @@ export class AuthService {
     const [known] = await this.db
       .select(publicUserColumns)
       .from(users)
-      .where(isAccountOf(account))
+      .where(matchesAccount(account))
       .limit(1);
 
     if (known) return this.refreshOwner(known, account, authToken);
@@ -64,6 +64,8 @@ export class AuthService {
   /**
    * Makes the account the owner if the instance has no user yet, in one
    * statement so two first sign-ins cannot both claim it. Refuses otherwise.
+   * Raw SQL because Drizzle's insert builder has no `INSERT … SELECT … WHERE
+   * NOT EXISTS`; its column list must follow the `users` schema.
    */
   private async claimInstance(account: PlexAccount, authToken: string): Promise<PublicUser> {
     const claimed = await this.db.all<{ id: number }>(sql`
