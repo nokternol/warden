@@ -17,10 +17,10 @@ export interface Scope {
     /** Provider types that cannot be configured and are left out of the type catalogue. */
     providerTypes: readonly ProviderType[];
     /**
-     * Rule keys that are never served, because each has no control or no producer of
-     * an offered type. /api/rules leaves them out by construction, and a test keeps
-     * this list equal to that set, so un-deferring a provider type shows which of
-     * these rules it brings back.
+     * Rule keys that are not served. A test keeps this list equal to the rules with no
+     * control or no producer of an offered type, so it is the complete inventory of
+     * deferred rules: un-deferring a provider type shows which of these it brings back,
+     * and removing an entry serves that rule once it has a live producer.
      */
     rules: readonly string[];
     /** Provider tasks that are not offered for enablement or automation. */
@@ -53,6 +53,11 @@ export const scope: Scope = {
 /** Whether `type` can be configured: `declared` does not defer it. */
 export function isOfferedProviderType(declared: Scope, type: ProviderType): boolean {
   return !declared.deferred.providerTypes.includes(type);
+}
+
+/** Whether the rule with `ruleKey` may be served: `declared` does not defer it. */
+export function isOfferedRule(declared: Scope, ruleKey: string): boolean {
+  return !declared.deferred.rules.includes(ruleKey);
 }
 
 /** Whether a provider type's task is offered for enablement and automation. */

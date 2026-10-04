@@ -1,5 +1,5 @@
 import type { ContentType } from '@contract/schemas';
-import { type Scope, isOfferedProviderType } from '@contract/scope';
+import { type Scope, isOfferedProviderType, isOfferedRule } from '@contract/scope';
 import { api } from '@server/kernel/api';
 import type { ActiveFieldSetCache } from './activeFieldSet';
 import { MEDIA_RULES, toDescriptor } from './ruleRegistry';
@@ -31,6 +31,7 @@ export function createRulesProcedures(cradle: RulesCradle) {
     return RULES.filter(
       (rule) => contentType === undefined || rule.contentTypes.includes(contentType)
     )
+      .filter((rule) => isOfferedRule(scope, rule.key))
       .filter(hasLiveProducer)
       .flatMap((rule) => toDescriptor(rule) ?? []);
   }
