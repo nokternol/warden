@@ -483,6 +483,8 @@ names, so nothing is renamed twice.
 - **Expected end state:** `MediaRule` gains `valueLabels?`, `options?`, `shortLabel?`, `lookup?` and
   `group`. The descriptor is an explicit allowlist of presentation fields (key, label, content
   types, data type, instance scoping, and those five), built by `toDescriptor`, not `Omit`.
+  The `csv-ids` data type is renamed for what its value is (`{ providerId?, ids }` since B6, not a
+  CSV string), once, while the descriptor's data types are being reshaped.
 - **Deletes:** `BOOLEAN_VALUE_LABELS`, `SEGMENT_LABEL_OVERRIDES`, `ENUM_OPTIONS`, `groupsFor`, the key
   switches in `csvIdOptions`/`csvStringOptions`, the client's own `MediaRuleDescriptor` declaration, and `ruleRendersControl` (C5 makes renderability a server
   fact).
