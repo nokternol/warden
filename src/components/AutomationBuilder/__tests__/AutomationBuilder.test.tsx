@@ -326,4 +326,34 @@ describe('AutomationBuilder', () => {
       )
     );
   });
+
+  it('names series as series in the count', async () => {
+    const DELETE_SERIES = {
+      id: 'deleteSeriesWithFiles',
+      label: 'Delete series + files',
+      destructive: true,
+      enabled: true,
+    };
+    mockApi(
+      [makeProvider({ type: 'SONARR', name: 'Sonarr Main' })],
+      [{ providerId: 1, type: 'SONARR', tasks: [DELETE_SERIES] }]
+    );
+    server.use(
+      mockProcedure(contract.automations.preview, () => ({
+        count: 3,
+        contentType: 'series' as const,
+      }))
+    );
+    const user = userEvent.setup();
+    renderBuilder({ queries: [{ ...mockQuery, contentType: 'series' }] });
+
+    await user.click(await screen.findByRole('radio', { name: /delete series \+ files/i }));
+
+    const confirmation = screen.getByRole('checkbox', { name: /confirm/i });
+    await waitFor(() =>
+      expect(confirmation).toHaveAccessibleName(
+        'Confirm: Delete series + files · will affect 3 series'
+      )
+    );
+  });
 });

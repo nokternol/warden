@@ -1,7 +1,7 @@
 import AutomationQueryList from '@app/components/AutomationQueryList';
 import type { AutomationQueryItem } from '@app/components/AutomationQueryList';
 import Badge from '@app/components/Badge';
-import { useAutomationPreview } from '@app/hooks/useAutomationPreview';
+import { type AutomationPreview, useAutomationPreview } from '@app/hooks/useAutomationPreview';
 import type { CreateAutomationInput } from '@app/hooks/useAutomations';
 import type { MediaQueryRecord } from '@app/hooks/useMediaQueries';
 import { useProviderSettings } from '@app/hooks/useProviderSettings';
@@ -59,6 +59,12 @@ function relativeTime(isoOrDate: string | Date): string {
   }
   const d = Math.round(abs / 86_400_000);
   return past ? `${d}d ago` : `in ${d}d`;
+}
+
+/** The blast-radius phrase for a preview, e.g. "will affect 214 movies". */
+function affectedItems({ count, contentType }: AutomationPreview): string {
+  const noun = contentType === 'series' ? 'series' : 'movies';
+  return `will affect ${count} ${noun}`;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -381,7 +387,7 @@ export default function AutomationBuilder({
               className="mt-0.5 flex-shrink-0 text-primary focus:ring-primary focus:ring-offset-0"
             />
             <span>
-              Confirm: {selectedTask.label} · will affect {preview?.count} movies
+              Confirm: {selectedTask.label} · {preview && affectedItems(preview)}
             </span>
           </label>
         )}
