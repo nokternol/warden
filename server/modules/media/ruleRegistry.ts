@@ -21,6 +21,16 @@ export interface Filter {
   value: FilterValue;
 }
 
+/** The section headings rules are grouped under in the filter bar. */
+export type RuleGroup =
+  | 'Movies'
+  | 'Series'
+  | 'Library'
+  | 'Media server'
+  | 'Play History'
+  | 'Requests'
+  | 'TMDB';
+
 export type Predicate<
   T extends NormalizedMovie | NormalizedSeries = NormalizedMovie | NormalizedSeries,
 > = (item: T, value: FilterValue) => boolean;
@@ -57,6 +67,9 @@ export interface MediaRule<
   shortLabel?: string;
   /** For a multi-value rule: the `media` lookup procedure its selectable values come from. */
   lookup?: MediaLookup;
+  /** The section heading the rule is shown under. Absent for the universal controls
+   *  (title, year) that sit outside every section. */
+  group?: RuleGroup;
   predicate: Predicate<T>;
 }
 
@@ -160,6 +173,7 @@ export const MEDIA_RULES = [
   {
     key: 'watched',
     label: 'Watched',
+    group: 'Play History',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     valueLabels: { true: 'Watched', false: 'Unwatched' },
@@ -174,6 +188,7 @@ export const MEDIA_RULES = [
   {
     key: 'addedDaysAgo',
     label: 'Added (days ago)',
+    group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: [MetadataProviderType.RADARR, MetadataProviderType.SONARR],
@@ -186,6 +201,7 @@ export const MEDIA_RULES = [
   {
     key: 'plexAddedDaysAgo',
     label: 'Plex added (days ago)',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: deriveProviders('plexAddedAt'),
@@ -199,6 +215,7 @@ export const MEDIA_RULES = [
   {
     key: 'jellyfinAddedDaysAgo',
     label: 'Jellyfin added (days ago)',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: deriveProviders('jellyfinAddedAt'),
@@ -212,6 +229,7 @@ export const MEDIA_RULES = [
   {
     key: 'sizeOnDiskGb',
     label: 'Size on disk (GB)',
+    group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: [MetadataProviderType.RADARR, MetadataProviderType.SONARR],
@@ -224,6 +242,7 @@ export const MEDIA_RULES = [
   {
     key: 'certification',
     label: 'Certification',
+    group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     providers: [
@@ -242,6 +261,7 @@ export const MEDIA_RULES = [
   {
     key: 'hasFile',
     label: 'Has file',
+    group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     valueLabels: { true: 'Downloaded', false: 'Missing' },
@@ -256,6 +276,7 @@ export const MEDIA_RULES = [
   {
     key: 'fileSizeBytes',
     label: 'File size (bytes)',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: deriveProviders('fileSizeBytes'),
@@ -269,6 +290,7 @@ export const MEDIA_RULES = [
   {
     key: 'releaseDaysAgo',
     label: 'Release date (days ago)',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: deriveProviders('releaseDate'),
@@ -282,6 +304,7 @@ export const MEDIA_RULES = [
   {
     key: 'fileContainer',
     label: 'File container',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     lookup: 'fileContainers',
@@ -296,6 +319,7 @@ export const MEDIA_RULES = [
   {
     key: 'videoCodec',
     label: 'Video codec',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     lookup: 'videoCodecs',
@@ -310,6 +334,7 @@ export const MEDIA_RULES = [
   {
     key: 'audioCodec',
     label: 'Audio codec',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     lookup: 'audioCodecs',
@@ -324,6 +349,7 @@ export const MEDIA_RULES = [
   {
     key: 'fileResolution',
     label: 'File resolution',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     lookup: 'fileResolutions',
@@ -338,6 +364,7 @@ export const MEDIA_RULES = [
   {
     key: 'labels',
     label: 'Labels',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     lookup: 'labels',
@@ -352,6 +379,7 @@ export const MEDIA_RULES = [
   {
     key: 'monitored',
     label: 'Monitored',
+    group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     valueLabels: { true: 'Monitored', false: 'Unmonitored' },
@@ -362,6 +390,7 @@ export const MEDIA_RULES = [
   {
     key: 'jellyfinIsFavorite',
     label: 'Jellyfin favorite',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     valueLabels: { true: 'Favorited', false: 'Not Favorited' },
@@ -375,6 +404,7 @@ export const MEDIA_RULES = [
   {
     key: 'tagIds',
     label: 'Tags',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'instance-ids',
     lookup: 'tags',
@@ -395,6 +425,7 @@ export const MEDIA_RULES = [
   {
     key: 'qualityProfileIds',
     label: 'Quality profile',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'instance-ids',
     lookup: 'qualityProfiles',
@@ -409,6 +440,7 @@ export const MEDIA_RULES = [
   {
     key: 'genres',
     label: 'Genres',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
     lookup: 'genres',
@@ -422,6 +454,7 @@ export const MEDIA_RULES = [
   {
     key: 'studio',
     label: 'Studio',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
     lookup: 'studio',
@@ -436,6 +469,7 @@ export const MEDIA_RULES = [
   {
     key: 'runtimeMinutes',
     label: 'Runtime (minutes)',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'range',
     providers: deriveProviders('runtimeMinutes'),
@@ -450,6 +484,7 @@ export const MEDIA_RULES = [
   {
     key: 'imdbRating',
     label: 'IMDB rating',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'range',
     providers: [MetadataProviderType.RADARR],
@@ -463,6 +498,7 @@ export const MEDIA_RULES = [
   {
     key: 'movieFileCount',
     label: 'Movie file count',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'range',
     providers: [MetadataProviderType.RADARR],
@@ -476,6 +512,7 @@ export const MEDIA_RULES = [
   {
     key: 'releaseGroups',
     label: 'Release group',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
     lookup: 'releaseGroups',
@@ -490,6 +527,7 @@ export const MEDIA_RULES = [
   {
     key: 'inCinemasDaysAgo',
     label: 'In cinemas (days ago)',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'range',
     providers: [MetadataProviderType.RADARR],
@@ -503,6 +541,7 @@ export const MEDIA_RULES = [
   {
     key: 'physicalReleaseDaysAgo',
     label: 'Physical release (days ago)',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'range',
     providers: [MetadataProviderType.RADARR],
@@ -516,6 +555,7 @@ export const MEDIA_RULES = [
   {
     key: 'digitalReleaseDaysAgo',
     label: 'Digital release (days ago)',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'range',
     providers: [MetadataProviderType.RADARR],
@@ -529,6 +569,7 @@ export const MEDIA_RULES = [
   {
     key: 'collectionName',
     label: 'Collection',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
     lookup: 'collectionNames',
@@ -543,6 +584,7 @@ export const MEDIA_RULES = [
   {
     key: 'isAvailable',
     label: 'Available',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'boolean',
     valueLabels: { true: 'Available', false: 'Unavailable' },
@@ -556,6 +598,7 @@ export const MEDIA_RULES = [
   {
     key: 'radarrStatus',
     label: 'Radarr status',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'string',
     options: [
@@ -578,6 +621,7 @@ export const MEDIA_RULES = [
   {
     key: 'seriesStatus',
     label: 'Series status',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'string',
     options: [
@@ -595,6 +639,7 @@ export const MEDIA_RULES = [
   {
     key: 'tagIds',
     label: 'Tags',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'instance-ids',
     lookup: 'tags',
@@ -612,6 +657,7 @@ export const MEDIA_RULES = [
   {
     key: 'qualityProfileIds',
     label: 'Quality profile',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'instance-ids',
     lookup: 'qualityProfiles',
@@ -626,6 +672,7 @@ export const MEDIA_RULES = [
   {
     key: 'genres',
     label: 'Genres',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'csv-strings',
     lookup: 'genres',
@@ -639,6 +686,7 @@ export const MEDIA_RULES = [
   {
     key: 'seriesType',
     label: 'Series type',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'string',
     options: [
@@ -657,6 +705,7 @@ export const MEDIA_RULES = [
   {
     key: 'studio',
     label: 'Studio',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'csv-strings',
     lookup: 'studio',
@@ -672,6 +721,7 @@ export const MEDIA_RULES = [
   {
     key: 'network',
     label: 'Network',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'csv-strings',
     lookup: 'networks',
@@ -686,6 +736,7 @@ export const MEDIA_RULES = [
   {
     key: 'communityRating',
     label: 'Community rating',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
     providers: [MetadataProviderType.SONARR],
@@ -699,6 +750,7 @@ export const MEDIA_RULES = [
   {
     key: 'ended',
     label: 'Ended',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'boolean',
     valueLabels: { true: 'Finished', false: 'Running' },
@@ -712,6 +764,7 @@ export const MEDIA_RULES = [
   {
     key: 'lastAiredDaysAgo',
     label: 'Last aired (days ago)',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
     providers: [MetadataProviderType.SONARR],
@@ -725,6 +778,7 @@ export const MEDIA_RULES = [
   {
     key: 'episodePercentage',
     label: 'Episode completion (%)',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
     providers: [MetadataProviderType.SONARR],
@@ -738,6 +792,7 @@ export const MEDIA_RULES = [
   {
     key: 'seasonCount',
     label: 'Season count',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
     providers: [MetadataProviderType.SONARR],
@@ -751,6 +806,7 @@ export const MEDIA_RULES = [
   {
     key: 'episodeCount',
     label: 'Episode count',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
     providers: [MetadataProviderType.SONARR],
@@ -765,6 +821,7 @@ export const MEDIA_RULES = [
   {
     key: 'nextAiringInDays',
     label: 'Next airing (days)',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
     providers: [MetadataProviderType.SONARR],
@@ -778,6 +835,7 @@ export const MEDIA_RULES = [
   {
     key: 'languageProfileIds',
     label: 'Language profile',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'instance-ids',
     lookup: 'languageProfiles',
@@ -793,6 +851,7 @@ export const MEDIA_RULES = [
   {
     key: 'tmdbStatus',
     label: 'TMDB status',
+    group: 'TMDB',
     contentTypes: ['movie', 'series'],
     dataType: 'string',
     options: [
@@ -814,6 +873,7 @@ export const MEDIA_RULES = [
   {
     key: 'overseerrRequestStatus',
     label: 'Overseerr request status',
+    group: 'Requests',
     contentTypes: ['movie', 'series'],
     dataType: 'number',
     options: [
@@ -834,6 +894,7 @@ export const MEDIA_RULES = [
   {
     key: 'overseerrHasIssue',
     label: 'Overseerr has issue',
+    group: 'Requests',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     valueLabels: { true: 'Has Issue', false: 'No Issue' },
@@ -846,6 +907,7 @@ export const MEDIA_RULES = [
   {
     key: 'lastWatchedDaysAgo',
     label: 'Last watched (days ago)',
+    group: 'Play History',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: deriveProviders('lastWatchedAt'),

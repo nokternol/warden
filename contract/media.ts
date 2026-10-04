@@ -221,6 +221,8 @@ export const MediaRuleDescriptorSchema = z.object({
     .optional(),
   shortLabel: z.string().optional(),
   lookup: MediaLookupSchema.optional(),
+  /** The section heading the rule is shown under; absent for the universal title and year. */
+  group: z.string().optional(),
 });
 
 /** One provider's answer to a cross-provider title search. */

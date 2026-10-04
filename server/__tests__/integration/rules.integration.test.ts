@@ -181,13 +181,15 @@ describe('GET /api/rules', () => {
   });
 
   describe('rule presentation', () => {
-    async function rulesServedWith(type: MetadataProviderType) {
-      await providerSettingsService.create({
-        type,
-        name: `Test ${type}`,
-        url: 'http://localhost:1234/api',
-        apiKey: 'test-api-key',
-      });
+    async function rulesServedWith(...types: MetadataProviderType[]) {
+      for (const type of types) {
+        await providerSettingsService.create({
+          type,
+          name: `Test ${type}`,
+          url: 'http://localhost:1234/api',
+          apiKey: 'test-api-key',
+        });
+      }
       const res = await supertest(app).get('/api/rules');
       expect(res.status).toBe(200);
       return res.body.data as Array<Record<string, unknown>>;
@@ -213,6 +215,17 @@ describe('GET /api/rules', () => {
       const rules = await rulesServedWith(MetadataProviderType.RADARR);
       expect(rules.find((r) => r.key === 'genres')?.lookup).toBe('genres');
       expect(rules.find((r) => r.key === 'tagIds')?.lookup).toBe('tags');
+    });
+
+    it("serves each rule's section heading, and none for the universal title and year", async () => {
+      const rules = await rulesServedWith(MetadataProviderType.RADARR, MetadataProviderType.PLEX);
+      const groupOf = (key: string) => rules.find((r) => r.key === key)?.group;
+      expect(groupOf('videoCodec')).toBe('Media server');
+      expect(groupOf('hasFile')).toBe('Library');
+      expect(groupOf('watched')).toBe('Play History');
+      expect(groupOf('imdbRating')).toBe('Movies');
+      expect(groupOf('title')).toBeUndefined();
+      expect(groupOf('year')).toBeUndefined();
     });
   });
 
