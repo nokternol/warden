@@ -384,9 +384,10 @@ Earlier entries in this ledger use the names that were current when they healed 
 - **Healed by:** `contract/scope.ts` is the one scope declaration. It lists the deferred provider types
   (SEERR, TMDB, OMDB, TVMAZE), the deferred rules (`certification`, `tmdbStatus`, checked by test to be
   exactly the rules with no control or no offered producer) and the deferred tasks (none). The kernel
-  container injects it as `scope`. Provider create and the connection test refuse a deferred type, a
-  rule needs a live producer of an offered type, and deferred tasks are left out of
-  `/api/providers/tasks`. The server's provider-type catalogue (`providerCatalogue.ts`, keyed by type)
+  container injects it as `scope`. Provider create and the connection test refuse a deferred type.
+  `/api/rules` leaves out every listed rule and requires a live producer of an offered type for the
+  rest. Deferred tasks are left out of `/api/providers/tasks`, and provider update and automation
+  create refuse them. The server's provider-type catalogue (`providerCatalogue.ts`, keyed by type)
   declares labels, API paths, default URLs and filter data once. The probe and `ProviderFactory`
   read it, and `GET /api/providers/types` projects the offered types. The client derives the
   add-provider list, the provider card's label, path and filter data, the Providers page order and the

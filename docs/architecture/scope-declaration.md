@@ -21,15 +21,15 @@ kinds of deferred things:
 The declaration covers provider types, rules and tasks. Pages, navigation items and API procedures
 are not part of it.
 
-The questions are asked through two functions beside the declaration. `isOfferedProviderType(declared,
-type)` and `isOfferedTask(declared, providerType, taskId)` take the declaration as an argument, so the
-server can be handed a different one under test.
+The questions are asked through three functions beside the declaration: `isOfferedProviderType(declared,
+type)`, `isOfferedRule(declared, ruleKey)` and `isOfferedTask(declared, providerType, taskId)`. Each
+takes the declaration as an argument, so the server can be handed a different one under test.
 
 ## Who consults it
 
 The kernel container registers the declaration as `scope`
-([`server/kernel/container.ts`](ref:path:server/kernel/container.ts)). Procedures read it from their
-cradle, never by importing it:
+([`server/kernel/container.ts`](ref:path:server/kernel/container.ts)). Procedures and services read it
+from their cradle, never by importing it:
 
 - **Provider types.** [`providers.procedures.ts`](ref:path:server/modules/providers/providers.procedures.ts)
   serves only offered types from `GET /api/providers/types`. Provider create and the connection test
@@ -37,16 +37,18 @@ cradle, never by importing it:
   connection is attempted. A row of a deferred type stored earlier still lists, but nothing in the API
   creates one.
 - **Rules.** [`media.rules.procedures.ts`](ref:path:server/modules/media/media.rules.procedures.ts)
-  serves a rule only if it has a *live producer*: one of its `providers` is configured, active, and of
-  an offered type. A deferred type is never a producer.
+  serves a rule only if the declaration does not defer it *and* it has a *live producer*: one of its
+  `providers` is configured, active, and of an offered type. A deferred type is never a producer.
 - **Tasks.** `GET /api/providers/tasks` leaves out deferred tasks. That projection is the only source
-  the provider card's task toggles and the automation builder read.
+  the provider card's task toggles and the automation builder read. A deferred task is also refused on
+  write: a provider update whose `settings.enabledTasks` names one answers 400, and
+  [`AutomationService.create`](ref:path:server/modules/automations/automationService.ts) rejects one
+  even if it was enabled before it was deferred.
 
-The `rules` list is not a second gate. `/api/rules` already leaves those rules out by construction: one
-has no descriptor, and the other has no offered producer. [`ruleScope.test.ts`](ref:path:server/__tests__/modules/media/ruleScope.test.ts)
-keeps the list equal to exactly the set of rules with no control or no offered producer. The
-declaration is therefore a complete, checked inventory: un-deferring TMDB fails that test until
-`tmdbStatus` is removed from the list too.
+The `rules` list decides: a listed rule is not served, and removing its entry serves it once it has a
+live producer. [`ruleScope.test.ts`](ref:path:server/__tests__/modules/media/ruleScope.test.ts) keeps
+the list complete, equal to exactly the set of rules with no control or no offered producer, so it is
+a checked inventory too: un-deferring TMDB fails that test until `tmdbStatus` is removed from the list.
 
 The probe itself, `probeConnection` ([`connectionProbe.ts`](ref:path:server/modules/providers/connectionProbe.ts)),
 still knows every type. Its SEERR and TVMAZE cases are tested against the probe directly
@@ -58,11 +60,13 @@ the deferred code stays covered while no route reaches it.
 [`providerCatalogue.ts`](ref:path:server/modules/providers/providerCatalogue.ts) describes every
 `MetadataProviderType` once: its `label`, the `apiPath` appended to the host the user enters, the
 `defaultUrl` of a hosted service, and its `filterData`: short phrases saying what it makes filterable.
-It is a `Record` keyed by type, so a type without an entry fails to compile. Its insertion order is the
-display order.
+It `satisfies` a `Record` keyed by type, so a type without an entry fails to compile, while each entry
+keeps its own shape: `ProviderFactory.createTvMaze` reads TVmaze's `defaultUrl` as a guaranteed string.
+Its insertion order is the display order. The connection probe reads `apiPath` from it.
 
-It is the one declaration of these facts on the server. The connection probe reads `apiPath` from it,
-and `ProviderFactory.createTvMaze` reads TVmaze's `defaultUrl` from it.
+A stored provider URL is the host the user enters with the type's `apiPath` appended.
+[`contract/providerUrl.ts`](ref:path:contract/providerUrl.ts) holds that join, `apiUrlOf`, and its
+inverse, `hostOf`. The connection probe, the add-provider form and the provider card all use them.
 
 `GET /api/providers/types` projects the catalogue through the contract's `ProviderTypeDescriptorSchema`
 ([`contract/providers.ts`](ref:path:contract/providers.ts)), filtered to offered types. The client holds
@@ -71,7 +75,7 @@ no copy. [`useProviderTypes`](ref:path:src/hooks/useProviderTypes.ts) fetches th
 
 - [`AddProviderForm`](ref:path:src/components/AddProviderForm/index.tsx) offers exactly the served
   types by label, starts on the first, appends the chosen type's `apiPath` on save, and fills in and
-  locks a `defaultUrl`.
+  locks a `defaultUrl`. While the types load, or when none are served, it says so and disables Save.
 - [`ProviderCard`](ref:path:src/components/ProviderCard/index.tsx) shows its type's label and
   filter data, and round-trips the host through `apiPath` when editing. A row of a deferred type gets
   no descriptor: it shows its raw type and no filter data.
@@ -82,9 +86,8 @@ no copy. [`useProviderTypes`](ref:path:src/hooks/useProviderTypes.ts) fetches th
 
 ## What this does not cover
 
-- **Enablement and automation of a deferred task are refused only by omission.** A deferred task is
-  absent from `/api/providers/tasks`, but nothing refuses a raw `PATCH` that enables it, or an
-  automation that names it once it is enabled. This has no effect while no task is deferred.
+- **An automation saved before its task was deferred still runs.** The executor checks enablement,
+  not the declaration.
 - **Query health still reports deferred producers.** A query's provider status lists every type in a
   rule's `providers`, deferred ones included.
 - **Per-type form fields stay on the client.** The Jellyfin user-id field, and the type icons, are

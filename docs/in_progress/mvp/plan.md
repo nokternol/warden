@@ -24,9 +24,11 @@ The MVP is done when all three of these hold for the deployed container:
 Exposure is decided by **one mechanism**: a single **scope declaration** (`contract/scope.ts`,
 created in C5 with the deferred provider types, rules and tasks, and extended by S1 with pages and API
 procedures) lists every deferred page, API procedure, provider type, rule and task. The server
-refuses deferred procedures and leaves deferred types, rules and tasks out of its projections.
+refuses deferred procedures, leaves deferred types, rules and tasks out of its projections, and
+refuses to create a deferred provider type or to enable or automate a deferred task.
 The client hides deferred nav items and page sections, and a deferred page URL answers 404. Nothing
-else decides exposure, and un-deferring a feature is one line removed from that file.
+else decides exposure, and un-deferring a feature is one line removed from that file (for a rule,
+provided it has a live producer of an offered type).
 
 ## In scope
 
@@ -549,7 +551,7 @@ names, so nothing is renamed twice.
 - **Expected end state (as built):** `contract/scope.ts` exports the scope declaration (`Scope`,
   `scope`) with `deferred.providerTypes` (SEERR, TMDB, OMDB, TVMAZE), `deferred.rules` (`certification`,
   `tmdbStatus`) and `deferred.tasks` (empty; a task is `{ providerType, taskId }`), plus
-  `isOfferedProviderType` and `isOfferedTask`, which take the declaration as an argument. The kernel
+  `isOfferedProviderType`, `isOfferedRule` and `isOfferedTask`, which take the declaration as an argument. The kernel
   container registers it as `scope`, and procedures read it from their cradle, so a test can inject its
   own. Against it:
   - `GET /api/providers/types` serves the offered types from the server's provider-type catalogue
@@ -558,13 +560,18 @@ names, so nothing is renamed twice.
     API path and TVmaze URL from that catalogue.
   - Provider create and the connection test answer 400 for a deferred type. The probe's SEERR and
     TVMAZE cases are tested against `probeConnection` directly.
-  - `/api/rules` serves a rule only with a live producer: configured, active and of an offered type.
-    A test keeps `deferred.rules` equal to exactly the rules with no control or no offered producer.
-  - `/api/providers/tasks` leaves out deferred tasks. A regression guard pins the 32 offered tasks.
+  - `/api/rules` leaves out every rule `deferred.rules` lists, and serves the rest only with a live
+    producer: configured, active and of an offered type. Removing a rule's entry serves it again once
+    it has one. A test keeps `deferred.rules` complete: exactly the rules with no control or no
+    offered producer.
+  - `/api/providers/tasks` leaves out deferred tasks, a provider update that enables one answers
+    400, and `AutomationService.create` rejects one. A regression guard pins the 32 offered tasks.
 
   The client reads the projection via `useProviderTypes`/`descriptorFor`: the add-provider form
-  (served types by label, starting on the first, with API path and fixed URL), the provider card
-  (label, filter data, API path), the Providers page order and the media page's owner name.
+  (served types by label, starting on the first, with API path and fixed URL, and a loading or
+  no-types message with Save disabled), the provider card (label, filter data, API path), the
+  Providers page order and the media page's owner name. `contract/providerUrl.ts` (`apiUrlOf`,
+  `hostOf`) is the one join of host and API path, shared by the forms and the connection probe.
 - **Deletes:** `src/lib/provider-registry.ts` (and its test) as a client-side catalogue,
   `PROVIDER_TYPES`/`API_SUFFIXES`/`PROVIDER_DEFAULT_URLS` in `AddProviderForm`,
   `API_SUFFIXES`/`PROVIDER_FILTER_DATA` in `ProviderCard`, and the suffix map in `connectionProbe.ts`.

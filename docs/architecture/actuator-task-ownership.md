@@ -111,7 +111,9 @@ It lists configured providers, constructs each via `ProviderFactory`, keeps thos
 `isMediaActuator(instance)` holds, and projects each instance's `tasks()` to descriptors tagged `enabled`,
 leaving out any task the scope declaration defers (`isOfferedTask`, in
 [`contract/scope.ts`](ref:path:contract/scope.ts)). A deferred task names its provider type, because
-task ids are unique only within a type.
+task ids are unique only within a type. A deferred task is refused on write as well: a provider update whose
+`settings.enabledTasks` names one answers 400, and `AutomationService.create` rejects one even if it
+was enabled before it was deferred.
 Non-actuators and non-constructable types emit nothing — the surface advertises only what some configured
 instance can actually do.
 
