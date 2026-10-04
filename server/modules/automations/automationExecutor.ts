@@ -1,6 +1,7 @@
 import type { AutomationPreview } from '@contract/automations';
 import type { MetadataProvider } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
+import { ValidationError } from '../../kernel/errors';
 import type { DomainEventBus } from '../../kernel/eventBus';
 import { getChildLogger } from '../../kernel/logger';
 import {
@@ -210,7 +211,7 @@ export class AutomationExecutor {
     if (!task) throw new Error(`Task "${taskId}" is not yet implemented`);
 
     if (!readEnabledTaskIds(providerSettings.settings).includes(taskId)) {
-      throw new Error(
+      throw new ValidationError(
         `Task "${taskId}" is not enabled on provider instance ${providerSettings.id}`
       );
     }

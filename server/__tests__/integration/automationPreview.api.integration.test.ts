@@ -108,4 +108,14 @@ describe('POST /api/automations/preview', () => {
 
     expect(res.status).toBe(404);
   });
+
+  it('answers 400 for a task not enabled on the provider instance', async () => {
+    const res = await client.post('/api/automations/preview', {
+      providerId: radarrId,
+      taskId: 'unmonitorMovie',
+      queries: [{ queryId: hasFileQueryId, role: 'include' }],
+    });
+
+    expect(res.status).toBe(400);
+  });
 });
