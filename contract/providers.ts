@@ -146,7 +146,7 @@ export const providers = {
     .output(ProviderSchema),
 
   delete: base
-    .route({ method: 'DELETE', path: '/api/settings/providers/{id}' })
+    .route({ method: 'DELETE', path: '/api/providers/{id}' })
     .input(z.object({ id: IdSchema }))
     .output(z.null()),
 

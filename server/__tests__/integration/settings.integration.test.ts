@@ -3,7 +3,7 @@ import { MetadataProviderType } from '@server/database/schema';
 /**
  * Settings API integration tests.
  *
- * All /api/settings/providers routes require authentication.
+ * All provider CRUD routes under /api/providers require authentication.
  * Tests cover: 401 on unauthenticated access, full CRUD, and Zod validation.
  *
  * Run: vitest run --project server
@@ -105,7 +105,7 @@ describe('Settings API Integration', () => {
     });
 
     it('DELETE /providers/:id returns 401', async () => {
-      const res = await unauthedClient.delete('/api/settings/providers/1');
+      const res = await unauthedClient.delete('/api/providers/1');
       expectErrorResponse(res, 401);
     });
   });
@@ -179,7 +179,7 @@ describe('Settings API Integration', () => {
       });
       const createdData = expectSuccessResponse(created);
 
-      const deleteRes = await authedClient.delete(`/api/settings/providers/${createdData.id}`);
+      const deleteRes = await authedClient.delete(`/api/providers/${createdData.id}`);
       expectSuccessResponse(deleteRes);
 
       const listRes = await authedClient.get('/api/providers');
