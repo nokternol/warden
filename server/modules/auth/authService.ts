@@ -1,4 +1,4 @@
-import { and, eq, isNull, or } from 'drizzle-orm';
+import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import { type PublicUser, UserType, users } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
 import { ForbiddenError, NotFoundError } from '../../kernel/errors';
@@ -58,30 +58,27 @@ export class AuthService {
       .limit(1);
 
     if (known) return this.refreshOwner(known, account, authToken);
-    if (await this.hasOwner()) {
-      throw new ForbiddenError('This Warden instance belongs to another Plex account');
-    }
     return this.claimInstance(account, authToken);
   }
 
-  private async hasOwner(): Promise<boolean> {
-    const rows = await this.db.select({ id: users.id }).from(users).limit(1);
-    return rows.length > 0;
-  }
-
+  /**
+   * Makes the account the owner if the instance has no user yet, in one
+   * statement so two first sign-ins cannot both claim it. Refuses otherwise.
+   */
   private async claimInstance(account: PlexAccount, authToken: string): Promise<PublicUser> {
+    const claimed = await this.db.all<{ id: number }>(sql`
+      INSERT INTO ${users} (email, plexUsername, plexId, plexToken, avatar, userType, isActive)
+      SELECT ${account.email.toLowerCase()}, ${account.username}, ${account.id}, ${authToken},
+             ${account.thumb ?? null}, ${UserType.PLEX}, 1
+      WHERE NOT EXISTS (SELECT 1 FROM ${users})
+      RETURNING id`);
+    if (claimed.length === 0) {
+      throw new ForbiddenError('This Warden instance belongs to another Plex account');
+    }
     const [owner] = await this.db
-      .insert(users)
-      .values({
-        email: account.email.toLowerCase(),
-        plexUsername: account.username,
-        plexId: account.id,
-        plexToken: authToken,
-        avatar: account.thumb ?? null,
-        userType: UserType.PLEX,
-        isActive: true,
-      })
-      .returning(publicUserColumns);
+      .select(publicUserColumns)
+      .from(users)
+      .where(eq(users.id, claimed[0].id));
 
     log.info('Plex account claimed the instance as owner', {
       userId: owner.id,

@@ -162,6 +162,24 @@ describe('AuthService', () => {
       expect(stored).toEqual([{ plexId: 111, plexToken: 'owner-token' }]);
     });
 
+    it('lets exactly one of two accounts racing to claim a fresh instance become its owner', async () => {
+      vi.mocked(plexService.getUserByToken).mockImplementation(async (token) =>
+        token === 'first-token'
+          ? makePlexUser({ id: 1, email: 'first@example.com' })
+          : makePlexUser({ id: 2, email: 'second@example.com' })
+      );
+
+      const outcomes = await Promise.allSettled([
+        authService.authenticateWithPlex('first-token'),
+        authService.authenticateWithPlex('second-token'),
+      ]);
+
+      const refusals = outcomes.filter((o) => o.status === 'rejected');
+      expect(refusals).toHaveLength(1);
+      expect((refusals[0] as PromiseRejectedResult).reason).toBeInstanceOf(ForbiddenError);
+      expect(await getDb().select().from(users)).toHaveLength(1);
+    });
+
     it('does not return plexToken in the result', async () => {
       vi.mocked(plexService.getUserByToken).mockResolvedValue(makePlexUser());
 
