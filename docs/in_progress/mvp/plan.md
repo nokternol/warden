@@ -35,8 +35,8 @@ else decides exposure, and un-deferring a feature is one line removed from that 
 | **Providers** | Add, edit, test and delete a provider of an offered type. Radarr/Sonarr allow multiple instances. Enable tasks per instance. |
 | **Media** | Browse movies and series from configured sources. Filter, filter by title, sort and paginate. |
 | **Queries** | Save a filter set as a query, list, preview and delete. |
-| **Automations** | Create from one or more include/exclude queries, a task (with its select parameter, if any) and a schedule. List, Run Now, Disable/Enable and Delete. A destructive task states its blast radius before saving. First-run guidance when setup is incomplete. |
-| **Runs** | History of runs with status, count, error and the items each run targeted, including items since removed from their source. |
+| **Automations** | Create from one or more include/exclude queries, a task (with its select parameter, if any) and a schedule. List, Run Now, Disable/Enable and Delete. A destructive task states its blast radius before saving. First-run guidance when setup is incomplete. An automation that cannot run as configured is skipped, not run. |
+| **Runs** | History of runs with status (succeeded, failed, or skipped as invalid with its reason), count, error and the items each run targeted, including items since removed from their source. |
 | **System** | System automations (identity resolution, enrichment) listed with Run Now, health status, and media data reset. |
 | **Delivery** | `docker compose up` with a persistent volume, a health check, graceful stop, migrations on boot, and an image published by CI. |
 
@@ -260,6 +260,7 @@ flowchart LR
   B5[B5 glossary + UI names] --> E1
   B5 --> B6[B6 rule, filter, query, source names]
   B6 --> C2[C2 rule presentation on registry]
+  B6 --> D4[D4 invalid automations are skipped]
   C0 --> C3
   C0 --> D1[D1 destructive guard]
   C0 --> F1
@@ -269,7 +270,7 @@ flowchart LR
   B5 & C5 --> D3[D3 Seerr is the one request manager]
   E1[E1 image correct] --> E2[E2 compose] --> E3[E3 CI smoke + publish]
   A2 --> E3
-  C3 & C4 & C5 & D1 & D2 & D3 & F1 --> F2[F2 impeccable pass]
+  C3 & C4 & C5 & D1 & D2 & D3 & D4 & F1 --> F2[F2 impeccable pass]
   F2 & E3 --> G1[G1 acceptance + docs closure]
 ```
 
@@ -601,6 +602,33 @@ names, so nothing is renamed twice.
 - **Docs:** fold the provider e2e `seerr.md`/`overseerr.md` specs' status into the implementation
   map. Phase 9 is absorbed here.
 
+**D4 · An invalid automation is skipped and says why** (after B6; story first)
+- **Model:** Sonnet 5.5 (one executor guard, one run status, one Runs page state).
+- **Why:** an automation can stop being runnable after it is saved: a provider instance its filters
+  name is deleted or deactivated, a filter names an instance other than the automation's own, or a
+  provider type a required rule needs is no longer configured. Since B6 a filter's instance lives in
+  its value, so deleting an instance leaves the filter naming it and matching nothing. Today the
+  automation still runs on schedule, targets nothing, and records a success with no explanation.
+  `computeHealth` (`mediaQueryService.ts`) already detects every one of these cases, but nothing
+  consumes its result.
+- **Behaviours:**
+  - An automation whose queries, or own provider, have a blocking health problem is not run. A run
+    is recorded with status `skipped` and a reason that names the rule and the provider, such as
+    *"Tags filter names Radarr instance 3, which is not an active provider"*.
+  - Run Now on such an automation records the same skipped run instead of running.
+  - The skip and its reason are logged at warn level for diagnosis.
+  - An automation whose only problem is a missing optional provider (health `degraded` with no
+    qualification issue) still runs, as today.
+  - On the Runs page a skipped run shows a distinct *Invalid* status with its reason.
+- **Expected end state:** validity is derived at run time from the queries' health and never
+  stored, so it can't drift from the providers it describes: deleting an instance makes a linked
+  automation invalid on its next run, and fixing the filter makes it valid again. Blocking means
+  health `unavailable` or any qualification issue. `automation_runs.status` gains `skipped`, with
+  the reason in the run's existing `error` column unless cycles show it needs its own. The run's
+  status schema in the contract carries the third value.
+- **Out of MVP:** showing invalidity outside the Runs page (an Automations page badge, the reason,
+  a link to fix the query). See [Post-MVP](#post-mvp-parked-in-order).
+
 ### Track E — Containerised delivery
 
 **E1 · The image is correct** (after B5)
@@ -696,5 +724,7 @@ names, so nothing is renamed twice.
    is a server-only change.
 5. Un-deferring each deferred surface, resolving its duplicate mechanism first (ratings vs rating
    filters, search vs title filter).
-6. `docs/intent/`: automation archive, realtime run state, ratings provider, inter-provider
+6. Invalid automations surfaced as issues to solve: an Automations page badge with the reason and
+   a link to fix the offending query, beyond the skipped run D4 records on the Runs page.
+7. `docs/intent/`: automation archive, realtime run state, ratings provider, inter-provider
    dependency, editions, per-consumer watchlist.

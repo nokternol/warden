@@ -89,7 +89,7 @@ fracture.
 | Movie or series | **movie / series** | show, `MediaKind`, `NormalizedShow` | Users see Sonarr's term, and the UI, routes and `series*` fields already say series. Stored `show` values migrated to `series`. |
 | What can be filtered on: key, type, predicate, the field it reads, the providers producing that field | **Rule** | `filterRegistry`, `filterFields`, `/api/filter-fields` | `MediaRule` / `MEDIA_RULES` live in `ruleRegistry.ts` and are served by the contract's `rules` procedure at `/api/rules`. A rule is the engine's definition; a filter is a rule's key paired with a value. |
 | A rule's key and a chosen value | **Filter** | `FilterValueEntry` | `Filter { ruleKey, value }` knows nothing about which provider supplies the data. `FilterValue` stays the name of the value itself. |
-| A query an automation includes or excludes | **Included / excluded query** | query source, `MediaQuerySource`, `querySources`, `automation_query_sources` | `AutomationQuery { queryId, role }`, table `automation_queries`. "Source" is reserved for one meaning (next row). |
+| A query an automation includes or excludes | **Included / excluded query** | query source, `MediaQuerySource`, `querySources`, `automation_query_sources` | `AutomationQuery { queryId, role, sortOrder }`, table `automation_queries`. "Source" is reserved for one meaning (next row). |
 | A provider that owns media | **Source** | `sourceProviders` on rules | A rule lists its `providers`; `MediaSource` is the one place "source" is used. |
 | The product | **Warden** | Maintainarr | Log files are `warden-*.log`, the default database is `./config/db/warden.db`, and Plex lists the app as Warden. |
 

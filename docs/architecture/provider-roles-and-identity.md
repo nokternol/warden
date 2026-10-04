@@ -235,7 +235,10 @@ pass-throughs to a different instance's coincidentally-matching id. `computeHeal
 (`mediaQueryService.ts`) surfaces two misconfiguration cases as `QueryHealth` degradations rather than
 silent mismatches: a value that names a `providerId` that is not an active instance, and — on the
 automation surface — one that names a provider other than the automation's own bound instance
-(which the gate above would otherwise make match nothing with no visible signal).
+(which the gate above would otherwise make match nothing with no visible signal). Deleting a
+provider leaves the `providerId` in any filter value that names it, so the filter matches nothing
+and its query reports `not_active`; it never widens to another instance's ids, which name different
+tags and profiles.
 
 The client (`MediaFilterBar`) mirrors this: when a rule's owning content type has more than one active
 instance (`useMediaSources()`), its dropdown renders options grouped into labeled per-instance sections
