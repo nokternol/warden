@@ -5,6 +5,8 @@
 --
 -- The stored CSV is read as the filter registry always read it: split on commas, trimmed,
 -- and only positive integers kept ("1,,2" -> [1,2]; "0,3,-1,x" -> [3]; "abc" -> []).
+-- Non-integer parts ("1.5", "1e2") are dropped too: ids are integers, and the filter schema
+-- rejects any other number on read.
 --
 -- A providerId on a row of any other rule is dropped with the column: the client only ever
 -- qualified instance-scoped rules (tags, quality and language profiles), so no other rule's
