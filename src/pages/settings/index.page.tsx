@@ -8,6 +8,7 @@ import TopBar from '@app/components/TopBar';
 import type { CreateProviderParams, ProviderSummary } from '@app/hooks/useProviderSettings';
 import { useProviderSettings } from '@app/hooks/useProviderSettings';
 import { tasksForProvider, useProviderTasks } from '@app/hooks/useProviderTasks';
+import { useProviderTypes } from '@app/hooks/useProviderTypes';
 import { getProviderOrder } from '@app/lib/provider-registry';
 import { requireAuth } from '@app/lib/utils/requireAuth';
 import { Plug } from 'lucide-react';
@@ -41,6 +42,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 export default function SettingsPage() {
   const { providers, isLoading, create, update, remove } = useProviderSettings();
   const { availability } = useProviderTasks();
+  const { types } = useProviderTypes();
   const [showAddForm, setShowAddForm] = useState(false);
 
   const handleCreate = async (params: CreateProviderParams) => {
@@ -72,7 +74,11 @@ export default function SettingsPage() {
     >
       <div className="p-6 space-y-4 max-w-3xl">
         {showAddForm && (
-          <AddProviderForm onSubmit={handleCreate} onCancel={() => setShowAddForm(false)} />
+          <AddProviderForm
+            types={types ?? []}
+            onSubmit={handleCreate}
+            onCancel={() => setShowAddForm(false)}
+          />
         )}
 
         {isLoading && (

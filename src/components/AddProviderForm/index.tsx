@@ -3,6 +3,7 @@ import ConnectionTestIcon from '@app/components/ConnectionTestIcon';
 import type { TestStatus } from '@app/components/ConnectionTestIcon';
 import type { CreateProviderParams } from '@app/hooks/useProviderSettings';
 import { api } from '@app/lib/api/client';
+import type { ProviderTypeDescriptor } from '@contract/providers';
 import { type ProviderType, ProviderTypeSchema } from '@contract/schemas';
 import { useRef, useState } from 'react';
 
@@ -24,17 +25,6 @@ const PROVIDER_DEFAULT_URLS: Partial<Record<string, string>> = {
   OMDB: 'http://www.omdbapi.com',
 };
 
-const PROVIDER_TYPES = [
-  'PLEX',
-  'JELLYFIN',
-  'SONARR',
-  'RADARR',
-  'TAUTULLI',
-  'OVERSEERR',
-  'TMDB',
-  'OMDB',
-] as const;
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface AddFormState {
@@ -48,9 +38,11 @@ interface AddFormState {
 // ─── AddProviderForm ──────────────────────────────────────────────────────────
 
 export default function AddProviderForm({
+  types,
   onSubmit,
   onCancel,
 }: {
+  types: ProviderTypeDescriptor[];
   onSubmit: (params: CreateProviderParams) => void;
   onCancel: () => void;
 }) {
@@ -129,9 +121,9 @@ export default function AddProviderForm({
             }}
             className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
           >
-            {PROVIDER_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
+            {types.map((t) => (
+              <option key={t.type} value={t.type}>
+                {t.label}
               </option>
             ))}
           </select>

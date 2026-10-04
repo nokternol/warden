@@ -1,4 +1,5 @@
 import { contract } from '@contract/index';
+import type { ProviderTypeDescriptor } from '@contract/providers';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -6,16 +7,31 @@ import { mockProcedure } from '../../../../tests/mocks/contract';
 import { server } from '../../../../tests/mocks/server';
 import AddProviderForm from '../index';
 
+const types: ProviderTypeDescriptor[] = [
+  { type: 'RADARR', label: 'Radarr', apiPath: '/api/v3', capabilities: ['Movie library'] },
+  { type: 'OVERSEERR', label: 'Overseerr', apiPath: '', capabilities: ['Request queue'] },
+];
+
 describe('AddProviderForm', () => {
+  it('offers exactly the served provider types, by their labels', () => {
+    render(<AddProviderForm types={types} onSubmit={vi.fn()} onCancel={vi.fn()} />);
+
+    const options = screen.getAllByRole('option') as HTMLOptionElement[];
+    expect(options.map((o) => [o.value, o.textContent])).toEqual([
+      ['RADARR', 'Radarr'],
+      ['OVERSEERR', 'Overseerr'],
+    ]);
+  });
+
   it('renders the Add provider heading', () => {
-    render(<AddProviderForm onSubmit={vi.fn()} onCancel={vi.fn()} />);
+    render(<AddProviderForm types={types} onSubmit={vi.fn()} onCancel={vi.fn()} />);
     expect(screen.getByText('Add provider')).toBeInTheDocument();
   });
 
   it('calls onCancel when Cancel is clicked', async () => {
     const user = userEvent.setup();
     const onCancel = vi.fn();
-    render(<AddProviderForm onSubmit={vi.fn()} onCancel={onCancel} />);
+    render(<AddProviderForm types={types} onSubmit={vi.fn()} onCancel={onCancel} />);
     await user.click(screen.getByRole('button', { name: /cancel/i }));
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
@@ -28,7 +44,7 @@ describe('AddProviderForm', () => {
     // so the request is handled rather than falling through as unhandled.
     server.use(mockProcedure(contract.providers.test, () => ({ ok: true })));
 
-    render(<AddProviderForm onSubmit={onSubmit} onCancel={vi.fn()} />);
+    render(<AddProviderForm types={types} onSubmit={onSubmit} onCancel={vi.fn()} />);
 
     await user.selectOptions(screen.getByLabelText('Type'), 'RADARR');
     await user.type(screen.getByLabelText('Name'), 'My Radarr');
