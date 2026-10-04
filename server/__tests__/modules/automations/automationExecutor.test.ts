@@ -1195,6 +1195,44 @@ describe('AutomationExecutor', () => {
     });
   });
 
+  // ─── Preview: an unsaved automation's count ──────────────────────────────
+
+  describe('preview — what an unsaved automation would act on', () => {
+    function previewExecutor(movies: RadarrMovie[]) {
+      return new AutomationExecutor({
+        automationService,
+        providerSettingsService,
+        mediaQueryService,
+        providerFactory: { create: () => radarrSource(movies) },
+        automationRunService: { createRun: vi.fn() } as unknown as AutomationRunService,
+      });
+    }
+
+    it('subtracts an excluded query from the count, as a run does', async () => {
+      const movies = [
+        createRadarrMovie({ id: 1, title: 'Keep', hasFile: true, qualityProfileId: 10 }),
+        createRadarrMovie({ id: 2, title: 'Skip', hasFile: false, qualityProfileId: 10 }),
+        createRadarrMovie({ id: 3, title: 'Remove', hasFile: true, qualityProfileId: 20 }),
+      ];
+      const provider = await seedRadarrProvider(providerSettingsService);
+      const onDisk = await seedMediaQuery(mediaQueryService, [{ ruleKey: 'hasFile', value: true }]);
+      const profile20 = await seedMediaQuery(mediaQueryService, [
+        { ruleKey: 'qualityProfileIds', value: { ids: [20] } },
+      ]);
+
+      const preview = await previewExecutor(movies).preview({
+        providerId: provider.id,
+        taskId: 'deleteMovieWithFiles',
+        queries: [
+          { queryId: onDisk.id, role: 'include' },
+          { queryId: profile20.id, role: 'exclude' },
+        ],
+      });
+
+      expect(preview).toEqual({ count: 1, contentType: 'movie' });
+    });
+  });
+
   // ─── Provider creation hoist ─────────────────────────────────────────────
 
   describe('provider creation hoist', () => {
