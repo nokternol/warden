@@ -535,8 +535,9 @@ names, so nothing is renamed twice.
   `contract/browseRangeKeys.ts` is deleted with the witness maps that used it.
 - **Deletes:** `MOVIE_PARAM_TO_KEY`, `SERIES_PARAM_TO_KEY`, `toFilterValues()`, the range satellite
   map and its coverage check, `toBrowseParams()`, and `/api/media/movies|series`.
-- **Docs:** retire `docs/architecture/browse-range-param-enforcement.md`, since what it enforces is
-  gone.
+- **Docs:** remove the browse range-param coverage sections from
+  `docs/architecture/browse-range-param-enforcement.md`, since what they enforce is gone, and rename it
+  `enrichment-field-completeness.md` for the `EnrichmentFields` completeness checks it still documents.
 
 **C4 · One multi-select** (after C2; story first)
 - **Model:** Sonnet 5.5 (component consolidation behind characterization tests).

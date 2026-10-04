@@ -120,7 +120,7 @@ automatically carried on `NormalizedMovie`/`NormalizedSeries` instead of needing
 `EnrichmentQueries.getByIdentityIds` returns via one generic `Object.assign`, so a field-type change
 there is no longer a compile-time-checked touch point at all; it was never enforceable in that shape to
 begin with.) See
-[`docs/architecture/browse-range-param-enforcement.md`](ref:path:docs/architecture/browse-range-param-enforcement.md)
+[`docs/architecture/enrichment-field-completeness.md`](ref:path:docs/architecture/enrichment-field-completeness.md)
 for the fuller set of compile-time checks a new `EnrichmentFields` key is now subject to end to end.
 
 ## Precedence: a total order, declared once per contested field

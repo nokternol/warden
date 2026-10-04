@@ -107,7 +107,7 @@ Before this change, `mediaEnrichment`'s six columns meant seven hand-maintained 
 each new field: `schema.ts`, a migration, `EnrichmentFields`, `activeFieldSet.ts`'s
 `fieldsByProviderType`, `movie.ts`/`series.ts`'s field union, `enrichmentMerge.ts`'s copy-through,
 `ruleRegistry.ts`'s rule, and `enrichmentJob.ts`'s write values. Four of those already carry
-compile-time exhaustiveness checks unrelated to this rewrite (`docs/architecture/browse-range-param-enforcement.md`)
+compile-time exhaustiveness checks unrelated to this rewrite (`docs/architecture/enrichment-field-completeness.md`)
 and are untouched by it. This rewrite removes the remaining two that had no such
 guard and couldn't get one under a wide-table shape:
 
