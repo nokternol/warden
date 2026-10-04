@@ -854,26 +854,13 @@ function groupsFor(rule: MediaRuleDescriptor, configuredTypes: Set<string>): Fil
   return groups;
 }
 
-// ─── Per-value display — the registry owns dataType/label/gating; these small
-// tables own only *value-level* display text a MediaRuleDescriptor doesn't
-// (and structurally can't) carry. Any dataType: 'boolean' rule not listed
-// here still renders correctly with a generic Yes/No pair.
-
-const BOOLEAN_VALUE_LABELS: Record<string, [true: string, false: string]> = {
-  hasFile: ['Downloaded', 'Missing'],
-  monitored: ['Monitored', 'Unmonitored'],
-  watched: ['Watched', 'Unwatched'],
-  ended: ['Finished', 'Running'],
-  overseerrHasIssue: ['Has Issue', 'No Issue'],
-  isAvailable: ['Available', 'Unavailable'],
-  jellyfinIsFavorite: ['Favorited', 'Not Favorited'],
-};
+// ─── Per-value display — read from the descriptor ─────────────────────────────
 
 function booleanOptions(rule: MediaRuleDescriptor) {
-  const [trueLabel, falseLabel] = BOOLEAN_VALUE_LABELS[rule.key] ?? ['Yes', 'No'];
+  const labels = rule.valueLabels ?? { true: 'Yes', false: 'No' };
   return [
-    { value: 'true' as const, label: trueLabel },
-    { value: 'false' as const, label: falseLabel },
+    { value: 'true' as const, label: labels.true },
+    { value: 'false' as const, label: labels.false },
   ];
 }
 

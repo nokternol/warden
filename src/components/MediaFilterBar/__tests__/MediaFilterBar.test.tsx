@@ -32,6 +32,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Watched',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
+    valueLabels: { true: 'Watched', false: 'Unwatched' },
     providers: ['TAUTULLI', 'PLEX'],
     required: false,
   },
@@ -56,6 +57,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Has file',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
+    valueLabels: { true: 'Downloaded', false: 'Missing' },
     providers: ['RADARR'],
     required: false,
   },
@@ -104,6 +106,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Monitored',
     contentTypes: ['series'],
     dataType: 'boolean',
+    valueLabels: { true: 'Monitored', false: 'Unmonitored' },
     providers: ['SONARR'],
     required: false,
   },
@@ -176,6 +179,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Ended',
     contentTypes: ['series'],
     dataType: 'boolean',
+    valueLabels: { true: 'Finished', false: 'Running' },
     providers: ['SONARR'],
     required: false,
   },
@@ -216,6 +220,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Has Issue',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
+    valueLabels: { true: 'Has Issue', false: 'No Issue' },
     providers: ['OVERSEERR'],
     required: false,
   },
@@ -355,6 +360,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Available',
     contentTypes: ['movie'],
     dataType: 'boolean',
+    valueLabels: { true: 'Available', false: 'Unavailable' },
     providers: ['RADARR'],
     required: false,
   },
@@ -371,6 +377,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Jellyfin favorite',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
+    valueLabels: { true: 'Favorited', false: 'Not Favorited' },
     providers: ['JELLYFIN'],
     required: false,
   },
@@ -1267,5 +1274,30 @@ describe('MediaFilterBar — FilterPicker excludes unrenderable rules', () => {
       />
     );
     expect(screen.queryByText('Movies')).not.toBeInTheDocument();
+  });
+});
+
+// ─── Rendering from the descriptor alone ──────────────────────────────────────
+//
+// Rules here exist only as descriptors: no key in this file's fixtures or in the
+// component names them, so they render correctly only if the descriptor carries
+// everything the control needs.
+
+describe('MediaFilterBar — renders a rule it has never seen', () => {
+  it('labels a boolean rule with the value labels its descriptor carries', async () => {
+    const user = setupUser();
+    const remastered: MediaRuleDescriptor = {
+      key: 'isRemastered',
+      label: 'Remaster',
+      contentTypes: ['movie'],
+      dataType: 'boolean',
+      providers: ['RADARR'],
+      required: false,
+      valueLabels: { true: 'Remastered', false: 'Original cut' },
+    };
+    render(<MediaFilterBar {...makeProps({ rules: [remastered] })} />);
+    await addFilter(user, 'Remaster');
+    expect(screen.getByRole('button', { name: 'Remastered' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Original cut' })).toBeInTheDocument();
   });
 });
