@@ -1,3 +1,4 @@
+import type { AutomationPreview } from '@contract/automations';
 import type { MetadataProvider } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
 import type { DomainEventBus } from '../../kernel/eventBus';
@@ -44,6 +45,9 @@ interface ExecutorDeps {
   systemTaskRunner?: SystemTaskRunnerLike;
   eventBus?: DomainEventBus;
 }
+
+/** One query an automation targets with, by id and role. */
+type TargetingQuery = Pick<AutomationQueryDto, 'queryId' | 'role'>;
 
 /** What a user run acts on: the task, its target items, and their actuator ids. */
 interface RunPlan {
@@ -164,6 +168,20 @@ export class AutomationExecutor {
   }
 
   /**
+   * What an unsaved automation would act on if it ran now: the same plan a run
+   * makes, counted in the actuator's own ids, without running the task.
+   */
+  async preview(draft: {
+    providerId: number;
+    taskId: string;
+    queries: TargetingQuery[];
+  }): Promise<AutomationPreview> {
+    const providerSettings = await this.providerSettingsService.findById(draft.providerId);
+    const plan = await this.planRun(draft.taskId, providerSettings, draft.queries);
+    return { count: plan.actuatorIds.length, contentType: plan.targets.contentType };
+  }
+
+  /**
    * Decides what a user run acts on: the enabled task, the catalog items the
    * query targets, and those items in the actuator's own id space. Running the
    * task is the caller's step, so the targets are known even if the task fails.
@@ -171,7 +189,7 @@ export class AutomationExecutor {
   private async planRun(
     taskId: string,
     providerSettings: MetadataProvider,
-    automationQueries: AutomationQueryDto[]
+    automationQueries: TargetingQuery[]
   ): Promise<RunPlan> {
     const queryDtos = await Promise.all(
       automationQueries.map((automationQuery) =>

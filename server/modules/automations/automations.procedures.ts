@@ -53,6 +53,10 @@ export function createAutomationProcedures(cradle: Cradle) {
       return null;
     }),
 
+    preview: api.automations.preview.handler(async ({ input }) =>
+      automationExecutor.preview(input)
+    ),
+
     run: api.automations.run.handler(async ({ input }) => {
       await automationService.getById(input.id);
       void automationExecutor.execute(input.id).catch((err) => {
