@@ -132,7 +132,7 @@ principles become these acceptance checks on every UI slice:
 
 | # | Finding | Evidence |
 |---|---|---|
-| X1 | **Any Plex account can sign in.** The first sign-in creates a user with no owner or allowlist check. Combined with X2, a stranger could configure providers and run delete tasks. | `server/modules/auth/authService.ts` `authenticateWithPlex` |
+| X1 | **Any Plex account can sign in.** The first sign-in creates a user with no owner or allowlist check. Combined with X2, a stranger could configure providers and run delete tasks. | `server/modules/auth/authService.ts` `authenticateWithPlex`. **Healed by A2:** the first sign-in claims the instance as its one user (the owner); any other Plex account is refused with 403 and no user row, and migration 0030 reduces existing multi-user instances to their earliest user. |
 | X2 | **Auth is opt-in per handler, and coverage has gaps.** `/api/providers/*` (tasks, task-options, metadata, ratings) and `/api/filter-fields` have no guard. One route carries the comment *"dev/config-time endpoint — add auth when the feature moves beyond the playground stage."* | `providers.routes.ts`, `providers.handler.ts` (0 guards), `media.filterFields.*` (0 guards). **Healed by A1:** the contract implementer's root guard refuses every procedure except four public ones (health, Plex sign-in, sign-out, backdrops), pinned by `defaultDenyAuth.integration.test.ts`. |
 
 ### Two names or two mechanisms for one concept
@@ -330,7 +330,13 @@ names, so nothing is renamed twice.
   - A different Plex account is refused, and no user is created for it.
   - The owner signing in again succeeds and refreshes their stored token.
   - The login page tells a refused account why it was refused.
-- **Expected end state:** an owner check in `authenticateWithPlex`.
+- **Expected end state:** an owner check in `authenticateWithPlex`. As built, the owner is the instance's
+  one user row, so there is no owner column. The first sign-in claims an empty user table with one
+  conditional insert, which also settles two simultaneous first sign-ins. Identity is the Plex id, and
+  email is accepted only for a row stored before its Plex id was known. A refusal is a 403 `FORBIDDEN`
+  that the login page's `signInFailure` classifies as `refused`. Migration
+  `0030_owner_only_users` keeps only the earliest user on an instance that let several accounts sign in,
+  which also ends their sessions.
 - **Verify:** the login page shows a clear refusal state for a non-owner. Story first.
 
 ### Track B — One name per concept

@@ -1,7 +1,8 @@
 import { buildContainer, scopePerRequest } from '@server/container';
+import { users } from '@server/database/schema';
 import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
-import { closeDatabase, initializeDatabase } from '@server/kernel/db';
+import { type DrizzleDb, closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { checkUser } from '@server/kernel/middleware/auth';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createAuthProcedures } from '@server/modules/auth';
@@ -15,6 +16,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 describe('auth procedures', () => {
   let app: Express;
+  let db: DrizzleDb;
 
   beforeAll(async () => {
     const mockConfig = createMockConfig({ DB_PATH: ':memory:', DB_LOGGING: false });
@@ -22,7 +24,7 @@ describe('auth procedures', () => {
       process.env[key] = String(value);
     }
     const config = loadConfig();
-    const db = await initializeDatabase(config);
+    db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
 
     app = express();
@@ -68,5 +70,26 @@ describe('auth procedures', () => {
 
     const me = await agent.get('/api/auth/me');
     expect(me.status).toBe(401);
+  });
+
+  it('refuses a different Plex account once the instance has an owner, starting no session and creating no user', async () => {
+    await request(app).post('/api/auth/plex').send({ authToken: 'plex-token' });
+    server.use(
+      http.get('https://plex.tv/api/v2/user', () =>
+        HttpResponse.json({ id: 9001, email: 'stranger@example.com', username: 'stranger' })
+      )
+    );
+    const stranger = request.agent(app);
+
+    const signIn = await stranger.post('/api/auth/plex').send({ authToken: 'stranger-token' });
+    expect(signIn.status).toBe(403);
+    expect(signIn.body.error).toMatchObject({
+      type: 'FORBIDDEN',
+      message: expect.stringMatching(/another Plex account/),
+    });
+
+    const me = await stranger.get('/api/auth/me');
+    expect(me.status).toBe(401);
+    expect(await db.select().from(users)).toHaveLength(1);
   });
 });

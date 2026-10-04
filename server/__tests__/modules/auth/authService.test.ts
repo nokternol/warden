@@ -9,6 +9,7 @@ import { users } from '@server/database/schema';
  */
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
+import { ForbiddenError } from '@server/kernel/errors';
 import { AuthService } from '@server/modules/auth/authService';
 import type { PlexService } from '@server/modules/providers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -69,7 +70,7 @@ describe('AuthService', () => {
   });
 
   describe('authenticateWithPlex', () => {
-    it('creates a new user when no match exists', async () => {
+    it('makes the first account to sign in on a fresh instance its owner', async () => {
       const plexUser = makePlexUser();
       vi.mocked(plexService.getUserByToken).mockResolvedValue(plexUser);
 
@@ -82,7 +83,7 @@ describe('AuthService', () => {
       expect(user.isActive).toBe(true);
     });
 
-    it('lowercases the email when creating a new user', async () => {
+    it("lowercases the owner's email when the instance is claimed", async () => {
       vi.mocked(plexService.getUserByToken).mockResolvedValue(
         makePlexUser({ email: 'Plex@EXAMPLE.COM' })
       );
@@ -92,7 +93,7 @@ describe('AuthService', () => {
       expect(user.email).toBe('plex@example.com');
     });
 
-    it('updates plexToken, plexUsername and avatar when matched by plexId', async () => {
+    it("updates the owner's plexUsername and avatar when matched by plexId", async () => {
       const db = getDb();
       // Seed an existing user
       await db.insert(users).values({
@@ -115,7 +116,20 @@ describe('AuthService', () => {
       expect('plexToken' in user).toBe(false);
     });
 
-    it('sets plexId on an existing user matched by email when plexId was null', async () => {
+    it("refreshes the owner's stored Plex token when they sign in again", async () => {
+      const db = getDb();
+      await db
+        .insert(users)
+        .values({ email: 'plex@example.com', plexId: 111, plexToken: 'old-token' });
+      vi.mocked(plexService.getUserByToken).mockResolvedValue(makePlexUser());
+
+      await authService.authenticateWithPlex('rotated-token');
+
+      const [stored] = await db.select({ plexToken: users.plexToken }).from(users);
+      expect(stored.plexToken).toBe('rotated-token');
+    });
+
+    it('binds the Plex id to an owner stored without one, matching them by email', async () => {
       const db = getDb();
       await db.insert(users).values({
         email: 'plex@example.com',
@@ -123,33 +137,47 @@ describe('AuthService', () => {
         plexUsername: 'plexuser',
         plexToken: 'old-token',
       });
-
       vi.mocked(plexService.getUserByToken).mockResolvedValue(makePlexUser({ id: 222 }));
 
       const user = await authService.authenticateWithPlex('new-token');
 
       expect(user.plexId).toBe(222);
+      expect(await db.select().from(users)).toHaveLength(1);
     });
 
-    it('matches existing user by email when plexId differs (email match wins)', async () => {
+    it("refuses an account presenting the owner's email under a different Plex id", async () => {
       const db = getDb();
-      await db.insert(users).values({
-        email: 'plex@example.com',
-        plexId: null,
-        plexUsername: 'existing',
-        plexToken: 'old-token',
-      });
+      await db
+        .insert(users)
+        .values({ email: 'plex@example.com', plexId: 111, plexToken: 'owner-token' });
+      vi.mocked(plexService.getUserByToken).mockResolvedValue(makePlexUser({ id: 999 }));
 
-      vi.mocked(plexService.getUserByToken).mockResolvedValue(
-        makePlexUser({ id: 333, email: 'plex@example.com' })
+      await expect(authService.authenticateWithPlex('other-token')).rejects.toBeInstanceOf(
+        ForbiddenError
       );
 
-      const user = await authService.authenticateWithPlex('new-token');
+      const stored = await db
+        .select({ plexId: users.plexId, plexToken: users.plexToken })
+        .from(users);
+      expect(stored).toEqual([{ plexId: 111, plexToken: 'owner-token' }]);
+    });
 
-      // Same user was found and updated, not a new one created
-      const allUsers = await db.select().from(users);
-      expect(allUsers).toHaveLength(1);
-      expect(user.plexId).toBe(333);
+    it('lets exactly one of two accounts racing to claim a fresh instance become its owner', async () => {
+      vi.mocked(plexService.getUserByToken).mockImplementation(async (token) =>
+        token === 'first-token'
+          ? makePlexUser({ id: 1, email: 'first@example.com' })
+          : makePlexUser({ id: 2, email: 'second@example.com' })
+      );
+
+      const outcomes = await Promise.allSettled([
+        authService.authenticateWithPlex('first-token'),
+        authService.authenticateWithPlex('second-token'),
+      ]);
+
+      const refusals = outcomes.filter((o) => o.status === 'rejected');
+      expect(refusals).toHaveLength(1);
+      expect((refusals[0] as PromiseRejectedResult).reason).toBeInstanceOf(ForbiddenError);
+      expect(await getDb().select().from(users)).toHaveLength(1);
     });
 
     it('does not return plexToken in the result', async () => {

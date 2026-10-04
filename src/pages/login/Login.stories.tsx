@@ -1,4 +1,5 @@
 import type { Meta, Story, StoryDecorator } from '@ladle/react';
+import { LoginScreen } from './LoginScreen';
 import LoginPage from './index.page';
 
 export const meta: Meta = {
@@ -14,3 +15,21 @@ export const meta: Meta = {
 };
 
 export const Default: Story = () => <LoginPage />;
+
+/** A Plex account that is not the instance's owner, turned away by the server. */
+export const Refused: Story = () => (
+  <LoginScreen
+    isSigningIn={false}
+    failure={{ kind: 'refused', reason: 'This Warden instance belongs to another Plex account' }}
+    onSignIn={() => {}}
+  />
+);
+
+/** A sign-in that failed for any other reason, such as Plex being unreachable. */
+export const Failed: Story = () => (
+  <LoginScreen
+    isSigningIn={false}
+    failure={{ kind: 'failed', reason: 'Authentication timeout' }}
+    onSignIn={() => {}}
+  />
+);

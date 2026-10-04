@@ -1,11 +1,14 @@
-import { and, eq, or } from 'drizzle-orm';
+import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import { type PublicUser, UserType, users } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
-import { NotFoundError } from '../../kernel/errors';
+import { ForbiddenError, NotFoundError } from '../../kernel/errors';
 import { getChildLogger } from '../../kernel/logger';
 import type { PlexService } from '../providers';
 
 const log = getChildLogger('AuthService');
+
+/** The Plex account a sign-in token belongs to. */
+type PlexAccount = Awaited<ReturnType<PlexService['getUserByToken']>>;
 
 // Columns returned by every standard user query — plexToken intentionally excluded
 const publicUserColumns = {
@@ -20,6 +23,18 @@ const publicUserColumns = {
   updatedAt: users.updatedAt,
 } as const;
 
+/**
+ * The user row a Plex account signs in as. The Plex id is the account's
+ * identity; email identifies only a row stored before its Plex id was known,
+ * because an email can move between Plex accounts.
+ */
+function matchesAccount(account: PlexAccount) {
+  return or(
+    eq(users.plexId, account.id),
+    and(isNull(users.plexId), eq(users.email, account.email.toLowerCase()))
+  );
+}
+
 export class AuthService {
   private readonly db: DrizzleDb;
   private readonly plexService: PlexService;
@@ -29,54 +44,74 @@ export class AuthService {
     this.plexService = plexService;
   }
 
+  /**
+   * Signs a Plex account in. The first account to sign in on a fresh instance
+   * claims it as the owner; any other account is refused.
+   */
   async authenticateWithPlex(authToken: string): Promise<PublicUser> {
-    const plexUser = await this.plexService.getUserByToken(authToken);
-    const email = plexUser.email.toLowerCase();
+    const account = await this.plexService.getUserByToken(authToken);
 
-    // Find by plexId OR email
-    const existing = await this.db
+    const [known] = await this.db
       .select(publicUserColumns)
       .from(users)
-      .where(or(eq(users.plexId, plexUser.id), eq(users.email, email)))
+      .where(matchesAccount(account))
       .limit(1);
 
-    if (existing.length === 0) {
-      const [created] = await this.db
-        .insert(users)
-        .values({
-          email,
-          plexUsername: plexUser.username,
-          plexId: plexUser.id,
-          plexToken: authToken,
-          avatar: plexUser.thumb ?? null,
-          userType: UserType.PLEX,
-          isActive: true,
-        })
-        .returning(publicUserColumns);
+    if (known) return this.refreshOwner(known, account, authToken);
+    return this.claimInstance(account, authToken);
+  }
 
-      log.info('Created new Plex user', { userId: created.id, plexId: plexUser.id });
-      return created;
+  /**
+   * Makes the account the owner if the instance has no user yet, in one
+   * statement so two first sign-ins cannot both claim it. Refuses otherwise.
+   * Raw SQL because Drizzle's insert builder has no `INSERT … SELECT … WHERE
+   * NOT EXISTS`; its column list must follow the `users` schema.
+   */
+  private async claimInstance(account: PlexAccount, authToken: string): Promise<PublicUser> {
+    const claimed = await this.db.all<{ id: number }>(sql`
+      INSERT INTO ${users} (email, plexUsername, plexId, plexToken, avatar, userType, isActive)
+      SELECT ${account.email.toLowerCase()}, ${account.username}, ${account.id}, ${authToken},
+             ${account.thumb ?? null}, ${UserType.PLEX}, 1
+      WHERE NOT EXISTS (SELECT 1 FROM ${users})
+      RETURNING id`);
+    if (claimed.length === 0) {
+      throw new ForbiddenError('This Warden instance belongs to another Plex account');
     }
+    const [owner] = await this.db
+      .select(publicUserColumns)
+      .from(users)
+      .where(eq(users.id, claimed[0].id));
 
-    const [current] = existing;
+    log.info('Plex account claimed the instance as owner', {
+      userId: owner.id,
+      plexId: account.id,
+    });
+    return owner;
+  }
+
+  private async refreshOwner(
+    owner: PublicUser,
+    account: PlexAccount,
+    authToken: string
+  ): Promise<PublicUser> {
     await this.db
       .update(users)
       .set({
         plexToken: authToken,
-        plexUsername: plexUser.username,
-        avatar: plexUser.thumb ?? null,
-        ...(current.plexId === null ? { plexId: plexUser.id } : {}),
+        plexUsername: account.username,
+        avatar: account.thumb ?? null,
+        ...(owner.plexId === null ? { plexId: account.id } : {}),
       })
-      .where(eq(users.id, current.id));
+      .where(eq(users.id, owner.id));
 
     // Re-fetch with updated fields (updatedAt was auto-updated by $onUpdateFn)
-    const [updated] = await this.db
+    const [refreshed] = await this.db
       .select(publicUserColumns)
       .from(users)
-      .where(eq(users.id, current.id));
+      .where(eq(users.id, owner.id));
 
-    log.info('Updated Plex user', { userId: updated.id, plexId: plexUser.id });
-    return updated;
+    log.info('Owner signed in', { userId: refreshed.id, plexId: account.id });
+    return refreshed;
   }
 
   async getUserById(userId: number): Promise<PublicUser> {
