@@ -109,7 +109,8 @@ Browse is the case that needs it. `media.browse.movie` and `media.browse.series`
 `GET /api/media/{movie|series}` and take `filters` as JSON holding the same `FilterSchema` entries a
 saved query stores, so browse and save share one filter encoding, validated by one schema. A `filters`
 value that is not JSON, or not an array of `Filter` entries, answers 400 rather than browsing
-unfiltered. [`usePaginatedMedia`](ref:path:src/hooks/usePaginatedMedia.ts) is the one client place that
+unfiltered, and so does any query param the browse input doesn't declare (a filter sent as its own
+param, such as `?monitored=true`). [`usePaginatedMedia`](ref:path:src/hooks/usePaginatedMedia.ts) is the one client place that
 encodes it.
 
 ## What enforces it

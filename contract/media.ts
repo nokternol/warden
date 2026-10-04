@@ -32,11 +32,17 @@ const jsonQuery = <T extends z.ZodType>(schema: T) =>
     })
     .pipe(schema);
 
-/** A browse request: the saved-query `Filter` entries, plus sort and page. */
-export const BrowseQuerySchema = paginationQuerySchema.extend({
-  filters: jsonQuery(z.array(FilterSchema)).optional(),
-  sort: sortField,
-});
+/**
+ * A browse request: the saved-query `Filter` entries, plus sort and page. Strict,
+ * so a filter sent as its own query param answers 400 rather than being dropped
+ * and browsing unfiltered.
+ */
+export const BrowseQuerySchema = paginationQuerySchema
+  .extend({
+    filters: jsonQuery(z.array(FilterSchema)).optional(),
+    sort: sortField,
+  })
+  .strict();
 
 // ─── Outputs ──────────────────────────────────────────────────────────────────
 

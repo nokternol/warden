@@ -197,4 +197,10 @@ describe('Browse speaks the save encoding', () => {
     expectErrorResponse(notJson, 400);
     expectErrorResponse(legacyShape, 400);
   });
+
+  it('rejects a filter sent as its own query param instead of browsing unfiltered', async () => {
+    const res = await client.get('/api/media/series?monitored=true');
+
+    expectErrorResponse(res, 400);
+  });
 });
