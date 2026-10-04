@@ -75,7 +75,7 @@ const SERIES_RESPONSE = {
 
 describe('MediaPoster — dwell gate and in-flight request abort', () => {
   beforeEach(() => {
-    cy.intercept('GET', '/api/media/movies*', MOVIES_RESPONSE).as('movies');
+    cy.intercept('GET', '/api/media/movie?*', MOVIES_RESPONSE).as('movies');
     cy.intercept('GET', '/api/media/series*', SERIES_RESPONSE).as('series');
   });
 

@@ -52,7 +52,7 @@ export const fieldsByProviderType = {
  * Every `EnrichmentFields` key must have at least one declared producer above — a field
  * with no producer anywhere is unreachable (nothing would ever populate it), the same
  * silent-gap shape as the other coverage checks in this codebase (see
- * `docs/architecture/browse-range-param-enforcement.md`). `_ActualCoveredField` is the
+ * `docs/architecture/enrichment-field-completeness.md`). `_ActualCoveredField` is the
  * real union of every provider's declared fields; a new `EnrichmentFields` key with no
  * matching entry above fails to compile here, naming it.
  */

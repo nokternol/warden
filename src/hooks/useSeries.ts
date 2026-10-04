@@ -1,8 +1,8 @@
 import { api } from '@app/lib/api/client';
-import type { MediaFilters } from '@app/types/media';
 import type { ManagedSeries } from '@contract/media';
-import { usePaginatedMedia } from './usePaginatedMedia';
+import { type BrowseRequest, usePaginatedMedia } from './usePaginatedMedia';
 
-export type { MediaFilters, ManagedSeries };
+export type { BrowseRequest, ManagedSeries };
 
-export const useSeries = (filters?: MediaFilters) => usePaginatedMedia(api.media.series, filters);
+export const useSeries = (request?: BrowseRequest) =>
+  usePaginatedMedia(api.media.browse.series, request);

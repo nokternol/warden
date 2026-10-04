@@ -1,4 +1,3 @@
-import type { MoviesBrowseQuerySchema, SeriesBrowseQuerySchema } from '@contract/media';
 import { MetadataProviderType } from '@server/database/schema';
 import { api } from '@server/kernel/api';
 import { MediaCache } from '@server/kernel/cache';
@@ -21,7 +20,6 @@ import {
   type SonarrSeries,
   type SonarrTag,
 } from '@server/modules/providers';
-import type { z } from 'zod';
 import { paginateItems } from './media.pagination';
 import { sortMedia } from './media.sort';
 import { resolutionTier } from './mediaFieldProvider';
@@ -31,262 +29,9 @@ import { resetMediaData } from './mediaReset';
 import type { MediaSource } from './mediaSource';
 import { sourceOwnership } from './mediaSourceFactory';
 import { normalizeRadarrMovie, normalizeSonarrSeries } from './normalizeMedia';
-import type {
-  Filter,
-  FilterValue,
-  InstanceScopedValue,
-  MovieRangeRuleKey,
-  NormalizedMovie,
-  NormalizedSeries,
-  RangeValue,
-  SeriesRangeRuleKey,
-} from './ruleRegistry';
+import type { Filter, NormalizedMovie, NormalizedSeries } from './ruleRegistry';
 
 const log = getChildLogger('MediaProcedures');
-
-// ─── Registry delegation ───────────────────────────────────────────────────────
-// The browse contract uses content-prefixed param names; the registry uses bare
-// keys. These maps bridge URL param → registry key so a single engine
-// (ruleRegistry) backs both the browse path and the automation executor.
-
-// A URL param maps onto a registry key directly, or (for a range rule) contributes
-// one bound (`min`/`max`) of that key's `{ min?, max? }` value.
-interface ParamMapping {
-  key: string;
-  bound?: 'min' | 'max';
-  /** Name of this param's sibling instance-qualifier param (§10), for `instanceScoped`
-   *  rules only — `movieTagIds` pairs with `movieTagIdsProviderId`, for example. */
-  providerIdParam?: string;
-}
-
-const MOVIE_PARAM_TO_KEY = {
-  title: { key: 'title' },
-  yearMin: { key: 'year', bound: 'min' },
-  yearMax: { key: 'year', bound: 'max' },
-  hasFile: { key: 'hasFile' },
-  movieTagIds: { key: 'tagIds', providerIdParam: 'movieTagIdsProviderId' },
-  movieQualityProfileIds: {
-    key: 'qualityProfileIds',
-    providerIdParam: 'movieQualityProfileIdsProviderId',
-  },
-  movieGenres: { key: 'genres' },
-  tautulliWatched: { key: 'watched' },
-  certification: { key: 'certification' },
-  addedDaysAgoGte: { key: 'addedDaysAgo', bound: 'min' },
-  addedDaysAgoLte: { key: 'addedDaysAgo', bound: 'max' },
-  sizeOnDiskGbGte: { key: 'sizeOnDiskGb', bound: 'min' },
-  sizeOnDiskGbLte: { key: 'sizeOnDiskGb', bound: 'max' },
-  radarrImdbRatingGte: { key: 'imdbRating', bound: 'min' },
-  radarrImdbRatingLte: { key: 'imdbRating', bound: 'max' },
-  runtimeMinutesGte: { key: 'runtimeMinutes', bound: 'min' },
-  runtimeMinutesLte: { key: 'runtimeMinutes', bound: 'max' },
-  overseerrRequestStatus: { key: 'overseerrRequestStatus' },
-  overseerrHasIssue: { key: 'overseerrHasIssue' },
-  tmdbStatus: { key: 'tmdbStatus' },
-  lastWatchedDaysAgoGte: { key: 'lastWatchedDaysAgo', bound: 'min' },
-  lastWatchedDaysAgoLte: { key: 'lastWatchedDaysAgo', bound: 'max' },
-  plexAddedDaysAgoGte: { key: 'plexAddedDaysAgo', bound: 'min' },
-  plexAddedDaysAgoLte: { key: 'plexAddedDaysAgo', bound: 'max' },
-  jellyfinAddedDaysAgoGte: { key: 'jellyfinAddedDaysAgo', bound: 'min' },
-  jellyfinAddedDaysAgoLte: { key: 'jellyfinAddedDaysAgo', bound: 'max' },
-  fileSizeBytesGte: { key: 'fileSizeBytes', bound: 'min' },
-  fileSizeBytesLte: { key: 'fileSizeBytes', bound: 'max' },
-  releaseDaysAgoGte: { key: 'releaseDaysAgo', bound: 'min' },
-  releaseDaysAgoLte: { key: 'releaseDaysAgo', bound: 'max' },
-  fileContainer: { key: 'fileContainer' },
-  videoCodec: { key: 'videoCodec' },
-  audioCodec: { key: 'audioCodec' },
-  fileResolution: { key: 'fileResolution' },
-  labels: { key: 'labels' },
-  movieFileCountGte: { key: 'movieFileCount', bound: 'min' },
-  movieFileCountLte: { key: 'movieFileCount', bound: 'max' },
-  releaseGroups: { key: 'releaseGroups' },
-  inCinemasDaysAgoGte: { key: 'inCinemasDaysAgo', bound: 'min' },
-  inCinemasDaysAgoLte: { key: 'inCinemasDaysAgo', bound: 'max' },
-  physicalReleaseDaysAgoGte: { key: 'physicalReleaseDaysAgo', bound: 'min' },
-  physicalReleaseDaysAgoLte: { key: 'physicalReleaseDaysAgo', bound: 'max' },
-  digitalReleaseDaysAgoGte: { key: 'digitalReleaseDaysAgo', bound: 'min' },
-  digitalReleaseDaysAgoLte: { key: 'digitalReleaseDaysAgo', bound: 'max' },
-  collectionName: { key: 'collectionName' },
-  isAvailable: { key: 'isAvailable' },
-  radarrStatus: { key: 'radarrStatus' },
-  jellyfinIsFavorite: { key: 'jellyfinIsFavorite' },
-} as const satisfies Record<string, ParamMapping>;
-
-const SERIES_PARAM_TO_KEY = {
-  title: { key: 'title' },
-  yearMin: { key: 'year', bound: 'min' },
-  yearMax: { key: 'year', bound: 'max' },
-  monitored: { key: 'monitored' },
-  seriesStatus: { key: 'seriesStatus' },
-  seriesTagIds: { key: 'tagIds', providerIdParam: 'seriesTagIdsProviderId' },
-  seriesQualityProfileIds: {
-    key: 'qualityProfileIds',
-    providerIdParam: 'seriesQualityProfileIdsProviderId',
-  },
-  seriesGenres: { key: 'genres' },
-  seriesType: { key: 'seriesType' },
-  network: { key: 'network' },
-  tautulliWatched: { key: 'watched' },
-  certification: { key: 'certification' },
-  addedDaysAgoGte: { key: 'addedDaysAgo', bound: 'min' },
-  addedDaysAgoLte: { key: 'addedDaysAgo', bound: 'max' },
-  sizeOnDiskGbGte: { key: 'sizeOnDiskGb', bound: 'min' },
-  sizeOnDiskGbLte: { key: 'sizeOnDiskGb', bound: 'max' },
-  sonarrRatingGte: { key: 'communityRating', bound: 'min' },
-  sonarrRatingLte: { key: 'communityRating', bound: 'max' },
-  sonarrEnded: { key: 'ended' },
-  sonarrLastAiredDaysAgoGte: { key: 'lastAiredDaysAgo', bound: 'min' },
-  sonarrLastAiredDaysAgoLte: { key: 'lastAiredDaysAgo', bound: 'max' },
-  sonarrPercentEpisodesGte: { key: 'episodePercentage', bound: 'min' },
-  sonarrPercentEpisodesLte: { key: 'episodePercentage', bound: 'max' },
-  seasonCountGte: { key: 'seasonCount', bound: 'min' },
-  seasonCountLte: { key: 'seasonCount', bound: 'max' },
-  episodeCountGte: { key: 'episodeCount', bound: 'min' },
-  episodeCountLte: { key: 'episodeCount', bound: 'max' },
-  nextAiringInDaysGte: { key: 'nextAiringInDays', bound: 'min' },
-  nextAiringInDaysLte: { key: 'nextAiringInDays', bound: 'max' },
-  seriesLanguageProfileIds: {
-    key: 'languageProfileIds',
-    providerIdParam: 'seriesLanguageProfileIdsProviderId',
-  },
-  overseerrRequestStatus: { key: 'overseerrRequestStatus' },
-  overseerrHasIssue: { key: 'overseerrHasIssue' },
-  tmdbStatus: { key: 'tmdbStatus' },
-  lastWatchedDaysAgoGte: { key: 'lastWatchedDaysAgo', bound: 'min' },
-  lastWatchedDaysAgoLte: { key: 'lastWatchedDaysAgo', bound: 'max' },
-  plexAddedDaysAgoGte: { key: 'plexAddedDaysAgo', bound: 'min' },
-  plexAddedDaysAgoLte: { key: 'plexAddedDaysAgo', bound: 'max' },
-  jellyfinAddedDaysAgoGte: { key: 'jellyfinAddedDaysAgo', bound: 'min' },
-  jellyfinAddedDaysAgoLte: { key: 'jellyfinAddedDaysAgo', bound: 'max' },
-  fileSizeBytesGte: { key: 'fileSizeBytes', bound: 'min' },
-  fileSizeBytesLte: { key: 'fileSizeBytes', bound: 'max' },
-  releaseDaysAgoGte: { key: 'releaseDaysAgo', bound: 'min' },
-  releaseDaysAgoLte: { key: 'releaseDaysAgo', bound: 'max' },
-  fileContainer: { key: 'fileContainer' },
-  videoCodec: { key: 'videoCodec' },
-  audioCodec: { key: 'audioCodec' },
-  fileResolution: { key: 'fileResolution' },
-  labels: { key: 'labels' },
-  jellyfinIsFavorite: { key: 'jellyfinIsFavorite' },
-} as const satisfies Record<string, ParamMapping>;
-
-/**
- * Range-rule coverage witness, per content type: a plain `as const`-style lookup —
- * registry rule key → the (possibly legacy-renamed) `*_PARAM_TO_KEY` entry names that
- * cover it — typed as `Record<RuleKey, ...>` so it's exhaustive over the
- * registry-derived `MovieRangeRuleKey`/`SeriesRangeRuleKey` union, and each `gte`/`lte`
- * value is typed `keyof typeof *_PARAM_TO_KEY` so a typo or a dangling reference to a
- * removed param also fails to compile. A new range rule, or a rule's content-type
- * scope changing, breaks this map until it's updated — not a silently-dropped filter
- * (caught the hard way once already: `plexAddedDaysAgo` shipped in the registry with
- * no entry in any of the five browse-path translators, and nothing failed to
- * compile). Deliberately a satellite map, not a restructuring of `*_PARAM_TO_KEY`
- * itself: the browse URL contract (`radarrImdbRatingGte`, `sonarrRatingGte`,
- * `yearMin`/`yearMax`, …) is a deliberately-renamed legacy vocabulary (see the
- * fracture ledger's "Filter/rule vocabulary" entry) with no derivable relationship to
- * registry keys, so `*_PARAM_TO_KEY`'s own keys can never be checked directly against
- * `MEDIA_RULES` without breaking that vocabulary.
- */
-const _MOVIE_RANGE_PARAM_WITNESS: Record<
-  MovieRangeRuleKey,
-  { gte: keyof typeof MOVIE_PARAM_TO_KEY; lte: keyof typeof MOVIE_PARAM_TO_KEY }
-> = {
-  year: { gte: 'yearMin', lte: 'yearMax' },
-  addedDaysAgo: { gte: 'addedDaysAgoGte', lte: 'addedDaysAgoLte' },
-  plexAddedDaysAgo: { gte: 'plexAddedDaysAgoGte', lte: 'plexAddedDaysAgoLte' },
-  jellyfinAddedDaysAgo: { gte: 'jellyfinAddedDaysAgoGte', lte: 'jellyfinAddedDaysAgoLte' },
-  sizeOnDiskGb: { gte: 'sizeOnDiskGbGte', lte: 'sizeOnDiskGbLte' },
-  imdbRating: { gte: 'radarrImdbRatingGte', lte: 'radarrImdbRatingLte' },
-  runtimeMinutes: { gte: 'runtimeMinutesGte', lte: 'runtimeMinutesLte' },
-  fileSizeBytes: { gte: 'fileSizeBytesGte', lte: 'fileSizeBytesLte' },
-  releaseDaysAgo: { gte: 'releaseDaysAgoGte', lte: 'releaseDaysAgoLte' },
-  lastWatchedDaysAgo: { gte: 'lastWatchedDaysAgoGte', lte: 'lastWatchedDaysAgoLte' },
-  movieFileCount: { gte: 'movieFileCountGte', lte: 'movieFileCountLte' },
-  inCinemasDaysAgo: { gte: 'inCinemasDaysAgoGte', lte: 'inCinemasDaysAgoLte' },
-  physicalReleaseDaysAgo: { gte: 'physicalReleaseDaysAgoGte', lte: 'physicalReleaseDaysAgoLte' },
-  digitalReleaseDaysAgo: { gte: 'digitalReleaseDaysAgoGte', lte: 'digitalReleaseDaysAgoLte' },
-};
-
-const _SERIES_RANGE_PARAM_WITNESS: Record<
-  SeriesRangeRuleKey,
-  { gte: keyof typeof SERIES_PARAM_TO_KEY; lte: keyof typeof SERIES_PARAM_TO_KEY }
-> = {
-  year: { gte: 'yearMin', lte: 'yearMax' },
-  addedDaysAgo: { gte: 'addedDaysAgoGte', lte: 'addedDaysAgoLte' },
-  plexAddedDaysAgo: { gte: 'plexAddedDaysAgoGte', lte: 'plexAddedDaysAgoLte' },
-  jellyfinAddedDaysAgo: { gte: 'jellyfinAddedDaysAgoGte', lte: 'jellyfinAddedDaysAgoLte' },
-  sizeOnDiskGb: { gte: 'sizeOnDiskGbGte', lte: 'sizeOnDiskGbLte' },
-  fileSizeBytes: { gte: 'fileSizeBytesGte', lte: 'fileSizeBytesLte' },
-  releaseDaysAgo: { gte: 'releaseDaysAgoGte', lte: 'releaseDaysAgoLte' },
-  communityRating: { gte: 'sonarrRatingGte', lte: 'sonarrRatingLte' },
-  lastAiredDaysAgo: { gte: 'sonarrLastAiredDaysAgoGte', lte: 'sonarrLastAiredDaysAgoLte' },
-  episodePercentage: { gte: 'sonarrPercentEpisodesGte', lte: 'sonarrPercentEpisodesLte' },
-  lastWatchedDaysAgo: { gte: 'lastWatchedDaysAgoGte', lte: 'lastWatchedDaysAgoLte' },
-  seasonCount: { gte: 'seasonCountGte', lte: 'seasonCountLte' },
-  episodeCount: { gte: 'episodeCountGte', lte: 'episodeCountLte' },
-  nextAiringInDays: { gte: 'nextAiringInDaysGte', lte: 'nextAiringInDaysLte' },
-};
-
-/**
- * Zod-schema coverage check: every param name `*_PARAM_TO_KEY` references must be a
- * field the query schema actually accepts — otherwise it's stripped by validation
- * before `toFilterValues` ever sees it, the same silent-drop failure mode as a missing
- * `*_PARAM_TO_KEY` entry, just one layer earlier. `Missing` is the param-name set
- * `*_PARAM_TO_KEY` references that the schema's inferred shape doesn't have; requiring
- * those as `never`-typed properties makes the assignment fail naming them by name if
- * the schema falls out of sync.
- */
-type MovieSchemaShape = z.infer<typeof MoviesBrowseQuerySchema>;
-type MovieSchemaMissing = Exclude<keyof typeof MOVIE_PARAM_TO_KEY, keyof MovieSchemaShape>;
-const _movieSchemaCoversParams: MovieSchemaShape & Record<MovieSchemaMissing, never> =
-  {} as MovieSchemaShape;
-
-type SeriesSchemaShape = z.infer<typeof SeriesBrowseQuerySchema>;
-type SeriesSchemaMissing = Exclude<keyof typeof SERIES_PARAM_TO_KEY, keyof SeriesSchemaShape>;
-const _seriesSchemaCoversParams: SeriesSchemaShape & Record<SeriesSchemaMissing, never> =
-  {} as SeriesSchemaShape;
-
-// Project a browse query's content-prefixed params onto registry-keyed filter
-// values — the included query the MediaQueryEngine evaluates for the browse view.
-// Gte/Lte param pairs targeting the same range rule merge into one `{ min?, max? }` entry.
-function parseCsvIds(raw: unknown): number[] {
-  return String(raw)
-    .split(',')
-    .map((s) => Number(s.trim()))
-    .filter((n) => !Number.isNaN(n) && n > 0);
-}
-
-function toFilterValues(
-  query: Record<string, unknown>,
-  paramMap: Record<string, ParamMapping>
-): Filter[] {
-  const entries: Filter[] = [];
-  const ranges = new Map<string, RangeValue>();
-
-  for (const [param, { key, bound, providerIdParam }] of Object.entries(paramMap)) {
-    const raw = query[param];
-    if (raw === undefined) continue;
-    if (bound) {
-      const range = ranges.get(key) ?? {};
-      range[bound] = Number(raw);
-      ranges.set(key, range);
-    } else {
-      if (providerIdParam) {
-        const rawProviderId = query[providerIdParam];
-        const value: InstanceScopedValue = { ids: parseCsvIds(raw) };
-        if (rawProviderId !== undefined) value.providerId = Number(rawProviderId);
-        entries.push({ ruleKey: key, value });
-      } else {
-        entries.push({ ruleKey: key, value: raw as FilterValue });
-      }
-    }
-  }
-  for (const [key, value] of ranges) {
-    entries.push({ ruleKey: key, value });
-  }
-  return entries;
-}
 
 // ─── Handler-local helpers ────────────────────────────────────────────────────
 
@@ -308,6 +53,13 @@ interface MediaCradle {
   providerFactory?: IProviderFactory;
   mediaQueryEngine: MediaQueryEngine;
   db?: DrizzleDb;
+}
+
+/** How a browse page is ordered and which slice of the matches it holds. */
+interface BrowseView {
+  sort: string;
+  page: number;
+  pageSize: number;
 }
 
 export interface MediaError {
@@ -526,6 +278,72 @@ export function createMediaProcedures(cradle: MediaCradle) {
       });
   }
 
+  /** One page of the movies matching `filters`, grouped by TMDB id across instances. */
+  async function browseMovies(filters: Filter[], view: BrowseView) {
+    const { sublists, errors } = await getMovies();
+    const all = sublists.flatMap((s) => s.movies);
+
+    const yearRange = computeYearRange(all);
+    const source: MediaSource = {
+      getMediaItems: async () =>
+        sublists.flatMap(({ providerId, movies }) =>
+          movies.map((m) => normalizeRadarrMovie(m, providerId))
+        ),
+      idOf: (item) => (item as NormalizedMovie)._sourceIds.radarr,
+    };
+    const matched = await mediaQueryEngine.evaluate({
+      source,
+      contentType: 'movie',
+      clauses: [{ filters, role: 'include' }],
+    });
+    const matchedKeys = new Set(matched.map((m) => itemKey(m)));
+    const matchedRaw: Attributed<RadarrMovie>[] = sublists.flatMap(({ providerId, movies }) =>
+      movies
+        .filter((m) => matchedKeys.has(rawItemKey(providerId, m.id)))
+        .map((m) => ({ ...m, providerId }))
+    );
+    const sorted = sortMedia(matchedRaw, view.sort, (m) => m.hasFile);
+    const grouped = groupByPrimaryId(sorted, (m) => m.tmdbId);
+    return {
+      ...paginateItems(grouped, { page: view.page, pageSize: view.pageSize }),
+      yearRange,
+      errors,
+    };
+  }
+
+  /** One page of the series matching `filters`, grouped by TVDB id across instances. */
+  async function browseSeries(filters: Filter[], view: BrowseView) {
+    const { sublists, errors } = await getSeries();
+    const all = sublists.flatMap((s) => s.series);
+
+    const yearRange = computeYearRange(all);
+    const source: MediaSource = {
+      getMediaItems: async () =>
+        sublists.flatMap(({ providerId, series }) =>
+          series.map((s) => normalizeSonarrSeries(s, providerId))
+        ),
+      idOf: (item) => (item as NormalizedSeries)._sourceIds.sonarr,
+    };
+    const matched = await mediaQueryEngine.evaluate({
+      source,
+      contentType: 'series',
+      clauses: [{ filters, role: 'include' }],
+    });
+    const matchedKeys = new Set(matched.map((s) => itemKey(s)));
+    const matchedRaw: Attributed<SonarrSeries>[] = sublists.flatMap(({ providerId, series }) =>
+      series
+        .filter((s) => matchedKeys.has(rawItemKey(providerId, s.id)))
+        .map((s) => ({ ...s, providerId }))
+    );
+    const sorted = sortMedia(matchedRaw, view.sort, (s) => s.monitored);
+    const grouped = groupByPrimaryId(sorted, (s) => s.tvdbId);
+    return {
+      ...paginateItems(grouped, { page: view.page, pageSize: view.pageSize }),
+      yearRange,
+      errors,
+    };
+  }
+
   function invalidateMediaCaches(): void {
     moviesCache.invalidate('movies');
     seriesCache.invalidate('series');
@@ -547,69 +365,14 @@ export function createMediaProcedures(cradle: MediaCradle) {
   }
 
   const procedures = {
-    movies: api.media.movies.handler(async ({ input: query }) => {
-      const { sublists, errors } = await getMovies();
-      const all = sublists.flatMap((s) => s.movies);
-
-      const yearRange = computeYearRange(all);
-      const source: MediaSource = {
-        getMediaItems: async () =>
-          sublists.flatMap(({ providerId, movies }) =>
-            movies.map((m) => normalizeRadarrMovie(m, providerId))
-          ),
-        idOf: (item) => (item as NormalizedMovie)._sourceIds.radarr,
-      };
-      const matched = await mediaQueryEngine.evaluate({
-        source,
-        contentType: 'movie',
-        clauses: [{ filters: toFilterValues(query, MOVIE_PARAM_TO_KEY), role: 'include' }],
-      });
-      const matchedKeys = new Set(matched.map((m) => itemKey(m)));
-      const matchedRaw: Attributed<RadarrMovie>[] = sublists.flatMap(({ providerId, movies }) =>
-        movies
-          .filter((m) => matchedKeys.has(rawItemKey(providerId, m.id)))
-          .map((m) => ({ ...m, providerId }))
-      );
-      const sorted = sortMedia(matchedRaw, query.sort, (m) => m.hasFile);
-      const grouped = groupByPrimaryId(sorted, (m) => m.tmdbId);
-      return {
-        ...paginateItems(grouped, { page: query.page, pageSize: query.pageSize }),
-        yearRange,
-        errors,
-      };
-    }),
-
-    series: api.media.series.handler(async ({ input: query }) => {
-      const { sublists, errors } = await getSeries();
-      const all = sublists.flatMap((s) => s.series);
-
-      const yearRange = computeYearRange(all);
-      const source: MediaSource = {
-        getMediaItems: async () =>
-          sublists.flatMap(({ providerId, series }) =>
-            series.map((s) => normalizeSonarrSeries(s, providerId))
-          ),
-        idOf: (item) => (item as NormalizedSeries)._sourceIds.sonarr,
-      };
-      const matched = await mediaQueryEngine.evaluate({
-        source,
-        contentType: 'series',
-        clauses: [{ filters: toFilterValues(query, SERIES_PARAM_TO_KEY), role: 'include' }],
-      });
-      const matchedKeys = new Set(matched.map((s) => itemKey(s)));
-      const matchedRaw: Attributed<SonarrSeries>[] = sublists.flatMap(({ providerId, series }) =>
-        series
-          .filter((s) => matchedKeys.has(rawItemKey(providerId, s.id)))
-          .map((s) => ({ ...s, providerId }))
-      );
-      const sorted = sortMedia(matchedRaw, query.sort, (s) => s.monitored);
-      const grouped = groupByPrimaryId(sorted, (s) => s.tvdbId);
-      return {
-        ...paginateItems(grouped, { page: query.page, pageSize: query.pageSize }),
-        yearRange,
-        errors,
-      };
-    }),
+    browse: {
+      movie: api.media.browse.movie.handler(({ input: { filters = [], ...view } }) =>
+        browseMovies(filters, view)
+      ),
+      series: api.media.browse.series.handler(({ input: { filters = [], ...view } }) =>
+        browseSeries(filters, view)
+      ),
+    },
 
     tags: api.media.tags.handler(() =>
       tagsCache.getOrFetch('tags', async () => {

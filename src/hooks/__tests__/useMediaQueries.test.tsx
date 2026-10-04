@@ -6,31 +6,10 @@ import { SWRConfig } from 'swr';
 import { describe, expect, it } from 'vitest';
 import { mockProcedure } from '../../../tests/mocks/contract';
 import { server } from '../../../tests/mocks/server';
-import { toFilterValues, useMediaQueries } from '../useMediaQueries';
+import { useMediaQueries } from '../useMediaQueries';
 
 const wrapper = ({ children }: { children: React.ReactNode }) =>
   React.createElement(SWRConfig, { value: { provider: () => new Map() } }, children);
-
-describe('toFilterValues', () => {
-  it('emits registry-keyed entries directly, no rename table', () => {
-    expect(toFilterValues({ tagIds: '1,2', hasFile: true })).toEqual([
-      { ruleKey: 'tagIds', value: '1,2' },
-      { ruleKey: 'hasFile', value: true },
-    ]);
-  });
-
-  it('drops undefined values rather than persisting them', () => {
-    expect(toFilterValues({ title: undefined, tagIds: '1,2' })).toEqual([
-      { ruleKey: 'tagIds', value: '1,2' },
-    ]);
-  });
-
-  it('passes range values through untouched', () => {
-    expect(toFilterValues({ year: { min: 2000, max: 2020 } })).toEqual([
-      { ruleKey: 'year', value: { min: 2000, max: 2020 } },
-    ]);
-  });
-});
 
 const savedQuery: MediaQueryRecord = {
   id: 1,

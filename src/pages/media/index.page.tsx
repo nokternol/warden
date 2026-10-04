@@ -27,7 +27,7 @@ import { useMovies } from '@app/hooks/useMovies';
 import { descriptorFor, useProviderTypes } from '@app/hooks/useProviderTypes';
 import type { ManagedSeries } from '@app/hooks/useSeries';
 import { useSeries } from '@app/hooks/useSeries';
-import { toBrowseParams, toSaveValues } from '@app/lib/mediaQueryAdapters';
+import { toFilters } from '@app/lib/mediaQueryAdapters';
 import { NAV_ITEMS } from '@app/lib/navigation';
 import { cn } from '@app/lib/utils/cn';
 import { requireAuth } from '@app/lib/utils/requireAuth';
@@ -723,11 +723,11 @@ export default function MediaPage() {
   const { rules = [] } = useMediaRules();
 
   const movies = useMovies({
-    ...toBrowseParams(debouncedFilters, 'movie'),
+    filters: toFilters(debouncedFilters, 'movie', rules),
     sort: values.movieSort,
   });
   const series = useSeries({
-    ...toBrowseParams(debouncedFilters, 'series'),
+    filters: toFilters(debouncedFilters, 'series', rules),
     sort: values.seriesSort,
   });
   const lookups = useMediaLookups();
@@ -840,7 +840,7 @@ export default function MediaPage() {
         onClose={() => setSaveDialogOpen(false)}
         onSave={(name) => {
           const contentType = activeTab === 'movies' ? 'movie' : 'series';
-          return saveQuery(name, contentType, toSaveValues(values, contentType, rules));
+          return saveQuery(name, contentType, toFilters(values, contentType, rules));
         }}
       />
     </>

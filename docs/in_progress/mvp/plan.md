@@ -520,12 +520,24 @@ names, so nothing is renamed twice.
   - Browsing with a set of filter values returns exactly the items that previewing a query saved
     with the same values returns.
   - Browse requests use the same filter encoding as save.
-- **Expected end state:** browse becomes `GET /api/media/:contentType` (`movie|series`) taking the same entries as
-  save.
+- **Expected end state (as built):** browse is `media.browse.movie` and `media.browse.series`, at
+  `GET /api/media/movie` and `GET /api/media/series`: two procedures built by one `browse(contentType,
+  itemSchema)` helper so each keeps its own typed output (`ManagedMovie` or `ManagedSeries` rows) and the
+  client calls each without a cast. Both take
+  `BrowseQuerySchema`: `filters` (the save path's `FilterSchema` entries), `sort`, `page`, `pageSize`.
+  `filters` travels as one JSON query param (`jsonQuery` in `contract/media.ts`), because oRPC's bracket
+  notation delivers every query value as a string and would lose a `Filter` value's booleans, numbers
+  and `{ min, max }` / `{ providerId, ids }` objects. A `filters` value that is not JSON or not `Filter`
+  entries answers 400. Server side, `browseMovies`/`browseSeries` evaluate the entries directly. Client
+  side, one function (`toFilters` in `src/lib/mediaQueryAdapters.ts`, formerly `toSaveValues`) builds the
+  entries for both browse and save, and `usePaginatedMedia(browse, { filters, sort })` encodes them
+  (the client's sort state is a free string, so only `sort` is narrowed to the contract's enum there).
+  `contract/browseRangeKeys.ts` is deleted with the witness maps that used it.
 - **Deletes:** `MOVIE_PARAM_TO_KEY`, `SERIES_PARAM_TO_KEY`, `toFilterValues()`, the range satellite
   map and its coverage check, `toBrowseParams()`, and `/api/media/movies|series`.
-- **Docs:** retire `docs/architecture/browse-range-param-enforcement.md`, since what it enforces is
-  gone.
+- **Docs:** remove the browse range-param coverage sections from
+  `docs/architecture/browse-range-param-enforcement.md`, since what they enforce is gone, and rename it
+  `enrichment-field-completeness.md` for the `EnrichmentFields` completeness checks it still documents.
 
 **C4 · One multi-select** (after C2; story first)
 - **Model:** Sonnet 5.5 (component consolidation behind characterization tests).

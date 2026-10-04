@@ -3,7 +3,7 @@ import { MetadataProviderType } from '@server/database/schema';
 /**
  * Media filter integration tests — Cycle 1 RED
  *
- * Verifies server-side filter predicates on /api/media/movies,
+ * Verifies server-side filter predicates on /api/media/movie,
  * /api/media/series, /api/media/tags, and /api/media/quality-profiles.
  *
  * Run: vitest run --project server
@@ -15,7 +15,7 @@ import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createMediaProcedures } from '@server/modules/media';
 import { createMockConfig } from '@tests/factories';
-import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
+import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
@@ -221,9 +221,9 @@ describe('Media Filter API', () => {
 
   // ─── A01 — Title search ────────────────────────────────────────────────────
 
-  describe('GET /api/media/movies — title filter (A01)', () => {
+  describe('GET /api/media/movie — title filter (A01)', () => {
     it('returns only movies whose title contains the search term (case-insensitive)', async () => {
-      const res = await client.get('/api/media/movies?title=batman');
+      const res = await client.get(browsePath('movie', [{ ruleKey: 'title', value: 'batman' }]));
       const data = expectSuccessResponse(res);
 
       expect(data.totalCount).toBe(2);
@@ -233,20 +233,20 @@ describe('Media Filter API', () => {
     });
 
     it('is case-insensitive', async () => {
-      const res = await client.get('/api/media/movies?title=BATMAN');
+      const res = await client.get(browsePath('movie', [{ ruleKey: 'title', value: 'BATMAN' }]));
       const data = expectSuccessResponse(res);
       expect(data.totalCount).toBe(2);
     });
 
     it('returns empty when no titles match', async () => {
-      const res = await client.get('/api/media/movies?title=unicorn');
+      const res = await client.get(browsePath('movie', [{ ruleKey: 'title', value: 'unicorn' }]));
       const data = expectSuccessResponse(res);
       expect(data.totalCount).toBe(0);
       expect(data.items).toHaveLength(0);
     });
 
     it('returns all movies when no title param is supplied', async () => {
-      const res = await client.get('/api/media/movies?pageSize=100');
+      const res = await client.get(browsePath('movie', [], { pageSize: 100 }));
       const data = expectSuccessResponse(res);
       expect(data.totalCount).toBe(4);
     });
@@ -254,9 +254,9 @@ describe('Media Filter API', () => {
 
   // ─── A02 — Status (hasFile) filter ────────────────────────────────────────
 
-  describe('GET /api/media/movies — hasFile filter (A02)', () => {
+  describe('GET /api/media/movie — hasFile filter (A02)', () => {
     it('returns only downloaded movies when hasFile=true', async () => {
-      const res = await client.get('/api/media/movies?hasFile=true');
+      const res = await client.get(browsePath('movie', [{ ruleKey: 'hasFile', value: true }]));
       const data = expectSuccessResponse(res);
 
       expect(data.totalCount).toBe(3);
@@ -264,7 +264,7 @@ describe('Media Filter API', () => {
     });
 
     it('returns only missing movies when hasFile=false', async () => {
-      const res = await client.get('/api/media/movies?hasFile=false');
+      const res = await client.get(browsePath('movie', [{ ruleKey: 'hasFile', value: false }]));
       const data = expectSuccessResponse(res);
 
       expect(data.totalCount).toBe(1);
@@ -276,7 +276,7 @@ describe('Media Filter API', () => {
 
   describe('GET /api/media/series — monitored filter (A02)', () => {
     it('returns only monitored series when monitored=true', async () => {
-      const res = await client.get('/api/media/series?monitored=true');
+      const res = await client.get(browsePath('series', [{ ruleKey: 'monitored', value: true }]));
       const data = expectSuccessResponse(res);
 
       expect(data.totalCount).toBe(3);
@@ -284,7 +284,7 @@ describe('Media Filter API', () => {
     });
 
     it('returns only unmonitored series when monitored=false', async () => {
-      const res = await client.get('/api/media/series?monitored=false');
+      const res = await client.get(browsePath('series', [{ ruleKey: 'monitored', value: false }]));
       const data = expectSuccessResponse(res);
 
       expect(data.totalCount).toBe(1);
@@ -294,7 +294,9 @@ describe('Media Filter API', () => {
 
   describe('GET /api/media/series — seriesStatus filter', () => {
     it('returns only ended series when seriesStatus=ended', async () => {
-      const res = await client.get('/api/media/series?seriesStatus=ended');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'seriesStatus', value: 'ended' }])
+      );
       const data = expectSuccessResponse(res);
 
       expect(data.totalCount).toBe(3);
@@ -302,7 +304,9 @@ describe('Media Filter API', () => {
     });
 
     it('returns only continuing series when seriesStatus=continuing', async () => {
-      const res = await client.get('/api/media/series?seriesStatus=continuing');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'seriesStatus', value: 'continuing' }])
+      );
       const data = expectSuccessResponse(res);
 
       expect(data.totalCount).toBe(1);
@@ -312,9 +316,11 @@ describe('Media Filter API', () => {
 
   // ─── A03 — Year range ─────────────────────────────────────────────────────
 
-  describe('GET /api/media/movies — year range filter (A03)', () => {
+  describe('GET /api/media/movie — year range filter (A03)', () => {
     it('returns movies within yearMin and yearMax (inclusive)', async () => {
-      const res = await client.get('/api/media/movies?yearMin=2005&yearMax=2008');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'year', value: { min: 2005, max: 2008 } }])
+      );
       const data = expectSuccessResponse(res);
 
       expect(data.totalCount).toBe(2);
@@ -324,7 +330,9 @@ describe('Media Filter API', () => {
     });
 
     it('excludes movies outside the year range', async () => {
-      const res = await client.get('/api/media/movies?yearMin=2005&yearMax=2008');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'year', value: { min: 2005, max: 2008 } }])
+      );
       const data = expectSuccessResponse(res);
 
       const titles = data.items.map((m: { title: string }) => m.title);
@@ -333,14 +341,18 @@ describe('Media Filter API', () => {
     });
 
     it('yearMin alone filters out older movies', async () => {
-      const res = await client.get('/api/media/movies?yearMin=2000');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'year', value: { min: 2000 } }])
+      );
       const data = expectSuccessResponse(res);
 
       expect(data.totalCount).toBe(2); // Batman Begins (2005), Dark Knight (2008)
     });
 
     it('yearMax alone filters out newer movies', async () => {
-      const res = await client.get('/api/media/movies?yearMax=1999');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'year', value: { max: 1999 } }])
+      );
       const data = expectSuccessResponse(res);
 
       expect(data.totalCount).toBe(2); // Batman Returns (1992), The Matrix (1999)
@@ -349,9 +361,11 @@ describe('Media Filter API', () => {
 
   // ─── A04 — Tag filter (OR semantics) ──────────────────────────────────────
 
-  describe('GET /api/media/movies — movieTagIds filter (A04)', () => {
+  describe('GET /api/media/movie — tagIds filter (A04)', () => {
     it('returns movies that have the specified tag', async () => {
-      const res = await client.get('/api/media/movies?movieTagIds=1');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'tagIds', value: { ids: [1] } }])
+      );
       const data = expectSuccessResponse(res);
 
       // Batman Begins [1,2], Batman Returns [1]
@@ -359,7 +373,9 @@ describe('Media Filter API', () => {
     });
 
     it('applies OR semantics — returns movies having ANY of the specified tags', async () => {
-      const res = await client.get('/api/media/movies?movieTagIds=1,2');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'tagIds', value: { ids: [1, 2] } }])
+      );
       const data = expectSuccessResponse(res);
 
       // Batman Begins [1,2], Batman Returns [1], The Matrix [2] — all have tag 1 OR tag 2
@@ -370,7 +386,9 @@ describe('Media Filter API', () => {
     });
 
     it('returns empty when no movies have any of the specified tags', async () => {
-      const res = await client.get('/api/media/movies?movieTagIds=99,100');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'tagIds', value: { ids: [99, 100] } }])
+      );
       const data = expectSuccessResponse(res);
       expect(data.totalCount).toBe(0);
     });
@@ -378,7 +396,7 @@ describe('Media Filter API', () => {
 
   // ─── Instance qualification (§10) ──────────────────────────────────────────
 
-  describe('GET /api/media/movies — movieTagIdsProviderId qualification', () => {
+  describe('GET /api/media/movie — tagIds instance qualification', () => {
     it('matches when the ProviderId names the active Radarr instance', async () => {
       const sourcesRes = await client.get('/api/media/sources');
       const sources = expectSuccessResponse(sourcesRes) as Array<{
@@ -389,28 +407,36 @@ describe('Media Filter API', () => {
       expect(radarrId).toBeDefined();
 
       const res = await client.get(
-        `/api/media/movies?movieTagIds=1&movieTagIdsProviderId=${radarrId}`
+        browsePath('movie', [
+          { ruleKey: 'tagIds', value: { providerId: radarrId as number, ids: [1] } },
+        ])
       );
       const data = expectSuccessResponse(res);
       expect(data.totalCount).toBe(2); // Batman Begins [1,2], Batman Returns [1]
     });
 
     it('matches nothing when the ProviderId names a different instance', async () => {
-      const res = await client.get('/api/media/movies?movieTagIds=1&movieTagIdsProviderId=999999');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'tagIds', value: { providerId: 999999, ids: [1] } }])
+      );
       const data = expectSuccessResponse(res);
       expect(data.totalCount).toBe(0);
     });
 
     it("is unqualified (today's behavior) when the ProviderId param is omitted", async () => {
-      const res = await client.get('/api/media/movies?movieTagIds=1');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'tagIds', value: { ids: [1] } }])
+      );
       const data = expectSuccessResponse(res);
       expect(data.totalCount).toBe(2);
     });
   });
 
-  describe('GET /api/media/series — seriesTagIds filter', () => {
+  describe('GET /api/media/series — tagIds filter', () => {
     it('returns only series with the specified tag', async () => {
-      const res = await client.get('/api/media/series?seriesTagIds=1');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'tagIds', value: { ids: [1] } }])
+      );
       const data = expectSuccessResponse(res);
 
       // Breaking Bad [1], Succession [1]
@@ -423,9 +449,11 @@ describe('Media Filter API', () => {
 
   // ─── A05 — Quality profile filter (OR semantics) ──────────────────────────
 
-  describe('GET /api/media/movies — movieQualityProfileIds filter (A05)', () => {
+  describe('GET /api/media/movie — qualityProfileIds filter (A05)', () => {
     it('returns movies on the specified profile', async () => {
-      const res = await client.get('/api/media/movies?movieQualityProfileIds=1');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'qualityProfileIds', value: { ids: [1] } }])
+      );
       const data = expectSuccessResponse(res);
 
       // Batman Begins (profile 1), The Matrix (profile 1)
@@ -433,16 +461,20 @@ describe('Media Filter API', () => {
     });
 
     it('applies OR semantics — returns movies on any of the specified profiles', async () => {
-      const res = await client.get('/api/media/movies?movieQualityProfileIds=1,2');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'qualityProfileIds', value: { ids: [1, 2] } }])
+      );
       const data = expectSuccessResponse(res);
 
       expect(data.totalCount).toBe(4); // all movies
     });
   });
 
-  describe('GET /api/media/series — seriesQualityProfileIds filter', () => {
+  describe('GET /api/media/series — qualityProfileIds filter', () => {
     it('returns only series on the specified profile', async () => {
-      const res = await client.get('/api/media/series?seriesQualityProfileIds=2');
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'qualityProfileIds', value: { ids: [2] } }])
+      );
       const data = expectSuccessResponse(res);
 
       // Better Call Saul (profile 2), The Boys (profile 2)
@@ -452,10 +484,16 @@ describe('Media Filter API', () => {
 
   // ─── A06 — Multi-filter conjunction ───────────────────────────────────────
 
-  describe('GET /api/media/movies — multi-filter AND conjunction (A06)', () => {
+  describe('GET /api/media/movie — multi-filter AND conjunction (A06)', () => {
     it('combines title + hasFile + yearMin with AND semantics', async () => {
       // "bat" + downloaded + after 2000 → only Batman Begins (2005, hasFile)
-      const res = await client.get('/api/media/movies?title=bat&hasFile=true&yearMin=2000');
+      const res = await client.get(
+        browsePath('movie', [
+          { ruleKey: 'title', value: 'bat' },
+          { ruleKey: 'hasFile', value: true },
+          { ruleKey: 'year', value: { min: 2000 } },
+        ])
+      );
       const data = expectSuccessResponse(res);
 
       expect(data.totalCount).toBe(1);
@@ -464,7 +502,12 @@ describe('Media Filter API', () => {
 
     it('returns empty when conjunctive filters have no intersection', async () => {
       // Missing movies after 2005 → Batman Returns is 1992, no match
-      const res = await client.get('/api/media/movies?hasFile=false&yearMin=2005');
+      const res = await client.get(
+        browsePath('movie', [
+          { ruleKey: 'hasFile', value: false },
+          { ruleKey: 'year', value: { min: 2005 } },
+        ])
+      );
       const data = expectSuccessResponse(res);
       expect(data.totalCount).toBe(0);
     });
@@ -474,7 +517,7 @@ describe('Media Filter API', () => {
 
   describe('yearRange in paginated response (A07)', () => {
     it('includes yearRange computed from the full unfiltered library', async () => {
-      const res = await client.get('/api/media/movies?page=1&pageSize=2');
+      const res = await client.get(browsePath('movie', [], { page: 1, pageSize: 2 }));
       const data = expectSuccessResponse(res);
 
       // Movies: 1992, 1999, 2005, 2008 → min=1992, max=2008
@@ -484,14 +527,16 @@ describe('Media Filter API', () => {
 
     it('yearRange does not change when a filter narrows the result set', async () => {
       // Only Batman Begins (2005) matches, but yearRange must still reflect full library
-      const res = await client.get('/api/media/movies?title=batman+begins');
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'title', value: 'batman begins' }])
+      );
       const data = expectSuccessResponse(res);
 
       expect(data.yearRange).toMatchObject({ min: 1992, max: 2008 });
     });
 
     it('includes yearRange in series response', async () => {
-      const res = await client.get('/api/media/series?page=1&pageSize=2');
+      const res = await client.get(browsePath('series', [], { page: 1, pageSize: 2 }));
       const data = expectSuccessResponse(res);
 
       // Series: 2008, 2015, 2018, 2019 → min=2008, max=2019

@@ -63,9 +63,7 @@ export type {
   InstanceScopedValue,
   MediaRule,
   MediaRuleDescriptor,
-  MovieRangeRuleKey,
   RangeValue,
-  SeriesRangeRuleKey,
 } from './ruleRegistry';
 export { MEDIA_RULES, getRule, toDescriptor } from './ruleRegistry';
 

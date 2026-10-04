@@ -1,24 +1,9 @@
 import type { FilterState } from '@app/hooks/useMediaFilters';
-import { toBrowseParams, toSaveValues } from '@app/lib/mediaQueryAdapters';
+import { toFilters } from '@app/lib/mediaQueryAdapters';
 import type { MediaRuleDescriptor } from '@contract/media';
 import { describe, expect, it } from 'vitest';
 
-describe('toBrowseParams', () => {
-  it('maps the shared plexAddedDaysAgo range onto plexAddedDaysAgoGte/Lte', () => {
-    const buckets = {
-      shared: { plexAddedDaysAgo: { min: 5, max: 15 } },
-      movie: {},
-      series: {},
-    };
-
-    const params = toBrowseParams(buckets, 'movie');
-
-    expect(params.plexAddedDaysAgoGte).toBe(5);
-    expect(params.plexAddedDaysAgoLte).toBe(15);
-  });
-});
-
-describe('toSaveValues', () => {
+describe('toFilters', () => {
   const rule = (key: string, instanceScoped = false) =>
     ({
       key,
@@ -41,7 +26,7 @@ describe('toSaveValues', () => {
   });
 
   it('puts the qualifying instance inside an instance-scoped value', () => {
-    const filters = toSaveValues(
+    const filters = toFilters(
       state({ movie: { tagIds: '1,2' }, movieQualifiers: { tagIds: 3 } }),
       'movie',
       rules
@@ -51,14 +36,34 @@ describe('toSaveValues', () => {
   });
 
   it('leaves an unqualified instance-scoped value as just its ids', () => {
-    const filters = toSaveValues(state({ movie: { qualityProfileIds: '5' } }), 'movie', rules);
+    const filters = toFilters(state({ movie: { qualityProfileIds: '5' } }), 'movie', rules);
 
     expect(filters).toEqual([{ ruleKey: 'qualityProfileIds', value: { ids: [5] } }]);
   });
 
   it('keeps other rules as a plain rule key and value', () => {
-    const filters = toSaveValues(state({ movie: { hasFile: true } }), 'movie', rules);
+    const filters = toFilters(state({ movie: { hasFile: true } }), 'movie', rules);
 
     expect(filters).toEqual([{ ruleKey: 'hasFile', value: true }]);
+  });
+
+  it('leaves out rules with no value', () => {
+    const filters = toFilters(
+      { shared: { title: undefined }, movie: { hasFile: true }, series: {} },
+      'movie',
+      rules
+    );
+
+    expect(filters).toEqual([{ ruleKey: 'hasFile', value: true }]);
+  });
+
+  it('passes range values through untouched', () => {
+    const filters = toFilters(
+      state({ shared: { year: { min: 2000, max: 2020 } } }),
+      'movie',
+      rules
+    );
+
+    expect(filters).toEqual([{ ruleKey: 'year', value: { min: 2000, max: 2020 } }]);
   });
 });

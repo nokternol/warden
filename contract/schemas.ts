@@ -70,6 +70,7 @@ export const FilterSchema = z
     value: FilterValueSchema,
   })
   .strict();
+export type Filter = z.infer<typeof FilterSchema>;
 
 export const ProviderStatusSchema = z
   .object({

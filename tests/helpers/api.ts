@@ -1,3 +1,4 @@
+import type { ContentType, Filter } from '@contract/schemas';
 import type { Express } from 'express';
 import request from 'supertest';
 import { expect } from 'vitest';
@@ -103,4 +104,20 @@ export function expectValidationError(
   }
 
   return error.errors;
+}
+
+/**
+ * The browse URL for a content type: the saved-query `Filter` entries as the
+ * JSON `filters` param, plus any sort and page params.
+ */
+export function browsePath(
+  contentType: ContentType,
+  filters: Filter[] = [],
+  view: { sort?: string; page?: number; pageSize?: number } = {}
+): string {
+  const query = new URLSearchParams();
+  if (filters.length > 0) query.set('filters', JSON.stringify(filters));
+  for (const [key, value] of Object.entries(view)) query.set(key, String(value));
+  const search = query.toString();
+  return `/api/media/${contentType}${search ? `?${search}` : ''}`;
 }

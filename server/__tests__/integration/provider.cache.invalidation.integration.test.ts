@@ -18,7 +18,7 @@ import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createMediaProcedures } from '@server/modules/media';
 import { createProvidersProcedures } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
-import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
+import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import { http, HttpResponse } from 'msw';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -120,14 +120,14 @@ describe('Provider mutation cache invalidation', () => {
     );
 
     // Warm the cache
-    await client.get('/api/media/movies');
+    await client.get(browsePath('movie'));
     expect(radarrCallCount).toBe(1);
 
     // Mutate the provider — should bust all media caches
     await client.patch(`/api/providers/${providerId}`, { name: 'Radarr Updated' });
 
     // Next media fetch must bypass cache and hit Radarr again
-    const res = await client.get('/api/media/movies');
+    const res = await client.get(browsePath('movie'));
     const data = expectSuccessResponse(res);
 
     expect(radarrCallCount).toBe(2);
@@ -158,14 +158,14 @@ describe('Provider mutation cache invalidation', () => {
     );
 
     // Warm the cache
-    await client.get('/api/media/movies');
+    await client.get(browsePath('movie'));
     expect(radarrCallCount).toBe(1);
 
     // Delete the extra provider — should bust all media caches
     await client.delete(`/api/providers/${extra.id}`);
 
     // Next media fetch must bypass cache and hit Radarr again
-    const res = await client.get('/api/media/movies');
+    const res = await client.get(browsePath('movie'));
     const data = expectSuccessResponse(res);
 
     expect(radarrCallCount).toBe(2);

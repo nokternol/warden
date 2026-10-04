@@ -2,7 +2,7 @@ import { buildContainer } from '@server/container';
 /**
  * Phase 7 — browse display dedup across multiple active instances.
  *
- * Verifies /api/media/movies groups matched raw rows by native primary id
+ * Verifies /api/media/movie groups matched raw rows by native primary id
  * (tmdbId), computed live per request (no DB dependency): a title appears once
  * even when two active Radarr instances both report it, with additive
  * `sourceCount`/`sourceProviderIds` fields; ANY filter semantics (a title
@@ -19,7 +19,7 @@ import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createMediaProcedures } from '@server/modules/media';
 import { createMockConfig } from '@tests/factories';
-import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
+import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
@@ -131,7 +131,7 @@ describe('Browse display dedup — multiple active Radarr instances', () => {
       )
     );
 
-    const res = await client.get('/api/media/movies?pageSize=100');
+    const res = await client.get(browsePath('movie', [], { pageSize: 100 }));
     const data = expectSuccessResponse(res);
 
     expect(data.totalCount).toBe(1);
@@ -176,7 +176,9 @@ describe('Browse display dedup — multiple active Radarr instances', () => {
       )
     );
 
-    const res = await client.get('/api/media/movies?hasFile=true&pageSize=100');
+    const res = await client.get(
+      browsePath('movie', [{ ruleKey: 'hasFile', value: true }], { pageSize: 100 })
+    );
     const data = expectSuccessResponse(res);
 
     expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Downloaded 4K only']);
@@ -204,7 +206,7 @@ describe('Browse display dedup — multiple active Radarr instances', () => {
       http.get(`${RADARR_4K_URL}/api/v3/movie`, () => HttpResponse.json([]))
     );
 
-    const res = await client.get('/api/media/movies?pageSize=100');
+    const res = await client.get(browsePath('movie', [], { pageSize: 100 }));
     const data = expectSuccessResponse(res);
 
     const solo = data.items.find((m: { title: string }) => m.title === 'Solo');
