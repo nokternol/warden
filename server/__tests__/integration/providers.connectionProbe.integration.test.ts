@@ -3,18 +3,18 @@ import { MetadataProviderType } from '@server/database/schema';
 /**
  * Integration tests for GET /api/providers/test
  *
- * Covers the two provider types that were missing from the probeProvider switch:
+ * Covers the two provider types that were missing from the probeConnection switch:
  *   - TVMAZE: no auth, no outbound call — should return { ok: true } immediately
  *   - SEERR:  same auth pattern as OVERSEERR — GET {base}/api/v1/status with X-Api-Key header
  *
- * Run: yarn vitest run --project server server/__tests__/integration/settings.testprovider.integration.test.ts
+ * Run: yarn vitest run --project server server/__tests__/integration/providers.connectionProbe.integration.test.ts
  */
 import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
-import { createProviderSettingsProcedures } from '@server/modules/settings';
+import { createProvidersProcedures } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
@@ -40,8 +40,8 @@ describe('GET /api/providers/test — TVMAZE and SEERR', () => {
     const config = loadConfig();
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
-    const settingsRoutes = serveApi({
-      providers: createProviderSettingsProcedures(container.cradle),
+    const providerRoutes = serveApi({
+      providers: createProvidersProcedures(container.cradle),
     });
 
     authedApp = express();
@@ -61,7 +61,7 @@ describe('GET /api/providers/test — TVMAZE and SEERR', () => {
       };
       next();
     });
-    authedApp.use(settingsRoutes);
+    authedApp.use(providerRoutes);
     authedApp.use(errorHandlerMiddleware);
   });
 

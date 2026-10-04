@@ -1,7 +1,7 @@
 import { buildContainer } from '@server/container';
 import { MetadataProviderType } from '@server/database/schema';
 /**
- * Settings API integration tests.
+ * Provider CRUD API integration tests.
  *
  * All provider CRUD routes under /api/providers require authentication.
  * Tests cover: 401 on unauthenticated access, full CRUD, and Zod validation.
@@ -13,14 +13,14 @@ import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
-import { createProviderSettingsProcedures } from '@server/modules/settings';
+import { createProvidersProcedures } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient, expectErrorResponse, expectSuccessResponse } from '@tests/helpers/api';
 import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-describe('Settings API Integration', () => {
+describe('Provider CRUD API Integration', () => {
   let authedApp: Express;
   let unauthedApp: Express;
   let authedClient: ReturnType<typeof createApiClient>;
@@ -40,8 +40,8 @@ describe('Settings API Integration', () => {
     const config = loadConfig();
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
-    const settingsRoutes = serveApi({
-      providers: createProviderSettingsProcedures(container.cradle),
+    const providerRoutes = serveApi({
+      providers: createProvidersProcedures(container.cradle),
     });
 
     // Authenticated app: inject fake user before routes
@@ -62,14 +62,14 @@ describe('Settings API Integration', () => {
       };
       next();
     });
-    authedApp.use(settingsRoutes);
+    authedApp.use(providerRoutes);
     authedApp.use(errorHandlerMiddleware);
 
     // Unauthenticated app: no user injected
     unauthedApp = express();
     unauthedApp.use(express.json());
     unauthedApp.use(requestIdMiddleware);
-    unauthedApp.use(settingsRoutes);
+    unauthedApp.use(providerRoutes);
     unauthedApp.use(errorHandlerMiddleware);
 
     authedClient = createApiClient(authedApp);

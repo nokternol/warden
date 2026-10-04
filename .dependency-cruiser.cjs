@@ -17,7 +17,6 @@ const MODULES = [
   'media',
   'mediaQueries',
   'providers',
-  'settings',
   'system',
 ];
 
@@ -31,7 +30,6 @@ const ALLOWED_TARGETS = {
   automations: ['media', 'mediaQueries', 'providers'],
   auth: ['providers'],
   system: [],
-  settings: ['providers'],
 };
 
 const directionRules = MODULES.map((mod) => {

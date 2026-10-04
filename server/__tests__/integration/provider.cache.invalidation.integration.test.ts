@@ -4,9 +4,9 @@ import { serveApi } from '@server/kernel/api';
 /**
  * Integration tests: provider mutations bust all media caches.
  *
- * The provider settings and media procedures share the same cradle.
+ * The providers and media procedures share the same cradle.
  * `createMediaProcedures()` returns an `invalidateMediaCaches` function
- * alongside the procedures. That function is passed into the provider settings
+ * alongside the procedures. That function is passed into the providers
  * procedures so update and delete can call it.
  *
  * Run: vitest run --project server
@@ -16,7 +16,7 @@ import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createMediaProcedures } from '@server/modules/media';
-import { createProviderSettingsProcedures } from '@server/modules/settings';
+import { createProvidersProcedures } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
@@ -83,13 +83,13 @@ describe('Provider mutation cache invalidation', () => {
 
   beforeEach(() => {
     // Build fresh media procedures per test so caches start empty. They expose
-    // `invalidateMediaCaches`, which is passed to the provider settings
+    // `invalidateMediaCaches`, which is passed to the providers
     // procedures so provider mutations can bust stale data.
     const media = createMediaProcedures(cradle);
     const { invalidateMediaCaches } = media;
 
-    // Provider settings procedures get the invalidator injected as second argument
-    const settingsProcedures = createProviderSettingsProcedures(cradle, invalidateMediaCaches);
+    // Providers procedures get the invalidator injected as second argument
+    const providersProcedures = createProvidersProcedures(cradle, invalidateMediaCaches);
 
     app = express();
     app.use(express.json());
@@ -98,7 +98,7 @@ describe('Provider mutation cache invalidation', () => {
       _req.user = MOCK_USER;
       next();
     });
-    app.use(serveApi({ media: media.procedures, providers: settingsProcedures }));
+    app.use(serveApi({ media: media.procedures, providers: providersProcedures }));
     app.use(errorHandlerMiddleware);
 
     client = createApiClient(app);
