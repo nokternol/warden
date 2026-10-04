@@ -109,8 +109,8 @@ describe('API shape contracts — real server responses', () => {
     }
   });
 
-  it('GET /api/settings/providers items match ProviderSchema', async () => {
-    const res = await client.get('/api/settings/providers');
+  it('GET /api/providers items match ProviderSchema', async () => {
+    const res = await client.get('/api/providers');
     expect(res.status).toBe(200);
     const items = (res.body as { data: unknown[] }).data;
     expect(items.length).toBeGreaterThan(0);

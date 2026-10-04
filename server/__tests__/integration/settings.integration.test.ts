@@ -86,7 +86,7 @@ describe('Settings API Integration', () => {
 
   describe('unauthenticated access', () => {
     it('GET /providers returns 401', async () => {
-      const res = await unauthedClient.get('/api/settings/providers');
+      const res = await unauthedClient.get('/api/providers');
       expectErrorResponse(res, 401);
     });
 
@@ -116,7 +116,7 @@ describe('Settings API Integration', () => {
 
   describe('GET /providers', () => {
     it('returns an empty array when no providers are saved', async () => {
-      const res = await authedClient.get('/api/settings/providers');
+      const res = await authedClient.get('/api/providers');
       const data = expectSuccessResponse(res);
       expect(data).toEqual([]);
     });
@@ -182,7 +182,7 @@ describe('Settings API Integration', () => {
       const deleteRes = await authedClient.delete(`/api/settings/providers/${createdData.id}`);
       expectSuccessResponse(deleteRes);
 
-      const listRes = await authedClient.get('/api/settings/providers');
+      const listRes = await authedClient.get('/api/providers');
       const list = expectSuccessResponse(listRes);
       expect(list.find((r: { id: number }) => r.id === createdData.id)).toBeUndefined();
     });

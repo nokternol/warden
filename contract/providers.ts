@@ -126,9 +126,7 @@ export const ProviderPatchSchema = ProviderSettingsInputSchema.partial();
 
 export const providers = {
   // ─── Configured instances ────────────────────────────────────────────────
-  list: base
-    .route({ method: 'GET', path: '/api/settings/providers' })
-    .output(z.array(ProviderSchema)),
+  list: base.route({ method: 'GET', path: '/api/providers' }).output(z.array(ProviderSchema)),
 
   create: base
     .route({ method: 'POST', path: '/api/settings/providers' })
