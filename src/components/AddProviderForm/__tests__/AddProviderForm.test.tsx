@@ -58,4 +58,22 @@ describe('AddProviderForm', () => {
       })
     );
   });
+
+  it("appends the chosen type's served API path to the host", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    server.use(mockProcedure(contract.providers.test, () => ({ ok: true })));
+    const served: ProviderTypeDescriptor[] = [
+      { type: 'RADARR', label: 'Radarr', apiPath: '/api/v4', capabilities: [] },
+    ];
+
+    render(<AddProviderForm types={served} onSubmit={onSubmit} onCancel={vi.fn()} />);
+    await user.type(screen.getByLabelText('Name'), 'My Radarr');
+    await user.type(screen.getByLabelText(/host url/i), 'http://localhost:7878/');
+    await user.click(screen.getByRole('button', { name: /save/i }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ url: 'http://localhost:7878/api/v4' })
+    );
+  });
 });

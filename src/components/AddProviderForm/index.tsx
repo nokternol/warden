@@ -9,17 +9,6 @@ import { useRef, useState } from 'react';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const API_SUFFIXES: Record<string, string> = {
-  SONARR: '/api/v3',
-  RADARR: '/api/v3',
-  PLEX: '',
-  JELLYFIN: '',
-  TAUTULLI: '',
-  OVERSEERR: '',
-  TMDB: '',
-  OMDB: '',
-};
-
 const PROVIDER_DEFAULT_URLS: Partial<Record<string, string>> = {
   TMDB: 'https://api.themoviedb.org/3',
   OMDB: 'http://www.omdbapi.com',
@@ -82,11 +71,12 @@ export default function AddProviderForm({
     }
   };
 
+  const chosen = types.find((t) => t.type === form.type);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const suffix = API_SUFFIXES[form.type] ?? '';
     const host = form.url.replace(/\/+$/, '');
-    const fullUrl = suffix ? `${host}${suffix}` : host;
+    const fullUrl = `${host}${chosen?.apiPath ?? ''}`;
     const settings = form.type === 'JELLYFIN' && form.userId ? { userId: form.userId } : undefined;
 
     onSubmit({
