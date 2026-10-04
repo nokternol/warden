@@ -1231,6 +1231,30 @@ describe('AutomationExecutor', () => {
 
       expect(preview).toEqual({ count: 1, contentType: 'movie' });
     });
+
+    it('counts the union of two included queries, as a run does', async () => {
+      const movies = [
+        createRadarrMovie({ id: 1, title: 'A', hasFile: true }),
+        createRadarrMovie({ id: 2, title: 'B', hasFile: false }),
+        createRadarrMovie({ id: 3, title: 'C', hasFile: true }),
+      ];
+      const provider = await seedRadarrProvider(providerSettingsService);
+      const onDisk = await seedMediaQuery(mediaQueryService, [{ ruleKey: 'hasFile', value: true }]);
+      const missing = await seedMediaQuery(mediaQueryService, [
+        { ruleKey: 'hasFile', value: false },
+      ]);
+
+      const preview = await previewExecutor(movies).preview({
+        providerId: provider.id,
+        taskId: 'deleteMovieWithFiles',
+        queries: [
+          { queryId: onDisk.id, role: 'include' },
+          { queryId: missing.id, role: 'include' },
+        ],
+      });
+
+      expect(preview.count).toBe(3);
+    });
   });
 
   // ─── Provider creation hoist ─────────────────────────────────────────────
