@@ -54,6 +54,27 @@ describe('migration 0029 — instance-scoped filter values name their instance',
     expect(values).toEqual([{ ids: [5] }, { ids: [3, 4] }]);
   });
 
+  it('keeps only the positive integer ids of a csv-ids value, in order', async () => {
+    const client = await databaseBefore(MIGRATION);
+    await legacyQuery(client);
+    await insertLegacy(client, 'tagIds', '1,,2', 1);
+    await insertLegacy(client, 'tagIds', '0,3,-1,x', null);
+    await insertLegacy(client, 'tagIds', '4,', null);
+    await insertLegacy(client, 'tagIds', 'abc', null);
+    await insertLegacy(client, 'tagIds', ' 7 ,  8', 1);
+
+    await applyMigration(client, MIGRATION);
+
+    const values = (await storedValues(client)).map(([, v]) => JSON.parse(v as string));
+    expect(values).toEqual([
+      { providerId: 1, ids: [1, 2] },
+      { ids: [3] },
+      { ids: [4] },
+      { ids: [] },
+      { providerId: 1, ids: [7, 8] },
+    ]);
+  });
+
   it('leaves values of every other rule exactly as stored', async () => {
     const client = await databaseBefore(MIGRATION);
     await legacyQuery(client);
