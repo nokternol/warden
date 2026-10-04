@@ -59,7 +59,7 @@ export interface MediaQueryRecord {
 function coerceValue(raw: string, dataType: string): FilterValue {
   if (dataType === 'boolean') return raw === 'true' || raw === '1';
   if (dataType === 'number') return Number(raw);
-  if (dataType === 'range' || dataType === 'csv-ids') return JSON.parse(raw) as FilterValue;
+  if (dataType === 'range' || dataType === 'instance-ids') return JSON.parse(raw) as FilterValue;
   return raw;
 }
 
@@ -209,12 +209,12 @@ export class MediaQueryService {
       }
       const instanceScoped = isInstanceScopedValue(value);
       const rangeShaped = isRangeValue(value);
-      if (rule.dataType === 'csv-ids' && !instanceScoped) {
+      if (rule.dataType === 'instance-ids' && !instanceScoped) {
         throw new ValidationError(
           `Filter key '${ruleKey}' expects an { ids, providerId? } instance-scoped value`
         );
       }
-      if (rule.dataType !== 'csv-ids' && instanceScoped) {
+      if (rule.dataType !== 'instance-ids' && instanceScoped) {
         throw new ValidationError(
           `Filter key '${ruleKey}' does not accept an instance-scoped value`
         );

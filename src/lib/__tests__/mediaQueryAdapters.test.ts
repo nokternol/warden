@@ -24,7 +24,7 @@ describe('toSaveValues', () => {
       key,
       label: key,
       contentTypes: ['movie'],
-      dataType: instanceScoped ? 'csv-ids' : 'boolean',
+      dataType: instanceScoped ? 'instance-ids' : 'boolean',
       providers: [],
       required: false,
       ...(instanceScoped ? { instanceScoped } : {}),

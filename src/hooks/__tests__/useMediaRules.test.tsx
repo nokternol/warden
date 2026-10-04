@@ -43,7 +43,7 @@ describe('useMediaRules', () => {
                 key: 'tagIds',
                 label: 'Tags',
                 contentTypes: ['movie'],
-                dataType: 'csv-ids',
+                dataType: 'instance-ids',
                 providers: ['RADARR'],
                 required: false,
               },

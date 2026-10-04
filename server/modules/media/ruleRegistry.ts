@@ -1,3 +1,4 @@
+import type { MediaLookup } from '@contract/media';
 import type { ContentType, FilterValue, InstanceScopedValue, RangeValue } from '@contract/schemas';
 import { isInstanceScopedValue } from '@contract/schemas';
 import { MetadataProviderType } from '../../database/schema';
@@ -30,7 +31,7 @@ export interface MediaRule<
   key: string;
   label: string;
   contentTypes: readonly ContentType[];
-  dataType: 'boolean' | 'number' | 'string' | 'csv-ids' | 'csv-strings' | 'range';
+  dataType: 'boolean' | 'number' | 'string' | 'instance-ids' | 'csv-strings' | 'range';
   providers: readonly MetadataProviderType[];
   required: boolean;
   /** True for rules whose values are a provider-*defined* id space (a quality profile id is
@@ -54,6 +55,8 @@ export interface MediaRule<
   /** A shorter label for places the rule's section heading already gives context
    *  ("Status" under a "Series" heading). Absent means `label`. */
   shortLabel?: string;
+  /** For a multi-value rule: the `media` lookup procedure its selectable values come from. */
+  lookup?: MediaLookup;
   predicate: Predicate<T>;
 }
 
@@ -281,6 +284,7 @@ export const MEDIA_RULES = [
     label: 'File container',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
+    lookup: 'fileContainers',
     providers: deriveProviders('fileContainer'),
     sourceField: 'fileContainer',
     required: false,
@@ -294,6 +298,7 @@ export const MEDIA_RULES = [
     label: 'Video codec',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
+    lookup: 'videoCodecs',
     providers: deriveProviders('videoCodec'),
     sourceField: 'videoCodec',
     required: false,
@@ -307,6 +312,7 @@ export const MEDIA_RULES = [
     label: 'Audio codec',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
+    lookup: 'audioCodecs',
     providers: deriveProviders('audioCodec'),
     sourceField: 'audioCodec',
     required: false,
@@ -320,6 +326,7 @@ export const MEDIA_RULES = [
     label: 'File resolution',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
+    lookup: 'fileResolutions',
     providers: deriveProviders('fileResolution'),
     sourceField: 'fileResolution',
     required: false,
@@ -333,6 +340,7 @@ export const MEDIA_RULES = [
     label: 'Labels',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
+    lookup: 'labels',
     providers: deriveProviders('labels'),
     sourceField: 'labels',
     required: false,
@@ -368,7 +376,8 @@ export const MEDIA_RULES = [
     key: 'tagIds',
     label: 'Tags',
     contentTypes: ['movie'],
-    dataType: 'csv-ids',
+    dataType: 'instance-ids',
+    lookup: 'tags',
     // Hand-listed, not deriveProviders('tags'): tags is now produced by
     // both Radarr and Sonarr, one per content type — deriving here would
     // wrongly list Sonarr on a movie-only rule. deriveProviders has no
@@ -387,7 +396,8 @@ export const MEDIA_RULES = [
     key: 'qualityProfileIds',
     label: 'Quality profile',
     contentTypes: ['movie'],
-    dataType: 'csv-ids',
+    dataType: 'instance-ids',
+    lookup: 'qualityProfiles',
     providers: [MetadataProviderType.RADARR],
     required: false,
     instanceScoped: true,
@@ -401,6 +411,7 @@ export const MEDIA_RULES = [
     label: 'Genres',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
+    lookup: 'genres',
     providers: [MetadataProviderType.RADARR],
     required: false,
     predicate: (item, value) => {
@@ -413,6 +424,7 @@ export const MEDIA_RULES = [
     label: 'Studio',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
+    lookup: 'studio',
     providers: deriveProviders('studio'),
     sourceField: 'studio',
     required: false,
@@ -466,6 +478,7 @@ export const MEDIA_RULES = [
     label: 'Release group',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
+    lookup: 'releaseGroups',
     providers: [MetadataProviderType.RADARR],
     required: false,
     predicate: (item, value) => {
@@ -518,6 +531,7 @@ export const MEDIA_RULES = [
     label: 'Collection',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
+    lookup: 'collectionNames',
     providers: [MetadataProviderType.RADARR],
     required: false,
     predicate: (item, value) => {
@@ -582,7 +596,8 @@ export const MEDIA_RULES = [
     key: 'tagIds',
     label: 'Tags',
     contentTypes: ['series'],
-    dataType: 'csv-ids',
+    dataType: 'instance-ids',
+    lookup: 'tags',
     // Hand-listed for the same reason as the movie-side tagIds rule above —
     // deriveProviders('tags') would wrongly include Radarr here.
     providers: [MetadataProviderType.SONARR],
@@ -598,7 +613,8 @@ export const MEDIA_RULES = [
     key: 'qualityProfileIds',
     label: 'Quality profile',
     contentTypes: ['series'],
-    dataType: 'csv-ids',
+    dataType: 'instance-ids',
+    lookup: 'qualityProfiles',
     providers: [MetadataProviderType.SONARR],
     required: false,
     instanceScoped: true,
@@ -612,6 +628,7 @@ export const MEDIA_RULES = [
     label: 'Genres',
     contentTypes: ['series'],
     dataType: 'csv-strings',
+    lookup: 'genres',
     providers: [MetadataProviderType.SONARR, MetadataProviderType.TMDB],
     required: false,
     predicate: (item, value) => {
@@ -642,6 +659,7 @@ export const MEDIA_RULES = [
     label: 'Studio',
     contentTypes: ['series'],
     dataType: 'csv-strings',
+    lookup: 'studio',
     providers: deriveProviders('studio'),
     sourceField: 'studio',
     required: false,
@@ -656,6 +674,7 @@ export const MEDIA_RULES = [
     label: 'Network',
     contentTypes: ['series'],
     dataType: 'csv-strings',
+    lookup: 'networks',
     providers: [MetadataProviderType.SONARR, MetadataProviderType.TVMAZE],
     required: false,
     predicate: (item, value) => {
@@ -760,7 +779,8 @@ export const MEDIA_RULES = [
     key: 'languageProfileIds',
     label: 'Language profile',
     contentTypes: ['series'],
-    dataType: 'csv-ids',
+    dataType: 'instance-ids',
+    lookup: 'languageProfiles',
     providers: [MetadataProviderType.SONARR],
     required: false,
     instanceScoped: true,

@@ -149,7 +149,7 @@ describe('GET /api/rules', () => {
     for (const field of res.body.data) {
       expect(field.key).toBeTruthy();
       expect(field.label).toBeTruthy();
-      expect(['boolean', 'number', 'string', 'csv-ids', 'csv-strings', 'range']).toContain(
+      expect(['boolean', 'number', 'string', 'instance-ids', 'csv-strings', 'range']).toContain(
         field.dataType
       );
       expect(Array.isArray(field.contentTypes)).toBe(true);
@@ -207,6 +207,12 @@ describe('GET /api/rules', () => {
         { value: 'ended', label: 'Ended' },
       ]);
       expect(seriesStatus?.shortLabel).toBe('Status');
+    });
+
+    it('serves a multi-value rule naming the lookup its options come from', async () => {
+      const rules = await rulesServedWith(MetadataProviderType.RADARR);
+      expect(rules.find((r) => r.key === 'genres')?.lookup).toBe('genres');
+      expect(rules.find((r) => r.key === 'tagIds')?.lookup).toBe('tags');
     });
   });
 

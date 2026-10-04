@@ -864,7 +864,7 @@ function booleanOptions(rule: MediaRuleDescriptor) {
   ];
 }
 
-// csv-ids / csv-strings rules need an option *list*, sourced from `lookups`
+// instance-ids / csv-strings rules need an option *list*, sourced from `lookups`
 // rather than the registry (tag/quality-profile/genre/network values are
 // library data, not part of the rule vocabulary). Only the handful of keys
 // with a known lookup source render a control; others are skipped, same as
@@ -935,7 +935,7 @@ function csvStringOptions(
 }
 
 /** Mirrors RuleControl's switch: true only for a rule/scope RuleControl would
- *  actually render something for. `string`/`number` rules with no `options` and `csv-ids`/`csv-strings` rules with no lookup source (e.g.
+ *  actually render something for. `string`/`number` rules with no `options` and `instance-ids`/`csv-strings` rules with no lookup source (e.g.
  *  `certification` today) render null — FilterPicker must not offer those, or
  *  "adding" one produces a labeled group with nothing inside it. */
 function ruleRendersControl(
@@ -950,7 +950,7 @@ function ruleRendersControl(
     case 'string':
     case 'number':
       return rule.options !== undefined;
-    case 'csv-ids':
+    case 'instance-ids':
       return csvIdOptions(rule, scope, lookups) !== null;
     case 'csv-strings':
       return csvStringOptions(rule, scope, lookups) !== null;
@@ -1001,7 +1001,7 @@ function conditionLabel(rule: MediaRuleDescriptor, value: FilterValue): string |
       const strValue = String(value);
       return options ? (options.find((o) => o.value === strValue)?.label ?? null) : strValue;
     }
-    case 'csv-ids':
+    case 'instance-ids':
     case 'csv-strings': {
       const count = String(value)
         .split(',')
@@ -1111,7 +1111,7 @@ function RuleControl({
       );
     }
 
-    case 'csv-ids': {
+    case 'instance-ids': {
       const options = csvIdOptions(rule, scope, lookups);
       if (!options) return null;
       const grouped = rule.instanceScoped === true && hasMultipleInstances(scope, sources);

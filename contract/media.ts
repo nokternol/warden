@@ -181,12 +181,32 @@ export const MediaSourceDescriptorSchema = z.object({
   instances: z.array(z.object({ id: z.number(), name: z.string() })),
 });
 
+/**
+ * The lookup a multi-value rule's selectable values come from. Each name is the
+ * `media` procedure that serves that lookup (checked below `media`).
+ */
+export const MediaLookupSchema = z.enum([
+  'tags',
+  'qualityProfiles',
+  'languageProfiles',
+  'genres',
+  'networks',
+  'studio',
+  'releaseGroups',
+  'collectionNames',
+  'fileContainers',
+  'videoCodecs',
+  'audioCodecs',
+  'fileResolutions',
+  'labels',
+]);
+
 /** A filterable rule as the client sees it: everything but its predicate. */
 export const MediaRuleDescriptorSchema = z.object({
   key: z.string(),
   label: z.string(),
   contentTypes: z.array(ContentTypeSchema).readonly(),
-  dataType: z.enum(['boolean', 'number', 'string', 'csv-ids', 'csv-strings', 'range']),
+  dataType: z.enum(['boolean', 'number', 'string', 'instance-ids', 'csv-strings', 'range']),
   providers: z.array(ProviderTypeSchema).readonly(),
   required: z.boolean(),
   /** True for rules whose values are a provider-defined id space (quality profiles, tags) —
@@ -200,6 +220,7 @@ export const MediaRuleDescriptorSchema = z.object({
     .readonly()
     .optional(),
   shortLabel: z.string().optional(),
+  lookup: MediaLookupSchema.optional(),
 });
 
 /** One provider's answer to a cross-provider title search. */
@@ -283,12 +304,15 @@ export const media = {
     .output(z.object({ deletedIdentities: z.number() })),
 };
 
+const _everyLookupIsAProcedure: readonly (keyof typeof media)[] = MediaLookupSchema.options;
+
 export type ManagedMovie = z.infer<typeof ManagedMovieSchema>;
 export type ManagedSeries = z.infer<typeof ManagedSeriesSchema>;
 export type MediaTag = z.infer<typeof MediaTagSchema>;
 export type MediaProfile = z.infer<typeof MediaProfileSchema>;
 export type MediaSourceDescriptor = z.infer<typeof MediaSourceDescriptorSchema>;
 export type MediaRuleDescriptor = z.infer<typeof MediaRuleDescriptorSchema>;
+export type MediaLookup = z.infer<typeof MediaLookupSchema>;
 export type SearchResult = z.infer<typeof SearchResultSchema>;
 export type MoviesBrowseQuery = z.input<typeof MoviesBrowseQuerySchema>;
 export type SeriesBrowseQuery = z.input<typeof SeriesBrowseQuerySchema>;
