@@ -41,7 +41,7 @@ describe('GET /api/providers/test — TVMAZE and SEERR', () => {
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
     const providerRoutes = serveApi({
-      providers: createProvidersProcedures(container.cradle),
+      providers: createProvidersProcedures(container.cradle, () => {}),
     });
 
     authedApp = express();

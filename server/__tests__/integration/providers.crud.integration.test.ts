@@ -41,7 +41,7 @@ describe('Provider CRUD API Integration', () => {
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
     const providerRoutes = serveApi({
-      providers: createProvidersProcedures(container.cradle),
+      providers: createProvidersProcedures(container.cradle, () => {}),
     });
 
     // Authenticated app: inject fake user before routes

@@ -96,7 +96,7 @@ async function resolveTaskOptions(
  */
 export function createProvidersProcedures(
   cradle: ProvidersCradle,
-  invalidateMediaCaches?: () => void
+  invalidateMediaCaches: () => void
 ) {
   const { providerSettingsService, providerFactory, config } = cradle;
 
@@ -111,13 +111,13 @@ export function createProvidersProcedures(
     update: api.providers.update.handler(async ({ input }) => {
       const { id, ...patch } = input;
       const result = await providerSettingsService.update(id, patch);
-      invalidateMediaCaches?.();
+      invalidateMediaCaches();
       return result;
     }),
 
     delete: api.providers.delete.handler(async ({ input }) => {
       await providerSettingsService.delete(input.id);
-      invalidateMediaCaches?.();
+      invalidateMediaCaches();
       return null;
     }),
 

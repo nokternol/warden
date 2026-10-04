@@ -75,7 +75,7 @@ describe('API shape contracts — real server responses', () => {
     });
     app.use(serveApi({ mediaQueries: createMediaQueryProcedures(container.cradle) }));
     app.use(serveApi({ automations: createAutomationProcedures(container.cradle) }));
-    app.use(serveApi({ providers: createProvidersProcedures(container.cradle) }));
+    app.use(serveApi({ providers: createProvidersProcedures(container.cradle, () => {}) }));
     app.use(errorHandlerMiddleware);
 
     client = createApiClient(app);
