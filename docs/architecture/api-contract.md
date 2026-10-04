@@ -52,6 +52,15 @@ The contract uses [oRPC](https://orpc.dev) in contract-first mode, with Zod 4 sc
   is therefore a reviewed change to that test. The procedure context carries the user that
   `checkUser` attached from the session, and the session itself, which sign-in starts and sign-out
   destroys.
+- **Owner-only sign-in.** `auth.plexLogin` is public, but only one Plex account may use it: the
+  instance's owner, its one user row. The first sign-in on an instance with no user claims it, in a
+  single conditional insert so two first sign-ins cannot both succeed. Every later sign-in must be that
+  account. It is matched by Plex id, and by email only while the stored row has no Plex id yet. Any other
+  account is refused with 403 `FORBIDDEN` and a reason, and no user row or session is created for it
+  ([`authService.ts`](ref:path:server/modules/auth/authService.ts)). The login page shows that reason as a
+  "Sign-in refused" state, distinct from a generic failure
+  ([`index.page.tsx`](ref:path:src/pages/login/index.page.tsx)). Migration 0030 reduced instances that had
+  let several accounts sign in to their earliest user.
 - **Auth bypass (development only).** With `BYPASS_AUTH=true`, `serveApi` marks every request's context
   `authBypassed`, and the root middleware lets non-public procedures answer without a user. This is what
   lets browser tooling such as `playwright-cli` drive the app without a Plex sign-in; `requireAuth`
