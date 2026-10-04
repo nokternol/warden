@@ -1,20 +1,20 @@
 import { buildContainer } from '@server/container';
 import { MetadataProviderType } from '@server/database/schema';
 /**
- * Integration tests for GET /api/settings/providers/test
+ * Integration tests for GET /api/providers/test
  *
- * Covers the two provider types that were missing from the probeProvider switch:
+ * Covers the TVMAZE and SEERR connection probes:
  *   - TVMAZE: no auth, no outbound call — should return { ok: true } immediately
  *   - SEERR:  same auth pattern as OVERSEERR — GET {base}/api/v1/status with X-Api-Key header
  *
- * Run: yarn vitest run --project server server/__tests__/integration/settings.testprovider.integration.test.ts
+ * Run: yarn vitest run --project server server/__tests__/integration/providers.connectionProbe.integration.test.ts
  */
 import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
-import { createProviderSettingsProcedures } from '@server/modules/settings';
+import { createProvidersProcedures } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
@@ -23,7 +23,7 @@ import { http, HttpResponse } from 'msw';
 import request from 'supertest';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
-describe('GET /api/settings/providers/test — TVMAZE and SEERR', () => {
+describe('GET /api/providers/test — TVMAZE and SEERR', () => {
   let authedApp: Express;
 
   beforeAll(async () => {
@@ -40,8 +40,8 @@ describe('GET /api/settings/providers/test — TVMAZE and SEERR', () => {
     const config = loadConfig();
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
-    const settingsRoutes = serveApi({
-      providers: createProviderSettingsProcedures(container.cradle),
+    const providerRoutes = serveApi({
+      providers: createProvidersProcedures(container.cradle, () => {}),
     });
 
     authedApp = express();
@@ -61,7 +61,7 @@ describe('GET /api/settings/providers/test — TVMAZE and SEERR', () => {
       };
       next();
     });
-    authedApp.use(settingsRoutes);
+    authedApp.use(providerRoutes);
     authedApp.use(errorHandlerMiddleware);
   });
 
@@ -93,12 +93,12 @@ describe('GET /api/settings/providers/test — TVMAZE and SEERR', () => {
       server.events.on('request:start', listener);
 
       const res = await request(authedApp)
-        .get('/api/settings/providers/test')
+        .get('/api/providers/test')
         .query({ type: MetadataProviderType.TVMAZE, url: 'https://api.tvmaze.com' });
 
       expect(res.status).toBe(200);
       expect(res.body.data).toEqual({ ok: true });
-      // probeProvider should have returned early without touching the TVMaze URL
+      // The TVMAZE probe answers without calling TVMaze
       expect(tvmazeRequests).toHaveLength(0);
 
       server.events.removeListener('request:start', listener);
@@ -116,7 +116,7 @@ describe('GET /api/settings/providers/test — TVMAZE and SEERR', () => {
       server.use(http.get(`${SEERR_URL}/api/v1/status`, () => HttpResponse.json({ status: 'ok' })));
 
       const res = await request(authedApp)
-        .get('/api/settings/providers/test')
+        .get('/api/providers/test')
         .query({ type: MetadataProviderType.SEERR, url: SEERR_URL, apiKey: 'test-key' });
 
       expect(res.status).toBe(200);
@@ -131,7 +131,7 @@ describe('GET /api/settings/providers/test — TVMAZE and SEERR', () => {
       );
 
       const res = await request(authedApp)
-        .get('/api/settings/providers/test')
+        .get('/api/providers/test')
         .query({ type: MetadataProviderType.SEERR, url: SEERR_URL, apiKey: 'bad-key' });
 
       expect(res.status).toBe(200);
@@ -146,7 +146,7 @@ describe('GET /api/settings/providers/test — TVMAZE and SEERR', () => {
       );
 
       const res = await request(authedApp)
-        .get('/api/settings/providers/test')
+        .get('/api/providers/test')
         .query({ type: MetadataProviderType.SEERR, url: SEERR_URL, apiKey: 'any-key' });
 
       expect(res.status).toBe(200);
@@ -167,7 +167,7 @@ describe('GET /api/settings/providers/test — TVMAZE and SEERR', () => {
       );
 
       const res = await request(authedApp)
-        .get('/api/settings/providers/test')
+        .get('/api/providers/test')
         .query({ type: MetadataProviderType.SEERR, url: SEERR_URL, apiKey: API_KEY });
 
       expect(res.status).toBe(200);

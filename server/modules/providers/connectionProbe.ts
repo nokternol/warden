@@ -1,6 +1,4 @@
 import { MetadataProviderType } from '@server/database/schema';
-import { api } from '@server/kernel/api';
-import type { ProviderSettingsService } from '@server/modules/providers';
 import ky from 'ky';
 
 const API_SUFFIXES: Record<string, string> = {
@@ -16,7 +14,12 @@ const API_SUFFIXES: Record<string, string> = {
   TVMAZE: '',
 };
 
-async function probeProvider(
+/**
+ * Probes a provider's connection details with one cheap call to its upstream
+ * API; resolves when the provider answers, rejects otherwise. TVmaze is public
+ * and keyless, so it resolves without a call.
+ */
+export async function probeConnection(
   type: MetadataProviderType,
   host: string,
   apiKey?: string
@@ -71,46 +74,4 @@ async function probeProvider(
       throw new Error(`Unsupported provider type: ${_exhaustive}`);
     }
   }
-}
-
-interface SettingsCradle {
-  providerSettingsService: ProviderSettingsService;
-}
-
-/** Provider CRUD and connection testing, declared under `providers` in the contract. */
-export function createProviderSettingsProcedures(
-  cradle: SettingsCradle,
-  invalidateMediaCaches?: () => void
-) {
-  const { providerSettingsService } = cradle;
-
-  return {
-    list: api.providers.list.handler(async () => providerSettingsService.list()),
-
-    create: api.providers.create.handler(async ({ input }) =>
-      providerSettingsService.create({ ...input, type: input.type as MetadataProviderType })
-    ),
-
-    update: api.providers.update.handler(async ({ input }) => {
-      const { id, ...patch } = input;
-      const result = await providerSettingsService.update(id, patch);
-      invalidateMediaCaches?.();
-      return result;
-    }),
-
-    delete: api.providers.delete.handler(async ({ input }) => {
-      await providerSettingsService.delete(input.id);
-      invalidateMediaCaches?.();
-      return null;
-    }),
-
-    test: api.providers.test.handler(async ({ input }) => {
-      try {
-        await probeProvider(input.type as MetadataProviderType, input.url, input.apiKey);
-        return { ok: true };
-      } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : String(err) };
-      }
-    }),
-  };
 }

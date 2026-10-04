@@ -126,17 +126,15 @@ export const ProviderPatchSchema = ProviderSettingsInputSchema.partial();
 
 export const providers = {
   // ─── Configured instances ────────────────────────────────────────────────
-  list: base
-    .route({ method: 'GET', path: '/api/settings/providers' })
-    .output(z.array(ProviderSchema)),
+  list: base.route({ method: 'GET', path: '/api/providers' }).output(z.array(ProviderSchema)),
 
   create: base
-    .route({ method: 'POST', path: '/api/settings/providers' })
+    .route({ method: 'POST', path: '/api/providers' })
     .input(ProviderDraftSchema)
     .output(ProviderSchema),
 
   update: base
-    .route({ method: 'PATCH', path: '/api/settings/providers/{id}' })
+    .route({ method: 'PATCH', path: '/api/providers/{id}' })
     .input(
       ProviderPatchSchema.extend({ id: IdSchema }).refine(
         ({ id: _id, ...patch }) => Object.keys(patch).length > 0,
@@ -148,13 +146,13 @@ export const providers = {
     .output(ProviderSchema),
 
   delete: base
-    .route({ method: 'DELETE', path: '/api/settings/providers/{id}' })
+    .route({ method: 'DELETE', path: '/api/providers/{id}' })
     .input(z.object({ id: IdSchema }))
     .output(z.null()),
 
   /** Probes a provider's connection details before they are saved. */
   test: base
-    .route({ method: 'GET', path: '/api/settings/providers/test' })
+    .route({ method: 'GET', path: '/api/providers/test' })
     .input(
       z.object({ type: ProviderTypeSchema, url: z.string().url(), apiKey: z.string().optional() })
     )

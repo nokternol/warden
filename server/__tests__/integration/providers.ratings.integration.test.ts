@@ -47,7 +47,7 @@ describe('GET /api/providers/ratings — TMDB key DI isolation', () => {
       req.user = { id: 1 } as unknown as NonNullable<typeof req.user>;
       next();
     });
-    app.use(serveApi({ providers: createProvidersProcedures(container.cradle) }));
+    app.use(serveApi({ providers: createProvidersProcedures(container.cradle, () => {}) }));
     app.use(errorHandlerMiddleware);
     return app;
   }

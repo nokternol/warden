@@ -9,8 +9,9 @@ HTTP transport down to the system job, and exposes it through one crafted public
 ```
 providers/
   index.ts                    # Public interface — the only import surface for code outside the module
-  providers.procedures.ts     # API contract procedures: actuator tasks, task options, ad-hoc metadata,
-                              #   aggregated ratings (instance CRUD lives in settings/)
+  providers.procedures.ts     # API contract procedures: instance CRUD and connection test, actuator
+                              #   tasks, task options, ad-hoc metadata, aggregated ratings
+  connectionProbe.ts          # One cheap upstream call per provider type to test connection details
   connections/                # BaseProviderConnection + one class per external system
   roles.ts                    # Capability role providers own: MediaActuator (task discovery)
   ratingsAggregation.ts       # Cross-provider rating aggregation (Tmdb/Omdb/TvMaze), module-private

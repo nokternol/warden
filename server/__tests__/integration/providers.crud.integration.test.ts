@@ -1,9 +1,9 @@
 import { buildContainer } from '@server/container';
 import { MetadataProviderType } from '@server/database/schema';
 /**
- * Settings API integration tests.
+ * Provider CRUD API integration tests.
  *
- * All /api/settings/providers routes require authentication.
+ * All provider CRUD routes under /api/providers require authentication.
  * Tests cover: 401 on unauthenticated access, full CRUD, and Zod validation.
  *
  * Run: vitest run --project server
@@ -13,14 +13,14 @@ import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
-import { createProviderSettingsProcedures } from '@server/modules/settings';
+import { createProvidersProcedures } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient, expectErrorResponse, expectSuccessResponse } from '@tests/helpers/api';
 import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-describe('Settings API Integration', () => {
+describe('Provider CRUD API Integration', () => {
   let authedApp: Express;
   let unauthedApp: Express;
   let authedClient: ReturnType<typeof createApiClient>;
@@ -40,8 +40,8 @@ describe('Settings API Integration', () => {
     const config = loadConfig();
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
-    const settingsRoutes = serveApi({
-      providers: createProviderSettingsProcedures(container.cradle),
+    const providerRoutes = serveApi({
+      providers: createProvidersProcedures(container.cradle, () => {}),
     });
 
     // Authenticated app: inject fake user before routes
@@ -62,14 +62,14 @@ describe('Settings API Integration', () => {
       };
       next();
     });
-    authedApp.use(settingsRoutes);
+    authedApp.use(providerRoutes);
     authedApp.use(errorHandlerMiddleware);
 
     // Unauthenticated app: no user injected
     unauthedApp = express();
     unauthedApp.use(express.json());
     unauthedApp.use(requestIdMiddleware);
-    unauthedApp.use(settingsRoutes);
+    unauthedApp.use(providerRoutes);
     unauthedApp.use(errorHandlerMiddleware);
 
     authedClient = createApiClient(authedApp);
@@ -86,12 +86,12 @@ describe('Settings API Integration', () => {
 
   describe('unauthenticated access', () => {
     it('GET /providers returns 401', async () => {
-      const res = await unauthedClient.get('/api/settings/providers');
+      const res = await unauthedClient.get('/api/providers');
       expectErrorResponse(res, 401);
     });
 
     it('POST /providers returns 401', async () => {
-      const res = await unauthedClient.post('/api/settings/providers', {
+      const res = await unauthedClient.post('/api/providers', {
         type: 'RADARR',
         name: 'Radarr',
         url: 'http://localhost:7878',
@@ -100,12 +100,12 @@ describe('Settings API Integration', () => {
     });
 
     it('PATCH /providers/:id returns 401', async () => {
-      const res = await unauthedClient.patch('/api/settings/providers/1', { name: 'X' });
+      const res = await unauthedClient.patch('/api/providers/1', { name: 'X' });
       expectErrorResponse(res, 401);
     });
 
     it('DELETE /providers/:id returns 401', async () => {
-      const res = await unauthedClient.delete('/api/settings/providers/1');
+      const res = await unauthedClient.delete('/api/providers/1');
       expectErrorResponse(res, 401);
     });
   });
@@ -116,7 +116,7 @@ describe('Settings API Integration', () => {
 
   describe('GET /providers', () => {
     it('returns an empty array when no providers are saved', async () => {
-      const res = await authedClient.get('/api/settings/providers');
+      const res = await authedClient.get('/api/providers');
       const data = expectSuccessResponse(res);
       expect(data).toEqual([]);
     });
@@ -124,7 +124,7 @@ describe('Settings API Integration', () => {
 
   describe('POST /providers', () => {
     it('creates a provider and returns it with apiKey redacted', async () => {
-      const res = await authedClient.post('/api/settings/providers', {
+      const res = await authedClient.post('/api/providers', {
         type: MetadataProviderType.SONARR,
         name: 'Sonarr Main',
         url: 'http://localhost:8989/api/v3',
@@ -139,21 +139,21 @@ describe('Settings API Integration', () => {
     });
 
     it('returns 400 for missing required fields', async () => {
-      const res = await authedClient.post('/api/settings/providers', { name: 'No type' });
+      const res = await authedClient.post('/api/providers', { name: 'No type' });
       expectErrorResponse(res, 400);
     });
   });
 
   describe('PATCH /providers/:id', () => {
     it('updates name and url of an existing provider', async () => {
-      const created = await authedClient.post('/api/settings/providers', {
+      const created = await authedClient.post('/api/providers', {
         type: MetadataProviderType.RADARR,
         name: 'Old Name',
         url: 'http://localhost:7878/api/v3',
       });
       const createdData = expectSuccessResponse(created);
 
-      const res = await authedClient.patch(`/api/settings/providers/${createdData.id}`, {
+      const res = await authedClient.patch(`/api/providers/${createdData.id}`, {
         name: 'New Name',
         url: 'http://radarr:7878/api/v3',
       });
@@ -163,7 +163,7 @@ describe('Settings API Integration', () => {
     });
 
     it('returns 400 for an invalid id format', async () => {
-      const res = await authedClient.patch('/api/settings/providers/not-a-number', {
+      const res = await authedClient.patch('/api/providers/not-a-number', {
         name: 'X',
       });
       expectErrorResponse(res, 400);
@@ -172,17 +172,17 @@ describe('Settings API Integration', () => {
 
   describe('DELETE /providers/:id', () => {
     it('removes a provider and it no longer appears in GET list', async () => {
-      const created = await authedClient.post('/api/settings/providers', {
+      const created = await authedClient.post('/api/providers', {
         type: MetadataProviderType.PLEX,
         name: 'Plex',
         url: 'http://localhost:32400',
       });
       const createdData = expectSuccessResponse(created);
 
-      const deleteRes = await authedClient.delete(`/api/settings/providers/${createdData.id}`);
+      const deleteRes = await authedClient.delete(`/api/providers/${createdData.id}`);
       expectSuccessResponse(deleteRes);
 
-      const listRes = await authedClient.get('/api/settings/providers');
+      const listRes = await authedClient.get('/api/providers');
       const list = expectSuccessResponse(listRes);
       expect(list.find((r: { id: number }) => r.id === createdData.id)).toBeUndefined();
     });

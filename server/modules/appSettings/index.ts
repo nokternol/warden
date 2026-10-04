@@ -7,8 +7,8 @@
  * and a growing export list is a design smell to challenge.
  *
  * System-wide settings (region, primaryMediaServer) that don't belong to any
- * single provider — distinct from `settings/`, which is transport for
- * per-provider connection config.
+ * single provider — distinct from per-provider connection config, which the
+ * providers module owns.
  */
 
 // HTTP surface — the appSettings procedures of the API contract.

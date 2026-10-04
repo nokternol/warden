@@ -13,7 +13,6 @@ import {
 } from './media';
 import { createMediaQueryProcedures } from './mediaQueries';
 import { createProvidersProcedures } from './providers';
-import { createProviderSettingsProcedures } from './settings';
 import { createSystemProcedures } from './system';
 
 /**
@@ -23,7 +22,7 @@ import { createSystemProcedures } from './system';
  * compile.
  *
  * Media procedures are built once so their `invalidateMediaCaches` function
- * can be shared with the provider settings procedures — provider mutations
+ * can be shared with the providers procedures — provider mutations
  * bust stale movies/series/tags/profiles/genres/networks cache entries
  * immediately.
  */
@@ -49,10 +48,7 @@ export function createApiRouter(cradle: Cradle) {
           ...createBackdropsProcedures(cradle),
         },
         mediaQueries: createMediaQueryProcedures(cradle),
-        providers: {
-          ...createProvidersProcedures(cradle),
-          ...createProviderSettingsProcedures(cradle, invalidateMediaCaches),
-        },
+        providers: createProvidersProcedures(cradle, invalidateMediaCaches),
         system: createSystemProcedures(cradle),
       }),
       { authBypass: cradle.config.BYPASS_AUTH }

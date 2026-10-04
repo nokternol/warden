@@ -4,6 +4,7 @@ import type { MetadataProvider } from '@server/database/schema';
 import { api } from '@server/kernel/api';
 import type { AppConfig } from '@server/kernel/config';
 import { getChildLogger } from '@server/kernel/logger';
+import { probeConnection } from './connectionProbe';
 import { JellyfinProvider } from './connections/jellyfinProvider';
 import { OmdbProvider } from './connections/omdbProvider';
 import { OverseerrProvider } from './connections/overseerrProvider';
@@ -87,10 +88,49 @@ async function resolveTaskOptions(
   }
 }
 
-export function createProvidersProcedures(cradle: ProvidersCradle) {
+/**
+ * The `providers` procedures of the API contract: configured-instance CRUD,
+ * connection probing, and provider capabilities. `invalidateMediaCaches` runs
+ * after an instance is updated or deleted so media caches never serve data
+ * from a provider that changed.
+ */
+export function createProvidersProcedures(
+  cradle: ProvidersCradle,
+  invalidateMediaCaches: () => void
+) {
   const { providerSettingsService, providerFactory, config } = cradle;
 
   return {
+    // ─── Configured instances ──────────────────────────────────────────────
+    list: api.providers.list.handler(async () => providerSettingsService.list()),
+
+    create: api.providers.create.handler(async ({ input }) =>
+      providerSettingsService.create({ ...input, type: input.type as MetadataProviderType })
+    ),
+
+    update: api.providers.update.handler(async ({ input }) => {
+      const { id, ...patch } = input;
+      const result = await providerSettingsService.update(id, patch);
+      invalidateMediaCaches();
+      return result;
+    }),
+
+    delete: api.providers.delete.handler(async ({ input }) => {
+      await providerSettingsService.delete(input.id);
+      invalidateMediaCaches();
+      return null;
+    }),
+
+    test: api.providers.test.handler(async ({ input }) => {
+      try {
+        await probeConnection(input.type as MetadataProviderType, input.url, input.apiKey);
+        return { ok: true };
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }),
+
+    // ─── Capabilities ──────────────────────────────────────────────────────
     tasks: api.providers.tasks.handler(async () => {
       const providers = await providerSettingsService.list();
 

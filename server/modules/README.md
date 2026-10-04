@@ -1,6 +1,6 @@
 # Modules
 
-Feature modules. Each module owns its part of the API contract's procedures (e.g., media, automations, providers), and — per the target design in `docs/architecture/server-architecture-north-star.md` — its domain logic too, exposed through a deliberately crafted public interface (`index.ts`, never a wholesale re-export). `providers/`, `media/`, `mediaQueries/`, `automations/`, `auth/`, and `system/` have converged: each owns its services/jobs behind its `index.ts` and a `<module>.registrations.ts` (a `<Module>Cradle` + `register<Module>Dependencies()`, composed into `server/container.ts`); everything outside a module imports only its `index.ts`. `settings/` has no domain logic of its own — it implements the provider instance procedures, consuming `providerSettingsService` from providers. The module-boundary and direction rules this convergence produced are enforced by `yarn depcruise:ci` (`.dependency-cruiser.cjs`); the fracture ledger's "Server layering" entry (`docs/architecture/fracture-ledger.md`) is the historical record of how it converged.
+Feature modules. Each module owns its part of the API contract's procedures (e.g., media, automations, providers), and — per the target design in `docs/architecture/server-architecture-north-star.md` — its domain logic too, exposed through a deliberately crafted public interface (`index.ts`, never a wholesale re-export). `providers/`, `media/`, `mediaQueries/`, `automations/`, `auth/`, `system/`, and `appSettings/` have converged: each owns its services/jobs behind its `index.ts` and a `<module>.registrations.ts` (a `<Module>Cradle` + `register<Module>Dependencies()`, composed into `server/container.ts`); everything outside a module imports only its `index.ts`. The module-boundary and direction rules this convergence produced are enforced by `yarn depcruise:ci` (`.dependency-cruiser.cjs`), and `server/__tests__/boundaries.test.ts` fails when a module directory has no direction rule; the fracture ledger's "Server layering" entry (`docs/architecture/fracture-ledger.md`) is the historical record of how it converged.
 
 ## Transport: procedures of the API contract
 
@@ -29,7 +29,7 @@ export function createMediaQueryProcedures({ mediaQueryService }: { mediaQuerySe
 - The contract decides method, path, input and output. A handler receives validated `input` and returns
   the output's shape; returning anything else fails to compile.
 - `<ns>.router({...})` requires every procedure of that namespace. A module implementing only part of a
-  namespace (media's rules, search and backdrops; providers' and settings' halves of `providers`) returns
+  namespace (media's rules, search and backdrops) returns
   a plain object of procedures, and `server/modules/index.ts` assembles them.
 - Handlers return data; `serveApi` wraps it in `{ status: 'ok', data }`.
 - Factory pattern: `createXProcedures(cradle)` receives dependencies by destructuring, never via

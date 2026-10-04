@@ -11,7 +11,7 @@ import { AutomationService } from '@server/modules/automations/automationService
 import { createMediaQueryProcedures } from '@server/modules/mediaQueries';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
-import { createProviderSettingsProcedures } from '@server/modules/settings';
+import { createProvidersProcedures } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient } from '@tests/helpers/api';
 import express, { type Express } from 'express';
@@ -75,7 +75,7 @@ describe('API shape contracts — real server responses', () => {
     });
     app.use(serveApi({ mediaQueries: createMediaQueryProcedures(container.cradle) }));
     app.use(serveApi({ automations: createAutomationProcedures(container.cradle) }));
-    app.use(serveApi({ providers: createProviderSettingsProcedures(container.cradle) }));
+    app.use(serveApi({ providers: createProvidersProcedures(container.cradle, () => {}) }));
     app.use(errorHandlerMiddleware);
 
     client = createApiClient(app);
@@ -109,8 +109,8 @@ describe('API shape contracts — real server responses', () => {
     }
   });
 
-  it('GET /api/settings/providers items match ProviderSchema', async () => {
-    const res = await client.get('/api/settings/providers');
+  it('GET /api/providers items match ProviderSchema', async () => {
+    const res = await client.get('/api/providers');
     expect(res.status).toBe(200);
     const items = (res.body as { data: unknown[] }).data;
     expect(items.length).toBeGreaterThan(0);
@@ -155,8 +155,8 @@ describe('API shape contracts — real server responses', () => {
     expect(result.success, JSON.stringify(result.error?.format())).toBe(true);
   });
 
-  it('POST /api/settings/providers response matches ProviderSchema', async () => {
-    const res = await client.post('/api/settings/providers', {
+  it('POST /api/providers response matches ProviderSchema', async () => {
+    const res = await client.post('/api/providers', {
       type: 'SONARR',
       name: 'Contract test Sonarr',
       url: 'http://localhost:8989/api/v3',
