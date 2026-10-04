@@ -61,7 +61,7 @@ describe('GET /api/automations/runs', () => {
     const query = await mediaQueryService.create({
       name: 'Test Query',
       contentType: 'movie',
-      filterValues: [],
+      filters: [],
     });
     const automation = await automationService.create({
       name: 'Nightly Cleanup',

@@ -36,13 +36,13 @@ const savedQuery: MediaQueryRecord = {
   id: 1,
   name: 'My query',
   contentType: 'movie',
-  filterValues: [],
+  filters: [],
   health: { status: 'healthy', providerStatus: [], qualificationIssues: [] },
   createdAt: '2026-01-01T00:00:00.000Z',
 };
 
 describe('useMediaQueries — save', () => {
-  it('posts registry-keyed filterValues for the given contentType, no translation', async () => {
+  it('posts registry-keyed filters for the given contentType, no translation', async () => {
     let body: unknown;
     server.use(
       mockProcedure(contract.mediaQueries.create, async ({ request }) => {
@@ -63,7 +63,7 @@ describe('useMediaQueries — save', () => {
     expect(body).toEqual({
       name: 'My query',
       contentType: 'movie',
-      filterValues: [
+      filters: [
         { ruleKey: 'tagIds', value: '1,2' },
         { ruleKey: 'hasFile', value: true },
       ],
@@ -90,7 +90,7 @@ describe('useMediaQueries — save', () => {
     expect(body).toEqual({
       name: '4k query',
       contentType: 'movie',
-      filterValues: [{ ruleKey: 'qualityProfileIds', value: { providerId: 3, ids: [5] } }],
+      filters: [{ ruleKey: 'qualityProfileIds', value: { providerId: 3, ids: [5] } }],
     });
   });
 });

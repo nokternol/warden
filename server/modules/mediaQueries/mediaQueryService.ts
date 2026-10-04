@@ -15,7 +15,7 @@ export type { FilterValue, Filter };
 export interface MediaQueryValue {
   name: string;
   contentType: ContentType;
-  filterValues: Filter[];
+  filters: Filter[];
 }
 
 export interface ProviderStatus {
@@ -41,15 +41,15 @@ export interface QueryHealth {
 /**
  * A persisted query: a `MediaQuerySpec` (contentType + clauses) given a database
  * identity and presentation metadata. The persisted form carries its single
- * include clause as the `filterValues` convenience accessor
- * (`clauses: [{ filterValues, role: 'include' }]`); the full multi-clause
+ * include clause as the `filters` convenience accessor
+ * (`clauses: [{ filters, role: 'include' }]`); the full multi-clause
  * projection is reserved for the client phase.
  */
 export interface MediaQueryRecord {
   id: number;
   name: string;
   contentType: ContentType;
-  filterValues: Filter[];
+  filters: Filter[];
   health: QueryHealth;
   createdAt: string;
 }
@@ -72,14 +72,14 @@ function isObjectShaped(value: FilterValue): boolean {
 }
 
 function computeHealth(
-  filterEntries: Filter[],
+  filters: Filter[],
   contentType: ContentType,
   activeProviderTypes: Set<MetadataProviderType>,
   activeProviderIds: Set<number>,
   automationProviderId?: number
 ): QueryHealth {
   const qualificationIssues: QualificationIssue[] = [];
-  for (const { ruleKey, value } of filterEntries) {
+  for (const { ruleKey, value } of filters) {
     if (!isInstanceScopedValue(value) || value.providerId === undefined) continue;
     const { providerId } = value;
     if (!activeProviderIds.has(providerId)) {
@@ -93,14 +93,14 @@ function computeHealth(
     }
   }
 
-  if (filterEntries.length === 0) {
+  if (filters.length === 0) {
     return { status: 'healthy', providerStatus: [], qualificationIssues: [] };
   }
 
   // Collect per-providerType requirements across all filter keys
   const providerMap = new Map<MetadataProviderType, { required: boolean; keys: string[] }>();
 
-  for (const { ruleKey } of filterEntries) {
+  for (const { ruleKey } of filters) {
     const rule = getRule(ruleKey, contentType);
     if (!rule) continue;
     for (const pt of rule.providers) {
@@ -168,21 +168,21 @@ export class MediaQueryService {
     );
 
     // Group filter value rows by mediaQueryId
-    const fvByQueryId = new Map<number, Filter[]>();
+    const filtersByQueryId = new Map<number, Filter[]>();
     for (const fv of fvRows) {
       const contentType = contentTypeByQueryId.get(fv.mediaQueryId);
       const rule = contentType ? getRule(fv.filterKey, contentType) : undefined;
       const dataType = rule?.dataType ?? 'string';
       const entry: Filter = { ruleKey: fv.filterKey, value: coerceValue(fv.value, dataType) };
-      const arr = fvByQueryId.get(fv.mediaQueryId) ?? [];
+      const arr = filtersByQueryId.get(fv.mediaQueryId) ?? [];
       arr.push(entry);
-      fvByQueryId.set(fv.mediaQueryId, arr);
+      filtersByQueryId.set(fv.mediaQueryId, arr);
     }
 
     return rows.map((row) => {
-      const filterValues = fvByQueryId.get(row.id) ?? [];
+      const filters = filtersByQueryId.get(row.id) ?? [];
       const health = computeHealth(
-        filterValues,
+        filters,
         row.contentType as ContentType,
         activeProviderTypes,
         activeProviderIds
@@ -191,7 +191,7 @@ export class MediaQueryService {
         id: row.id,
         name: row.name,
         contentType: row.contentType as ContentType,
-        filterValues,
+        filters,
         health,
         createdAt: row.createdAt.toISOString(),
       };
@@ -204,7 +204,7 @@ export class MediaQueryService {
     // `{ min: undefined, max: undefined }` for a range rule, so `inRange` would
     // silently match every item instead of rejecting or filtering correctly; a bare
     // csv string for an instance-scoped rule carries no instance and no parsed ids).
-    for (const { ruleKey, value } of draft.filterValues) {
+    for (const { ruleKey, value } of draft.filters) {
       const rule = getRule(ruleKey, draft.contentType);
       if (!rule) {
         throw new ValidationError(
@@ -236,9 +236,9 @@ export class MediaQueryService {
       .values({ name: draft.name.trim(), contentType: draft.contentType })
       .returning();
 
-    if (draft.filterValues.length > 0) {
+    if (draft.filters.length > 0) {
       await this.db.insert(mediaQueryFilterValues).values(
-        draft.filterValues.map(({ ruleKey, value }) => ({
+        draft.filters.map(({ ruleKey, value }) => ({
           mediaQueryId: row.id,
           filterKey: ruleKey,
           value: serializeValue(value),
@@ -249,7 +249,7 @@ export class MediaQueryService {
     const { types: activeProviderTypes, ids: activeProviderIds } = await this.activeProviders();
 
     const health = computeHealth(
-      draft.filterValues,
+      draft.filters,
       draft.contentType,
       activeProviderTypes,
       activeProviderIds
@@ -259,7 +259,7 @@ export class MediaQueryService {
       id: row.id,
       name: row.name,
       contentType: row.contentType as ContentType,
-      filterValues: draft.filterValues,
+      filters: draft.filters,
       health,
       createdAt: row.createdAt.toISOString(),
     };
@@ -276,14 +276,14 @@ export class MediaQueryService {
 
     const { types: activeProviderTypes, ids: activeProviderIds } = await this.activeProviders();
 
-    const filterValues: Filter[] = fvRows.map((fv) => {
+    const filters: Filter[] = fvRows.map((fv) => {
       const rule = getRule(fv.filterKey, row.contentType as ContentType);
       const dataType = rule?.dataType ?? 'string';
       return { ruleKey: fv.filterKey, value: coerceValue(fv.value, dataType) };
     });
 
     const health = computeHealth(
-      filterValues,
+      filters,
       row.contentType as ContentType,
       activeProviderTypes,
       activeProviderIds
@@ -293,7 +293,7 @@ export class MediaQueryService {
       id: row.id,
       name: row.name,
       contentType: row.contentType as ContentType,
-      filterValues,
+      filters,
       health,
       createdAt: row.createdAt.toISOString(),
     };
@@ -312,7 +312,7 @@ export class MediaQueryService {
     const record = await this.getById(queryId);
     const { types: activeProviderTypes, ids: activeProviderIds } = await this.activeProviders();
     return computeHealth(
-      record.filterValues,
+      record.filters,
       record.contentType,
       activeProviderTypes,
       activeProviderIds,

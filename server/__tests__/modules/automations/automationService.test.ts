@@ -37,7 +37,7 @@ async function seedProvider(providerService: ProviderSettingsService) {
 }
 
 async function seedQuery(queryService: MediaQueryService) {
-  return queryService.create({ name: 'Test Query', contentType: 'movie', filterValues: [] });
+  return queryService.create({ name: 'Test Query', contentType: 'movie', filters: [] });
 }
 
 describe('AutomationService', () => {
@@ -62,7 +62,7 @@ describe('AutomationService', () => {
       const query = await mediaQueryService.create({
         name: 'Movie Query',
         contentType: 'movie',
-        filterValues: [],
+        filters: [],
       });
       const provider = await providerSettingsService.create({
         type: MetadataProviderType.RADARR,
@@ -87,7 +87,7 @@ describe('AutomationService', () => {
       const query = await mediaQueryService.create({
         name: 'My Query',
         contentType: 'movie',
-        filterValues: [{ ruleKey: 'hasFile', value: true }],
+        filters: [{ ruleKey: 'hasFile', value: true }],
       });
       const provider = await providerSettingsService.create({
         type: MetadataProviderType.RADARR,
@@ -154,7 +154,7 @@ describe('AutomationService', () => {
       const query = await mediaQueryService.create({
         name: 'Movie Query',
         contentType: 'movie',
-        filterValues: [],
+        filters: [],
       });
       const provider = await providerSettingsService.create({
         type: MetadataProviderType.SONARR,
@@ -179,7 +179,7 @@ describe('AutomationService', () => {
       const query = await mediaQueryService.create({
         name: 'Show Query',
         contentType: 'series',
-        filterValues: [],
+        filters: [],
       });
       const provider = await providerSettingsService.create({
         type: MetadataProviderType.RADARR,
@@ -278,12 +278,12 @@ describe('AutomationService', () => {
       const queryA = await mediaQueryService.create({
         name: 'Include Q',
         contentType: 'movie',
-        filterValues: [],
+        filters: [],
       });
       const queryB = await mediaQueryService.create({
         name: 'Exclude Q',
         contentType: 'movie',
-        filterValues: [],
+        filters: [],
       });
 
       const created = await automationService.create({
@@ -351,7 +351,7 @@ describe('AutomationService', () => {
       const query = await mediaQueryService.create({
         name: 'Status Query',
         contentType: 'series',
-        filterValues: [],
+        filters: [],
       });
       const provider = await providerSettingsService.create({
         type: MetadataProviderType.SONARR,

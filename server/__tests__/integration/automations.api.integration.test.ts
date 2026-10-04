@@ -53,14 +53,14 @@ describe('POST /api/automations — Session C', () => {
     const movieQuery = await mediaQueryService.create({
       name: 'Movie Query',
       contentType: 'movie',
-      filterValues: [],
+      filters: [],
     });
     movieQueryId = movieQuery.id;
 
     const showQuery = await mediaQueryService.create({
       name: 'Show Query',
       contentType: 'series',
-      filterValues: [],
+      filters: [],
     });
     showQueryId = showQuery.id;
 

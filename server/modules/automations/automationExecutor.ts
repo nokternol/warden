@@ -178,7 +178,7 @@ export class AutomationExecutor {
     );
     const contentType = queryDtos[0].contentType;
     const querySpecs = automationQueries.map((s, i) => ({
-      filterValues: queryDtos[i].filterValues,
+      filters: queryDtos[i].filters,
       role: s.role,
     }));
 

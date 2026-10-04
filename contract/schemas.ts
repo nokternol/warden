@@ -84,7 +84,7 @@ export const MediaQueryRecordSchema = z
     id: z.number(),
     name: z.string(),
     contentType: ContentTypeSchema,
-    filterValues: z.array(FilterSchema),
+    filters: z.array(FilterSchema),
     health: QueryHealthSchema,
     createdAt: z.string(),
   })
@@ -151,7 +151,7 @@ export const AutomationSchema = z
 export const MediaQueryValueSchema = z.object({
   name: z.string().min(1).max(200),
   contentType: ContentTypeSchema,
-  filterValues: z.array(FilterSchema),
+  filters: z.array(FilterSchema),
 });
 
 // ─── Additional response schemas ─────────────────────────────────────────────

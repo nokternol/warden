@@ -74,7 +74,7 @@ export const MOCK_MEDIA_QUERIES: MediaQueryRecord[] = [
     id: 1,
     name: 'Unwatched movies',
     contentType: 'movie' as const,
-    filterValues: [],
+    filters: [],
     health: MOCK_HEALTH,
     createdAt: '2026-01-01T00:00:00Z',
   },
@@ -82,7 +82,7 @@ export const MOCK_MEDIA_QUERIES: MediaQueryRecord[] = [
     id: 2,
     name: 'All series',
     contentType: 'series' as const,
-    filterValues: [],
+    filters: [],
     health: MOCK_HEALTH,
     createdAt: '2026-01-01T00:00:00Z',
   },
@@ -94,13 +94,13 @@ export const mediaQueriesHandlers = [
   mockProcedure(contract.mediaQueries.create, async ({ request }) => {
     const body = (await request.json()) as Pick<
       MediaQueryRecord,
-      'name' | 'contentType' | 'filterValues'
+      'name' | 'contentType' | 'filters'
     >;
     return {
       id: 99,
       name: body.name,
       contentType: body.contentType,
-      filterValues: body.filterValues ?? [],
+      filters: body.filters ?? [],
       health: MOCK_HEALTH,
       createdAt: new Date().toISOString(),
     };

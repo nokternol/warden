@@ -59,7 +59,7 @@ describe('serveApi — the contract served over HTTP', () => {
     const query = await new MediaQueryService({ db }).create({
       name: 'Movies',
       contentType: 'movie',
-      filterValues: [],
+      filters: [],
     });
     await new AutomationService({ db }).create({
       name: 'Nightly unmonitor',

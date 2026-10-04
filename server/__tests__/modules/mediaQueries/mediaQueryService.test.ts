@@ -39,8 +39,8 @@ describe('MediaQueryService', () => {
   });
 
   it('returns all queries ordered by createdAt', async () => {
-    await service.create({ name: 'First', contentType: 'movie', filterValues: [] });
-    await service.create({ name: 'Second', contentType: 'series', filterValues: [] });
+    await service.create({ name: 'First', contentType: 'movie', filters: [] });
+    await service.create({ name: 'Second', contentType: 'series', filters: [] });
 
     const result = await service.list();
     expect(result).toHaveLength(2);
@@ -49,16 +49,16 @@ describe('MediaQueryService', () => {
   });
 
   it('returns each item with createdAt as a valid ISO 8601 string', async () => {
-    await service.create({ name: 'Q', contentType: 'movie', filterValues: [] });
+    await service.create({ name: 'Q', contentType: 'movie', filters: [] });
     const [dto] = await service.list();
     expect(dto.createdAt).toMatch(ISO_REGEX);
   });
 
-  it('returns filterValues array with registry-coerced types', async () => {
+  it('returns filters array with registry-coerced types', async () => {
     await service.create({
       name: 'Movie Q',
       contentType: 'movie',
-      filterValues: [
+      filters: [
         { ruleKey: 'hasFile', value: true },
         { ruleKey: 'year', value: { min: 2010 } },
         { ruleKey: 'title', value: 'Inception' },
@@ -66,18 +66,18 @@ describe('MediaQueryService', () => {
     });
 
     const [dto] = await service.list();
-    expect(dto.filterValues).toHaveLength(3);
-    const hasFile = dto.filterValues.find((f) => f.ruleKey === 'hasFile');
+    expect(dto.filters).toHaveLength(3);
+    const hasFile = dto.filters.find((f) => f.ruleKey === 'hasFile');
     expect(hasFile?.value).toBe(true);
-    const year = dto.filterValues.find((f) => f.ruleKey === 'year');
+    const year = dto.filters.find((f) => f.ruleKey === 'year');
     expect(year?.value).toEqual({ min: 2010 });
-    const title = dto.filterValues.find((f) => f.ruleKey === 'title');
+    const title = dto.filters.find((f) => f.ruleKey === 'title');
     expect(title?.value).toBe('Inception');
   });
 
   it('returns contentType on each dto', async () => {
-    await service.create({ name: 'Movies', contentType: 'movie', filterValues: [] });
-    await service.create({ name: 'Shows', contentType: 'series', filterValues: [] });
+    await service.create({ name: 'Movies', contentType: 'movie', filters: [] });
+    await service.create({ name: 'Shows', contentType: 'series', filters: [] });
 
     const result = await service.list();
     expect(result[0].contentType).toBe('movie');
@@ -85,7 +85,7 @@ describe('MediaQueryService', () => {
   });
 
   it('returns health: healthy when query has no filter values', async () => {
-    await service.create({ name: 'Empty', contentType: 'movie', filterValues: [] });
+    await service.create({ name: 'Empty', contentType: 'movie', filters: [] });
     const [dto] = await service.list();
     expect(dto.health.status).toBe('healthy');
     expect(dto.health.providerStatus).toEqual([]);
@@ -95,7 +95,7 @@ describe('MediaQueryService', () => {
     await service.create({
       name: 'Filtered',
       contentType: 'movie',
-      filterValues: [{ ruleKey: 'hasFile', value: true }],
+      filters: [{ ruleKey: 'hasFile', value: true }],
     });
     const [dto] = await service.list();
     // No providers configured in test DB → all optional filters degrade
@@ -116,9 +116,7 @@ describe('MediaQueryService', () => {
     await service.create({
       name: 'Dangling',
       contentType: 'movie',
-      filterValues: [
-        { ruleKey: 'qualityProfileIds', value: { providerId: provider.id, ids: [5] } },
-      ],
+      filters: [{ ruleKey: 'qualityProfileIds', value: { providerId: provider.id, ids: [5] } }],
     });
 
     const [dto] = await service.list();
@@ -138,9 +136,7 @@ describe('MediaQueryService', () => {
     await service.create({
       name: 'Qualified',
       contentType: 'movie',
-      filterValues: [
-        { ruleKey: 'qualityProfileIds', value: { providerId: provider.id, ids: [5] } },
-      ],
+      filters: [{ ruleKey: 'qualityProfileIds', value: { providerId: provider.id, ids: [5] } }],
     });
 
     const [dto] = await service.list();
@@ -161,9 +157,7 @@ describe('MediaQueryService', () => {
     const query = await service.create({
       name: 'Bound elsewhere',
       contentType: 'movie',
-      filterValues: [
-        { ruleKey: 'qualityProfileIds', value: { providerId: providerA.id, ids: [5] } },
-      ],
+      filters: [{ ruleKey: 'qualityProfileIds', value: { providerId: providerA.id, ids: [5] } }],
     });
 
     const health = await service.getHealthForAutomation(query.id, providerB.id);
@@ -187,9 +181,7 @@ describe('MediaQueryService', () => {
     const query = await service.create({
       name: 'Bound correctly',
       contentType: 'movie',
-      filterValues: [
-        { ruleKey: 'qualityProfileIds', value: { providerId: provider.id, ids: [5] } },
-      ],
+      filters: [{ ruleKey: 'qualityProfileIds', value: { providerId: provider.id, ids: [5] } }],
     });
 
     const health = await service.getHealthForAutomation(query.id, provider.id);
@@ -213,15 +205,15 @@ describe('MediaQueryService', () => {
     const created = await service.create({
       name: 'Qualified',
       contentType: 'movie',
-      filterValues: [filter],
+      filters: [filter],
     });
-    expect(created.filterValues).toEqual([filter]);
+    expect(created.filters).toEqual([filter]);
 
     const [listed] = await service.list();
-    expect(listed.filterValues).toEqual([filter]);
+    expect(listed.filters).toEqual([filter]);
 
     const fetched = await service.getById(created.id);
-    expect(fetched.filterValues).toEqual([filter]);
+    expect(fetched.filters).toEqual([filter]);
   });
 
   it('an unqualified instance-scoped value reads back as just its ids', async () => {
@@ -229,26 +221,26 @@ describe('MediaQueryService', () => {
     const created = await service.create({
       name: 'Unqualified',
       contentType: 'movie',
-      filterValues: [filter],
+      filters: [filter],
     });
-    expect(created.filterValues).toEqual([filter]);
+    expect(created.filters).toEqual([filter]);
 
     const [listed] = await service.list();
-    expect(listed.filterValues).toEqual([filter]);
+    expect(listed.filters).toEqual([filter]);
   });
 
   it('inserts and returns a DTO with correct fields', async () => {
     const dto = await service.create({
       name: 'My Query',
       contentType: 'movie',
-      filterValues: [{ ruleKey: 'year', value: { min: 2015 } }],
+      filters: [{ ruleKey: 'year', value: { min: 2015 } }],
     });
 
     expect(dto.id).toBeGreaterThan(0);
     expect(dto.name).toBe('My Query');
     expect(dto.contentType).toBe('movie');
-    expect(dto.filterValues).toHaveLength(1);
-    expect(dto.filterValues[0]).toEqual({ ruleKey: 'year', value: { min: 2015 } });
+    expect(dto.filters).toHaveLength(1);
+    expect(dto.filters[0]).toEqual({ ruleKey: 'year', value: { min: 2015 } });
     expect(dto.createdAt).toMatch(ISO_REGEX);
   });
 
@@ -256,7 +248,7 @@ describe('MediaQueryService', () => {
     const dto = await service.create({
       name: '  Padded  ',
       contentType: 'movie',
-      filterValues: [],
+      filters: [],
     });
     expect(dto.name).toBe('Padded');
   });
@@ -266,7 +258,7 @@ describe('MediaQueryService', () => {
       service.create({
         name: 'Bad',
         contentType: 'movie',
-        filterValues: [{ ruleKey: 'nonExistentKey', value: 'x' }],
+        filters: [{ ruleKey: 'nonExistentKey', value: 'x' }],
       })
     ).rejects.toThrow('nonExistentKey');
   });
@@ -276,7 +268,7 @@ describe('MediaQueryService', () => {
       service.create({
         name: 'Wrong type',
         contentType: 'movie',
-        filterValues: [{ ruleKey: 'seriesStatus', value: 'ended' }],
+        filters: [{ ruleKey: 'seriesStatus', value: 'ended' }],
       })
     ).rejects.toThrow('seriesStatus');
   });
@@ -286,7 +278,7 @@ describe('MediaQueryService', () => {
       service.create({
         name: 'Bad range',
         contentType: 'movie',
-        filterValues: [{ ruleKey: 'imdbRating', value: 8 }],
+        filters: [{ ruleKey: 'imdbRating', value: 8 }],
       })
     ).rejects.toThrow('imdbRating');
   });
@@ -296,7 +288,7 @@ describe('MediaQueryService', () => {
       service.create({
         name: 'Unexpected range',
         contentType: 'movie',
-        filterValues: [{ ruleKey: 'hasFile', value: { min: 1 } }],
+        filters: [{ ruleKey: 'hasFile', value: { min: 1 } }],
       })
     ).rejects.toThrow('hasFile');
   });
@@ -307,7 +299,7 @@ describe('MediaQueryService', () => {
         service.create({
           name: 'Wrong shape',
           contentType: 'movie',
-          filterValues: [{ ruleKey: 'tagIds', value }],
+          filters: [{ ruleKey: 'tagIds', value }],
         })
       ).rejects.toThrow('tagIds');
     }
@@ -319,7 +311,7 @@ describe('MediaQueryService', () => {
     const created = await service.create({
       name: 'To Delete',
       contentType: 'movie',
-      filterValues: [],
+      filters: [],
     });
     await service.delete(created.id);
     const list = await service.list();
@@ -330,7 +322,7 @@ describe('MediaQueryService', () => {
     const created = await service.create({
       name: 'With Filters',
       contentType: 'movie',
-      filterValues: [{ ruleKey: 'hasFile', value: true }],
+      filters: [{ ruleKey: 'hasFile', value: true }],
     });
     await service.delete(created.id);
     // Verify via list — if cascade works, no orphan rows cause issues

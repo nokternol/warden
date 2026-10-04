@@ -123,7 +123,7 @@ describe('Multi-instance Radarr — identity resolution + preview fan-out', () =
     const query = await mediaQueryService.create({
       name: 'Downloaded',
       contentType: 'movie',
-      filterValues: [{ ruleKey: 'hasFile', value: true }],
+      filters: [{ ruleKey: 'hasFile', value: true }],
     });
 
     const res = await client.get(`/api/media-queries/${query.id}/preview`);

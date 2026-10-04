@@ -28,7 +28,7 @@ describe('MediaQueryEngine', () => {
       const result = await engine.evaluate({
         source,
         contentType: 'movie',
-        clauses: [{ filterValues: [{ ruleKey: 'hasFile', value: true }], role: 'include' }],
+        clauses: [{ filters: [{ ruleKey: 'hasFile', value: true }], role: 'include' }],
       });
 
       expect(radarrIds(result as NormalizedMovie[])).toEqual([1]);
@@ -48,9 +48,9 @@ describe('MediaQueryEngine', () => {
         source,
         contentType: 'movie',
         clauses: [
-          { filterValues: [{ ruleKey: 'hasFile', value: true }], role: 'include' },
+          { filters: [{ ruleKey: 'hasFile', value: true }], role: 'include' },
           {
-            filterValues: [{ ruleKey: 'qualityProfileIds', value: { ids: [20] } }],
+            filters: [{ ruleKey: 'qualityProfileIds', value: { ids: [20] } }],
             role: 'exclude',
           },
         ],
@@ -71,7 +71,7 @@ describe('MediaQueryEngine', () => {
       const result = await engine.evaluate({
         source,
         contentType: 'movie',
-        clauses: [{ filterValues: [], role: 'include' }],
+        clauses: [{ filters: [], role: 'include' }],
       });
 
       expect(radarrIds(result as NormalizedMovie[])).toEqual([1, 2]);

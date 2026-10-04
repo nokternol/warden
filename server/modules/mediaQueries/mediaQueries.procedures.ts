@@ -18,7 +18,7 @@ export function createMediaQueryProcedures(cradle: Cradle) {
       mediaQueryService.create({
         name: input.name,
         contentType: input.contentType,
-        filterValues: input.filterValues,
+        filters: input.filters,
       })
     ),
 
@@ -36,7 +36,7 @@ export function createMediaQueryProcedures(cradle: Cradle) {
           const set = await mediaQueryEngine.evaluate({
             source,
             contentType: query.contentType,
-            clauses: [{ filterValues: query.filterValues, role: 'include' }],
+            clauses: [{ filters: query.filters, role: 'include' }],
           });
           return { providerId, name, count: set.length };
         })

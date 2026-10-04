@@ -42,14 +42,14 @@ describe('GET /api/media-queries/:id/preview', () => {
     const query = await mediaQueryService.create({
       name: 'Preview Query',
       contentType: 'movie',
-      filterValues: [],
+      filters: [],
     });
     seededQueryId = query.id;
 
     const filtered = await mediaQueryService.create({
       name: 'Downloaded Movies',
       contentType: 'movie',
-      filterValues: [{ ruleKey: 'hasFile', value: true }],
+      filters: [{ ruleKey: 'hasFile', value: true }],
     });
     filteredQueryId = filtered.id;
 
@@ -108,7 +108,7 @@ describe('GET /api/media-queries/:id/preview', () => {
     const noInstanceQuery = await mediaQueryService.create({
       name: 'No Instance',
       contentType: 'series',
-      filterValues: [],
+      filters: [],
     });
 
     const res = await client.get(`/api/media-queries/${noInstanceQuery.id}/preview`);

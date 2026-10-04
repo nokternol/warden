@@ -53,7 +53,7 @@ async function seedFixtures() {
   const query = await mediaQueryService.create({
     name: 'All Movies',
     contentType: 'movie',
-    filterValues: [],
+    filters: [],
   });
   const automation = await automationService.create({
     name: 'Nightly Cleanup',
@@ -194,7 +194,7 @@ describe('AutomationRunService', () => {
       const query = await mediaQueryService.create({
         name: 'Q',
         contentType: 'movie',
-        filterValues: [],
+        filters: [],
       });
 
       const auto1 = await automationService.create({

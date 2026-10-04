@@ -36,8 +36,8 @@ const LABELS: Record<string, string> = {
   plexAddedDaysAgoLte: 'Plex added ≤ days',
 };
 
-export function summarizeFilters(filterValues: Filter[]): string[] {
-  return filterValues.map(({ ruleKey, value }) => {
+export function summarizeFilters(filters: Filter[]): string[] {
+  return filters.map(({ ruleKey, value }) => {
     const label = LABELS[ruleKey] ?? ruleKey;
     if (typeof value === 'boolean') {
       return value ? label : `Not ${label.toLowerCase()}`;

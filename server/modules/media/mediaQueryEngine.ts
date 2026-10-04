@@ -13,7 +13,7 @@ import type { NormalizedSeries } from './series';
 
 /** One clause of a query: a set of filters and the role it plays (an included or excluded query). */
 export interface MediaQueryClause {
-  filterValues: Filter[];
+  filters: Filter[];
   role: 'include' | 'exclude';
 }
 
@@ -32,7 +32,7 @@ export interface MediaQuerySpec {
  * A `MediaQuerySpec` bound to a `MediaSource` — the engine's input. The source is
  * what the engine reads items from; the spec says what to match. A query is
  * a single-clause include spec; the browse view is the same with URL-derived
- * filterValues.
+ * filters.
  */
 export interface MediaQuery extends MediaQuerySpec {
   source: MediaSource;
@@ -42,18 +42,18 @@ export type { MediaItemSet };
 
 /**
  * The engine's match primitive: the subset of `items` satisfying every predicate
- * in `filterValues` under the registry for `contentType`. Unknown keys pass through.
+ * in `filters` under the registry for `contentType`. Unknown keys pass through.
  * A filter whose value names a `providerId` is a claim about one instance's namespace — an
  * item from another instance cannot satisfy it, so it fails the entry outright rather
  * than falling through to the predicate.
  */
 export function matchItems<T extends NormalizedMovie | NormalizedSeries>(
   items: T[],
-  filterValues: Filter[],
+  filters: Filter[],
   contentType: ContentType
 ): T[] {
   return items.filter((item) =>
-    filterValues.every(({ ruleKey, value }) => {
+    filters.every(({ ruleKey, value }) => {
       const rule = getRule(ruleKey, contentType);
       if (!rule) return true;
       if (isInstanceScopedValue(value) && value.providerId !== undefined) {
@@ -99,7 +99,7 @@ export class MediaQueryEngine {
   ): T[] {
     const queryResults: QueryResult[] = clauses.map((c) => ({
       role: c.role,
-      items: matchItems(normalized, c.filterValues, contentType)
+      items: matchItems(normalized, c.filters, contentType)
         .map((i) => itemKey(i))
         .filter((k): k is string => k !== undefined),
     }));

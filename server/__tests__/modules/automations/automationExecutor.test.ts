@@ -133,10 +133,10 @@ async function seedSonarrProvider(providerSettingsService: ProviderSettingsServi
 
 async function seedMediaQuery(
   mediaQueryService: MediaQueryService,
-  filterValues: Filter[] = [],
+  filters: Filter[] = [],
   contentType: ContentType = 'movie'
 ) {
-  return mediaQueryService.create({ name: 'Test Query', contentType, filterValues });
+  return mediaQueryService.create({ name: 'Test Query', contentType, filters });
 }
 
 async function seedAutomation(
@@ -809,7 +809,7 @@ describe('AutomationExecutor', () => {
           id: 1,
           name: 'Q',
           contentType: 'movie' as const,
-          filterValues: [],
+          filters: [],
           health: { status: 'healthy' as const, providerStatus: [] },
           createdAt: new Date().toISOString(),
         }),
@@ -887,7 +887,7 @@ describe('AutomationExecutor', () => {
           id: 1,
           name: 'Q',
           contentType: 'movie' as const,
-          filterValues: [],
+          filters: [],
           health: { status: 'healthy' as const, providerStatus: [] },
           createdAt: new Date().toISOString(),
         }),

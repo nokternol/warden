@@ -82,7 +82,7 @@ describe('AutomationExecutor writes to automation_runs', () => {
     const query = await mediaQueryService.create({
       name: 'Q',
       contentType: 'movie',
-      filterValues: [],
+      filters: [],
     });
     const automation = await automationService.create({
       name: 'Nightly',
@@ -116,7 +116,7 @@ describe('AutomationExecutor writes to automation_runs', () => {
     const query = await mediaQueryService.create({
       name: 'Q',
       contentType: 'movie',
-      filterValues: [],
+      filters: [],
     });
     const automation = await automationService.create({
       name: 'Nightly',
@@ -146,7 +146,7 @@ describe('AutomationExecutor writes to automation_runs', () => {
       const query = await mediaQueryService.create({
         name: 'Q',
         contentType: 'movie',
-        filterValues: [],
+        filters: [],
       });
       const automation = await automationService.create({
         name: 'Nightly',

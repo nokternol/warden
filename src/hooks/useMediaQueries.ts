@@ -27,9 +27,9 @@ export function useMediaQueries() {
   const save = async (
     name: string,
     contentType: ContentType,
-    filterValues: Filter[]
+    filters: Filter[]
   ): Promise<MediaQueryRecord> => {
-    const query = await api.mediaQueries.create({ name, contentType, filterValues });
+    const query = await api.mediaQueries.create({ name, contentType, filters });
     await mutate();
     return query;
   };

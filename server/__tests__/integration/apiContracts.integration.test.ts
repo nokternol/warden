@@ -52,7 +52,7 @@ describe('API shape contracts — real server responses', () => {
     const query = await mediaQueryService.create({
       name: 'Test Query',
       contentType: 'movie',
-      filterValues: [{ ruleKey: 'watched', value: true }],
+      filters: [{ ruleKey: 'watched', value: true }],
     });
     const automation = await automationService.create({
       name: 'Test Automation',
@@ -126,7 +126,7 @@ describe('API shape contracts — real server responses', () => {
     const res = await client.post('/api/media-queries', {
       name: 'Contract test query',
       contentType: 'series',
-      filterValues: [{ ruleKey: 'monitored', value: true }],
+      filters: [{ ruleKey: 'monitored', value: true }],
     });
     expect(res.status).toBe(200);
     const result = MediaQueryRecordSchema.safeParse((res.body as { data: unknown }).data);
