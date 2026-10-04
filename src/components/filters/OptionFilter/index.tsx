@@ -35,7 +35,7 @@ export interface OptionFilterProps<T extends string> {
   /** Dimension label displayed before the control. Omit when context is clear. */
   label?: string;
   /** Non-default options. Do not include an "All" entry — that state is implicit. */
-  options: OptionFilterOption<T>[];
+  options: readonly OptionFilterOption<T>[];
   /** Current value. `undefined` means "All" / nothing selected. */
   value: T | undefined;
   onChange: (v: T | undefined) => void;

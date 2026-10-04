@@ -864,57 +864,6 @@ function booleanOptions(rule: MediaRuleDescriptor) {
   ];
 }
 
-// The segment label shown beside an enum control's options. Defaults to the
-// registry's own `label`, which reads fine standalone but is occasionally
-// redundant next to the FilterGroup it renders inside (e.g. "TMDB status"
-// under a "TMDB" heading) — override only where that's the case.
-const SEGMENT_LABEL_OVERRIDES: Partial<Record<string, string | undefined>> = {
-  seriesStatus: 'Status',
-  seriesType: 'Type',
-  overseerrRequestStatus: 'Status',
-  tmdbStatus: undefined,
-};
-
-function segmentLabel(rule: MediaRuleDescriptor): string | undefined {
-  return rule.key in SEGMENT_LABEL_OVERRIDES ? SEGMENT_LABEL_OVERRIDES[rule.key] : rule.label;
-}
-
-// Fixed option sets for the enum-shaped string/number rules. A string/number
-// rule outside this table has no known enum and no free-text/number control
-// is rendered for it yet (matches pre-Stage-2d: `certification`, a
-// csv-strings rule with no lookup source either, rendered nothing).
-const ENUM_OPTIONS: Record<string, { value: string; label: string }[]> = {
-  seriesStatus: [
-    { value: 'continuing', label: 'Continuing' },
-    { value: 'ended', label: 'Ended' },
-  ],
-  seriesType: [
-    { value: 'standard', label: 'Standard' },
-    { value: 'anime', label: 'Anime' },
-    { value: 'daily', label: 'Daily' },
-  ],
-  tmdbStatus: [
-    { value: 'Released', label: 'Released' },
-    { value: 'In Production', label: 'In Production' },
-    { value: 'Ended', label: 'Ended' },
-    { value: 'Returning Series', label: 'Returning Series' },
-    { value: 'Canceled', label: 'Canceled' },
-  ],
-  overseerrRequestStatus: [
-    { value: '1', label: 'Pending' },
-    { value: '2', label: 'Approved' },
-    { value: '3', label: 'Declined' },
-    { value: '4', label: 'Available' },
-  ],
-  radarrStatus: [
-    { value: 'tba', label: 'TBA' },
-    { value: 'announced', label: 'Announced' },
-    { value: 'inCinemas', label: 'In Cinemas' },
-    { value: 'released', label: 'Released' },
-    { value: 'deleted', label: 'Deleted' },
-  ],
-};
-
 // csv-ids / csv-strings rules need an option *list*, sourced from `lookups`
 // rather than the registry (tag/quality-profile/genre/network values are
 // library data, not part of the rule vocabulary). Only the handful of keys
@@ -986,8 +935,7 @@ function csvStringOptions(
 }
 
 /** Mirrors RuleControl's switch: true only for a rule/scope RuleControl would
- *  actually render something for. `string`/`number` rules with no ENUM_OPTIONS
- *  entry and `csv-ids`/`csv-strings` rules with no lookup source (e.g.
+ *  actually render something for. `string`/`number` rules with no `options` and `csv-ids`/`csv-strings` rules with no lookup source (e.g.
  *  `certification` today) render null — FilterPicker must not offer those, or
  *  "adding" one produces a labeled group with nothing inside it. */
 function ruleRendersControl(
@@ -1001,7 +949,7 @@ function ruleRendersControl(
       return true;
     case 'string':
     case 'number':
-      return ENUM_OPTIONS[rule.key] !== undefined;
+      return rule.options !== undefined;
     case 'csv-ids':
       return csvIdOptions(rule, scope, lookups) !== null;
     case 'csv-strings':
@@ -1049,7 +997,7 @@ function conditionLabel(rule: MediaRuleDescriptor, value: FilterValue): string |
     }
     case 'string':
     case 'number': {
-      const options = ENUM_OPTIONS[rule.key];
+      const options = rule.options;
       const strValue = String(value);
       return options ? (options.find((o) => o.value === strValue)?.label ?? null) : strValue;
     }
@@ -1133,9 +1081,9 @@ function RuleControl({
 
     case 'string':
     case 'number': {
-      const options = ENUM_OPTIONS[rule.key];
+      const options = rule.options;
       if (!options) return null;
-      const label = segmentLabel(rule);
+      const label = rule.shortLabel ?? rule.label;
       const control = (
         <OptionFilter
           variant={variant}

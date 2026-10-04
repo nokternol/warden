@@ -115,6 +115,11 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Status',
     contentTypes: ['series'],
     dataType: 'string',
+    options: [
+      { value: 'continuing', label: 'Continuing' },
+      { value: 'ended', label: 'Ended' },
+    ],
+    shortLabel: 'Status',
     providers: ['SONARR'],
     required: false,
   },
@@ -147,6 +152,12 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Type',
     contentTypes: ['series'],
     dataType: 'string',
+    options: [
+      { value: 'standard', label: 'Standard' },
+      { value: 'anime', label: 'Anime' },
+      { value: 'daily', label: 'Daily' },
+    ],
+    shortLabel: 'Type',
     providers: ['SONARR'],
     required: false,
   },
@@ -204,6 +215,14 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'TMDB Status',
     contentTypes: ['movie', 'series'],
     dataType: 'string',
+    options: [
+      { value: 'Released', label: 'Released' },
+      { value: 'In Production', label: 'In Production' },
+      { value: 'Ended', label: 'Ended' },
+      { value: 'Returning Series', label: 'Returning Series' },
+      { value: 'Canceled', label: 'Canceled' },
+    ],
+    shortLabel: 'Status',
     providers: ['TMDB'],
     required: false,
   },
@@ -212,6 +231,13 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Status',
     contentTypes: ['movie', 'series'],
     dataType: 'number',
+    options: [
+      { value: '1', label: 'Pending' },
+      { value: '2', label: 'Approved' },
+      { value: '3', label: 'Declined' },
+      { value: '4', label: 'Available' },
+    ],
+    shortLabel: 'Status',
     providers: ['OVERSEERR'],
     required: false,
   },
@@ -369,6 +395,13 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     label: 'Radarr status',
     contentTypes: ['movie'],
     dataType: 'string',
+    options: [
+      { value: 'tba', label: 'TBA' },
+      { value: 'announced', label: 'Announced' },
+      { value: 'inCinemas', label: 'In Cinemas' },
+      { value: 'released', label: 'Released' },
+      { value: 'deleted', label: 'Deleted' },
+    ],
     providers: ['RADARR'],
     required: false,
   },
@@ -1299,5 +1332,28 @@ describe('MediaFilterBar — renders a rule it has never seen', () => {
     await addFilter(user, 'Remaster');
     expect(screen.getByRole('button', { name: 'Remastered' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Original cut' })).toBeInTheDocument();
+  });
+
+  it("offers an enum rule's descriptor options under its short label", async () => {
+    const user = setupUser();
+    const hdrFormat: MediaRuleDescriptor = {
+      key: 'hdrFormat',
+      label: 'HDR format',
+      contentTypes: ['movie'],
+      dataType: 'string',
+      providers: ['RADARR'],
+      required: false,
+      options: [
+        { value: 'dolbyVision', label: 'Dolby Vision' },
+        { value: 'hdr10', label: 'HDR10' },
+      ],
+      shortLabel: 'HDR',
+    };
+    const onRuleChange = vi.fn();
+    render(<MediaFilterBar {...makeProps({ rules: [hdrFormat], onRuleChange })} />);
+    await addFilter(user, 'HDR format');
+    expect(screen.getByText('HDR')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Dolby Vision' }));
+    expect(onRuleChange).toHaveBeenCalledWith('movie', 'hdrFormat', 'dolbyVision');
   });
 });
