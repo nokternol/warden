@@ -428,9 +428,11 @@ Earlier entries in this ledger use the names that were current when they healed 
   or numeric values, serves every multi-value rule. It takes the selection and emits the next one as an
   array, shows options under a group heading when they carry one (the bar supplies the instance as the
   group when a content type has several), explains a selection that crosses groups, is operable by
-  keyboard end to end, and has a clear action that empties the selection. Option grouping and the
+  keyboard end to end, and has a clear action, pinned below the scrolling list, that empties the selection. Option grouping and the
   qualifying instance are worked out in `MediaFilterBar`, which converts between the stored value and
-  the control's arrays at the call site.
+  the control's arrays at the call site. The bar's other controls (`TextFilter`, `NumberRangeFilter`,
+  `MobileYearInputs`) moved to `src/components/filters/` too, so the bar keeps only layout, the
+  rule-to-control mapping and change dispatch.
   `MultiSelectDropdown`, `StringMultiSelectDropdown` and the bar's CSV helpers are deleted. Filter
   state still holds a multi-value selection as one comma-separated string; `multiValueFilter` in
   `src/lib` is the only code that reads or writes it, shared by the bar and `toFilters`.
