@@ -61,10 +61,15 @@ function relativeTime(isoOrDate: string | Date): string {
   return past ? `${d}d ago` : `in ${d}d`;
 }
 
+const ITEM_NOUNS: Record<AutomationPreview['contentType'], { one: string; many: string }> = {
+  movie: { one: 'movie', many: 'movies' },
+  series: { one: 'series', many: 'series' },
+};
+
 /** The blast-radius phrase for a preview, e.g. "will affect 214 movies". */
 function affectedItems({ count, contentType }: AutomationPreview): string {
-  const noun = contentType === 'series' ? 'series' : 'movies';
-  return `will affect ${count} ${noun}`;
+  const nouns = ITEM_NOUNS[contentType];
+  return `will affect ${count} ${count === 1 ? nouns.one : nouns.many}`;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
