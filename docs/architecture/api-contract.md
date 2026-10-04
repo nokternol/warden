@@ -48,7 +48,7 @@ The contract uses [oRPC](https://orpc.dev) in contract-first mode, with Zod 4 sc
   images). [`defaultDenyAuth.integration.test.ts`](ref:path:server/__tests__/integration/defaultDenyAuth.integration.test.ts)
   pins this down. It requires the contract's `public` marks to be exactly that allowlist. With
   `BYPASS_AUTH` off, it also walks the contract against the assembled router: every procedure outside the
-  allowlist must refuse an anonymous call, and every one on it must answer. Adding a public procedure
+  allowlist must refuse an anonymous call, and none on it may be refused by the guard. Adding a public procedure
   is therefore a reviewed change to that test. The procedure context carries the user that
   `checkUser` attached from the session, and the session itself, which sign-in starts and sign-out
   destroys.
