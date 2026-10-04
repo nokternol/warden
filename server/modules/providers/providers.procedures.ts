@@ -104,6 +104,13 @@ export function createProvidersProcedures(
 ) {
   const { providerSettingsService, providerFactory, config, scope } = cradle;
 
+  /** Refuses a provider type the scope declaration defers. */
+  function assertOfferedType(type: ProviderType): void {
+    if (!isOfferedProviderType(scope, type)) {
+      throw new ValidationError(`Provider type ${type} is not offered`);
+    }
+  }
+
   /** Refuses settings that enable a task the scope declaration defers for this provider's type. */
   async function assertEnablesOnlyOfferedTasks(
     providerId: number,
@@ -128,9 +135,7 @@ export function createProvidersProcedures(
     list: api.providers.list.handler(async () => providerSettingsService.list()),
 
     create: api.providers.create.handler(async ({ input }) => {
-      if (!isOfferedProviderType(scope, input.type)) {
-        throw new ValidationError(`Provider type ${input.type} is not offered`);
-      }
+      assertOfferedType(input.type);
       return providerSettingsService.create({ ...input, type: input.type as MetadataProviderType });
     }),
 
@@ -149,9 +154,7 @@ export function createProvidersProcedures(
     }),
 
     test: api.providers.test.handler(async ({ input }) => {
-      if (!isOfferedProviderType(scope, input.type)) {
-        throw new ValidationError(`Provider type ${input.type} is not offered`);
-      }
+      assertOfferedType(input.type);
       try {
         await probeConnection(input.type as MetadataProviderType, input.url, input.apiKey);
         return { ok: true };
