@@ -90,6 +90,9 @@ export default function AddProviderForm({
       className="p-4 border border-primary/30 rounded-lg bg-surface-panel space-y-4"
     >
       <div className="text-sm font-medium text-text-primary">Add provider</div>
+      {types.length === 0 && (
+        <p className="text-xs text-text-muted">No provider types are available to add.</p>
+      )}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label htmlFor="add-type" className="block text-xs text-text-secondary mb-1">
@@ -197,7 +200,7 @@ export default function AddProviderForm({
         <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" variant="primary" size="sm">
+        <Button type="submit" variant="primary" size="sm" disabled={!chosen}>
           Save
         </Button>
       </div>

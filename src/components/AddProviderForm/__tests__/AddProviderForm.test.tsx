@@ -114,4 +114,11 @@ describe('AddProviderForm', () => {
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ type: 'PLEX' }));
   });
+
+  it('says no provider types are available, and cannot be saved, when none are served', () => {
+    render(<AddProviderForm types={[]} onSubmit={vi.fn()} onCancel={vi.fn()} />);
+
+    expect(screen.queryByText(/no provider types are available/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
+  });
 });
