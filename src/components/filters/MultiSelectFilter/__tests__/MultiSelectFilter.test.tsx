@@ -130,3 +130,35 @@ describe('MultiSelectFilter — boundaries', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 });
+
+describe('MultiSelectFilter — clearing', () => {
+  it('empties the selection with the clear action, by pointer', async () => {
+    const onChange = vi.fn();
+    const user = setupUser();
+    render(<MultiSelectFilter label="Tags" options={TAGS} selected={[1, 3]} onChange={onChange} />);
+    await user.click(screen.getByRole('button', { name: /tags, 2 selected/i }));
+    await user.click(screen.getByRole('menuitem', { name: /clear/i }));
+    expect(onChange).toHaveBeenCalledWith([]);
+  });
+
+  it('empties the selection with the clear action, by keyboard, returning focus to the trigger', async () => {
+    const onChange = vi.fn();
+    const user = setupUser();
+    render(<MultiSelectFilter label="Tags" options={TAGS} selected={[1]} onChange={onChange} />);
+    const trigger = screen.getByRole('button', { name: /tags, 1 selected/i });
+    trigger.focus();
+    await user.keyboard('{ArrowDown}{ArrowDown}{ArrowDown}{ArrowDown}');
+    expect(screen.getByRole('menuitem', { name: /clear/i })).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(onChange).toHaveBeenCalledWith([]);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  it('offers no clear action when nothing is selected', async () => {
+    const user = setupUser();
+    render(<MultiSelectFilter label="Tags" options={TAGS} selected={[]} onChange={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: /tags/i }));
+    expect(screen.queryByRole('menuitem', { name: /clear/i })).not.toBeInTheDocument();
+  });
+});

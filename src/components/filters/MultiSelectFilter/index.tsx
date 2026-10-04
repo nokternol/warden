@@ -14,6 +14,10 @@ import { useEffect, useId, useRef, useState } from 'react';
 // option; ArrowDown/ArrowUp move between options across groups; Space/Enter
 // toggle the focused option; ArrowUp from the first option or Escape returns
 // focus to the trigger (Escape also closes the menu).
+//
+// While anything is selected the menu ends with a "Clear selection" item, the
+// last stop in the same keyboard order. It emits an empty selection and
+// returns focus to the trigger.
 
 export interface MultiSelectOption<T extends string | number> {
   value: T;
@@ -100,7 +104,15 @@ export function MultiSelectFilter<T extends string | number>({
     }
   };
 
-  const onOptionKeyDown = (e: React.KeyboardEvent, option: MultiSelectOption<T>, index: number) => {
+  const hasClearItem = activeCount > 0;
+  const itemCount = renderOrder.length + (hasClearItem ? 1 : 0);
+
+  const clearSelection = () => {
+    onChange([]);
+    closeToTrigger();
+  };
+
+  const onItemKeyDown = (e: React.KeyboardEvent, index: number, activate: () => void) => {
     switch (e.key) {
       case 'Escape':
         e.preventDefault();
@@ -108,7 +120,7 @@ export function MultiSelectFilter<T extends string | number>({
         break;
       case 'ArrowDown':
         e.preventDefault();
-        itemRefs.current[Math.min(index + 1, renderOrder.length - 1)]?.focus();
+        itemRefs.current[Math.min(index + 1, itemCount - 1)]?.focus();
         break;
       case 'ArrowUp':
         e.preventDefault();
@@ -118,7 +130,7 @@ export function MultiSelectFilter<T extends string | number>({
       case 'Enter':
       case ' ':
         e.preventDefault();
-        toggle(option.value);
+        activate();
         break;
     }
   };
@@ -192,7 +204,7 @@ export function MultiSelectFilter<T extends string | number>({
                     aria-checked={checked}
                     tabIndex={-1}
                     onClick={() => toggle(option.value)}
-                    onKeyDown={(e) => onOptionKeyDown(e, option, index)}
+                    onKeyDown={(e) => onItemKeyDown(e, index, () => toggle(option.value))}
                     className="flex items-center gap-2 px-3 py-2.5 text-xs text-text-secondary hover:bg-surface-hover focus:bg-surface-hover focus:outline-none cursor-pointer select-none"
                   >
                     <span
@@ -225,6 +237,20 @@ export function MultiSelectFilter<T extends string | number>({
               })}
             </div>
           ))}
+          {hasClearItem && (
+            <div
+              ref={(el) => {
+                itemRefs.current[renderOrder.length] = el;
+              }}
+              role="menuitem"
+              tabIndex={-1}
+              onClick={clearSelection}
+              onKeyDown={(e) => onItemKeyDown(e, renderOrder.length, clearSelection)}
+              className="border-t border-border mt-1 px-3 py-2.5 text-xs text-text-secondary hover:bg-surface-hover focus:bg-surface-hover focus:outline-none cursor-pointer select-none"
+            >
+              Clear selection
+            </div>
+          )}
         </div>
       )}
     </div>
