@@ -20,7 +20,7 @@ const EMPTY_FILTER_STATE: FilterState = {
 };
 
 // Mirrors GET /api/rules' provider-gated MediaRuleDescriptor projection
-// for a RADARR + SONARR + TAUTULLI library — matches ALL_PROVIDERS below.
+// for a RADARR + SONARR + TAUTULLI library.
 const FIXTURE_RULES: MediaRuleDescriptor[] = [
   {
     key: 'title',
@@ -41,6 +41,7 @@ const FIXTURE_RULES: MediaRuleDescriptor[] = [
   {
     key: 'watched',
     label: 'Watched',
+    group: 'Play History',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     valueLabels: { true: 'Watched', false: 'Unwatched' },
@@ -50,6 +51,7 @@ const FIXTURE_RULES: MediaRuleDescriptor[] = [
   {
     key: 'addedDaysAgo',
     label: 'Added (days ago)',
+    group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: ['RADARR', 'SONARR'],
@@ -58,6 +60,7 @@ const FIXTURE_RULES: MediaRuleDescriptor[] = [
   {
     key: 'sizeOnDiskGb',
     label: 'Size on disk (GB)',
+    group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: ['RADARR', 'SONARR'],
@@ -66,6 +69,7 @@ const FIXTURE_RULES: MediaRuleDescriptor[] = [
   {
     key: 'hasFile',
     label: 'Has file',
+    group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     valueLabels: { true: 'Downloaded', false: 'Missing' },
@@ -75,6 +79,7 @@ const FIXTURE_RULES: MediaRuleDescriptor[] = [
   {
     key: 'tagIds',
     label: 'Tags',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'instance-ids',
     lookup: 'tags',
@@ -84,6 +89,7 @@ const FIXTURE_RULES: MediaRuleDescriptor[] = [
   {
     key: 'qualityProfileIds',
     label: 'Quality profile',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'instance-ids',
     lookup: 'qualityProfiles',
@@ -93,6 +99,7 @@ const FIXTURE_RULES: MediaRuleDescriptor[] = [
   {
     key: 'genres',
     label: 'Genres',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
     lookup: 'genres',
@@ -102,6 +109,7 @@ const FIXTURE_RULES: MediaRuleDescriptor[] = [
   {
     key: 'imdbRating',
     label: 'IMDB rating',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'range',
     providers: ['RADARR'],
@@ -110,6 +118,7 @@ const FIXTURE_RULES: MediaRuleDescriptor[] = [
   {
     key: 'monitored',
     label: 'Monitored',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'boolean',
     valueLabels: { true: 'Monitored', false: 'Unmonitored' },
@@ -119,6 +128,7 @@ const FIXTURE_RULES: MediaRuleDescriptor[] = [
   {
     key: 'seriesStatus',
     label: 'Series status',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'string',
     options: [
@@ -132,6 +142,7 @@ const FIXTURE_RULES: MediaRuleDescriptor[] = [
   {
     key: 'tagIds',
     label: 'Tags',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'instance-ids',
     lookup: 'tags',
@@ -141,6 +152,7 @@ const FIXTURE_RULES: MediaRuleDescriptor[] = [
   {
     key: 'qualityProfileIds',
     label: 'Quality profile',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'instance-ids',
     lookup: 'qualityProfiles',
@@ -150,6 +162,7 @@ const FIXTURE_RULES: MediaRuleDescriptor[] = [
   {
     key: 'genres',
     label: 'Genres',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'csv-strings',
     lookup: 'genres',
@@ -159,6 +172,7 @@ const FIXTURE_RULES: MediaRuleDescriptor[] = [
   {
     key: 'seriesType',
     label: 'Series type',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'string',
     options: [
@@ -173,6 +187,7 @@ const FIXTURE_RULES: MediaRuleDescriptor[] = [
   {
     key: 'network',
     label: 'Network',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'csv-strings',
     lookup: 'networks',
@@ -182,6 +197,7 @@ const FIXTURE_RULES: MediaRuleDescriptor[] = [
   {
     key: 'communityRating',
     label: 'Community rating',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
     providers: ['SONARR'],
@@ -190,6 +206,7 @@ const FIXTURE_RULES: MediaRuleDescriptor[] = [
   {
     key: 'ended',
     label: 'Ended',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'boolean',
     valueLabels: { true: 'Finished', false: 'Running' },
@@ -199,6 +216,7 @@ const FIXTURE_RULES: MediaRuleDescriptor[] = [
   {
     key: 'lastAiredDaysAgo',
     label: 'Last aired (days ago)',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
     providers: ['SONARR'],
@@ -207,6 +225,7 @@ const FIXTURE_RULES: MediaRuleDescriptor[] = [
   {
     key: 'episodePercentage',
     label: 'Episode completion (%)',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
     providers: ['SONARR'],
@@ -215,6 +234,7 @@ const FIXTURE_RULES: MediaRuleDescriptor[] = [
   {
     key: 'lastWatchedDaysAgo',
     label: 'Last watched (days ago)',
+    group: 'Play History',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: ['TAUTULLI'],
@@ -275,8 +295,6 @@ const LOOKUPS = {
   ],
 };
 
-const ALL_PROVIDERS = new Set(['RADARR', 'SONARR', 'TAUTULLI']);
-
 // ─── Controlled wrapper ───────────────────────────────────────────────────────
 
 function isBucketActive(bucket: Record<string, FilterValue>, skipEmptyTitle = false): boolean {
@@ -330,7 +348,6 @@ function Controlled({
       movies={emptySlice<ManagedMovie>()}
       series={emptySlice<ManagedSeries>()}
       lookups={LOOKUPS}
-      configuredTypes={ALL_PROVIDERS}
       sources={{
         movie: {
           contentType: 'movie',

@@ -75,6 +75,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'watched',
     label: 'Watched',
+    group: 'Play History',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     valueLabels: { true: 'Watched', false: 'Unwatched' },
@@ -84,6 +85,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'addedDaysAgo',
     label: 'Added (days ago)',
+    group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: ['RADARR', 'SONARR', 'PLEX'],
@@ -92,6 +94,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'sizeOnDiskGb',
     label: 'Size on disk (GB)',
+    group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: ['RADARR', 'SONARR'],
@@ -100,6 +103,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'certification',
     label: 'Certification',
+    group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     providers: ['RADARR', 'SONARR', 'TMDB', 'OMDB'],
@@ -108,6 +112,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'hasFile',
     label: 'Has file',
+    group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     valueLabels: { true: 'Downloaded', false: 'Missing' },
@@ -117,6 +122,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'tagIds',
     label: 'Tags',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'instance-ids',
     lookup: 'tags',
@@ -127,6 +133,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'qualityProfileIds',
     label: 'Quality profile',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'instance-ids',
     lookup: 'qualityProfiles',
@@ -137,6 +144,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'genres',
     label: 'Genres',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
     lookup: 'genres',
@@ -146,6 +154,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'imdbRating',
     label: 'IMDB rating',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'range',
     providers: ['RADARR', 'OMDB'],
@@ -154,6 +163,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'monitored',
     label: 'Monitored',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'boolean',
     valueLabels: { true: 'Monitored', false: 'Unmonitored' },
@@ -163,6 +173,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'seriesStatus',
     label: 'Series status',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'string',
     options: [
@@ -176,6 +187,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'tagIds',
     label: 'Tags',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'instance-ids',
     lookup: 'tags',
@@ -186,6 +198,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'qualityProfileIds',
     label: 'Quality profile',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'instance-ids',
     lookup: 'qualityProfiles',
@@ -196,6 +209,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'genres',
     label: 'Genres',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'csv-strings',
     lookup: 'genres',
@@ -205,6 +219,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'seriesType',
     label: 'Series type',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'string',
     options: [
@@ -219,6 +234,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'network',
     label: 'Network',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'csv-strings',
     lookup: 'networks',
@@ -228,6 +244,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'communityRating',
     label: 'Community rating',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
     providers: ['SONARR', 'TMDB'],
@@ -236,6 +253,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'ended',
     label: 'Ended',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'boolean',
     valueLabels: { true: 'Finished', false: 'Running' },
@@ -245,6 +263,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'lastAiredDaysAgo',
     label: 'Last aired (days ago)',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
     providers: ['SONARR'],
@@ -253,6 +272,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'episodePercentage',
     label: 'Episode completion (%)',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
     providers: ['SONARR'],
@@ -261,6 +281,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'tmdbStatus',
     label: 'TMDB status',
+    group: 'TMDB',
     contentTypes: ['movie', 'series'],
     dataType: 'string',
     options: [
@@ -277,6 +298,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'overseerrRequestStatus',
     label: 'Overseerr request status',
+    group: 'Requests',
     contentTypes: ['movie', 'series'],
     dataType: 'number',
     options: [
@@ -292,6 +314,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'overseerrHasIssue',
     label: 'Overseerr has issue',
+    group: 'Requests',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     valueLabels: { true: 'Has Issue', false: 'No Issue' },
@@ -301,6 +324,7 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
   {
     key: 'lastWatchedDaysAgo',
     label: 'Last watched (days ago)',
+    group: 'Play History',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: ['TAUTULLI', 'PLEX'],

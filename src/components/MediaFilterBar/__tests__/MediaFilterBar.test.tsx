@@ -30,6 +30,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'watched',
     label: 'Watched',
+    group: 'Play History',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     valueLabels: { true: 'Watched', false: 'Unwatched' },
@@ -39,6 +40,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'addedDaysAgo',
     label: 'Added',
+    group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: ['RADARR', 'SONARR'],
@@ -47,6 +49,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'sizeOnDiskGb',
     label: 'Size (GB)',
+    group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: ['RADARR', 'SONARR'],
@@ -55,6 +58,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'hasFile',
     label: 'Has file',
+    group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     valueLabels: { true: 'Downloaded', false: 'Missing' },
@@ -64,6 +68,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'tagIds',
     label: 'Movie Tags',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'instance-ids',
     lookup: 'tags',
@@ -73,6 +78,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'qualityProfileIds',
     label: 'Movie Quality',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'instance-ids',
     lookup: 'qualityProfiles',
@@ -82,6 +88,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'genres',
     label: 'Movie Genres',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
     lookup: 'genres',
@@ -91,6 +98,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'imdbRating',
     label: 'IMDB Rating',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'range',
     providers: ['RADARR'],
@@ -99,6 +107,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'studio',
     label: 'Movie Studio',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
     lookup: 'studio',
@@ -108,6 +117,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'monitored',
     label: 'Monitored',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'boolean',
     valueLabels: { true: 'Monitored', false: 'Unmonitored' },
@@ -117,6 +127,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'seriesStatus',
     label: 'Status',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'string',
     options: [
@@ -130,6 +141,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'tagIds',
     label: 'Series Tags',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'instance-ids',
     lookup: 'tags',
@@ -139,6 +151,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'qualityProfileIds',
     label: 'Series Quality',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'instance-ids',
     lookup: 'qualityProfiles',
@@ -148,6 +161,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'genres',
     label: 'Series Genres',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'csv-strings',
     lookup: 'genres',
@@ -157,6 +171,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'seriesType',
     label: 'Type',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'string',
     options: [
@@ -171,6 +186,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'network',
     label: 'Network',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'csv-strings',
     lookup: 'networks',
@@ -180,6 +196,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'studio',
     label: 'Series Studio',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'csv-strings',
     lookup: 'studio',
@@ -189,6 +206,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'communityRating',
     label: 'Sonarr Rating',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
     providers: ['SONARR'],
@@ -197,6 +215,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'ended',
     label: 'Ended',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'boolean',
     valueLabels: { true: 'Finished', false: 'Running' },
@@ -206,6 +225,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'lastAiredDaysAgo',
     label: 'Last Aired',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
     providers: ['SONARR'],
@@ -214,6 +234,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'episodePercentage',
     label: '% Episodes',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
     providers: ['SONARR'],
@@ -222,6 +243,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'tmdbStatus',
     label: 'TMDB Status',
+    group: 'TMDB',
     contentTypes: ['movie', 'series'],
     dataType: 'string',
     options: [
@@ -238,6 +260,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'overseerrRequestStatus',
     label: 'Status',
+    group: 'Requests',
     contentTypes: ['movie', 'series'],
     dataType: 'number',
     options: [
@@ -253,6 +276,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'overseerrHasIssue',
     label: 'Has Issue',
+    group: 'Requests',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     valueLabels: { true: 'Has Issue', false: 'No Issue' },
@@ -262,6 +286,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'lastWatchedDaysAgo',
     label: 'Last Watched',
+    group: 'Play History',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: ['TAUTULLI', 'PLEX'],
@@ -273,6 +298,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
     // the picker offering a rule it can't actually render a control for.
     key: 'certification',
     label: 'Certification',
+    group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     providers: ['RADARR', 'SONARR', 'TMDB', 'OMDB'],
@@ -281,6 +307,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'fileContainer',
     label: 'File container',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     lookup: 'fileContainers',
@@ -290,6 +317,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'videoCodec',
     label: 'Video codec',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     lookup: 'videoCodecs',
@@ -299,6 +327,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'audioCodec',
     label: 'Audio codec',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     lookup: 'audioCodecs',
@@ -308,6 +337,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'fileResolution',
     label: 'File resolution',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     lookup: 'fileResolutions',
@@ -317,6 +347,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'labels',
     label: 'Labels',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     lookup: 'labels',
@@ -326,6 +357,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'fileSizeBytes',
     label: 'File size (bytes)',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: ['PLEX'],
@@ -334,6 +366,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'releaseDaysAgo',
     label: 'Release date (days ago)',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: ['PLEX'],
@@ -342,6 +375,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'runtimeMinutes',
     label: 'Runtime (minutes)',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'range',
     providers: ['PLEX'],
@@ -350,6 +384,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'movieFileCount',
     label: 'Movie file count',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'range',
     providers: ['RADARR'],
@@ -358,6 +393,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'releaseGroups',
     label: 'Release group',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
     lookup: 'releaseGroups',
@@ -367,6 +403,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'inCinemasDaysAgo',
     label: 'In cinemas (days ago)',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'range',
     providers: ['RADARR'],
@@ -375,6 +412,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'physicalReleaseDaysAgo',
     label: 'Physical release (days ago)',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'range',
     providers: ['RADARR'],
@@ -383,6 +421,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'digitalReleaseDaysAgo',
     label: 'Digital release (days ago)',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'range',
     providers: ['RADARR'],
@@ -391,6 +430,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'collectionName',
     label: 'Collection',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
     lookup: 'collectionNames',
@@ -400,6 +440,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'isAvailable',
     label: 'Available',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'boolean',
     valueLabels: { true: 'Available', false: 'Unavailable' },
@@ -409,6 +450,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'radarrStatus',
     label: 'Radarr status',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'string',
     options: [
@@ -424,6 +466,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'jellyfinIsFavorite',
     label: 'Jellyfin favorite',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     valueLabels: { true: 'Favorited', false: 'Not Favorited' },
@@ -433,6 +476,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'languageProfileIds',
     label: 'Language profile',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'instance-ids',
     lookup: 'languageProfiles',
@@ -523,7 +567,6 @@ function makeProps(overrides: Partial<MediaFilterBarProps> = {}): MediaFilterBar
     movieYearRange: { min: 1990, max: 2024 },
     seriesYearRange: { min: 2000, max: 2024 },
     lookups: EMPTY_LOOKUPS,
-    configuredTypes: new Set(['RADARR', 'SONARR', 'TAUTULLI']),
     mobileOpen: false,
     onMobileClose: vi.fn(),
     ...overrides,
@@ -546,7 +589,7 @@ function valuesWith(patch: {
 
 function propsFor(configuredTypes: string[]): Partial<MediaFilterBarProps> {
   const types = new Set(configuredTypes);
-  return { rules: rulesFor(types), configuredTypes: types };
+  return { rules: rulesFor(types) };
 }
 
 /** Opens the "Add filter" picker and selects the rule with the given label —
@@ -680,7 +723,7 @@ describe('MediaFilterBar — activeTab prop', () => {
     expect(screen.queryByRole('button', { name: /monitored/i })).not.toBeInTheDocument();
   });
 
-  it('shows only series filters when activeTab is series', async () => {
+  it('hides movie-only filters when activeTab is series', async () => {
     const user = setupUser();
     render(
       <MediaFilterBar
@@ -692,8 +735,9 @@ describe('MediaFilterBar — activeTab prop', () => {
       />
     );
     await addFilter(user, 'Monitored');
-    expect(screen.queryByRole('option', { name: /has file/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /downloaded/i })).not.toBeInTheDocument();
+    // Movie-only rules aren't offered on the series tab; shared rules are.
+    expect(screen.queryByRole('option', { name: /imdb rating/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /has file/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Monitored' })).toBeInTheDocument();
   });
 });
@@ -736,7 +780,6 @@ describe('MediaFilterBar — MultiSelectDropdown', () => {
         {...makeProps({
           lookups: RICH_LOOKUPS,
           rules: rulesFor(new Set(['RADARR', 'SONARR', 'TAUTULLI', 'PLEX'])),
-          configuredTypes: new Set(['RADARR', 'SONARR', 'TAUTULLI', 'PLEX']),
         })}
       />
     );
@@ -751,7 +794,6 @@ describe('MediaFilterBar — MultiSelectDropdown', () => {
         {...makeProps({
           lookups: RICH_LOOKUPS,
           rules: rulesFor(new Set(['RADARR', 'SONARR', 'TAUTULLI', 'PLEX'])),
-          configuredTypes: new Set(['RADARR', 'SONARR', 'TAUTULLI', 'PLEX']),
         })}
       />
     );
@@ -766,7 +808,6 @@ describe('MediaFilterBar — MultiSelectDropdown', () => {
         {...makeProps({
           lookups: RICH_LOOKUPS,
           rules: rulesFor(new Set(['RADARR', 'SONARR', 'TAUTULLI', 'PLEX'])),
-          configuredTypes: new Set(['RADARR', 'SONARR', 'TAUTULLI', 'PLEX']),
         })}
       />
     );
@@ -1003,7 +1044,7 @@ describe('MediaFilterBar — mobile sheet', () => {
         {...makeProps({ mobileOpen: true, ...propsFor(['RADARR']), lookups: EMPTY_LOOKUPS })}
       />
     );
-    await addFilter(user, /has file/i, within(screen.getByRole('dialog')));
+    await addFilter(user, /imdb rating/i, within(screen.getByRole('dialog')));
     expect(screen.getByRole('heading', { name: 'Movies' })).toBeInTheDocument();
   });
 
@@ -1318,7 +1359,6 @@ describe('MediaFilterBar — FilterPicker excludes unrenderable rules', () => {
       <MediaFilterBar
         {...makeProps({
           rules: [ALL_RULES.find((r) => r.key === 'certification')!],
-          configuredTypes: new Set(['RADARR']),
           lookups: EMPTY_LOOKUPS,
         })}
       />
@@ -1339,6 +1379,7 @@ describe('MediaFilterBar — renders a rule it has never seen', () => {
     const remastered: MediaRuleDescriptor = {
       key: 'isRemastered',
       label: 'Remaster',
+      group: 'Movies',
       contentTypes: ['movie'],
       dataType: 'boolean',
       providers: ['RADARR'],
@@ -1356,6 +1397,7 @@ describe('MediaFilterBar — renders a rule it has never seen', () => {
     const hdrFormat: MediaRuleDescriptor = {
       key: 'hdrFormat',
       label: 'HDR format',
+      group: 'Movies',
       contentTypes: ['movie'],
       dataType: 'string',
       providers: ['RADARR'],
@@ -1379,6 +1421,7 @@ describe('MediaFilterBar — renders a rule it has never seen', () => {
     const codecFamily: MediaRuleDescriptor = {
       key: 'codecFamily',
       label: 'Codec family',
+      group: 'Movies',
       contentTypes: ['movie'],
       dataType: 'csv-strings',
       providers: ['RADARR'],
@@ -1388,6 +1431,7 @@ describe('MediaFilterBar — renders a rule it has never seen', () => {
     const preferredProfile: MediaRuleDescriptor = {
       key: 'preferredProfileIds',
       label: 'Preferred profile',
+      group: 'Movies',
       contentTypes: ['movie'],
       dataType: 'instance-ids',
       providers: ['RADARR'],
@@ -1414,6 +1458,7 @@ describe('MediaFilterBar — renders a rule it has never seen', () => {
     const edition: MediaRuleDescriptor = {
       key: 'edition',
       label: 'Edition',
+      group: 'Movies',
       contentTypes: ['movie'],
       dataType: 'string',
       providers: ['RADARR'],
@@ -1426,5 +1471,25 @@ describe('MediaFilterBar — renders a rule it has never seen', () => {
       target: { value: "Director's Cut" },
     });
     expect(onRuleChange).toHaveBeenCalledWith('movie', 'edition', "Director's Cut");
+  });
+
+  it('shows a rule under the section heading its descriptor names, on desktop and mobile', async () => {
+    const user = setupUser();
+    const atmos: MediaRuleDescriptor = {
+      key: 'dolbyAtmos',
+      label: 'Dolby Atmos',
+      contentTypes: ['movie', 'series'],
+      dataType: 'boolean',
+      providers: ['RADARR'],
+      required: false,
+      valueLabels: { true: 'Atmos', false: 'No Atmos' },
+      group: 'Audio',
+    };
+    render(<MediaFilterBar {...makeProps({ rules: [atmos], mobileOpen: true })} />);
+    await addFilter(user, 'Dolby Atmos', within(screen.getByRole('dialog')));
+    expect(
+      within(screen.getByRole('dialog')).getByRole('heading', { name: 'Audio' })
+    ).toBeVisible();
+    expect(within(screen.getByRole('search')).getByText('Audio')).toBeInTheDocument();
   });
 });

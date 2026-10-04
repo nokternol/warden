@@ -180,6 +180,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'watched',
     label: 'Watched',
+    group: 'Play History',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     valueLabels: { true: 'Watched', false: 'Unwatched' },
@@ -189,6 +190,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'addedDaysAgo',
     label: 'Added (days ago)',
+    group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: ['RADARR', 'SONARR'],
@@ -197,6 +199,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'sizeOnDiskGb',
     label: 'Size on disk (GB)',
+    group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: ['RADARR', 'SONARR'],
@@ -205,6 +208,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'hasFile',
     label: 'Has file',
+    group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     valueLabels: { true: 'Downloaded', false: 'Missing' },
@@ -214,6 +218,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'tagIds',
     label: 'Tags',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'instance-ids',
     lookup: 'tags',
@@ -224,6 +229,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'qualityProfileIds',
     label: 'Quality profile',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'instance-ids',
     lookup: 'qualityProfiles',
@@ -234,6 +240,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'genres',
     label: 'Genres',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
     lookup: 'genres',
@@ -243,6 +250,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'imdbRating',
     label: 'IMDB rating',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'range',
     providers: ['RADARR'],
@@ -251,6 +259,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'movieFileCount',
     label: 'Movie file count',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'range',
     providers: ['RADARR'],
@@ -259,6 +268,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'releaseGroups',
     label: 'Release group',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
     lookup: 'releaseGroups',
@@ -268,6 +278,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'inCinemasDaysAgo',
     label: 'In cinemas (days ago)',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'range',
     providers: ['RADARR'],
@@ -276,6 +287,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'physicalReleaseDaysAgo',
     label: 'Physical release (days ago)',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'range',
     providers: ['RADARR'],
@@ -284,6 +296,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'digitalReleaseDaysAgo',
     label: 'Digital release (days ago)',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'range',
     providers: ['RADARR'],
@@ -292,6 +305,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'collectionName',
     label: 'Collection',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
     lookup: 'collectionNames',
@@ -301,6 +315,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'isAvailable',
     label: 'Available',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'boolean',
     valueLabels: { true: 'Available', false: 'Unavailable' },
@@ -310,6 +325,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'radarrStatus',
     label: 'Radarr status',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'string',
     options: [
@@ -325,6 +341,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'studio',
     label: 'Studio',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
     lookup: 'studio',
@@ -334,6 +351,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'monitored',
     label: 'Monitored',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'boolean',
     valueLabels: { true: 'Monitored', false: 'Unmonitored' },
@@ -343,6 +361,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'seriesStatus',
     label: 'Series status',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'string',
     options: [
@@ -356,6 +375,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'tagIds',
     label: 'Tags',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'instance-ids',
     lookup: 'tags',
@@ -366,6 +386,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'qualityProfileIds',
     label: 'Quality profile',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'instance-ids',
     lookup: 'qualityProfiles',
@@ -376,6 +397,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'genres',
     label: 'Genres',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'csv-strings',
     lookup: 'genres',
@@ -385,6 +407,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'languageProfileIds',
     label: 'Language profile',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'instance-ids',
     lookup: 'languageProfiles',
@@ -395,6 +418,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'seriesType',
     label: 'Series type',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'string',
     options: [
@@ -409,6 +433,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'network',
     label: 'Network',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'csv-strings',
     lookup: 'networks',
@@ -418,6 +443,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'studio',
     label: 'Studio',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'csv-strings',
     lookup: 'studio',
@@ -427,6 +453,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'communityRating',
     label: 'Community rating',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
     providers: ['SONARR'],
@@ -435,6 +462,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'ended',
     label: 'Ended',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'boolean',
     valueLabels: { true: 'Finished', false: 'Running' },
@@ -444,6 +472,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'lastAiredDaysAgo',
     label: 'Last aired (days ago)',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
     providers: ['SONARR'],
@@ -452,6 +481,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'episodePercentage',
     label: 'Episode completion (%)',
+    group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
     providers: ['SONARR'],
@@ -460,6 +490,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'lastWatchedDaysAgo',
     label: 'Last watched (days ago)',
+    group: 'Play History',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: ['TAUTULLI', 'PLEX', 'JELLYFIN'],
@@ -468,6 +499,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'runtimeMinutes',
     label: 'Runtime (minutes)',
+    group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'range',
     providers: ['PLEX', 'JELLYFIN'],
@@ -476,6 +508,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'fileSizeBytes',
     label: 'File size (bytes)',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: ['PLEX', 'JELLYFIN'],
@@ -484,6 +517,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'releaseDaysAgo',
     label: 'Release date (days ago)',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: ['PLEX', 'JELLYFIN'],
@@ -492,6 +526,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'fileContainer',
     label: 'File container',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     lookup: 'fileContainers',
@@ -501,6 +536,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'videoCodec',
     label: 'Video codec',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     lookup: 'videoCodecs',
@@ -510,6 +546,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'audioCodec',
     label: 'Audio codec',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     lookup: 'audioCodecs',
@@ -519,6 +556,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'fileResolution',
     label: 'File resolution',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     lookup: 'fileResolutions',
@@ -528,6 +566,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'labels',
     label: 'Labels',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
     lookup: 'labels',
@@ -537,6 +576,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'jellyfinAddedDaysAgo',
     label: 'Jellyfin added (days ago)',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     providers: ['JELLYFIN'],
@@ -545,6 +585,7 @@ const ALL_RULES: MediaRuleDescriptor[] = [
   {
     key: 'jellyfinIsFavorite',
     label: 'Jellyfin favorite',
+    group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     valueLabels: { true: 'Favorited', false: 'Not Favorited' },
@@ -668,7 +709,6 @@ function FilterBarWrapper({
         movieYearRange={YEAR_RANGE}
         seriesYearRange={YEAR_RANGE}
         lookups={lookups}
-        configuredTypes={types}
         mobileOpen={mobileOpen}
         onMobileClose={() => setMobileOpen(false)}
       />
@@ -774,7 +814,101 @@ export const WithActiveFilters: Story = () => {
         movieYearRange={YEAR_RANGE}
         seriesYearRange={YEAR_RANGE}
         lookups={RICH_LOOKUPS}
-        configuredTypes={new Set(['RADARR', 'SONARR', 'TAUTULLI'])}
+        sources={SINGLE_INSTANCE_SOURCES}
+        mobileOpen={false}
+        onMobileClose={() => {}}
+      />
+    </div>
+  );
+};
+
+// Rules the client has no knowledge of — keys, headings, labels, options and
+// lookups that appear nowhere in the filter bar's code. Each renders from its
+// descriptor alone: a boolean with its own value labels, an enum with its own
+// options and short label, a multi-value rule reading a named lookup, and a
+// free-text rule, under the "Audio", "Video" and "Release" headings the
+// descriptors name.
+const DESCRIPTOR_ONLY_RULES: MediaRuleDescriptor[] = [
+  {
+    key: 'title',
+    label: 'Title',
+    contentTypes: ['movie', 'series'],
+    dataType: 'string',
+    providers: ['RADARR'],
+    required: false,
+  },
+  {
+    key: 'dolbyAtmos',
+    label: 'Dolby Atmos',
+    group: 'Audio',
+    contentTypes: ['movie', 'series'],
+    dataType: 'boolean',
+    valueLabels: { true: 'Atmos', false: 'No Atmos' },
+    providers: ['PLEX'],
+    required: false,
+  },
+  {
+    key: 'hdrFormat',
+    label: 'HDR format',
+    group: 'Video',
+    contentTypes: ['movie'],
+    dataType: 'string',
+    options: [
+      { value: 'dolbyVision', label: 'Dolby Vision' },
+      { value: 'hdr10', label: 'HDR10' },
+      { value: 'sdr', label: 'SDR' },
+    ],
+    shortLabel: 'HDR',
+    providers: ['PLEX'],
+    required: false,
+  },
+  {
+    key: 'codecFamily',
+    label: 'Codec family',
+    group: 'Video',
+    contentTypes: ['movie'],
+    dataType: 'csv-strings',
+    lookup: 'videoCodecs',
+    providers: ['PLEX'],
+    required: false,
+  },
+  {
+    key: 'edition',
+    label: 'Edition',
+    group: 'Release',
+    contentTypes: ['movie'],
+    dataType: 'string',
+    providers: ['RADARR'],
+    required: false,
+  },
+];
+
+export const DescriptorOnlyRules: Story = () => {
+  const [values, setValues] = useState<FilterState>({
+    ...EMPTY_FILTER_STATE,
+    shared: { title: '', dolbyAtmos: 'true' },
+    movie: { hdrFormat: 'dolbyVision', codecFamily: 'hevc', edition: "Director's Cut" },
+  });
+  const onRuleChange = (scope: ContentScope, key: string, value: FilterValue | undefined) =>
+    setValues((s) => {
+      const bucket = { ...s[scope] };
+      if (value === undefined) delete bucket[key];
+      else bucket[key] = value;
+      return { ...s, [scope]: bucket };
+    });
+
+  return (
+    <div className="bg-surface-bg min-h-screen">
+      <MediaFilterBar
+        rules={DESCRIPTOR_ONLY_RULES}
+        values={values}
+        onRuleChange={onRuleChange}
+        onQualifierChange={() => {}}
+        clearAll={() => setValues(EMPTY_FILTER_STATE)}
+        isActive={true}
+        movieYearRange={YEAR_RANGE}
+        seriesYearRange={YEAR_RANGE}
+        lookups={RICH_LOOKUPS}
         sources={SINGLE_INSTANCE_SOURCES}
         mobileOpen={false}
         onMobileClose={() => {}}
