@@ -1,0 +1,58 @@
+import type { ProviderTypeDescriptor } from '@contract/providers';
+import type { Story } from '@ladle/react';
+import AddProviderForm from './index';
+
+/** The offered types as /api/providers/types serves them. */
+const offeredTypes: ProviderTypeDescriptor[] = [
+  { type: 'PLEX', label: 'Plex', apiPath: '', capabilities: ['Library contents', 'Item metadata'] },
+  {
+    type: 'JELLYFIN',
+    label: 'Jellyfin',
+    apiPath: '',
+    capabilities: ['Library contents', 'Item metadata'],
+  },
+  {
+    type: 'RADARR',
+    label: 'Radarr',
+    apiPath: '/api/v3',
+    capabilities: ['Movie library', 'Quality profiles', 'Tags'],
+  },
+  {
+    type: 'SONARR',
+    label: 'Sonarr',
+    apiPath: '/api/v3',
+    capabilities: ['Series library', 'Quality profiles', 'Tags'],
+  },
+  {
+    type: 'TAUTULLI',
+    label: 'Tautulli',
+    apiPath: '',
+    capabilities: ['Watch history', 'Play statistics', 'User activity'],
+  },
+  { type: 'OVERSEERR', label: 'Overseerr', apiPath: '', capabilities: ['Request queue'] },
+];
+
+export const OfferedTypes: Story = () => (
+  <div className="max-w-3xl p-6">
+    <AddProviderForm types={offeredTypes} onSubmit={() => {}} onCancel={() => {}} />
+  </div>
+);
+
+/** A hosted type the server gives a fixed URL: the host is filled in and locked. */
+export const HostedTypeWithFixedUrl: Story = () => (
+  <div className="max-w-3xl p-6">
+    <AddProviderForm
+      types={[
+        {
+          type: 'TMDB',
+          label: 'TMDB',
+          apiPath: '',
+          defaultUrl: 'https://api.themoviedb.org/3',
+          capabilities: ['Ratings', 'Metadata'],
+        },
+      ]}
+      onSubmit={() => {}}
+      onCancel={() => {}}
+    />
+  </div>
+);
