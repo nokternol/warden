@@ -1,9 +1,10 @@
 import type { ProviderType, TaskOptionsRoute } from '@contract/providers';
-import { scope } from '@contract/scope';
+import { isOfferedProviderType } from '@contract/scope';
 import { MetadataProviderType } from '@server/database/schema';
 import type { MetadataProvider } from '@server/database/schema';
 import { api } from '@server/kernel/api';
 import type { AppConfig } from '@server/kernel/config';
+import { ValidationError } from '@server/kernel/errors';
 import { getChildLogger } from '@server/kernel/logger';
 import { probeConnection } from './connectionProbe';
 import { JellyfinProvider } from './connections/jellyfinProvider';
@@ -105,15 +106,18 @@ export function createProvidersProcedures(
   return {
     // ─── Catalogue ─────────────────────────────────────────────────────────
     types: api.providers.types.handler(async () =>
-      describeProviderTypes().filter((entry) => !scope.deferred.providerTypes.includes(entry.type))
+      describeProviderTypes().filter((entry) => isOfferedProviderType(entry.type))
     ),
 
     // ─── Configured instances ──────────────────────────────────────────────
     list: api.providers.list.handler(async () => providerSettingsService.list()),
 
-    create: api.providers.create.handler(async ({ input }) =>
-      providerSettingsService.create({ ...input, type: input.type as MetadataProviderType })
-    ),
+    create: api.providers.create.handler(async ({ input }) => {
+      if (!isOfferedProviderType(input.type)) {
+        throw new ValidationError(`Provider type ${input.type} is not offered`);
+      }
+      return providerSettingsService.create({ ...input, type: input.type as MetadataProviderType });
+    }),
 
     update: api.providers.update.handler(async ({ input }) => {
       const { id, ...patch } = input;

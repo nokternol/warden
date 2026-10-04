@@ -26,3 +26,8 @@ export const scope: Scope = {
     ],
   },
 };
+
+/** Whether `type` can be configured: it is not a deferred provider type. */
+export function isOfferedProviderType(type: ProviderType): boolean {
+  return !scope.deferred.providerTypes.includes(type);
+}
