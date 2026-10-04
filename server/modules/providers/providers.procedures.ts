@@ -104,6 +104,20 @@ export function createProvidersProcedures(
 ) {
   const { providerSettingsService, providerFactory, config, scope } = cradle;
 
+  /** Refuses settings that enable a task the scope declaration defers for this provider's type. */
+  async function assertEnablesOnlyOfferedTasks(
+    providerId: number,
+    settings: Record<string, unknown>
+  ): Promise<void> {
+    const { type } = await providerSettingsService.findById(providerId);
+    const deferred = readEnabledTaskIds(settings).filter(
+      (taskId) => !isOfferedTask(scope, type, taskId)
+    );
+    if (deferred.length > 0) {
+      throw new ValidationError(`Task ${deferred.join(', ')} is not offered for ${type}`);
+    }
+  }
+
   return {
     // ─── Catalogue ─────────────────────────────────────────────────────────
     types: api.providers.types.handler(async () =>
@@ -122,6 +136,7 @@ export function createProvidersProcedures(
 
     update: api.providers.update.handler(async ({ input }) => {
       const { id, ...patch } = input;
+      if (patch.settings) await assertEnablesOnlyOfferedTasks(id, patch.settings);
       const result = await providerSettingsService.update(id, patch);
       invalidateMediaCaches();
       return result;

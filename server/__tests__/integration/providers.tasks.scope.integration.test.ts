@@ -17,8 +17,12 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
  * declaration. No task is deferred today, so the declaration here defers one
  * to prove the projection consults it.
  */
-describe('GET /api/providers/tasks under the scope declaration', () => {
+describe('provider tasks under the scope declaration', () => {
   let client: ReturnType<typeof createApiClient>;
+  const providerIds: Record<string, number> = {};
+  let providerSettingsService: ReturnType<
+    typeof buildContainer
+  >['cradle']['providerSettingsService'];
 
   beforeAll(async () => {
     const mockConfig = createMockConfig({
@@ -50,8 +54,15 @@ describe('GET /api/providers/tasks under the scope declaration', () => {
       [MetadataProviderType.RADARR, 'http://localhost:7878/api/v3'],
       [MetadataProviderType.SONARR, 'http://localhost:8989/api/v3'],
     ] as const) {
-      await cradle.providerSettingsService.create({ type, name: type, url, apiKey: 'k' });
+      const created = await cradle.providerSettingsService.create({
+        type,
+        name: type,
+        url,
+        apiKey: 'k',
+      });
+      providerIds[type] = created.id;
     }
+    providerSettingsService = cradle.providerSettingsService;
 
     const app = express();
     app.use(express.json());
@@ -79,5 +90,16 @@ describe('GET /api/providers/tasks under the scope declaration', () => {
 
     expect(taskIdsOf('RADARR')).not.toContain('triggerSearch');
     expect(taskIdsOf('SONARR')).toContain('triggerSearch');
+  });
+
+  it('refuses to enable a deferred task on a provider, and stores nothing', async () => {
+    const radarrId = providerIds.RADARR;
+
+    const res = await client.patch(`/api/providers/${radarrId}`, {
+      settings: { enabledTasks: ['unmonitorMovie', 'triggerSearch'] },
+    });
+
+    expect(res.status).toBe(400);
+    expect((await providerSettingsService.findById(radarrId)).settings).toBeNull();
   });
 });
