@@ -6,9 +6,9 @@ import type {
   RangeValue,
 } from '@app/hooks/useMediaFilters';
 import type { Filter } from '@app/hooks/useMediaQueries';
-import type { MediaRuleDescriptor } from '@app/hooks/useMediaRules';
 import type { MediaFilters } from '@app/types/media';
 import type { MovieRangeRuleKey, SeriesRangeRuleKey } from '@contract/browseRangeKeys';
+import type { MediaRuleDescriptor } from '@contract/media';
 /**
  * Two adapters from the registry-keyed, scoped `FilterState` (`useMediaFilters`)
  * to the two wire contracts that haven't caught up to it yet:

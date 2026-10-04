@@ -7,9 +7,9 @@ import type {
 } from '@app/hooks/useMediaFilters';
 import { scopeOf } from '@app/hooks/useMediaFilters';
 import type { MediaQualityProfile, MediaTag } from '@app/hooks/useMediaLookups';
-import type { MediaRuleDescriptor } from '@app/hooks/useMediaRules';
 import type { MediaSourceDescriptor } from '@app/hooks/useMediaSources';
 import { cn } from '@app/lib/utils/cn';
+import type { MediaRuleDescriptor } from '@contract/media';
 import type { ContentType } from '@contract/schemas';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { OptionFilter } from '../filters/OptionFilter';

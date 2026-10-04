@@ -136,7 +136,7 @@ describe('GET /api/rules', () => {
     expect(keys).not.toContain('imdbRating');
   });
 
-  it('each field is a full MediaRuleDescriptor', async () => {
+  it('each rule has a key, label, data type and content types', async () => {
     await providerSettingsService.create({
       type: MetadataProviderType.RADARR,
       name: 'Test Radarr',
@@ -153,9 +153,6 @@ describe('GET /api/rules', () => {
         field.dataType
       );
       expect(Array.isArray(field.contentTypes)).toBe(true);
-      expect(Array.isArray(field.providers)).toBe(true);
-      expect(typeof field.required).toBe('boolean');
-      expect(field.predicate).toBeUndefined();
     }
   });
 
@@ -226,6 +223,33 @@ describe('GET /api/rules', () => {
       expect(groupOf('imdbRating')).toBe('Movies');
       expect(groupOf('title')).toBeUndefined();
       expect(groupOf('year')).toBeUndefined();
+    });
+
+    it('exposes presentation only — no predicate, producers, field mapping or required flag', async () => {
+      const rules = await rulesServedWith(
+        MetadataProviderType.RADARR,
+        MetadataProviderType.SONARR,
+        MetadataProviderType.PLEX,
+        MetadataProviderType.JELLYFIN,
+        MetadataProviderType.TAUTULLI,
+        MetadataProviderType.OVERSEERR,
+        MetadataProviderType.TMDB
+      );
+      const presentationFields = [
+        'key',
+        'label',
+        'contentTypes',
+        'dataType',
+        'instanceScoped',
+        'valueLabels',
+        'options',
+        'shortLabel',
+        'lookup',
+        'group',
+      ];
+      for (const rule of rules) {
+        expect(Object.keys(rule).filter((f) => !presentationFields.includes(f))).toEqual([]);
+      }
     });
   });
 

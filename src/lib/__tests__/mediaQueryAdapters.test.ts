@@ -25,8 +25,6 @@ describe('toSaveValues', () => {
       label: key,
       contentTypes: ['movie'],
       dataType: instanceScoped ? 'instance-ids' : 'boolean',
-      providers: [],
-      required: false,
       ...(instanceScoped ? { instanceScoped } : {}),
     }) as MediaRuleDescriptor;
   const rules = [rule('tagIds', true), rule('qualityProfileIds', true), rule('hasFile')];

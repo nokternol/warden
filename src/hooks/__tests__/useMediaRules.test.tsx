@@ -20,8 +20,6 @@ describe('useMediaRules', () => {
           label: 'Year',
           contentTypes: ['movie', 'series'],
           dataType: 'range',
-          providers: ['RADARR', 'SONARR'],
-          required: false,
         },
       ])
     );
@@ -45,8 +43,6 @@ describe('useMediaRules', () => {
                 contentTypes: ['movie'],
                 dataType: 'instance-ids',
                 lookup: 'tags',
-                providers: ['RADARR'],
-                required: false,
               },
             ]
           : []

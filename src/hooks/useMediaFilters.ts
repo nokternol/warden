@@ -1,8 +1,8 @@
 import type { MediaFilters } from '@app/types/media';
+import type { MediaRuleDescriptor } from '@contract/media';
 import type { ContentType } from '@contract/schemas';
 import { useRouter } from 'next/router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { MediaRuleDescriptor } from './useMediaRules';
 import { useMediaRules } from './useMediaRules';
 
 const DEBOUNCE_MS = 300;

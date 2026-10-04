@@ -61,16 +61,12 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     label: 'Title',
     contentTypes: ['movie', 'series'],
     dataType: 'string',
-    providers: ['RADARR', 'SONARR', 'PLEX'],
-    required: false,
   },
   {
     key: 'year',
     label: 'Year',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    providers: ['RADARR', 'SONARR', 'PLEX', 'TMDB'],
-    required: false,
   },
   {
     key: 'watched',
@@ -79,8 +75,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     valueLabels: { true: 'Watched', false: 'Unwatched' },
-    providers: ['TAUTULLI', 'PLEX'],
-    required: false,
   },
   {
     key: 'addedDaysAgo',
@@ -88,8 +82,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    providers: ['RADARR', 'SONARR', 'PLEX'],
-    required: false,
   },
   {
     key: 'sizeOnDiskGb',
@@ -97,8 +89,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    providers: ['RADARR', 'SONARR'],
-    required: false,
   },
   {
     key: 'certification',
@@ -106,8 +96,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     group: 'Library',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
-    providers: ['RADARR', 'SONARR', 'TMDB', 'OMDB'],
-    required: false,
   },
   {
     key: 'hasFile',
@@ -116,8 +104,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     valueLabels: { true: 'Downloaded', false: 'Missing' },
-    providers: ['RADARR', 'SONARR', 'PLEX'],
-    required: false,
   },
   {
     key: 'tagIds',
@@ -127,8 +113,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     dataType: 'instance-ids',
     lookup: 'tags',
     instanceScoped: true,
-    providers: ['RADARR'],
-    required: false,
   },
   {
     key: 'qualityProfileIds',
@@ -138,8 +122,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     dataType: 'instance-ids',
     lookup: 'qualityProfiles',
     instanceScoped: true,
-    providers: ['RADARR'],
-    required: false,
   },
   {
     key: 'genres',
@@ -148,8 +130,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     contentTypes: ['movie'],
     dataType: 'csv-strings',
     lookup: 'genres',
-    providers: ['RADARR', 'TMDB'],
-    required: false,
   },
   {
     key: 'imdbRating',
@@ -157,8 +137,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     group: 'Movies',
     contentTypes: ['movie'],
     dataType: 'range',
-    providers: ['RADARR', 'OMDB'],
-    required: false,
   },
   {
     key: 'monitored',
@@ -167,8 +145,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     contentTypes: ['series'],
     dataType: 'boolean',
     valueLabels: { true: 'Monitored', false: 'Unmonitored' },
-    providers: ['SONARR'],
-    required: false,
   },
   {
     key: 'seriesStatus',
@@ -181,8 +157,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
       { value: 'ended', label: 'Ended' },
     ],
     shortLabel: 'Status',
-    providers: ['SONARR'],
-    required: false,
   },
   {
     key: 'tagIds',
@@ -192,8 +166,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     dataType: 'instance-ids',
     lookup: 'tags',
     instanceScoped: true,
-    providers: ['SONARR'],
-    required: false,
   },
   {
     key: 'qualityProfileIds',
@@ -203,8 +175,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     dataType: 'instance-ids',
     lookup: 'qualityProfiles',
     instanceScoped: true,
-    providers: ['SONARR'],
-    required: false,
   },
   {
     key: 'genres',
@@ -213,8 +183,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     contentTypes: ['series'],
     dataType: 'csv-strings',
     lookup: 'genres',
-    providers: ['SONARR', 'TMDB'],
-    required: false,
   },
   {
     key: 'seriesType',
@@ -228,8 +196,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
       { value: 'daily', label: 'Daily' },
     ],
     shortLabel: 'Type',
-    providers: ['SONARR'],
-    required: false,
   },
   {
     key: 'network',
@@ -238,8 +204,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     contentTypes: ['series'],
     dataType: 'csv-strings',
     lookup: 'networks',
-    providers: ['SONARR', 'TVMAZE'],
-    required: false,
   },
   {
     key: 'communityRating',
@@ -247,8 +211,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
-    providers: ['SONARR', 'TMDB'],
-    required: false,
   },
   {
     key: 'ended',
@@ -257,8 +219,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     contentTypes: ['series'],
     dataType: 'boolean',
     valueLabels: { true: 'Finished', false: 'Running' },
-    providers: ['SONARR'],
-    required: false,
   },
   {
     key: 'lastAiredDaysAgo',
@@ -266,8 +226,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
-    providers: ['SONARR'],
-    required: false,
   },
   {
     key: 'episodePercentage',
@@ -275,8 +233,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     group: 'Series',
     contentTypes: ['series'],
     dataType: 'range',
-    providers: ['SONARR'],
-    required: false,
   },
   {
     key: 'tmdbStatus',
@@ -292,8 +248,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
       { value: 'Canceled', label: 'Canceled' },
     ],
     shortLabel: 'Status',
-    providers: ['TMDB'],
-    required: false,
   },
   {
     key: 'overseerrRequestStatus',
@@ -308,8 +262,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
       { value: '4', label: 'Available' },
     ],
     shortLabel: 'Status',
-    providers: ['OVERSEERR'],
-    required: false,
   },
   {
     key: 'overseerrHasIssue',
@@ -318,8 +270,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     valueLabels: { true: 'Has Issue', false: 'No Issue' },
-    providers: ['OVERSEERR'],
-    required: false,
   },
   {
     key: 'lastWatchedDaysAgo',
@@ -327,8 +277,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     group: 'Play History',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    providers: ['TAUTULLI', 'PLEX'],
-    required: false,
   },
 ];
 

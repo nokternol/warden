@@ -19,7 +19,6 @@ import { useMediaFilters } from '@app/hooks/useMediaFilters';
 import { useMediaLookups } from '@app/hooks/useMediaLookups';
 import type { MediaQualityProfile, MediaTag } from '@app/hooks/useMediaLookups';
 import { useMediaQueries } from '@app/hooks/useMediaQueries';
-import type { MediaRuleDescriptor } from '@app/hooks/useMediaRules';
 import { useMediaRules } from '@app/hooks/useMediaRules';
 import type { MediaSourceDescriptor } from '@app/hooks/useMediaSources';
 import { useMediaSources } from '@app/hooks/useMediaSources';
@@ -32,6 +31,7 @@ import { NAV_ITEMS } from '@app/lib/navigation';
 import { PROVIDER_REGISTRY } from '@app/lib/provider-registry';
 import { cn } from '@app/lib/utils/cn';
 import { requireAuth } from '@app/lib/utils/requireAuth';
+import type { MediaRuleDescriptor } from '@contract/media';
 import type { ContentType } from '@contract/schemas';
 import {
   ArrowDown,

@@ -1,4 +1,5 @@
-import type { MediaLookup } from '@contract/media';
+import type { MediaLookup, MediaRuleDescriptor } from '@contract/media';
+import { MediaRuleDescriptorSchema } from '@contract/media';
 import type { ContentType, FilterValue, InstanceScopedValue, RangeValue } from '@contract/schemas';
 import { isInstanceScopedValue } from '@contract/schemas';
 import { MetadataProviderType } from '../../database/schema';
@@ -73,12 +74,16 @@ export interface MediaRule<
   predicate: Predicate<T>;
 }
 
-/** `MediaRule`'s JSON-honest transport projection — no `predicate`. */
-export type MediaRuleDescriptor = Omit<MediaRule, 'predicate'>;
+export type { MediaRuleDescriptor };
 
+/**
+ * A rule as the client sees it: only the presentation fields the contract's
+ * `MediaRuleDescriptorSchema` lists. Engine concerns (the predicate, the providers
+ * that produce the rule, its `sourceField`, `required`) are left behind, because
+ * the schema is an allowlist and drops every field it doesn't name.
+ */
 export function toDescriptor(rule: MediaRule): MediaRuleDescriptor {
-  const { predicate: _predicate, ...descriptor } = rule;
-  return descriptor;
+  return MediaRuleDescriptorSchema.parse(rule);
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

@@ -207,12 +207,9 @@ export const MediaRuleDescriptorSchema = z.object({
   label: z.string(),
   contentTypes: z.array(ContentTypeSchema).readonly(),
   dataType: z.enum(['boolean', 'number', 'string', 'instance-ids', 'csv-strings', 'range']),
-  providers: z.array(ProviderTypeSchema).readonly(),
-  required: z.boolean(),
   /** True for rules whose values are a provider-defined id space (quality profiles, tags) —
    *  the client must qualify these per instance when more than one is active. */
   instanceScoped: z.boolean().optional(),
-  sourceField: z.string().optional(),
   /** What a boolean rule's two values read as; absent means Yes / No. */
   valueLabels: z.object({ true: z.string(), false: z.string() }).optional(),
   options: z
