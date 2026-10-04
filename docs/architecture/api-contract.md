@@ -94,9 +94,23 @@ rather than interfaces.
 The contract can't import the server, so it declares the provider type list itself. Server code that
 reads a type from a request checks at compile time that the contract's list equals
 `MetadataProviderType`'s values, in
-[`providers.procedures.ts`](ref:path:server/modules/providers/providers.procedures.ts). Likewise
-[`contract/browseRangeKeys.ts`](ref:path:contract/browseRangeKeys.ts) is checked against `MEDIA_RULES`
-in `ruleRegistry.ts`.
+[`providers.procedures.ts`](ref:path:server/modules/providers/providers.procedures.ts).
+
+## Structured values on a GET
+
+oRPC's OpenAPI link sends a GET's input as bracket-notation query params, and every value arrives at
+the server as a string. That is fine for a page number the input schema coerces, but not for a value
+whose type matters, such as a `Filter` whose `value` may be a boolean, a number, a `{ min, max }` range
+or an `{ providerId, ids }` object. Such a value travels as one JSON query param instead: `jsonQuery`
+in [`contract/media.ts`](ref:path:contract/media.ts) parses the string and pipes it into the schema the
+value would have anywhere else.
+
+Browse is the case that needs it. `media.browse.movie` and `media.browse.series` answer
+`GET /api/media/{movie|series}` and take `filters` as JSON holding the same `FilterSchema` entries a
+saved query stores, so browse and save share one filter encoding, validated by one schema. A `filters`
+value that is not JSON, or not an array of `Filter` entries, answers 400 rather than browsing
+unfiltered. [`usePaginatedMedia`](ref:path:src/hooks/usePaginatedMedia.ts) is the one client place that
+encodes it.
 
 ## What enforces it
 

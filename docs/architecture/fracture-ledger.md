@@ -64,7 +64,8 @@ is graphed, dated, and verified against code, not inferred from a plan.
   keys — its deletion needs the client to emit registry keys for browsing too, which wasn't in this
   phase's scope. `src/pages/media/mediaQueryAdapters.ts`'s `toBrowseParams()` mirrors it client-side
   (`GET /api/media/movies|series` still expects the old param names) until that translator is retired;
-  `toSaveValues()` in the same file is the permanent save-path adapter, not a shim.
+  `toSaveValues()` in the same file is the permanent save-path adapter, not a shim. That translator was
+  retired by MVP slice C3; see "Browse and save — two filter encodings" below.
 - **Deliberate behavior refinement, not a preserved bug:** `hasFile` is declared shared
   (`contentTypes: ['movie', 'series']`) in the registry, but the old hand-built `MediaFilterBar` only ever
   rendered it in the Movies section — series were never filterable by file presence via UI despite the
@@ -392,6 +393,27 @@ Earlier entries in this ledger use the names that were current when they healed 
   read it, and `GET /api/providers/types` projects the offered types. The client derives the
   add-provider list, the provider card's label, path and filter data, the Providers page order and the
   media page's owner name from that projection. Every client copy is deleted.
+
+### Browse and save — two filter encodings (recorded and healed 2026-10-04, MVP slice C3)
+
+- **Fracture:** one piece of filter state reached the server in two shapes. Save sent registry-keyed
+  `Filter { ruleKey, value }` entries. Browse sent a content-prefixed param vocabulary (`movieTagIds` with
+  a sibling `movieTagIdsProviderId`, `radarrImdbRatingGte`/`Lte`, `yearMin`/`yearMax`), which the
+  client's `toBrowseParams()` built and the server's `MOVIE_PARAM_TO_KEY`/`SERIES_PARAM_TO_KEY` and
+  `toFilterValues()` translated back into `Filter` entries. Because those names had no derivable
+  relationship to rule keys, a range rule needed matching entries in five hand-kept maps, held together
+  by witness maps keyed by a range-key list in `contract/browseRangeKeys.ts` and a schema-coverage check.
+- **How it misled:** browse and a query saved from the same filters could disagree. The client mirror
+  read `hasFile` from the movie scope while the filter state keeps it shared, so the Has file filter never
+  narrowed browse although saving it worked. A rule could be filterable in a saved query and silently
+  missing from browse until every map was extended (`plexAddedDaysAgo` shipped that way once).
+- **Healed by:** browse takes the save encoding. `media.browse.movie` and `media.browse.series` answer
+  `GET /api/media/{movie|series}` with `filters` as one JSON query param holding `FilterSchema` entries,
+  so the server evaluates exactly what a saved query would. The client builds both requests with one
+  function (`toFilters`, formerly `toSaveValues`). The param maps, `toFilterValues()`, the witness maps,
+  the schema-coverage check, `contract/browseRangeKeys.ts`, `toBrowseParams()`, the unused client
+  `toFilterValues()` and the `/api/media/movies` route are deleted. A test pins that browsing and
+  previewing a query saved with the same entries match the same items.
 
 ## Open
 
