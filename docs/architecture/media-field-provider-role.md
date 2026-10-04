@@ -242,9 +242,8 @@ hand-listed (`[RADARR]` / `[SONARR]` respectively) rather than calling
 `deriveProviders('tags')`, which would derive to `[RADARR, SONARR]` on *both* rules — wrong,
 since Sonarr can't produce a movie's tags and Radarr can't produce a series'.
 
-Three previously-stale `providers` entries were corrected as part of this work, confirmed
-against [`docs/architecture/media-providers.md`](ref:path:docs/architecture/media-providers.md)'s
-provider catalog: `genres` (movie) and `imdbRating` are Radarr-only (no TMDB genres call or OMDB
+Three hand-listed `providers` entries match the provider catalog in
+[`docs/architecture/media-providers.md`](ref:path:docs/architecture/media-providers.md): `genres` (movie) and `imdbRating` are Radarr-only (no TMDB genres call or OMDB
 integration exists); `communityRating` (series) is Sonarr-only (Sonarr's `ratings` is a single
 aggregate, no TMDB key configured). `network`'s `TVMAZE` entry is deliberately unchanged — real and
 buildable, just not yet wired to an adapter.

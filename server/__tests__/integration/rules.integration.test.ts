@@ -180,7 +180,7 @@ describe('GET /api/rules', () => {
     expect(after.body.data.map((f: { key: string }) => f.key)).toContain('monitored');
   });
 
-  it('no longer serves the retired /api/filter-fields path', async () => {
+  it('answers 404 at /api/filter-fields', async () => {
     const res = await supertest(app).get('/api/filter-fields');
     expect(res.status).toBe(404);
   });
