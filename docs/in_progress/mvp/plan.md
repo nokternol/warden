@@ -133,7 +133,7 @@ principles become these acceptance checks on every UI slice:
 | # | Finding | Evidence |
 |---|---|---|
 | X1 | **Any Plex account can sign in.** The first sign-in creates a user with no owner or allowlist check. Combined with X2, a stranger could configure providers and run delete tasks. | `server/modules/auth/authService.ts` `authenticateWithPlex` |
-| X2 | **Auth is opt-in per handler, and coverage has gaps.** `/api/providers/*` (tasks, task-options, metadata, ratings) and `/api/filter-fields` have no guard. One route carries the comment *"dev/config-time endpoint — add auth when the feature moves beyond the playground stage."* | `providers.routes.ts`, `providers.handler.ts` (0 guards), `media.filterFields.*` (0 guards) |
+| X2 | **Auth is opt-in per handler, and coverage has gaps.** `/api/providers/*` (tasks, task-options, metadata, ratings) and `/api/filter-fields` have no guard. One route carries the comment *"dev/config-time endpoint — add auth when the feature moves beyond the playground stage."* | `providers.routes.ts`, `providers.handler.ts` (0 guards), `media.filterFields.*` (0 guards). **Healed by A1:** the contract implementer's root guard refuses every procedure except four public ones (health, Plex sign-in, sign-out, backdrops), pinned by `defaultDenyAuth.integration.test.ts`. |
 
 ### Two names or two mechanisms for one concept
 
