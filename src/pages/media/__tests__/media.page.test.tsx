@@ -1,5 +1,6 @@
 import { contract } from '@contract/index';
 import type { MediaSourceDescriptor } from '@contract/media';
+import type { ProviderTypeDescriptor } from '@contract/providers';
 import '@testing-library/jest-dom/vitest';
 import { render, screen, setupUser, waitFor } from '@tests/helpers/component';
 import { mockProcedure } from '@tests/mocks/contract';
@@ -101,6 +102,23 @@ describe('MediaPage', () => {
     render(<MediaPage />, { wrapper: Wrapper });
     await waitFor(() => {
       expect(screen.getByText(/no radarr connection configured/i)).toBeInTheDocument();
+    });
+  });
+
+  it("names the source owner by its type's served label", async () => {
+    server.use(
+      mockProcedure(contract.media.sources, (): MediaSourceDescriptor[] => [
+        { contentType: 'movie', ownerType: 'RADARR', configured: false, instances: [] },
+        { contentType: 'series', ownerType: 'SONARR', configured: false, instances: [] },
+      ]),
+      mockProcedure(contract.media.movies, () => EMPTY_PAGE),
+      mockProcedure(contract.providers.types, (): ProviderTypeDescriptor[] => [
+        { type: 'RADARR', label: 'Radarr 4K', apiPath: '/api/v3', capabilities: [] },
+      ])
+    );
+    render(<MediaPage />, { wrapper: Wrapper });
+    await waitFor(() => {
+      expect(screen.queryByText(/no radarr 4k connection configured/i)).toBeInTheDocument();
     });
   });
 });

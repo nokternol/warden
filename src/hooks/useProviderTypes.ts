@@ -1,8 +1,16 @@
 import { api } from '@app/lib/api/client';
 import { useApi } from '@app/lib/api/useApi';
-import type { ProviderTypeDescriptor } from '@contract/providers';
+import type { ProviderType, ProviderTypeDescriptor } from '@contract/providers';
 
 export type { ProviderTypeDescriptor };
+
+/** The served description of `type`; absent while loading or for a type that is not offered. */
+export function descriptorFor(
+  types: ProviderTypeDescriptor[] | undefined,
+  type: ProviderType
+): ProviderTypeDescriptor | undefined {
+  return types?.find((t) => t.type === type);
+}
 
 /**
  * The provider types that can be configured, in display order, with their

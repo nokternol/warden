@@ -8,7 +8,7 @@ import TopBar from '@app/components/TopBar';
 import type { CreateProviderParams, ProviderSummary } from '@app/hooks/useProviderSettings';
 import { useProviderSettings } from '@app/hooks/useProviderSettings';
 import { tasksForProvider, useProviderTasks } from '@app/hooks/useProviderTasks';
-import { useProviderTypes } from '@app/hooks/useProviderTypes';
+import { descriptorFor, useProviderTypes } from '@app/hooks/useProviderTypes';
 import { requireAuth } from '@app/lib/utils/requireAuth';
 import type { ProviderType } from '@contract/providers';
 import { Plug } from 'lucide-react';
@@ -110,7 +110,7 @@ export default function SettingsPage() {
                   {showDivider && <div className="h-px bg-border/40 my-1" />}
                   <ProviderCard
                     provider={p}
-                    providerType={types?.find((t) => t.type === p.type)}
+                    providerType={descriptorFor(types, p.type)}
                     tasks={tasksForProvider(availability, p.id)}
                     onUpdate={(patch) => update(p.id, patch)}
                     onDelete={() => remove(p.id)}

@@ -2,6 +2,7 @@ import Button from '@app/components/Button';
 import ConnectionTestIcon from '@app/components/ConnectionTestIcon';
 import type { TestStatus } from '@app/components/ConnectionTestIcon';
 import type { CreateProviderParams } from '@app/hooks/useProviderSettings';
+import { descriptorFor } from '@app/hooks/useProviderTypes';
 import { api } from '@app/lib/api/client';
 import type { ProviderTypeDescriptor } from '@contract/providers';
 import { type ProviderType, ProviderTypeSchema } from '@contract/schemas';
@@ -64,8 +65,7 @@ export default function AddProviderForm({
     }
   };
 
-  const descriptorOf = (type: ProviderType) => types.find((t) => t.type === type);
-  const chosen = form.type ? descriptorOf(form.type) : types[0];
+  const chosen = form.type ? descriptorFor(types, form.type) : types[0];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,7 +100,7 @@ export default function AddProviderForm({
             value={chosen?.type}
             onChange={(e) => {
               const newType = ProviderTypeSchema.parse(e.target.value);
-              const defaultUrl = descriptorOf(newType)?.defaultUrl;
+              const defaultUrl = descriptorFor(types, newType)?.defaultUrl;
               setForm((f) => ({ ...f, type: newType, url: defaultUrl ?? f.url }));
               setTestStatus('idle');
               setTestError(undefined);
