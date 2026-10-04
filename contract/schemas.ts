@@ -117,7 +117,7 @@ export const AutomationLastRunSchema = z
   })
   .strict();
 
-export const AutomationQuerySourceSchema = z
+export const AutomationQuerySchema = z
   .object({
     queryId: z.number(),
     role: z.enum(['include', 'exclude']),
@@ -133,7 +133,7 @@ export const AutomationSchema = z
     name: z.string(),
     kind: z.enum(['user', 'system']),
     query: AutomationQueryRefSchema,
-    querySources: z.array(AutomationQuerySourceSchema),
+    queries: z.array(AutomationQuerySchema),
     provider: ProviderRefSchema,
     taskId: z.string(),
     taskParameter: z.string().optional(),

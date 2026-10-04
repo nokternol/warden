@@ -1,6 +1,6 @@
+import AutomationQueryList from '@app/components/AutomationQueryList';
+import type { AutomationQueryItem } from '@app/components/AutomationQueryList';
 import Badge from '@app/components/Badge';
-import QuerySourceList from '@app/components/QuerySourceList';
-import type { QuerySource } from '@app/components/QuerySourceList';
 import type { CreateAutomationInput } from '@app/hooks/useAutomations';
 import type { MediaQueryRecord } from '@app/hooks/useMediaQueries';
 import { useProviderSettings } from '@app/hooks/useProviderSettings';
@@ -141,7 +141,7 @@ export default function AutomationBuilder({
   }, [availableTasks]);
 
   const [name, setName] = useState('');
-  const [querySources, setQuerySources] = useState<QuerySource[]>(
+  const [automationQueries, setAutomationQueries] = useState<AutomationQueryItem[]>(
     queries.length === 1 ? [{ queryId: queries[0].id, role: 'include', sortOrder: 0 }] : []
   );
   const [selectedTask, setSelectedTask] = useState<BuilderTask | null>(null);
@@ -170,7 +170,7 @@ export default function AutomationBuilder({
   const nextRunDate = effectiveCron ? safeNextRun(effectiveCron) : null;
   const isValidCron = nextRunDate !== null;
 
-  const hasValidInclude = querySources.some((s) => s.role === 'include' && s.queryId > 0);
+  const hasValidInclude = automationQueries.some((s) => s.role === 'include' && s.queryId > 0);
 
   const hasRequiredParameter = !selectedTask?.parameter || taskParameterValue.trim().length > 0;
 
@@ -188,14 +188,14 @@ export default function AutomationBuilder({
       setSubmitError(null);
       onSubmit({
         name: name.trim(),
-        querySources,
+        queries: automationQueries,
         providerId: selectedTask.providerId,
         taskId: selectedTask.taskId,
         taskParameter: selectedTask.parameter ? taskParameterValue : undefined,
         schedule: effectiveCron,
       });
     },
-    [canSubmit, querySources, selectedTask, name, effectiveCron, taskParameterValue, onSubmit]
+    [canSubmit, automationQueries, selectedTask, name, effectiveCron, taskParameterValue, onSubmit]
   );
 
   return (
@@ -237,14 +237,14 @@ export default function AutomationBuilder({
           />
         </div>
 
-        {/* ── Query sources ── */}
+        {/* ── Automation queries ── */}
         <div>
           <p className="text-xs font-medium text-text-secondary mb-1">Run on</p>
           <p className="text-xs text-text-muted mb-3">Which media this automation targets.</p>
-          <QuerySourceList
-            sources={querySources}
+          <AutomationQueryList
+            automationQueries={automationQueries}
             queries={queries.map((q) => ({ id: q.id, name: q.name }))}
-            onChange={setQuerySources}
+            onChange={setAutomationQueries}
           />
         </div>
 

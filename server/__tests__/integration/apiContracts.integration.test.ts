@@ -56,7 +56,7 @@ describe('API shape contracts — real server responses', () => {
     });
     const automation = await automationService.create({
       name: 'Test Automation',
-      querySources: [{ queryId: query.id, role: 'include' }],
+      queries: [{ queryId: query.id, role: 'include' }],
       providerId: provider.id,
       taskId: 'unmonitorMovie',
       schedule: '0 2 * * *',

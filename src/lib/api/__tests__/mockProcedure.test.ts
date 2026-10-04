@@ -9,7 +9,7 @@ const automation = {
   name: 'Weekly search',
   kind: 'user' as const,
   query: null,
-  querySources: [],
+  queries: [],
   provider: null,
   taskId: 'triggerSearch',
   schedule: '0 3 * * 0',

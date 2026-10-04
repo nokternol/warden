@@ -57,7 +57,7 @@ async function seedFixtures() {
   });
   const automation = await automationService.create({
     name: 'Nightly Cleanup',
-    querySources: [{ queryId: query.id, role: 'include' }],
+    queries: [{ queryId: query.id, role: 'include' }],
     providerId: provider.id,
     taskId: 'unmonitorMovie',
     schedule: '0 2 * * *',
@@ -199,14 +199,14 @@ describe('AutomationRunService', () => {
 
       const auto1 = await automationService.create({
         name: 'Auto 1',
-        querySources: [{ queryId: query.id, role: 'include' }],
+        queries: [{ queryId: query.id, role: 'include' }],
         providerId: provider.id,
         taskId: 'unmonitorMovie',
         schedule: '* * * * *',
       });
       const auto2 = await automationService.create({
         name: 'Auto 2',
-        querySources: [{ queryId: query.id, role: 'include' }],
+        queries: [{ queryId: query.id, role: 'include' }],
         providerId: provider.id,
         taskId: 'unmonitorMovie',
         schedule: '* * * * *',

@@ -74,7 +74,7 @@ describe('AutomationService', () => {
 
       const dto = await automationService.create({
         name: 'My Automation',
-        querySources: [{ queryId: query.id, role: 'include' }],
+        queries: [{ queryId: query.id, role: 'include' }],
         providerId: provider.id,
         taskId: 'unmonitorMovie',
         schedule: '0 * * * *',
@@ -99,7 +99,7 @@ describe('AutomationService', () => {
 
       const dto = await automationService.create({
         name: 'My Automation',
-        querySources: [{ queryId: query.id, role: 'include' }],
+        queries: [{ queryId: query.id, role: 'include' }],
         providerId: provider.id,
         taskId: 'unmonitorMovie',
         schedule: '0 * * * *',
@@ -117,7 +117,7 @@ describe('AutomationService', () => {
 
       const dto = await automationService.create({
         name: 'My Automation',
-        querySources: [{ queryId: query.id, role: 'include' }],
+        queries: [{ queryId: query.id, role: 'include' }],
         providerId: provider.id,
         taskId: 'unmonitorMovie',
         schedule: '0 * * * *',
@@ -140,7 +140,7 @@ describe('AutomationService', () => {
       await expect(
         automationService.create({
           name: 'Disabled Task Automation',
-          querySources: [{ queryId: query.id, role: 'include' }],
+          queries: [{ queryId: query.id, role: 'include' }],
           providerId: provider.id,
           taskId: 'unmonitorMovie',
           schedule: '0 * * * *',
@@ -167,7 +167,7 @@ describe('AutomationService', () => {
       await expect(
         automationService.create({
           name: 'Bad Automation',
-          querySources: [{ queryId: query.id, role: 'include' }],
+          queries: [{ queryId: query.id, role: 'include' }],
           providerId: provider.id,
           taskId: 'unmonitorSeries',
           schedule: '0 * * * *',
@@ -192,7 +192,7 @@ describe('AutomationService', () => {
       await expect(
         automationService.create({
           name: 'Bad Automation',
-          querySources: [{ queryId: query.id, role: 'include' }],
+          queries: [{ queryId: query.id, role: 'include' }],
           providerId: provider.id,
           taskId: 'unmonitorMovie',
           schedule: '0 * * * *',
@@ -209,7 +209,7 @@ describe('AutomationService', () => {
 
       await automationService.create({
         name: 'User Automation',
-        querySources: [{ queryId: query.id, role: 'include' }],
+        queries: [{ queryId: query.id, role: 'include' }],
         providerId: provider.id,
         taskId: 'unmonitorMovie',
         schedule: '0 * * * *',
@@ -233,14 +233,14 @@ describe('AutomationService', () => {
 
       await automationService.create({
         name: 'Automation A',
-        querySources: [{ queryId: query.id, role: 'include' }],
+        queries: [{ queryId: query.id, role: 'include' }],
         providerId: provider.id,
         taskId: 'unmonitorMovie',
         schedule: '0 * * * *',
       });
       await automationService.create({
         name: 'Automation B',
-        querySources: [{ queryId: query.id, role: 'include' }],
+        queries: [{ queryId: query.id, role: 'include' }],
         providerId: provider.id,
         taskId: 'triggerSearch',
         schedule: '0 0 * * *',
@@ -262,7 +262,7 @@ describe('AutomationService', () => {
 
       const created = await automationService.create({
         name: 'Automation C',
-        querySources: [{ queryId: query.id, role: 'include' }],
+        queries: [{ queryId: query.id, role: 'include' }],
         providerId: provider.id,
         taskId: 'unmonitorMovie',
         schedule: '0 * * * *',
@@ -273,7 +273,7 @@ describe('AutomationService', () => {
       expect(found.updatedAt).toMatch(ISO_REGEX);
     });
 
-    it('returns querySources array with role and queryId for each source', async () => {
+    it('returns queries array with role and queryId for each source', async () => {
       const provider = await seedProvider(providerSettingsService);
       const queryA = await mediaQueryService.create({
         name: 'Include Q',
@@ -288,7 +288,7 @@ describe('AutomationService', () => {
 
       const created = await automationService.create({
         name: 'Multi-source Automation',
-        querySources: [
+        queries: [
           { queryId: queryA.id, role: 'include', sortOrder: 0 },
           { queryId: queryB.id, role: 'exclude', sortOrder: 1 },
         ],
@@ -298,8 +298,8 @@ describe('AutomationService', () => {
       });
 
       const found = await automationService.getById(created.id);
-      expect(found.querySources).toHaveLength(2);
-      expect(found.querySources).toEqual(
+      expect(found.queries).toHaveLength(2);
+      expect(found.queries).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ queryId: queryA.id, role: 'include' }),
           expect.objectContaining({ queryId: queryB.id, role: 'exclude' }),
@@ -363,7 +363,7 @@ describe('AutomationService', () => {
 
       const created = await automationService.create({
         name: 'Status Automation',
-        querySources: [{ queryId: query.id, role: 'include' }],
+        queries: [{ queryId: query.id, role: 'include' }],
         providerId: provider.id,
         taskId: 'unmonitorSeries',
         schedule: '0 * * * *',
@@ -382,7 +382,7 @@ describe('AutomationService', () => {
 
       const created = await automationService.create({
         name: 'Automation D',
-        querySources: [{ queryId: query.id, role: 'include' }],
+        queries: [{ queryId: query.id, role: 'include' }],
         providerId: provider.id,
         taskId: 'unmonitorMovie',
         schedule: '0 * * * *',

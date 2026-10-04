@@ -11,17 +11,17 @@ import {
 } from './schemas';
 
 /** One query an automation draws from, included in or excluded from its media set. */
-const QuerySourceInputSchema = z.object({
+const AutomationQueryInputSchema = z.object({
   queryId: z.number().int().positive(),
   role: z.enum(['include', 'exclude']),
   sortOrder: z.number().int().optional(),
 });
 
-export type QuerySourceInput = z.input<typeof QuerySourceInputSchema>;
+export type AutomationQueryInput = z.input<typeof AutomationQueryInputSchema>;
 
 /**
  * A new automation's draft. `queryId` is the single-query shorthand: it becomes
- * one include source when `querySources` is absent.
+ * one include source when `queries` is absent.
  */
 const CreateAutomationInputSchema = z
   .object({
@@ -30,7 +30,7 @@ const CreateAutomationInputSchema = z
     taskId: z.string().min(1),
     taskParameter: z.string().min(1).optional(),
     schedule: z.string().min(1),
-    querySources: z.array(QuerySourceInputSchema).min(1).optional(),
+    queries: z.array(AutomationQueryInputSchema).min(1).optional(),
     queryId: z.number().int().positive().optional(),
   })
   .transform((val) => ({
@@ -39,8 +39,8 @@ const CreateAutomationInputSchema = z
     taskId: val.taskId,
     taskParameter: val.taskParameter,
     schedule: val.schedule,
-    querySources:
-      val.querySources ??
+    queries:
+      val.queries ??
       (val.queryId ? [{ queryId: val.queryId, role: 'include' as const, sortOrder: 0 }] : []),
   }));
 

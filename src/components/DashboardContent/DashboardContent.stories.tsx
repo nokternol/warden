@@ -63,7 +63,7 @@ function mockAutomation(
     name,
     kind: 'user' as const,
     query: { id: 1, name: 'Movies > 2yr, unwatched', contentType: 'movie' as const },
-    querySources: [{ queryId: 1, role: 'include' as const, sortOrder: 0 }],
+    queries: [{ queryId: 1, role: 'include' as const, sortOrder: 0 }],
     provider: { id: 1, name: 'My Plex', type: 'PLEX' },
     taskId: 'deleteFromLibrary',
     schedule: '0 2 * * 0',

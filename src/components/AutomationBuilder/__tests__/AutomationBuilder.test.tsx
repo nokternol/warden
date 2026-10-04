@@ -163,9 +163,7 @@ describe('AutomationBuilder', () => {
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'My Automation',
-        querySources: expect.arrayContaining([
-          expect.objectContaining({ queryId: 1, role: 'include' }),
-        ]),
+        queries: expect.arrayContaining([expect.objectContaining({ queryId: 1, role: 'include' })]),
         taskId: 'unmonitorMovie',
         providerId: 1,
       })

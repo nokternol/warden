@@ -16,7 +16,7 @@ const automation = {
   name: 'Nightly unmonitor',
   kind: 'user' as const,
   query: { id: 1, name: 'Movies', contentType: 'movie' as const },
-  querySources: [{ queryId: 1, role: 'include' as const, sortOrder: 0 }],
+  queries: [{ queryId: 1, role: 'include' as const, sortOrder: 0 }],
   provider: { id: 1, name: 'Radarr', type: 'RADARR' },
   taskId: 'unmonitorMovie',
   schedule: '0 2 * * *',

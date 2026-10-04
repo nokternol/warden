@@ -145,7 +145,7 @@ async function seedAutomation(
 ) {
   return automationService.create({
     name: 'Test Automation',
-    querySources: [{ queryId: opts.queryId, role: 'include' }],
+    queries: [{ queryId: opts.queryId, role: 'include' }],
     providerId: opts.providerId,
     taskId: opts.taskId,
     taskParameter: opts.taskParameter,
@@ -780,7 +780,7 @@ describe('AutomationExecutor', () => {
   // ─── Legacy path removal ─────────────────────────────────────────────────
 
   describe('legacy path removal', () => {
-    it('records error when querySources is empty even if a legacy query field is defined', async () => {
+    it('records error when queries is empty even if a legacy query field is defined', async () => {
       const movies = [createRadarrMovie({ id: 7, title: 'Dune', year: 2021 })];
       const mockRadarr = radarrSource(movies, {
         unmonitorMovies: async (_: number[]) => {},
@@ -792,7 +792,7 @@ describe('AutomationExecutor', () => {
           id: 99,
           name: 'Legacy Path Test',
           kind: 'user' as const,
-          querySources: [],
+          queries: [],
           query: { id: 1, name: 'Q', contentType: 'movie' as const },
           provider: { id: 1, name: 'Radarr', type: 'RADARR' },
           taskId: 'unmonitorMovie',
@@ -843,7 +843,7 @@ describe('AutomationExecutor', () => {
         99,
         expect.objectContaining({
           status: 'error',
-          error: expect.stringMatching(/no query sources/i),
+          error: expect.stringMatching(/no queries/i),
         })
       );
     });
@@ -870,7 +870,7 @@ describe('AutomationExecutor', () => {
           id: 99,
           name: 'Discriminator Test',
           kind: 'user' as const,
-          querySources: [{ queryId: 1, role: 'include' as const, sortOrder: 0 }],
+          queries: [{ queryId: 1, role: 'include' as const, sortOrder: 0 }],
           query: { id: 1, name: 'Q', contentType: 'movie' as const },
           provider: { id: 1, name: 'Radarr', type: 'RADARR' },
           taskId: 'unmonitorMovie',
@@ -1124,7 +1124,7 @@ describe('AutomationExecutor', () => {
 
       const automation = await automationService.create({
         name: 'Difference Test',
-        querySources: [
+        queries: [
           { queryId: includeQuery.id, role: 'include' },
           { queryId: excludeQuery.id, role: 'exclude' },
         ],
@@ -1172,7 +1172,7 @@ describe('AutomationExecutor', () => {
 
       const automation = await automationService.create({
         name: 'Multi-include',
-        querySources: [
+        queries: [
           { queryId: queryA.id, role: 'include' },
           { queryId: queryB.id, role: 'include' },
         ],
@@ -1222,7 +1222,7 @@ describe('AutomationExecutor', () => {
 
       const automation = await automationService.create({
         name: 'Hoist Test',
-        querySources: [
+        queries: [
           { queryId: queryA.id, role: 'include' },
           { queryId: queryB.id, role: 'include' },
         ],

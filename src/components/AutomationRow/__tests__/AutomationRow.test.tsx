@@ -14,7 +14,7 @@ const mockAutomation: AutomationDto = {
     name: 'Stale Movies',
     contentType: 'movie',
   },
-  querySources: [{ queryId: 1, role: 'include', sortOrder: 0 }],
+  queries: [{ queryId: 1, role: 'include', sortOrder: 0 }],
   provider: { id: 1, name: 'Radarr', type: 'RADARR' },
   taskId: 'deleteMovieWithFiles',
   schedule: '0 2 * * *',
