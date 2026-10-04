@@ -9,7 +9,12 @@ import { type Filter, createMediaProcedures } from '@server/modules/media';
 import { createMediaQueryProcedures } from '@server/modules/mediaQueries';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { createMockConfig, createRadarrMovie, createSonarrSeries } from '@tests/factories';
-import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
+import {
+  browsePath,
+  createApiClient,
+  expectErrorResponse,
+  expectSuccessResponse,
+} from '@tests/helpers/api';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import { http, HttpResponse } from 'msw';
@@ -181,5 +186,15 @@ describe('Browse speaks the save encoding', () => {
 
     expect(titles).toEqual(['Batman Begins', 'The Matrix']);
     expect(browsed).toBe(previewed);
+  });
+
+  it('rejects filters that are not save-shaped entries instead of browsing unfiltered', async () => {
+    const notJson = await client.get('/api/media/movie?filters=hasFile%3Dtrue');
+    const legacyShape = await client.get(
+      `/api/media/movie?filters=${encodeURIComponent(JSON.stringify({ hasFile: true }))}`
+    );
+
+    expectErrorResponse(notJson, 400);
+    expectErrorResponse(legacyShape, 400);
   });
 });
