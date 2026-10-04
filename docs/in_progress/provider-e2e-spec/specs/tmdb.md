@@ -142,7 +142,7 @@ metadata; no `MediaActuator` role is plausible.").
 
 No `/prototype` session needed — every filterable field maps onto a `RuleControl` renderer already
 established across the six prior UI passes (`range` → `NumberRangeFilter`, `csv-strings` →
-`StringMultiSelectDropdown`, `boolean` → `OptionFilter`). No tasks exist for TMDB (confirmed: "Tasks:
+`MultiSelectFilter`, `boolean` → `OptionFilter`). No tasks exist for TMDB (confirmed: "Tasks:
 N/A — no tasks" above), so nothing goes to `11-automation-task-parameters` this ticket, unlike every
 prior provider's UI pass.
 
@@ -175,7 +175,7 @@ if (rule.key === 'originCountry') return ISO_COUNTRY_CODES; // fixed ~250-entry 
 ```
 
 No new `Lookups` field, no new route. (Display label mapping from code → country name, if wanted in
-the dropdown, is a rendering-layer concern for `StringMultiSelectDropdown` generally, not specific to
+the dropdown, is a rendering-layer concern for `MultiSelectFilter` generally, not specific to
 this field — out of scope for a filter-shape decision.)
 
 **Naming note carried to OMDB**: this key is `originCountry`, already used verbatim in

@@ -151,7 +151,7 @@ Tasks / automation options: N/A — no tasks, confirmed empty-by-design.
 
 No `/prototype` session needed — every filterable field maps onto a `RuleControl` renderer already
 established across the eight prior UI passes (`range` → `NumberRangeFilter`, `csv-strings` →
-`StringMultiSelectDropdown`, `string` → `ENUM_OPTIONS`-driven fixed picker). No tasks exist for
+`MultiSelectFilter`, `string` → `ENUM_OPTIONS`-driven fixed picker). No tasks exist for
 TVMaze (confirmed: "Tasks / automation options: N/A" above), so nothing goes to
 `11-automation-task-parameters` — the ninth of ten providers with nothing to append there.
 

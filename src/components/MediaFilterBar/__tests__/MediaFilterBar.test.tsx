@@ -693,7 +693,7 @@ describe('MediaFilterBar — activeTab prop', () => {
 
 // ─── Multi-select dropdowns ───────────────────────────────────────────────────
 
-describe('MediaFilterBar — MultiSelectDropdown', () => {
+describe('MediaFilterBar — multi-value controls', () => {
   it('renders movie tags dropdown when radarr tags are present', async () => {
     const user = setupUser();
     render(<MediaFilterBar {...makeProps({ lookups: RICH_LOOKUPS })} />);
@@ -824,6 +824,151 @@ describe('MediaFilterBar — MultiSelectDropdown', () => {
     await user.click(screen.getByRole('button', { name: /movie tags, 1 selected/i }));
     await user.click(screen.getByRole('menuitemcheckbox', { name: /4k/i }));
     expect(onRuleChange).toHaveBeenCalledWith('movie', 'tagIds', undefined);
+  });
+});
+
+// ─── Multi-value rules — grouping, qualification, keyboard ────────────────────
+
+const TWO_RADARRS: NonNullable<MediaFilterBarProps['sources']> = {
+  movie: {
+    contentType: 'movie',
+    ownerType: 'RADARR',
+    configured: true,
+    instances: [
+      { id: 1, name: 'Radarr 4K' },
+      { id: 3, name: 'Radarr Standard' },
+    ],
+  },
+  series: {
+    contentType: 'series',
+    ownerType: 'SONARR',
+    configured: true,
+    instances: [{ id: 2, name: 'Sonarr' }],
+  },
+};
+
+const TWO_RADARR_LOOKUPS: MediaFilterBarProps['lookups'] = {
+  ...EMPTY_LOOKUPS,
+  tags: {
+    radarr: [
+      { id: 10, label: 'Remux', providerId: 1, providerName: 'Radarr 4K' },
+      { id: 11, label: 'HDR', providerId: 1, providerName: 'Radarr 4K' },
+      { id: 20, label: 'Kids', providerId: 3, providerName: 'Radarr Standard' },
+    ],
+    sonarr: [],
+  },
+  genres: { movies: ['Action', 'Comedy', 'Drama'], series: [] },
+};
+
+/** The registry marks id lookups owned by an instance as `instanceScoped`; the
+ *  shared fixture predates that, so these tests opt the rules in. */
+const instanceScoped = (rules: MediaRuleDescriptor[]): MediaRuleDescriptor[] =>
+  rules.map((r) => (r.dataType === 'instance-ids' ? { ...r, instanceScoped: true } : r));
+
+describe('MediaFilterBar — multi-value rules across several instances', () => {
+  const twoRadarrProps = (overrides: Partial<MediaFilterBarProps> = {}) =>
+    makeProps({
+      rules: instanceScoped(makeProps().rules),
+      lookups: TWO_RADARR_LOOKUPS,
+      sources: TWO_RADARRS,
+      ...overrides,
+    });
+
+  it('lists options under their instance and qualifies a single-instance selection', async () => {
+    const onRuleChange = vi.fn();
+    const onQualifierChange = vi.fn();
+    const user = setupUser();
+    render(<MediaFilterBar {...twoRadarrProps({ onRuleChange, onQualifierChange })} />);
+    await addFilter(user, /movie tags/i);
+    await user.click(screen.getByRole('button', { name: /movie tags/i }));
+    const menu = screen.getByRole('menu', { name: /movie tags/i });
+    expect(within(menu).getByText('Radarr 4K')).toBeInTheDocument();
+    expect(within(menu).getByText('Radarr Standard')).toBeInTheDocument();
+    await user.click(within(menu).getByRole('menuitemcheckbox', { name: /kids/i }));
+    expect(onRuleChange).toHaveBeenCalledWith('movie', 'tagIds', '20');
+    expect(onQualifierChange).toHaveBeenCalledWith('movie', 'tagIds', 3);
+  });
+
+  it('leaves a selection spanning instances unqualified and says so', async () => {
+    const onQualifierChange = vi.fn();
+    const user = setupUser();
+    render(
+      <MediaFilterBar
+        {...twoRadarrProps({
+          onQualifierChange,
+          values: valuesWith({ movie: { tagIds: '10' } }),
+        })}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: /movie tags, 1 selected/i }));
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('menuitemcheckbox', { name: /kids/i }));
+    expect(onQualifierChange).toHaveBeenCalledWith('movie', 'tagIds', undefined);
+  });
+
+  it('shows the spans-instances note when the current selection crosses instances', async () => {
+    const user = setupUser();
+    render(
+      <MediaFilterBar {...twoRadarrProps({ values: valuesWith({ movie: { tagIds: '10,20' } }) })} />
+    );
+    await user.click(screen.getByRole('button', { name: /movie tags, 2 selected/i }));
+    expect(screen.getByRole('note')).toHaveTextContent(/spans multiple instances/i);
+  });
+
+  it('does not group or qualify with a single instance', async () => {
+    const onQualifierChange = vi.fn();
+    const user = setupUser();
+    render(
+      <MediaFilterBar
+        {...makeProps({
+          rules: instanceScoped(makeProps().rules),
+          lookups: RICH_LOOKUPS,
+          onQualifierChange,
+        })}
+      />
+    );
+    await addFilter(user, /movie tags/i);
+    await user.click(screen.getByRole('button', { name: /movie tags/i }));
+    expect(screen.queryByText('Radarr')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('menuitemcheckbox', { name: /4k/i }));
+    expect(onQualifierChange).toHaveBeenCalledWith('movie', 'tagIds', undefined);
+  });
+
+  it('emits comma-separated strings for a string multi-value rule and undefined when emptied', async () => {
+    const onRuleChange = vi.fn();
+    const user = setupUser();
+    const { rerender } = render(<MediaFilterBar {...twoRadarrProps({ onRuleChange })} />);
+    await addFilter(user, /movie genres/i);
+    await user.click(screen.getByRole('button', { name: /movie genres/i }));
+    await user.click(screen.getByRole('menuitemcheckbox', { name: /comedy/i }));
+    expect(onRuleChange).toHaveBeenLastCalledWith('movie', 'genres', 'Comedy');
+    rerender(
+      <MediaFilterBar
+        {...twoRadarrProps({ onRuleChange, values: valuesWith({ movie: { genres: 'Comedy' } }) })}
+      />
+    );
+    await user.click(screen.getByRole('menuitemcheckbox', { name: /comedy/i }));
+    expect(onRuleChange).toHaveBeenLastCalledWith('movie', 'genres', undefined);
+  });
+
+  it('is operable from the keyboard', async () => {
+    const onRuleChange = vi.fn();
+    const user = setupUser();
+    render(<MediaFilterBar {...twoRadarrProps({ onRuleChange })} />);
+    await addFilter(user, /movie tags/i);
+    const trigger = screen.getByRole('button', { name: /movie tags/i });
+    trigger.focus();
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('menuitemcheckbox', { name: /remux/i })).toHaveFocus();
+    await user.keyboard('{ArrowDown}{ArrowDown}');
+    expect(screen.getByRole('menuitemcheckbox', { name: /kids/i })).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(onRuleChange).toHaveBeenLastCalledWith('movie', 'tagIds', '20');
+    await user.keyboard('{ArrowUp}{ArrowUp}{ArrowUp}');
+    expect(trigger).toHaveFocus();
+    await user.keyboard('{ArrowDown}{Escape}');
+    expect(screen.queryByRole('menu', { name: /movie tags/i })).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
   });
 });
 

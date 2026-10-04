@@ -240,10 +240,11 @@ provider leaves the `providerId` in any filter value that names it, so the filte
 and its query reports `not_active`; it never widens to another instance's ids, which name different
 tags and profiles.
 
-The client (`MediaFilterBar`) mirrors this: when a rule's owning content type has more than one active
-instance (`useMediaSources()`), its dropdown renders options grouped into labeled per-instance sections
-and, if every currently-selected option resolves to exactly one instance, saves a value that names it; a
-selection spanning instances (or none) falls back to the unqualified interpretation. With exactly one
+The client mirrors this: when a rule's owning content type has more than one active instance
+(`useMediaSources()`), `MediaFilterBar` gives `MultiSelectFilter` each option's instance as its group,
+so options render in labeled per-instance sections. If every currently-selected option resolves to
+exactly one instance, the bar reports that instance for the value to be saved with; a selection spanning
+instances (or none) falls back to the unqualified interpretation, and the control shows a note saying so. With exactly one
 active instance the control renders flat and saves unqualified values — the stored shape of a
 single-instance deployment carries no `providerId`.
 

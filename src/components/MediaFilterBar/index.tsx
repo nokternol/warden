@@ -8,11 +8,16 @@ import type {
 import { scopeOf } from '@app/hooks/useMediaFilters';
 import type { MediaQualityProfile, MediaTag } from '@app/hooks/useMediaLookups';
 import type { MediaSourceDescriptor } from '@app/hooks/useMediaSources';
+import { parseIds, parseStrings, toCsv } from '@app/lib/multiValueFilter';
 import { cn } from '@app/lib/utils/cn';
 import type { InstanceIdLookup, MediaRuleDescriptor, StringLookup } from '@contract/media';
 import type { ContentType } from '@contract/schemas';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { MobileYearInputs } from '../filters/MobileYearInputs';
+import { MultiSelectFilter } from '../filters/MultiSelectFilter';
+import { NumberRangeFilter } from '../filters/NumberRangeFilter';
 import { OptionFilter } from '../filters/OptionFilter';
+import { TextFilter } from '../filters/TextFilter';
 import type { PickerEntry } from './FilterPicker';
 import { FilterPicker } from './FilterPicker';
 
@@ -97,730 +102,6 @@ function ChipX() {
   );
 }
 
-// ─── MultiSelectDropdown ──────────────────────────────────────────────────────
-
-interface QualifiableOption {
-  id: number;
-  displayName: string;
-  providerId: number;
-  providerName: string;
-}
-
-/** Groups options by `providerId`, preserving each group's first-seen order —
- *  the shape a grouped dropdown menu renders as labeled sections. */
-function groupByProvider(options: QualifiableOption[]): Array<[string, QualifiableOption[]]> {
-  const groups = new Map<string, QualifiableOption[]>();
-  for (const opt of options) {
-    const key = opt.providerName;
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(opt);
-  }
-  return Array.from(groups.entries());
-}
-
-/** The single providerId every selected option shares, or `undefined` if the
- *  selection spans zero or more than one instance — mixed/empty selections
- *  fall back to today's unqualified interpretation (native id space of each
- *  item's own instance), the same degrade the design document accepts for
- *  cross-instance picks that can't be qualified to one namespace. */
-function providerIdOf(options: QualifiableOption[], selectedIds: number[]): number | undefined {
-  const providerIds = new Set(
-    options.filter((o) => selectedIds.includes(o.id)).map((o) => o.providerId)
-  );
-  return providerIds.size === 1 ? Array.from(providerIds)[0] : undefined;
-}
-
-function MultiSelectDropdown({
-  label,
-  options,
-  selectedIds,
-  onChange,
-  grouped = false,
-}: {
-  label: string;
-  options: Array<{ id: number; displayName: string; providerId?: number; providerName?: string }>;
-  selectedIds: number[];
-  onChange: (ids: number[], providerId: number | undefined) => void;
-  /** Renders options in labeled per-instance sections and reports the
-   *  qualified `providerId` on every change — set when the owning content
-   *  type has more than one active instance (see `MediaFilterBar`). */
-  grouped?: boolean;
-}) {
-  const id = useId();
-  const menuId = `${id}-menu`;
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (isOpen) {
-      itemRefs.current[0]?.focus();
-    }
-  }, [isOpen]);
-
-  if (options.length === 0) return null;
-
-  const qualifiable = options as QualifiableOption[];
-
-  const toggle = (optId: number) => {
-    const next = selectedIds.includes(optId)
-      ? selectedIds.filter((x) => x !== optId)
-      : [...selectedIds, optId];
-    onChange(next, grouped ? providerIdOf(qualifiable, next) : undefined);
-  };
-
-  const activeCount = selectedIds.length;
-  const menuGroups = grouped ? groupByProvider(qualifiable) : null;
-  // Flattened in the same order the menu renders (grouped or not) so
-  // keyboard-nav indices line up with the labeled sections below.
-  const renderOrder = menuGroups ? menuGroups.flatMap(([, opts]) => opts) : options;
-  const indexById = new Map(renderOrder.map((opt, index) => [opt.id, index]));
-
-  return (
-    <div ref={containerRef} className="relative">
-      <button
-        ref={triggerRef}
-        type="button"
-        aria-label={activeCount > 0 ? `${label}, ${activeCount} selected` : label}
-        aria-expanded={isOpen}
-        aria-haspopup="menu"
-        aria-controls={isOpen ? menuId : undefined}
-        onClick={() => setIsOpen((o) => !o)}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape' && isOpen) {
-            e.preventDefault();
-            setIsOpen(false);
-          } else if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            if (!isOpen) setIsOpen(true);
-            else itemRefs.current[0]?.focus();
-          } else if ((e.key === 'Enter' || e.key === ' ') && !isOpen) {
-            e.preventDefault();
-            setIsOpen(true);
-          }
-        }}
-        className={cn(
-          'flex items-center gap-1.5 px-2.5 rounded-md text-xs font-medium border transition-colors h-7',
-          activeCount > 0
-            ? 'bg-primary text-white border-primary'
-            : 'bg-surface-panel text-text-secondary border-border hover:bg-surface-hover'
-        )}
-      >
-        {label}
-        {activeCount > 0 && (
-          <span className="bg-white/20 rounded-full px-1.5 py-0.5 text-xs" aria-hidden="true">
-            {activeCount}
-          </span>
-        )}
-        <svg
-          className="w-3 h-3 ml-0.5"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          aria-hidden="true"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {isOpen && (
-        <div
-          role="menu"
-          id={menuId}
-          aria-label={label}
-          className="absolute top-full left-0 mt-1 min-w-40 max-h-60 overflow-y-auto bg-surface-panel border border-border rounded-lg shadow-lg py-1 z-20"
-        >
-          {(menuGroups ?? ([[undefined, options]] as const)).map(([providerName, groupOptions]) => (
-            <div key={providerName ?? 'ungrouped'}>
-              {providerName !== undefined && (
-                <div
-                  className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-text-muted select-none first:pt-1.5"
-                  aria-hidden="true"
-                >
-                  {providerName}
-                </div>
-              )}
-              {groupOptions.map((opt) => {
-                const index = indexById.get(opt.id)!;
-                const checked = selectedIds.includes(opt.id);
-                return (
-                  <div
-                    key={`${id}-${opt.id}`}
-                    ref={(el) => {
-                      itemRefs.current[index] = el;
-                    }}
-                    role="menuitemcheckbox"
-                    aria-checked={checked}
-                    tabIndex={-1}
-                    onClick={() => toggle(opt.id)}
-                    onKeyDown={(e) => {
-                      switch (e.key) {
-                        case 'Escape':
-                          e.preventDefault();
-                          setIsOpen(false);
-                          triggerRef.current?.focus();
-                          break;
-                        case 'ArrowDown':
-                          e.preventDefault();
-                          itemRefs.current[Math.min(index + 1, renderOrder.length - 1)]?.focus();
-                          break;
-                        case 'ArrowUp':
-                          e.preventDefault();
-                          if (index === 0) triggerRef.current?.focus();
-                          else itemRefs.current[index - 1]?.focus();
-                          break;
-                        case 'Enter':
-                        case ' ':
-                          e.preventDefault();
-                          toggle(opt.id);
-                          break;
-                      }
-                    }}
-                    className="flex items-center gap-2 px-3 py-2.5 text-xs text-text-secondary hover:bg-surface-hover focus:bg-surface-hover focus:outline-none cursor-pointer select-none"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={cn(
-                        'w-3.5 h-3.5 flex-shrink-0 rounded-sm border flex items-center justify-center',
-                        checked ? 'bg-primary border-primary' : 'border-border bg-surface-bg'
-                      )}
-                    >
-                      {checked && (
-                        <svg
-                          viewBox="0 0 12 12"
-                          fill="none"
-                          className="w-full h-full p-0.5"
-                          aria-hidden="true"
-                        >
-                          <path
-                            d="M2 6l3 3 5-5"
-                            stroke="white"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      )}
-                    </span>
-                    {opt.displayName}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-          {grouped &&
-            selectedIds.length > 0 &&
-            providerIdOf(qualifiable, selectedIds) === undefined && (
-              <div
-                role="note"
-                className="border-t border-border mt-1 px-3 pt-2 pb-1.5 text-[11px] leading-snug text-text-muted"
-              >
-                Spans multiple instances — matches within each item&apos;s own instance.
-              </div>
-            )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function StringMultiSelectDropdown({
-  label,
-  options,
-  selectedValues,
-  onChange,
-}: {
-  label: string;
-  options: string[];
-  selectedValues: string[];
-  onChange: (values: string[]) => void;
-}) {
-  const id = useId();
-  const menuId = `${id}-menu`;
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (isOpen) {
-      itemRefs.current[0]?.focus();
-    }
-  }, [isOpen]);
-
-  if (options.length === 0) return null;
-
-  const toggle = (value: string) => {
-    const next = selectedValues.includes(value)
-      ? selectedValues.filter((x) => x !== value)
-      : [...selectedValues, value];
-    onChange(next);
-  };
-
-  const activeCount = selectedValues.length;
-
-  return (
-    <div ref={containerRef} className="relative">
-      <button
-        ref={triggerRef}
-        type="button"
-        aria-label={activeCount > 0 ? `${label}, ${activeCount} selected` : label}
-        aria-expanded={isOpen}
-        aria-haspopup="menu"
-        aria-controls={isOpen ? menuId : undefined}
-        onClick={() => setIsOpen((o) => !o)}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape' && isOpen) {
-            e.preventDefault();
-            setIsOpen(false);
-          } else if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            if (!isOpen) setIsOpen(true);
-            else itemRefs.current[0]?.focus();
-          } else if ((e.key === 'Enter' || e.key === ' ') && !isOpen) {
-            e.preventDefault();
-            setIsOpen(true);
-          }
-        }}
-        className={cn(
-          'flex items-center gap-1.5 px-2.5 rounded-md text-xs font-medium border transition-colors h-7',
-          activeCount > 0
-            ? 'bg-primary text-white border-primary'
-            : 'bg-surface-panel text-text-secondary border-border hover:bg-surface-hover'
-        )}
-      >
-        {label}
-        {activeCount > 0 && (
-          <span className="bg-white/20 rounded-full px-1.5 py-0.5 text-xs" aria-hidden="true">
-            {activeCount}
-          </span>
-        )}
-        <svg
-          className="w-3 h-3 ml-0.5"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          aria-hidden="true"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {isOpen && (
-        <div
-          role="menu"
-          id={menuId}
-          aria-label={label}
-          className="absolute top-full left-0 mt-1 min-w-40 max-h-60 overflow-y-auto bg-surface-panel border border-border rounded-lg shadow-lg py-1 z-20"
-        >
-          {options.map((opt, index) => {
-            const checked = selectedValues.includes(opt);
-            return (
-              <div
-                key={`${id}-${opt}`}
-                ref={(el) => {
-                  itemRefs.current[index] = el;
-                }}
-                role="menuitemcheckbox"
-                aria-checked={checked}
-                tabIndex={-1}
-                onClick={() => toggle(opt)}
-                onKeyDown={(e) => {
-                  switch (e.key) {
-                    case 'Escape':
-                      e.preventDefault();
-                      setIsOpen(false);
-                      triggerRef.current?.focus();
-                      break;
-                    case 'ArrowDown':
-                      e.preventDefault();
-                      itemRefs.current[Math.min(index + 1, options.length - 1)]?.focus();
-                      break;
-                    case 'ArrowUp':
-                      e.preventDefault();
-                      if (index === 0) triggerRef.current?.focus();
-                      else itemRefs.current[index - 1]?.focus();
-                      break;
-                    case 'Enter':
-                    case ' ':
-                      e.preventDefault();
-                      toggle(opt);
-                      break;
-                  }
-                }}
-                className="flex items-center gap-2 px-3 py-2.5 text-xs text-text-secondary hover:bg-surface-hover focus:bg-surface-hover focus:outline-none cursor-pointer select-none"
-              >
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    'w-3.5 h-3.5 flex-shrink-0 rounded-sm border flex items-center justify-center',
-                    checked ? 'bg-primary border-primary' : 'border-border bg-surface-bg'
-                  )}
-                >
-                  {checked && (
-                    <svg
-                      viewBox="0 0 12 12"
-                      fill="none"
-                      className="w-full h-full p-0.5"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M2 6l3 3 5-5"
-                        stroke="white"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  )}
-                </span>
-                {opt}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── TextFilter — a free-text rule (a `string` rule with no fixed options) ───
-
-function TextFilter({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string | undefined;
-  onChange: (value: string | undefined) => void;
-}) {
-  return (
-    <input
-      type="text"
-      aria-label={label}
-      placeholder={label}
-      value={value ?? ''}
-      onChange={(e) => onChange(e.target.value || undefined)}
-      className="px-2.5 py-1 rounded-md text-xs bg-surface-bg border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary w-36"
-    />
-  );
-}
-
-// ─── NumberRangeFilter ────────────────────────────────────────────────────────
-
-function parseNumber(s: string): number | undefined {
-  const n = Number.parseFloat(s);
-  return s.trim() === '' || Number.isNaN(n) ? undefined : n;
-}
-
-function NumberRangeFilter({
-  label,
-  min,
-  max,
-  dataMin = null,
-  dataMax = null,
-  onChangeMin,
-  onChangeMax,
-}: {
-  label: string;
-  min: number | undefined;
-  max: number | undefined;
-  dataMin?: number | null;
-  dataMax?: number | null;
-  onChangeMin: (v: number | undefined) => void;
-  onChangeMax: (v: number | undefined) => void;
-}) {
-  const id = useId();
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const fromInputRef = useRef<HTMLInputElement>(null);
-  const draftMinRef = useRef('');
-  const draftMaxRef = useRef('');
-  const [draftMin, setDraftMinRaw] = useState('');
-  const [draftMax, setDraftMaxRaw] = useState('');
-
-  const isActive = min !== undefined || max !== undefined;
-
-  const setDraftMin = (v: string) => {
-    draftMinRef.current = v;
-    setDraftMinRaw(v);
-  };
-  const setDraftMax = (v: string) => {
-    draftMaxRef.current = v;
-    setDraftMaxRaw(v);
-  };
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const minStr = min != null ? String(min) : '';
-    const maxStr = max != null ? String(max) : '';
-    draftMinRef.current = minStr;
-    draftMaxRef.current = maxStr;
-    setDraftMinRaw(minStr);
-    setDraftMaxRaw(maxStr);
-    requestAnimationFrame(() => fromInputRef.current?.focus());
-  }, [isOpen, min, max]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        onChangeMin(parseNumber(draftMinRef.current));
-        onChangeMax(parseNumber(draftMaxRef.current));
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [isOpen, onChangeMin, onChangeMax]);
-
-  const commitAndClose = () => {
-    onChangeMin(parseNumber(draftMinRef.current));
-    onChangeMax(parseNumber(draftMaxRef.current));
-    setIsOpen(false);
-    triggerRef.current?.focus();
-  };
-
-  const clearAndClose = () => {
-    draftMinRef.current = '';
-    draftMaxRef.current = '';
-    onChangeMin(undefined);
-    onChangeMax(undefined);
-    setIsOpen(false);
-    triggerRef.current?.focus();
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      setIsOpen(false);
-      triggerRef.current?.focus();
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      commitAndClose();
-    }
-  };
-
-  const buttonLabel = isActive ? `${min ?? '…'}–${max ?? '…'}` : label;
-  const fromPlaceholder = dataMin != null ? String(dataMin) : 'Min';
-  const toPlaceholder = dataMax != null ? String(dataMax) : 'Max';
-
-  return (
-    <div ref={containerRef} className="relative flex-shrink-0">
-      <button
-        ref={triggerRef}
-        type="button"
-        aria-label={
-          isActive
-            ? `${label} filter: ${min ?? 'any'} to ${max ?? 'any'}, click to change`
-            : `${label} filter`
-        }
-        aria-expanded={isOpen}
-        aria-haspopup="dialog"
-        onClick={() => setIsOpen((o) => !o)}
-        className={cn(
-          'flex items-center gap-1 px-2.5 rounded-md text-xs font-medium border transition-colors h-7',
-          isActive
-            ? 'bg-primary text-white border-primary'
-            : 'bg-surface-panel text-text-secondary border-border hover:bg-surface-hover'
-        )}
-      >
-        <span className={isActive ? 'font-mono tabular-nums' : ''}>{buttonLabel}</span>
-        <svg
-          className="w-3 h-3 opacity-50 flex-shrink-0"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          aria-hidden="true"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {isOpen && (
-        <div
-          role="dialog"
-          aria-label={`${label} range filter`}
-          className="absolute top-full left-0 mt-1 z-20 bg-surface-elevated border border-border rounded-lg p-3 w-48"
-          style={{
-            boxShadow:
-              'inset 0 0 0 1px rgba(13,148,136,0.18), 0 4px 24px rgba(13,148,136,0.08), 0 1px 6px rgba(0,0,0,0.50)',
-          }}
-        >
-          <div className="flex items-end gap-2">
-            <div className="flex-1 min-w-0">
-              <label
-                htmlFor={`${id}-from`}
-                className="block text-[10px] text-text-muted mb-1 select-none"
-              >
-                From
-              </label>
-              <input
-                ref={fromInputRef}
-                id={`${id}-from`}
-                type="number"
-                value={draftMin}
-                placeholder={fromPlaceholder}
-                onChange={(e) => setDraftMin(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="w-full px-2 py-1.5 rounded text-xs bg-surface-bg border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary tabular-nums"
-              />
-            </div>
-            <span className="text-text-muted text-xs pb-[9px] flex-shrink-0">–</span>
-            <div className="flex-1 min-w-0">
-              <label
-                htmlFor={`${id}-to`}
-                className="block text-[10px] text-text-muted mb-1 select-none"
-              >
-                To
-              </label>
-              <input
-                id={`${id}-to`}
-                type="number"
-                value={draftMax}
-                placeholder={toPlaceholder}
-                onChange={(e) => setDraftMax(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="w-full px-2 py-1.5 rounded text-xs bg-surface-bg border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary tabular-nums"
-              />
-            </div>
-          </div>
-          <div className="flex items-center justify-between mt-2.5">
-            <button
-              type="button"
-              onClick={clearAndClose}
-              disabled={!isActive && !draftMin && !draftMax}
-              className={cn(
-                'text-[10px] transition-colors underline underline-offset-2',
-                isActive || draftMin || draftMax
-                  ? 'text-text-muted hover:text-text-primary'
-                  : 'text-text-muted/30 pointer-events-none'
-              )}
-            >
-              Clear
-            </button>
-            <button
-              type="button"
-              onClick={commitAndClose}
-              className="text-xs font-medium px-3 py-1 rounded bg-primary text-white hover:bg-primary-hover transition-colors focus:outline-none focus:ring-1 focus:ring-primary focus:ring-offset-1 focus:ring-offset-surface-elevated"
-            >
-              Apply
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Mobile year inputs — better UX on touch than a 144px slider ──────────────
-
-function MobileYearInputs({
-  yearMin,
-  yearMax,
-  globalMin,
-  globalMax,
-  setYearMin,
-  setYearMax,
-}: {
-  yearMin: number | undefined;
-  yearMax: number | undefined;
-  globalMin: number;
-  globalMax: number;
-  setYearMin: (v: number | undefined) => void;
-  setYearMax: (v: number | undefined) => void;
-}) {
-  const id = useId();
-  return (
-    <div className="flex items-end gap-3">
-      <div className="flex-1">
-        <label htmlFor={`${id}-from`} className="block text-xs text-text-muted mb-1.5">
-          From
-        </label>
-        <input
-          id={`${id}-from`}
-          type="number"
-          placeholder={String(globalMin)}
-          value={yearMin !== undefined ? yearMin : ''}
-          onChange={(e) => {
-            const v = e.target.valueAsNumber;
-            setYearMin(Number.isNaN(v) ? undefined : v);
-          }}
-          className="w-full px-3 py-2.5 rounded-md text-sm bg-surface-bg border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary"
-        />
-      </div>
-      <span className="text-text-muted pb-3">–</span>
-      <div className="flex-1">
-        <label htmlFor={`${id}-to`} className="block text-xs text-text-muted mb-1.5">
-          To
-        </label>
-        <input
-          id={`${id}-to`}
-          type="number"
-          placeholder={String(globalMax)}
-          value={yearMax !== undefined ? yearMax : ''}
-          onChange={(e) => {
-            const v = e.target.valueAsNumber;
-            setYearMax(Number.isNaN(v) ? undefined : v);
-          }}
-          className="w-full px-3 py-2.5 rounded-md text-sm bg-surface-bg border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary"
-        />
-      </div>
-    </div>
-  );
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function parseCsvIds(csv: string | undefined): number[] {
-  if (!csv) return [];
-  return csv
-    .split(',')
-    .map(Number)
-    .filter((n) => !Number.isNaN(n) && n > 0);
-}
-
-function toCsvOrUndefined(ids: number[]): string | undefined {
-  return ids.length > 0 ? ids.join(',') : undefined;
-}
-
-function parseCsvStrings(csv: string | undefined): string[] {
-  if (!csv) return [];
-  return csv
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-function toStringCsvOrUndefined(values: string[]): string | undefined {
-  return values.length > 0 ? values.join(',') : undefined;
-}
-
 // ─── Rule grouping — the descriptor names its section heading ───────────────
 //
 // Each rule renders under its descriptor's `group` heading, in the order the
@@ -878,11 +159,33 @@ function bySource<T>(pair: { radarr: T; sonarr: T }, scope: ContentScope): T {
   return scope === 'movie' ? pair.radarr : pair.sonarr;
 }
 
-function tagOption(t: MediaTag): QualifiableOption {
+/** An id option from an instance's lookup, carrying the instance it belongs to. */
+interface InstanceOption {
+  id: number;
+  displayName: string;
+  providerId: number;
+  providerName: string;
+}
+
+/** The single instance every selected option belongs to, or `undefined` when the
+ *  selection spans zero or several instances. A mixed selection stays unqualified:
+ *  each item is matched in its own instance's id space, since one instance's ids
+ *  cannot qualify another's. */
+function qualifyingProviderId(
+  options: InstanceOption[],
+  selectedIds: number[]
+): number | undefined {
+  const providerIds = new Set(
+    options.filter((o) => selectedIds.includes(o.id)).map((o) => o.providerId)
+  );
+  return providerIds.size === 1 ? Array.from(providerIds)[0] : undefined;
+}
+
+function tagOption(t: MediaTag): InstanceOption {
   return { id: t.id, displayName: t.label, providerId: t.providerId, providerName: t.providerName };
 }
 
-function profileOption(p: MediaQualityProfile): QualifiableOption {
+function profileOption(p: MediaQualityProfile): InstanceOption {
   return { id: p.id, displayName: p.name, providerId: p.providerId, providerName: p.providerName };
 }
 
@@ -890,7 +193,7 @@ function idOptions(
   lookup: InstanceIdLookup,
   scope: ContentScope,
   lookups: Lookups
-): QualifiableOption[] {
+): InstanceOption[] {
   switch (lookup) {
     case 'tags':
       return bySource(lookups.tags, scope).map(tagOption);
@@ -900,6 +203,8 @@ function idOptions(
       return lookups.languageProfiles.map(profileOption);
   }
 }
+
+const SPANS_INSTANCES_NOTE = "Spans multiple instances — matches within each item's own instance.";
 
 /** Whether the rule's owning content type currently has more than one active
  *  instance — the trigger for grouped, instance-qualified rendering (§10). */
@@ -1081,32 +386,38 @@ function RuleControl({
       const options = idOptions(rule.lookup, scope, lookups);
       const grouped = rule.instanceScoped === true && hasMultipleInstances(scope, sources);
       return (
-        <MultiSelectDropdown
+        <MultiSelectFilter
           label={rule.label}
-          options={options}
-          selectedIds={parseCsvIds(value as string | undefined)}
-          grouped={grouped}
-          onChange={(ids, providerId) => {
-            onRuleChange(scope, rule.key, toCsvOrUndefined(ids));
+          options={options.map((o) => ({
+            value: o.id,
+            label: o.displayName,
+            group: grouped ? o.providerName : undefined,
+          }))}
+          selected={parseIds(value as string | undefined)}
+          spanNote={grouped ? SPANS_INSTANCES_NOTE : undefined}
+          onChange={(ids) => {
+            onRuleChange(scope, rule.key, toCsv(ids));
             if (rule.instanceScoped && (scope === 'movie' || scope === 'series')) {
-              onQualifierChange(scope, rule.key, providerId);
+              onQualifierChange(
+                scope,
+                rule.key,
+                grouped ? qualifyingProviderId(options, ids) : undefined
+              );
             }
           }}
         />
       );
     }
 
-    case 'csv-strings': {
-      const options = stringOptions(rule.lookup, scope, lookups);
+    case 'csv-strings':
       return (
-        <StringMultiSelectDropdown
+        <MultiSelectFilter
           label={rule.label}
-          options={options}
-          selectedValues={parseCsvStrings(value as string | undefined)}
-          onChange={(v) => onRuleChange(scope, rule.key, toStringCsvOrUndefined(v))}
+          options={stringOptions(rule.lookup, scope, lookups).map((v) => ({ value: v, label: v }))}
+          selected={parseStrings(value as string | undefined)}
+          onChange={(v) => onRuleChange(scope, rule.key, toCsv(v))}
         />
       );
-    }
 
     default:
       return null;

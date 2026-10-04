@@ -103,7 +103,7 @@ ratings/metadata lookup service; no `MediaActuator` role is plausible.").
 ## UI decisions
 
 No `/prototype` session needed — every filterable field maps onto a `RuleControl` renderer already
-established across the seven prior UI passes (`csv-strings` → `StringMultiSelectDropdown`, `range` →
+established across the seven prior UI passes (`csv-strings` → `MultiSelectFilter`, `range` →
 `NumberRangeFilter`, `boolean` → `OptionFilter`). No tasks exist for OMDB ("Tasks: N/A — no tasks"
 above), so nothing goes to `11-automation-task-parameters` this ticket, matching TMDB's UI pass.
 
@@ -119,7 +119,7 @@ branch in `csvStringOptions` — no new `Lookups` route for either.
 **Carry-forward from TMDB's UI ticket, confirmed**: OMDB's `Country` field is single-valued (per
 OMDB's API shape), joining `originCountry` as an additional producer of that multi-value
 `csv-strings` rule. This is a query-engine/provider-field-layer concern, not a widget-shape one — the
-UI control is unaffected (`StringMultiSelectDropdown` already handles a producer contributing a
+UI control is unaffected (`MultiSelectFilter` already handles a producer contributing a
 single value into the aggregated set). The one-element-array wrapping needs to happen where OMDB's
 `Country` value is normalized into the shared `originCountry` field, not in `MediaFilterBar`. No UI
 change follows from this note; flagged here only so the wrapping isn't lost before that layer is

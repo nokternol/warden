@@ -415,6 +415,30 @@ Earlier entries in this ledger use the names that were current when they healed 
   `toFilterValues()` and the `/api/media/movies` route are deleted. A test pins that browsing and
   previewing a query saved with the same entries match the same items.
 
+### Multi-select controls — three implementations of one control (recorded and healed 2026-10-04, MVP slice C4)
+
+- **Fracture:** the filter bar carried three multi-value controls in one file. `MultiSelectDropdown`
+  (id options, optionally grouped and instance-qualified) and `StringMultiSelectDropdown` (string options)
+  were near-copies of the same trigger, menu, focus handling and checkbox rows, and the bar kept its own
+  comma-separated parse and format helpers beside a second copy of the id parser in `toFilters`.
+- **How it misled:** a fix to one dropdown's keyboard handling or styling had to be repeated in the
+  other, and the two parsers read the same stored value with different rules (one accepted non-integer
+  ids, the other did not).
+- **Healed by:** one `MultiSelectFilter` (`src/components/filters/MultiSelectFilter`), generic over string
+  or numeric values, serves every multi-value rule. It takes the selection and emits the next one as an
+  array, shows options under a group heading when they carry one (the bar supplies the instance as the
+  group when a content type has several), explains a selection that crosses groups, is operable by
+  keyboard end to end, and has a clear action, pinned below the scrolling list, that empties the selection. Option grouping and the
+  qualifying instance are worked out in `MediaFilterBar`, which converts between the stored value and
+  the control's arrays at the call site. The bar's other controls (`TextFilter`, `NumberRangeFilter`,
+  `MobileYearInputs`) moved to `src/components/filters/` too. The bar keeps layout, the rule-to-control
+  mapping (`RuleControl`), the active-condition chips, the option builders and the range helpers
+  (`readRangeBound`, `rangePatch`), and change dispatch.
+  `MultiSelectDropdown`, `StringMultiSelectDropdown` and the bar's CSV helpers are deleted. Filter
+  state still holds a multi-value selection as one comma-separated string; `multiValueFilter` in
+  `src/lib` is the only client code that reads or writes it, shared by the bar and `toFilters`. The
+  server's `ruleRegistry.ts` keeps its own parser for the same value (tracked in #158).
+
 ## Open
 
 No fracture is currently open.

@@ -548,10 +548,26 @@ names, so nothing is renamed twice.
   - The multi-select is fully keyboard operable.
   - Clear-all empties the selection.
   - Existing filter-bar behaviour is unchanged (pinned as regression guards per the skill).
-- **Expected end state:** controls move into `src/components/filters/*`, each with a story. `MediaFilterBar`
-  becomes layout plus change dispatch.
-- **Deletes:** `MultiSelectDropdown`, `StringMultiSelectDropdown`, and the CSV parse helpers that C3
-  makes redundant.
+- **Expected end state (as built):** every control lives in `src/components/filters/<Name>/`, each with a
+  story and its own tests: `MultiSelectFilter`, `TextFilter`, `NumberRangeFilter`, `MobileYearInputs`
+  (and the existing `OptionFilter`). `NumberRangeFilter` keeps its `parseNumber` helper beside it.
+  `MediaFilterBar/index.tsx` keeps layout, the rule-to-control mapping (`RuleControl`), active-condition
+  chips and change dispatch, plus `readRangeBound` and `rangePatch`, which it needs to turn a control's
+  bound into a range value.
+
+  `MultiSelectFilter` serves every `instance-ids` and `csv-strings` rule. It is generic over string or
+  numeric values and takes and emits arrays. Options may carry a `group` (the bar passes the instance name
+  when a content type has several instances), `spanNote` explains a selection that crosses groups, the
+  whole control is keyboard operable, and a "Clear selection" item empties the selection. The note and the
+  clear item sit in a footer outside the scrolling option list, so they stay visible however long it is.
+  Which instance a grouped selection qualifies to stays in `MediaFilterBar` (`qualifyingProviderId`),
+  because that is change dispatch rather than presentation. Filter state still holds a multi-value
+  selection as a comma-separated string, so `src/lib/multiValueFilter.ts` is the one codec between that
+  string and the control's arrays, used by the bar and by `toFilters`.
+- **Deletes:** `MultiSelectDropdown` and `StringMultiSelectDropdown` are deleted. The CSV parse helpers
+  are consolidated into the one codec rather than deleted, because C3 changed the wire encoding but not
+  the filter state's shape; removing the codec means holding arrays in `FilterValue`, `useMediaFilters`
+  and its URL encoding, which is left to a follow-up.
 
 **C5 · The server decides exposure** (after C2, B3; decisions 9, 10)
 - **Model:** Opus 5.5 (one exposure mechanism across three authorities).

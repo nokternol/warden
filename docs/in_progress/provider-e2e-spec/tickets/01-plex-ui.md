@@ -42,7 +42,7 @@ ticket's original scope — are unaddressed. Each still needs its own widget-sha
   `RuleControl` (`src/components/MediaFilterBar/index.tsx`) and confirmed all 13 fields map onto
   the two existing generic renderers it already switches on by `dataType`: `range` →
   `NumberRangeFilter` (same shape as `sizeOnDiskGb`/`addedDaysAgo`), `csv-strings` →
-  `StringMultiSelectDropdown` (same shape as `network`). None of Plex's fields need a bespoke
+  `MultiSelectFilter` (same shape as `network`). None of Plex's fields need a bespoke
   widget (no date picker, no slider) — "real UI complexity" per this map's own Notes criterion for
   triggering `/prototype` never materialized here.
 - **Remaining decision was the options-source for the 6 net-new `csv-strings` fields**

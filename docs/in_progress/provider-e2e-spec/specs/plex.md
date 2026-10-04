@@ -198,7 +198,7 @@ source, not inventing new widget shapes:
   implementation finds a natural bound.
 - **`csv-strings` fields** (`studio`, `fileContainer`, `videoCodec`, `audioCodec`, `fileResolution`,
   `labels`, plus `genres`/`certification` which join existing rules) render via
-  `StringMultiSelectDropdown`, options resolved through `csvStringOptions(rule, scope, lookups)`.
+  `MultiSelectFilter`, options resolved through `csvStringOptions(rule, scope, lookups)`.
 - **`playCount`/`lastWatchedAt`** stay on their already-wired `boolean`/`range` controls — Plex adds
   no new control, only a new producer.
 
