@@ -42,8 +42,14 @@ The contract uses [oRPC](https://orpc.dev) in contract-first mode, with Zod 4 sc
   that breaks the contract's output, is a logged 500 `INTERNAL_ERROR`.
   Requests the contract doesn't match fall through to the next Express handler.
 - **Authentication.** The implementer's root middleware is default-deny: a procedure answers without a
-  signed-in user only when its contract meta says `public: true` (grep `contract/` for
-  `public: true` for the current set). The procedure context carries the user that
+  signed-in user only when its contract meta says `public: true`. Every other procedure, including one
+  added later, is refused with 401 `UNAUTHORIZED`. Only four procedures are public, the ones needed before
+  sign-in: `system.health`, `auth.plexLogin`, `auth.logout` and `media.backdrops` (the sign-in page's
+  images). [`defaultDenyAuth.integration.test.ts`](ref:path:server/__tests__/integration/defaultDenyAuth.integration.test.ts)
+  pins this down. It requires the contract's `public` marks to be exactly that allowlist. With
+  `BYPASS_AUTH` off, it also walks the contract against the assembled router: every procedure outside the
+  allowlist must refuse an anonymous call, and none on it may be refused by the guard. Adding a public procedure
+  is therefore a reviewed change to that test. The procedure context carries the user that
   `checkUser` attached from the session, and the session itself, which sign-in starts and sign-out
   destroys.
 - **Auth bypass (development only).** With `BYPASS_AUTH=true`, `serveApi` marks every request's context

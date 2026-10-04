@@ -43,6 +43,10 @@ describe('GET /api/providers/ratings — TMDB key DI isolation', () => {
     const app = express();
     app.use(express.json());
     app.use(requestIdMiddleware);
+    app.use((req, _res, next) => {
+      req.user = { id: 1 } as unknown as NonNullable<typeof req.user>;
+      next();
+    });
     app.use(serveApi({ providers: createProvidersProcedures(container.cradle) }));
     app.use(errorHandlerMiddleware);
     return app;
