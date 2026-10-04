@@ -180,6 +180,26 @@ describe('GET /api/rules', () => {
     expect(after.body.data.map((f: { key: string }) => f.key)).toContain('monitored');
   });
 
+  describe('rule presentation', () => {
+    async function rulesServedWith(type: MetadataProviderType) {
+      await providerSettingsService.create({
+        type,
+        name: `Test ${type}`,
+        url: 'http://localhost:1234/api',
+        apiKey: 'test-api-key',
+      });
+      const res = await supertest(app).get('/api/rules');
+      expect(res.status).toBe(200);
+      return res.body.data as Array<Record<string, unknown>>;
+    }
+
+    it('serves a boolean rule with its own value labels', async () => {
+      const rules = await rulesServedWith(MetadataProviderType.SONARR);
+      const monitored = rules.find((r) => r.key === 'monitored');
+      expect(monitored?.valueLabels).toEqual({ true: 'Monitored', false: 'Unmonitored' });
+    });
+  });
+
   it('answers 404 at /api/filter-fields', async () => {
     const res = await supertest(app).get('/api/filter-fields');
     expect(res.status).toBe(404);

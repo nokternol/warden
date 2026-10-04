@@ -193,6 +193,8 @@ export const MediaRuleDescriptorSchema = z.object({
    *  the client must qualify these per instance when more than one is active. */
   instanceScoped: z.boolean().optional(),
   sourceField: z.string().optional(),
+  /** What a boolean rule's two values read as; absent means Yes / No. */
+  valueLabels: z.object({ true: z.string(), false: z.string() }).optional(),
 });
 
 /** One provider's answer to a cross-provider title search. */

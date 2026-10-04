@@ -45,6 +45,9 @@ export interface MediaRule<
    *  `MEDIA_RULES` — a field with no rule at all is enriched, stored, and merged onto the
    *  item, and silently never filterable. */
   sourceField?: keyof EnrichmentFields;
+  /** What a boolean rule's two values read as in the UI (*Monitored* / *Unmonitored*).
+   *  Absent means the generic *Yes* / *No*. */
+  valueLabels?: { true: string; false: string };
   predicate: Predicate<T>;
 }
 
@@ -150,6 +153,7 @@ export const MEDIA_RULES = [
     label: 'Watched',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
+    valueLabels: { true: 'Watched', false: 'Unwatched' },
     providers: deriveProviders('playCount'),
     sourceField: 'playCount',
     required: false,
@@ -231,6 +235,7 @@ export const MEDIA_RULES = [
     label: 'Has file',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
+    valueLabels: { true: 'Downloaded', false: 'Missing' },
     providers: [
       MetadataProviderType.RADARR,
       MetadataProviderType.SONARR,
@@ -335,6 +340,7 @@ export const MEDIA_RULES = [
     label: 'Monitored',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
+    valueLabels: { true: 'Monitored', false: 'Unmonitored' },
     providers: [MetadataProviderType.RADARR, MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => item.monitored === asBool(value),
@@ -344,6 +350,7 @@ export const MEDIA_RULES = [
     label: 'Jellyfin favorite',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
+    valueLabels: { true: 'Favorited', false: 'Not Favorited' },
     providers: deriveProviders('isFavorite'),
     sourceField: 'isFavorite',
     required: false,
@@ -518,6 +525,7 @@ export const MEDIA_RULES = [
     label: 'Available',
     contentTypes: ['movie'],
     dataType: 'boolean',
+    valueLabels: { true: 'Available', false: 'Unavailable' },
     providers: [MetadataProviderType.RADARR],
     required: false,
     predicate: (item, value) => {
@@ -650,6 +658,7 @@ export const MEDIA_RULES = [
     label: 'Ended',
     contentTypes: ['series'],
     dataType: 'boolean',
+    valueLabels: { true: 'Finished', false: 'Running' },
     providers: [MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => {
@@ -768,6 +777,7 @@ export const MEDIA_RULES = [
     label: 'Overseerr has issue',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
+    valueLabels: { true: 'Has Issue', false: 'No Issue' },
     providers: deriveProviders('overseerrHasIssue'),
     sourceField: 'overseerrHasIssue',
     required: false,
