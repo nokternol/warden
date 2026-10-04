@@ -457,8 +457,8 @@ names, so nothing is renamed twice.
   tasks/task-options/metadata/ratings), which A1 narrows. `src/lib/api/client.ts` (`api`,
   `createApiClient`) validates responses against the contract and surfaces the server's error;
   `useApi` is the one SWR hook. `tests/mocks/contract.ts` (`mockProcedure`) declares mocks. Provider
-  CRUD/test are declared under `providers` but stay at `/api/settings/providers` and in the `settings`
-  module; B3 moves the URL and the handlers. Browse is a contract procedure taking the legacy
+  CRUD/test are declared under `providers`; B3 serves them at `/api/providers` from the providers
+  module. Browse is a contract procedure taking the legacy
   content-prefixed params unchanged; C3 changes the encoding.
 - **Deletes:** `defineRoute`, every `*.routes.ts`/`*.handler.ts` transport pair (logic moves into
   procedures), `src/lib/api/schemas.ts` (moved into `contract/`), and the client's hand-written URLs.

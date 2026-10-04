@@ -3,7 +3,7 @@ import { MetadataProviderType } from '@server/database/schema';
 /**
  * Integration tests for GET /api/providers/test
  *
- * Covers the two provider types that were missing from the probeConnection switch:
+ * Covers the TVMAZE and SEERR connection probes:
  *   - TVMAZE: no auth, no outbound call — should return { ok: true } immediately
  *   - SEERR:  same auth pattern as OVERSEERR — GET {base}/api/v1/status with X-Api-Key header
  *
@@ -98,7 +98,7 @@ describe('GET /api/providers/test — TVMAZE and SEERR', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.data).toEqual({ ok: true });
-      // probeProvider should have returned early without touching the TVMaze URL
+      // The TVMAZE probe answers without calling TVMaze
       expect(tvmazeRequests).toHaveLength(0);
 
       server.events.removeListener('request:start', listener);

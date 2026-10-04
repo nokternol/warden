@@ -8,8 +8,8 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 /**
- * Providers have one HTTP home, `/api/providers`. The settings paths that
- * once served provider CRUD and connection testing are not served at all.
+ * Providers have one HTTP home, `/api/providers`. Every
+ * `/api/settings/providers` method and path answers 404.
  */
 
 const testConfig: AppConfig = {
