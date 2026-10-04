@@ -57,7 +57,7 @@ the deferred code stays covered while no route reaches it.
 
 [`providerCatalogue.ts`](ref:path:server/modules/providers/providerCatalogue.ts) describes every
 `MetadataProviderType` once: its `label`, the `apiPath` appended to the host the user enters, the
-`defaultUrl` of a hosted service, and the `capabilities` text saying what it contributes to filtering.
+`defaultUrl` of a hosted service, and its `filterData`: short phrases saying what it makes filterable.
 It is a `Record` keyed by type, so a type without an entry fails to compile. Its insertion order is the
 display order.
 
@@ -73,7 +73,7 @@ no copy. [`useProviderTypes`](ref:path:src/hooks/useProviderTypes.ts) fetches th
   types by label, starts on the first, appends the chosen type's `apiPath` on save, and fills in and
   locks a `defaultUrl`.
 - [`ProviderCard`](ref:path:src/components/ProviderCard/index.tsx) shows its type's label and
-  capabilities, and round-trips the host through `apiPath` when editing. A row of a deferred type gets
+  filter data, and round-trips the host through `apiPath` when editing. A row of a deferred type gets
   no descriptor: it shows its raw type and no filter data.
 - The Providers page ([`src/pages/settings/index.page.tsx`](ref:path:src/pages/settings/index.page.tsx))
   groups configured providers in the served order. The media page

@@ -8,8 +8,8 @@ import { server } from '../../../../tests/mocks/server';
 import AddProviderForm from '../index';
 
 const types: ProviderTypeDescriptor[] = [
-  { type: 'RADARR', label: 'Radarr', apiPath: '/api/v3', capabilities: ['Movie library'] },
-  { type: 'OVERSEERR', label: 'Overseerr', apiPath: '', capabilities: ['Request queue'] },
+  { type: 'RADARR', label: 'Radarr', apiPath: '/api/v3', filterData: ['Movie library'] },
+  { type: 'OVERSEERR', label: 'Overseerr', apiPath: '', filterData: ['Request queue'] },
 ];
 
 describe('AddProviderForm', () => {
@@ -64,7 +64,7 @@ describe('AddProviderForm', () => {
     const onSubmit = vi.fn();
     server.use(mockProcedure(contract.providers.test, () => ({ ok: true })));
     const served: ProviderTypeDescriptor[] = [
-      { type: 'RADARR', label: 'Radarr', apiPath: '/api/v4', capabilities: [] },
+      { type: 'RADARR', label: 'Radarr', apiPath: '/api/v4', filterData: [] },
     ];
 
     render(<AddProviderForm types={served} onSubmit={onSubmit} onCancel={vi.fn()} />);
@@ -80,13 +80,13 @@ describe('AddProviderForm', () => {
   it('fills in and locks the host of a type the server gives a fixed URL', async () => {
     const user = userEvent.setup();
     const served: ProviderTypeDescriptor[] = [
-      { type: 'RADARR', label: 'Radarr', apiPath: '/api/v3', capabilities: [] },
+      { type: 'RADARR', label: 'Radarr', apiPath: '/api/v3', filterData: [] },
       {
         type: 'TAUTULLI',
         label: 'Tautulli',
         apiPath: '',
         defaultUrl: 'https://tautulli.example',
-        capabilities: [],
+        filterData: [],
       },
     ];
 
@@ -103,8 +103,8 @@ describe('AddProviderForm', () => {
     const onSubmit = vi.fn();
     server.use(mockProcedure(contract.providers.test, () => ({ ok: true })));
     const served: ProviderTypeDescriptor[] = [
-      { type: 'PLEX', label: 'Plex', apiPath: '', capabilities: [] },
-      { type: 'RADARR', label: 'Radarr', apiPath: '/api/v3', capabilities: [] },
+      { type: 'PLEX', label: 'Plex', apiPath: '', filterData: [] },
+      { type: 'RADARR', label: 'Radarr', apiPath: '/api/v3', filterData: [] },
     ];
 
     render(<AddProviderForm types={served} onSubmit={onSubmit} onCancel={vi.fn()} />);

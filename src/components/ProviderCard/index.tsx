@@ -121,7 +121,7 @@ export default function ProviderCard({
   const serverEnabledIds = tasks.filter((t) => t.enabled).map((t) => t.id);
   const enabledTasks = localEnabledTasks ?? serverEnabledIds;
   const allTasks = tasks;
-  const capabilities = providerType?.capabilities ?? [];
+  const filterData = providerType?.filterData ?? [];
   const hasTasks = allTasks.length > 0;
 
   const runTest = async (url: string, apiKey: string) => {
@@ -200,11 +200,11 @@ export default function ProviderCard({
     }
   };
 
-  const capabilitySummary = (() => {
+  const summary = (() => {
     const parts: string[] = [];
-    if (capabilities.length > 0) {
-      const labels = capabilities.slice(0, 2).join(' · ');
-      parts.push(`Filter: ${labels}${capabilities.length > 2 ? ' +more' : ''}`);
+    if (filterData.length > 0) {
+      const labels = filterData.slice(0, 2).join(' · ');
+      parts.push(`Filter: ${labels}${filterData.length > 2 ? ' +more' : ''}`);
     }
     if (hasTasks) {
       parts.push(`Tasks: ${enabledTasks.length} of ${allTasks.length} enabled`);
@@ -245,9 +245,7 @@ export default function ProviderCard({
             <StatusIndicator isActive={provider.isActive} />
           </div>
           <div className="text-xs text-text-muted mt-0.5 truncate">{provider.url}</div>
-          {capabilitySummary && (
-            <div className="text-xs text-text-muted mt-1">{capabilitySummary}</div>
-          )}
+          {summary && <div className="text-xs text-text-muted mt-1">{summary}</div>}
         </div>
 
         <div className="shrink-0 text-text-muted mt-1">
@@ -394,13 +392,13 @@ export default function ProviderCard({
           {!editing && (
             <>
               {/* Filter data */}
-              {capabilities.length > 0 && (
+              {filterData.length > 0 && (
                 <section>
                   <div className="text-xs font-medium text-text-muted uppercase tracking-wide mb-2">
                     Filter data
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {capabilities.map((label) => (
+                    {filterData.map((label) => (
                       <span
                         key={label}
                         className="text-xs px-2 py-0.5 rounded-full bg-surface-elevated text-text-secondary"

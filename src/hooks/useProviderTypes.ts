@@ -14,7 +14,7 @@ export function descriptorFor(
 
 /**
  * The provider types that can be configured, in display order, with their
- * labels, connection defaults and capability text. The server owns the
+ * labels, connection defaults and filter data. The server owns the
  * catalogue; the client derives from it.
  */
 export function useProviderTypes(): {

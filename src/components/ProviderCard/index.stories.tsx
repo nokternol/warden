@@ -21,14 +21,14 @@ const radarrType: ProviderTypeDescriptor = {
   type: 'RADARR',
   label: 'Radarr',
   apiPath: '/api/v3',
-  capabilities: ['Movie library', 'Quality profiles', 'Tags'],
+  filterData: ['Movie library', 'Quality profiles', 'Tags'],
 };
 
 const overseerrType: ProviderTypeDescriptor = {
   type: 'OVERSEERR',
   label: 'Overseerr',
   apiPath: '',
-  capabilities: ['Request queue'],
+  filterData: ['Request queue'],
 };
 
 const tasks: ProviderTaskDescriptor[] = [

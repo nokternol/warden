@@ -145,7 +145,7 @@ principles become these acceptance checks on every UI slice:
 | F6 | **"Saved queries"** in the live UI, a name `VOCABULARY.md` retired. | `pages/automations/index.page.tsx` |
 | F7 | **"Source" means four things:** the `MediaSource` role, an automation's include/exclude `MediaQuerySource`, `MediaQuerySpec.sources`, and a rule's `sourceProviders`. | `mediaQueryEngine.ts:27`, `filterRegistry.ts`. **Healed by B6:** "source" keeps the `MediaSource` role only. An automation has included and excluded `queries` (`AutomationQuery`, table `automation_queries` via migration 0028), a query spec holds `clauses`, and a rule lists its `providers`. |
 | F8 | **System automations are called "Tasks"** on the System page, while "Task" means a provider action everywhere else. Stories add "New Task" and "Active Tasks" for automations, plus "Collections". | `pages/system`, `*.stories.tsx` |
-| F9 | **The client re-declares the provider catalogue.** `PROVIDER_REGISTRY` lists 8 of the 10 types with hand-written labels and `filterCapabilities` strings, while the server's enum, factory and roles are the real authority. | `src/lib/provider-registry.ts`. **Healed by C5:** the server's provider-type catalogue (`providerCatalogue.ts`) is projected at `/api/providers/types`, the client derives the add-provider list, card labels, API paths, capability text and order from it, and `provider-registry.ts` plus the form's and card's per-type maps are deleted. |
+| F9 | **The client re-declares the provider catalogue.** `PROVIDER_REGISTRY` lists 8 of the 10 types with hand-written labels and `filterCapabilities` strings, while the server's enum, factory and roles are the real authority. | `src/lib/provider-registry.ts`. **Healed by C5:** the server's provider-type catalogue (`providerCatalogue.ts`) is projected at `/api/providers/types`, the client derives the add-provider list, card labels, API paths, filter data and order from it, and `provider-registry.ts` plus the form's and card's per-type maps are deleted. |
 | F10 | **Ratings have two mechanisms**: rating filters via enrichment, and an ad-hoc `/api/providers/ratings` aggregation feeding a separate page and panel. | `ratingsAggregation.ts`, `pages/ratings` |
 | F11 | **Title lookup has two mechanisms**: the title filter, and the Search page's cross-provider metadata search. | `pages/search`, `media.search.*` |
 | F13 | **The rule descriptor leaks engine concerns to the client.** It is `Omit<MediaRule, 'predicate'>`, so `sourceField` and `sourceProviders` cross the wire, and the client's `groupsFor` derives section headings from providers. The client also re-declares `MediaRuleDescriptor` itself. The rule/filter split is load-bearing: precedence and production are engine concerns. | `filterRegistry.ts:57`, `MediaFilterBar/index.tsx:830`, `src/hooks/useMediaRules.ts:7`. **Healed by C2:** the descriptor is the contract's presentation allowlist, built by `toDescriptor`; headings come from each rule's `group`, and the client imports the type from `@contract/media`. |
@@ -554,7 +554,7 @@ names, so nothing is renamed twice.
   own. Against it:
   - `GET /api/providers/types` serves the offered types from the server's provider-type catalogue
     (`providerCatalogue.ts`, a `Record` keyed by type in display order, holding each type's `label`,
-    `apiPath`, `defaultUrl` and `capabilities`). The connection probe and `ProviderFactory` read their
+    `apiPath`, `defaultUrl` and `filterData`). The connection probe and `ProviderFactory` read their
     API path and TVmaze URL from that catalogue.
   - Provider create and the connection test answer 400 for a deferred type. The probe's SEERR and
     TVMAZE cases are tested against `probeConnection` directly.
@@ -564,11 +564,11 @@ names, so nothing is renamed twice.
 
   The client reads the projection via `useProviderTypes`/`descriptorFor`: the add-provider form
   (served types by label, starting on the first, with API path and fixed URL), the provider card
-  (label, capability text, API path), the Providers page order and the media page's owner name.
+  (label, filter data, API path), the Providers page order and the media page's owner name.
 - **Deletes:** `src/lib/provider-registry.ts` (and its test) as a client-side catalogue,
   `PROVIDER_TYPES`/`API_SUFFIXES`/`PROVIDER_DEFAULT_URLS` in `AddProviderForm`,
   `API_SUFFIXES`/`PROVIDER_FILTER_DATA` in `ProviderCard`, and the suffix map in `connectionProbe.ts`.
-  Their labels, defaults, API paths and capability text move to the server catalogue and its
+  Their labels, defaults, API paths and filter data move to the server catalogue and its
   projection, so nothing is lost.
 
 ### Track D — Finish the in-scope features

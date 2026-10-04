@@ -21,7 +21,7 @@ const radarrType: ProviderTypeDescriptor = {
   type: 'RADARR',
   label: 'Radarr',
   apiPath: '/api/v3',
-  capabilities: ['Films', 'Profiles'],
+  filterData: ['Films', 'Profiles'],
 };
 
 describe('ProviderCard', () => {

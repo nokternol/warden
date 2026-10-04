@@ -372,9 +372,9 @@ Earlier entries in this ledger use the names that were current when they healed 
 ### Provider catalogue and exposure — declared on the client and decided nowhere (recorded and healed 2026-10-04, MVP slice C5)
 
 - **Fracture:** the provider-type catalogue had four client copies beside the server's real authority.
-  `src/lib/provider-registry.ts` listed 8 of the 10 types with hand-written labels, capability text and
+  `src/lib/provider-registry.ts` listed 8 of the 10 types with hand-written labels, filter data and
   display order. The add-provider form kept its own type list, API-path suffixes and default URLs. The
-  provider card kept suffixes and capability text again, and the connection probe kept a fifth suffix
+  provider card kept suffixes and filter data again, and the connection probe kept a fifth suffix
   map on the server. Which types, rules and tasks Warden exposed was decided by none of them: the
   contract's enum accepted every type.
 - **How it misled:** the add-provider list offered raw enum names, including TMDB and OMDB, and creating
@@ -387,7 +387,7 @@ Earlier entries in this ledger use the names that were current when they healed 
   container injects it as `scope`. Provider create and the connection test refuse a deferred type, a
   rule needs a live producer of an offered type, and deferred tasks are left out of
   `/api/providers/tasks`. The server's provider-type catalogue (`providerCatalogue.ts`, keyed by type)
-  declares labels, API paths, default URLs and capability text once. The probe and `ProviderFactory`
+  declares labels, API paths, default URLs and filter data once. The probe and `ProviderFactory`
   read it, and `GET /api/providers/types` projects the offered types. The client derives the
   add-provider list, the provider card's label, path and filter data, the Providers page order and the
   media page's owner name from that projection. Every client copy is deleted.

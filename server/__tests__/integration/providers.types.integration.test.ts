@@ -71,13 +71,13 @@ describe('GET /api/providers/types', () => {
       type: 'RADARR',
       label: 'Radarr',
       apiPath: '/api/v3',
-      capabilities: ['Movie library', 'Quality profiles', 'Tags'],
+      filterData: ['Movie library', 'Quality profiles', 'Tags'],
     });
     expect(byType('PLEX')).toEqual({
       type: 'PLEX',
       label: 'Plex',
       apiPath: '',
-      capabilities: ['Library contents', 'Item metadata'],
+      filterData: ['Library contents', 'Item metadata'],
     });
   });
 });

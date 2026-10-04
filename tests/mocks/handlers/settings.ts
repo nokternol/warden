@@ -18,32 +18,32 @@ const mockProviders: ProviderSummary[] = [
 ];
 
 const mockProviderTypes: ProviderTypeDescriptor[] = [
-  { type: 'PLEX', label: 'Plex', apiPath: '', capabilities: ['Library contents', 'Item metadata'] },
+  { type: 'PLEX', label: 'Plex', apiPath: '', filterData: ['Library contents', 'Item metadata'] },
   {
     type: 'JELLYFIN',
     label: 'Jellyfin',
     apiPath: '',
-    capabilities: ['Library contents', 'Item metadata'],
+    filterData: ['Library contents', 'Item metadata'],
   },
   {
     type: 'RADARR',
     label: 'Radarr',
     apiPath: '/api/v3',
-    capabilities: ['Movie library', 'Quality profiles', 'Tags'],
+    filterData: ['Movie library', 'Quality profiles', 'Tags'],
   },
   {
     type: 'SONARR',
     label: 'Sonarr',
     apiPath: '/api/v3',
-    capabilities: ['Series library', 'Quality profiles', 'Tags'],
+    filterData: ['Series library', 'Quality profiles', 'Tags'],
   },
   {
     type: 'TAUTULLI',
     label: 'Tautulli',
     apiPath: '',
-    capabilities: ['Watch history', 'Play statistics', 'User activity'],
+    filterData: ['Watch history', 'Play statistics', 'User activity'],
   },
-  { type: 'OVERSEERR', label: 'Overseerr', apiPath: '', capabilities: ['Request queue'] },
+  { type: 'OVERSEERR', label: 'Overseerr', apiPath: '', filterData: ['Request queue'] },
 ];
 
 export const settingsHandlers = [

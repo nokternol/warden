@@ -133,7 +133,7 @@ export const ProviderTypeDescriptorSchema = z.object({
   /** The URL every instance uses, for a hosted service; absent means the user enters a host. */
   defaultUrl: z.string().optional(),
   /** What the provider contributes to filtering, as short phrases. */
-  capabilities: z.array(z.string()),
+  filterData: z.array(z.string()),
 });
 
 export const providers = {
