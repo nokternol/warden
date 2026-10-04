@@ -351,6 +351,24 @@ Earlier entries in this ledger use the names that were current when they healed 
   its `providers`, which leaves "source" meaning only the `MediaSource` role. The retired names are in
   `VOCABULARY.md`'s deprecated table; the old path answers 404 by regression test.
 
+### Rule presentation — declared on the server and again on the client (recorded and healed 2026-10-04, MVP slice C2)
+
+- **Fracture:** a rule's presentation had two authorities. The registry declared its key, label and
+  data type, while the filter bar kept its own per-key tables for everything else: boolean value labels,
+  enum options, segment labels, which lookup fed a multi-value control, which section a rule sat in
+  (derived by reading the rule's providers) and whether a rule had a control at all. The descriptor
+  itself was the registry rule minus its predicate, so engine concerns (producing providers, the
+  enrichment field a rule reads, `required`) crossed the wire.
+- **How it misled:** a rule added to the registry rendered with Yes/No labels, no options, the wrong
+  heading or not at all until someone found and extended the matching client table, and nothing failed
+  when they didn't. Section headings followed provider names, so Plex/Jellyfin file facts appeared under
+  Play History.
+- **Healed by:** each rule declares its own `valueLabels`, `options`, `shortLabel`, `lookup` and `group`.
+  The descriptor is an allowlist of presentation fields, a union on `dataType` in which every variant
+  states what its control needs. `toDescriptor` projects through it, and a rule that cannot be described
+  (`certification`, a multi-value rule with no lookup) is not served. The filter bar renders any rule
+  from its descriptor alone and holds no per-key table. The `csv-ids` data type is now `instance-ids`.
+
 ## Open
 
 No fracture is currently open.
