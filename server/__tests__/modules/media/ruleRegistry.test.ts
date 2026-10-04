@@ -1,10 +1,12 @@
 import { MetadataProviderType } from '@server/database/schema';
 import {
   MEDIA_RULES,
+  type MediaRule,
   type NormalizedMovie,
   type NormalizedSeries,
   deriveProviders,
   getRule,
+  toDescriptor,
 } from '@server/modules/media/ruleRegistry';
 import { MOCK_RULES } from '@tests/mocks/handlers/media';
 import { describe, expect, it } from 'vitest';
@@ -826,5 +828,16 @@ describe('MSW media.rules mock', () => {
         );
       }
     }
+  });
+});
+
+// ─── Descriptors ───────────────────────────────────────────────────────────────
+
+describe('toDescriptor', () => {
+  it('describes every rule that has a control — only certification, with no lookup, has none', () => {
+    const undescribed = (MEDIA_RULES as readonly MediaRule[])
+      .filter((rule) => toDescriptor(rule) === undefined)
+      .map((rule) => rule.key);
+    expect(undescribed).toEqual(['certification']);
   });
 });

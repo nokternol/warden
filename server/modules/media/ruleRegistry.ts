@@ -77,13 +77,15 @@ export interface MediaRule<
 export type { MediaRuleDescriptor };
 
 /**
- * A rule as the client sees it: only the presentation fields the contract's
- * `MediaRuleDescriptorSchema` lists. Engine concerns (the predicate, the providers
- * that produce the rule, its `sourceField`, `required`) are left behind, because
- * the schema is an allowlist and drops every field it doesn't name.
+ * A rule as the client sees it, or `undefined` when the rule has no control to
+ * offer (a multi-value rule naming no lookup, a number rule with no options).
+ * Projects through the contract's `MediaRuleDescriptorSchema`, an allowlist that
+ * drops every engine concern: the predicate, the providers that produce the rule,
+ * its `sourceField` and `required`.
  */
-export function toDescriptor(rule: MediaRule): MediaRuleDescriptor {
-  return MediaRuleDescriptorSchema.parse(rule);
+export function toDescriptor(rule: MediaRule): MediaRuleDescriptor | undefined {
+  const described = MediaRuleDescriptorSchema.safeParse(rule);
+  return described.success ? described.data : undefined;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

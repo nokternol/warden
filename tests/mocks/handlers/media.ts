@@ -91,13 +91,6 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     dataType: 'range',
   },
   {
-    key: 'certification',
-    label: 'Certification',
-    group: 'Library',
-    contentTypes: ['movie', 'series'],
-    dataType: 'csv-strings',
-  },
-  {
     key: 'hasFile',
     label: 'Has file',
     group: 'Library',

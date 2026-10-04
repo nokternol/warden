@@ -270,17 +270,6 @@ const ALL_RULES: GatedRule[] = [
     providers: ['TAUTULLI', 'PLEX'],
   },
   {
-    // csv-strings with no lookup source (matches ruleRegistry.ts's real
-    // shape) — RuleControl renders nothing for it. Regression coverage for
-    // the picker offering a rule it can't actually render a control for.
-    key: 'certification',
-    label: 'Certification',
-    group: 'Library',
-    contentTypes: ['movie', 'series'],
-    dataType: 'csv-strings',
-    providers: ['RADARR', 'SONARR', 'TMDB', 'OMDB'],
-  },
-  {
     key: 'fileContainer',
     label: 'File container',
     group: 'Media server',
@@ -1298,32 +1287,6 @@ describe('MediaFilterBar — series predicate controls', () => {
   it('does not render series-specific filters when SONARR is not configured', () => {
     render(<MediaFilterBar {...makeProps(propsFor(['RADARR']))} />);
     expect(screen.queryByRole('button', { name: /sonarr rating/i })).not.toBeInTheDocument();
-  });
-});
-
-// ─── FilterPicker — only offers renderable rules ──────────────────────────────
-
-describe('MediaFilterBar — FilterPicker excludes unrenderable rules', () => {
-  it('does not offer Certification — a csv-strings rule with no lookup source, which RuleControl renders as nothing', async () => {
-    const user = setupUser();
-    render(<MediaFilterBar {...makeProps({ ...propsFor(['RADARR']), lookups: EMPTY_LOOKUPS })} />);
-    await user.click(screen.getByRole('button', { name: /add filter/i }));
-    expect(screen.queryByRole('option', { name: /certification/i })).not.toBeInTheDocument();
-  });
-
-  it('does not render an empty labeled group when a rule with no other visible fields would be the only content', () => {
-    // Movies section would contain only Certification if offered — with no
-    // renderable rule added, hasMovieSection must stay false so no empty
-    // "Movies" panel appears.
-    render(
-      <MediaFilterBar
-        {...makeProps({
-          rules: [ALL_RULES.find((r) => r.key === 'certification')!],
-          lookups: EMPTY_LOOKUPS,
-        })}
-      />
-    );
-    expect(screen.queryByText('Movies')).not.toBeInTheDocument();
   });
 });
 

@@ -251,6 +251,13 @@ describe('GET /api/rules', () => {
         expect(Object.keys(rule).filter((f) => !presentationFields.includes(f))).toEqual([]);
       }
     });
+
+    it('leaves out a rule the filter bar has no control for', async () => {
+      const rules = await rulesServedWith(MetadataProviderType.RADARR);
+      // `certification` is multi-value but names no lookup to draw its options from.
+      expect(rules.map((r) => r.key)).not.toContain('certification');
+      expect(rules.map((r) => r.key)).toContain('genres');
+    });
   });
 
   it('answers 404 at /api/filter-fields', async () => {

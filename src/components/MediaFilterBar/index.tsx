@@ -9,7 +9,7 @@ import { scopeOf } from '@app/hooks/useMediaFilters';
 import type { MediaQualityProfile, MediaTag } from '@app/hooks/useMediaLookups';
 import type { MediaSourceDescriptor } from '@app/hooks/useMediaSources';
 import { cn } from '@app/lib/utils/cn';
-import type { MediaRuleDescriptor } from '@contract/media';
+import type { InstanceIdLookup, MediaRuleDescriptor, StringLookup } from '@contract/media';
 import type { ContentType } from '@contract/schemas';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { OptionFilter } from '../filters/OptionFilter';
@@ -856,7 +856,12 @@ function sectionsOf(
 
 // ─── Per-value display — read from the descriptor ─────────────────────────────
 
-function booleanOptions(rule: MediaRuleDescriptor) {
+type DescriptorOf<D extends MediaRuleDescriptor['dataType']> = Extract<
+  MediaRuleDescriptor,
+  { dataType: D }
+>;
+
+function booleanOptions(rule: DescriptorOf<'boolean'>) {
   const labels = rule.valueLabels ?? { true: 'Yes', false: 'No' };
   return [
     { value: 'true' as const, label: labels.true },
@@ -882,19 +887,17 @@ function profileOption(p: MediaQualityProfile): QualifiableOption {
 }
 
 function idOptions(
-  rule: MediaRuleDescriptor,
+  lookup: InstanceIdLookup,
   scope: ContentScope,
   lookups: Lookups
-): QualifiableOption[] | null {
-  switch (rule.lookup) {
+): QualifiableOption[] {
+  switch (lookup) {
     case 'tags':
       return bySource(lookups.tags, scope).map(tagOption);
     case 'qualityProfiles':
       return bySource(lookups.qualityProfiles, scope).map(profileOption);
     case 'languageProfiles':
       return lookups.languageProfiles.map(profileOption);
-    default:
-      return null;
   }
 }
 
@@ -908,48 +911,9 @@ function hasMultipleInstances(
   return (sources?.[scope]?.instances.length ?? 0) > 1;
 }
 
-function stringOptions(
-  rule: MediaRuleDescriptor,
-  scope: ContentScope,
-  lookups: Lookups
-): string[] | null {
-  switch (rule.lookup) {
-    case undefined:
-    case 'tags':
-    case 'qualityProfiles':
-    case 'languageProfiles':
-      return null;
-    case 'genres':
-      return scope === 'movie' ? lookups.genres.movies : lookups.genres.series;
-    default:
-      return lookups[rule.lookup];
-  }
-}
-
-/** Mirrors RuleControl's switch: true only for a rule/scope RuleControl would
- *  actually render something for. `string`/`number` rules with no `options` and `instance-ids`/`csv-strings` rules with no lookup source (e.g.
- *  `certification` today) render null — FilterPicker must not offer those, or
- *  "adding" one produces a labeled group with nothing inside it. */
-function ruleRendersControl(
-  rule: MediaRuleDescriptor,
-  scope: ContentScope,
-  lookups: Lookups
-): boolean {
-  switch (rule.dataType) {
-    case 'range':
-    case 'boolean':
-      return true;
-    case 'string':
-      return true;
-    case 'number':
-      return rule.options !== undefined;
-    case 'instance-ids':
-      return idOptions(rule, scope, lookups) !== null;
-    case 'csv-strings':
-      return stringOptions(rule, scope, lookups) !== null;
-    default:
-      return false;
-  }
+function stringOptions(lookup: StringLookup, scope: ContentScope, lookups: Lookups): string[] {
+  if (lookup === 'genres') return scope === 'movie' ? lookups.genres.movies : lookups.genres.series;
+  return lookups[lookup];
 }
 
 // ─── Value access + range collapse ────────────────────────────────────────────
@@ -1114,8 +1078,7 @@ function RuleControl({
     }
 
     case 'instance-ids': {
-      const options = idOptions(rule, scope, lookups);
-      if (!options) return null;
+      const options = idOptions(rule.lookup, scope, lookups);
       const grouped = rule.instanceScoped === true && hasMultipleInstances(scope, sources);
       return (
         <MultiSelectDropdown
@@ -1134,8 +1097,7 @@ function RuleControl({
     }
 
     case 'csv-strings': {
-      const options = stringOptions(rule, scope, lookups);
-      if (!options) return null;
+      const options = stringOptions(rule.lookup, scope, lookups);
       return (
         <StringMultiSelectDropdown
           label={rule.label}
@@ -1233,11 +1195,10 @@ export function MediaFilterBar({
           heading,
           entries
             .filter(({ rule, scope }) => !isRuleVisible(rule, scope))
-            .filter(({ rule, scope }) => ruleRendersControl(rule, scope, lookups))
             .map(({ rule, scope }) => ({ rule, scope, group: heading })),
         ])
         .filter(([, entries]) => entries.length > 0),
-    [sections, isRuleVisible, lookups]
+    [sections, isRuleVisible]
   );
 
   const handlePick = (entry: PickerEntry) => {
