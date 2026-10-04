@@ -1845,6 +1845,40 @@ describe('non-source actuators — id translation through the identity graph', (
     expect(deleteWatchHistory).toHaveBeenCalledTimes(1);
     expect(deleteWatchHistory.mock.calls[0][0].sort()).toEqual(['rk-1', 'rk-2']);
   });
+  it('previews a Tautulli task in the Plex addressing space', async () => {
+    const db = getDb();
+    const radarrProv = await seedRadarrProvider(providerSettingsService);
+    const tautulliProv = await providerSettingsService.create({
+      type: MetadataProviderType.TAUTULLI,
+      name: 'Test Tautulli',
+      url: 'http://localhost:8181',
+      apiKey: 'tautulli-key',
+      settings: { enabledTasks: ['deleteWatchHistory'] },
+    });
+    await seedIdentityGraph(radarrProv.id);
+    const tautulliInstance = new TautulliProvider(
+      { name: 'Test Tautulli', url: 'http://localhost:8181', apiKey: 'tautulli-key', settings: {} },
+      mockConnectionLogger
+    );
+    const executor = new AutomationExecutor({
+      automationService,
+      automationRunService: new AutomationRunService({ db }),
+      providerSettingsService,
+      mediaQueryService,
+      providerFactory: { create: () => tautulliInstance },
+      mediaSourceFactory: fakeMovieSources(radarrProv.id),
+      db,
+    });
+    const query = await seedMediaQuery(mediaQueryService);
+
+    const preview = await executor.preview({
+      providerId: tautulliProv.id,
+      taskId: 'deleteWatchHistory',
+      queries: [{ queryId: query.id, role: 'include' }],
+    });
+
+    expect(preview.count).toBe(2);
+  });
 });
 
 describe('task parameters — stored on the automation, threaded into run', () => {
