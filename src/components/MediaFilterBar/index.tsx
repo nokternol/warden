@@ -204,10 +204,10 @@ function idOptions(
   }
 }
 
-/** Whether the rule's owning content type currently has more than one active
- *  instance — the trigger for grouped, instance-qualified rendering (§10). */
 const SPANS_INSTANCES_NOTE = "Spans multiple instances — matches within each item's own instance.";
 
+/** Whether the rule's owning content type currently has more than one active
+ *  instance — the trigger for grouped, instance-qualified rendering (§10). */
 function hasMultipleInstances(
   scope: ContentScope,
   sources: Record<ContentType, MediaSourceDescriptor> | undefined
