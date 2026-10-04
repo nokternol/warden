@@ -1,3 +1,4 @@
+import { apiUrlOf } from '@contract/providerUrl';
 import { MetadataProviderType } from '@server/database/schema';
 import ky from 'ky';
 import { PROVIDER_CATALOGUE } from './providerCatalogue';
@@ -12,7 +13,7 @@ export async function probeConnection(
   host: string,
   apiKey?: string
 ): Promise<void> {
-  const base = host.replace(/\/+$/, '') + PROVIDER_CATALOGUE[type].apiPath;
+  const base = apiUrlOf(host, PROVIDER_CATALOGUE[type].apiPath);
   const key = apiKey ?? '';
   const timeout = 8000;
 

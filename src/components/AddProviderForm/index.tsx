@@ -4,6 +4,7 @@ import type { TestStatus } from '@app/components/ConnectionTestIcon';
 import type { CreateProviderParams } from '@app/hooks/useProviderSettings';
 import { descriptorFor } from '@app/hooks/useProviderTypes';
 import { api } from '@app/lib/api/client';
+import { apiUrlOf } from '@contract/providerUrl';
 import type { ProviderTypeDescriptor } from '@contract/providers';
 import { type ProviderType, ProviderTypeSchema } from '@contract/schemas';
 import { useRef, useState } from 'react';
@@ -72,8 +73,7 @@ export default function AddProviderForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!chosen) return;
-    const host = form.url.replace(/\/+$/, '');
-    const fullUrl = `${host}${chosen.apiPath}`;
+    const fullUrl = apiUrlOf(form.url, chosen.apiPath);
     const settings =
       chosen.type === 'JELLYFIN' && form.userId ? { userId: form.userId } : undefined;
 

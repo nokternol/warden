@@ -7,6 +7,7 @@ import type { ProviderSummary, UpdateProviderParams } from '@app/hooks/useProvid
 import type { ProviderTaskDescriptor } from '@app/hooks/useProviderTasks';
 import { api } from '@app/lib/api/client';
 import { cn } from '@app/lib/utils/cn';
+import { apiUrlOf, hostOf } from '@contract/providerUrl';
 import type { ProviderTypeDescriptor } from '@contract/providers';
 import {
   BarChart2,
@@ -23,14 +24,6 @@ import {
   Tv,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
-
-// ─── Local helpers ────────────────────────────────────────────────────────────
-
-/** The host the user entered, without the API path appended when it was saved. */
-function hostOf(url: string, apiPath: string): string {
-  if (apiPath && url.endsWith(apiPath)) return url.slice(0, -apiPath.length);
-  return url;
-}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -151,8 +144,7 @@ export default function ProviderCard({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const host = editForm.url.replace(/\/+$/, '');
-    const fullUrl = `${host}${apiPath}`;
+    const fullUrl = apiUrlOf(editForm.url, apiPath);
 
     const patch: UpdateProviderParams = { name: editForm.name, url: fullUrl };
     if (editForm.apiKey) patch.apiKey = editForm.apiKey;
