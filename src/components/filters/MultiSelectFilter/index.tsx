@@ -19,6 +19,10 @@ export function MultiSelectFilter<T extends string | number>({
   onChange,
 }: MultiSelectFilterProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
+
+  const toggle = (value: T) =>
+    onChange(selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value]);
+
   return (
     <div>
       <button type="button" onClick={() => setIsOpen(true)}>
@@ -32,8 +36,8 @@ export function MultiSelectFilter<T extends string | number>({
               role="menuitemcheckbox"
               aria-checked={selected.includes(o.value)}
               tabIndex={-1}
-              onClick={() => onChange([...selected, o.value])}
-              onKeyDown={(e) => e.key === 'Enter' && onChange([...selected, o.value])}
+              onClick={() => toggle(o.value)}
+              onKeyDown={(e) => e.key === 'Enter' && toggle(o.value)}
             >
               {o.label}
             </div>
