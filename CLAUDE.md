@@ -13,10 +13,10 @@ Use `pkill -f "<process pattern>"` or track the PID at start and kill it explici
 
 ## Writing: comments, commits, PRs
 
-Everything written into the repo must be **durable** — describe the thing as it stands (what/why), not the process that produced it or transient session context. Anything grounded in "current context" that isn't in the artifact drifts stale.
+Everything written into the repo must be **durable**: useful to a future reader who has none of the session's context. Each artifact describes its own subject, and nothing about the session that produced it.
 
-- **Code comments:** explain what the code does/why, not "changed from…", "now we…", or migration narration.
-- **Commits & PR bodies:** describe the delivered end-state — What / Why / Changes / Testing. Never the journey (no "first… then…", no RED/GREEN/REFACTOR steps, no cycle-by-cycle evolution).
+- **Code comments** describe the code: what it does, why, and its constraints. Change language ("changed from…", "now we…", "fixed so that…") doesn't belong here, because once the change merges the comment is narrating a past that the reader can't see.
+- **Commits & PR bodies** describe the change they contain: what changed and why — What / Why / Changes / Testing. Change language ("X now requires sign-in") is correct here, since a commit *is* a change. What's excluded is the session's process: attempts, mistakes fixed along the way, "first… then…", RED/GREEN/REFACTOR steps, cycle-by-cycle evolution, or review back-and-forth.
 
 ## UI changes
 
