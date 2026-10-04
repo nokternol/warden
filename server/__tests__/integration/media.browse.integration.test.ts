@@ -9,7 +9,7 @@ import { type Filter, createMediaProcedures } from '@server/modules/media';
 import { createMediaQueryProcedures } from '@server/modules/mediaQueries';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { createMockConfig, createRadarrMovie, createSonarrSeries } from '@tests/factories';
-import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
+import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import { http, HttpResponse } from 'msw';
@@ -19,9 +19,30 @@ const RADARR_URL = 'http://localhost:7878';
 const SONARR_URL = 'http://localhost:8989';
 
 const MOVIES = [
-  createRadarrMovie({ id: 1, title: 'Batman Begins', year: 2005, hasFile: true, tmdbId: 272 }),
-  createRadarrMovie({ id: 2, title: 'Batman Returns', year: 1992, hasFile: false, tmdbId: 364 }),
-  createRadarrMovie({ id: 3, title: 'The Matrix', year: 1999, hasFile: true, tmdbId: 603 }),
+  createRadarrMovie({
+    id: 1,
+    title: 'Batman Begins',
+    year: 2005,
+    hasFile: true,
+    tmdbId: 272,
+    tags: [1, 2],
+  }),
+  createRadarrMovie({
+    id: 2,
+    title: 'Batman Returns',
+    year: 1992,
+    hasFile: false,
+    tmdbId: 364,
+    tags: [1],
+  }),
+  createRadarrMovie({
+    id: 3,
+    title: 'The Matrix',
+    year: 1999,
+    hasFile: true,
+    tmdbId: 603,
+    tags: [2],
+  }),
 ];
 
 const SERIES = [
@@ -44,6 +65,7 @@ const SERIES = [
 describe('Browse speaks the save encoding', () => {
   let client: ReturnType<typeof createApiClient>;
   let mediaQueryService: MediaQueryService;
+  let radarrId: number;
 
   beforeAll(async () => {
     const mockConfig = createMockConfig({
@@ -60,12 +82,12 @@ describe('Browse speaks the save encoding', () => {
     const container = buildContainer({ config, db });
     mediaQueryService = new MediaQueryService({ db });
 
-    await container.cradle.providerSettingsService.create({
+    ({ id: radarrId } = await container.cradle.providerSettingsService.create({
       type: MetadataProviderType.RADARR,
       name: 'Radarr',
       url: `${RADARR_URL}/api/v3`,
       apiKey: 'test-api-key',
-    });
+    }));
     await container.cradle.providerSettingsService.create({
       type: MetadataProviderType.SONARR,
       name: 'Sonarr',
@@ -102,8 +124,7 @@ describe('Browse speaks the save encoding', () => {
   });
 
   async function browse(contentType: 'movie' | 'series', filters: Filter[]) {
-    const query = new URLSearchParams({ filters: JSON.stringify(filters), pageSize: '100' });
-    const res = await client.get(`/api/media/${contentType}?${query}`);
+    const res = await client.get(browsePath(contentType, filters, { pageSize: 100 }));
     return expectSuccessResponse(res) as { totalCount: number; items: { title: string }[] };
   }
 
@@ -113,17 +134,23 @@ describe('Browse speaks the save encoding', () => {
     return expectSuccessResponse(res) as { count: number };
   }
 
+  /** Browses with `filters` and previews a query saved with them, for comparing the two. */
+  async function browseAndPreview(contentType: 'movie' | 'series', filters: Filter[]) {
+    const page = await browse(contentType, filters);
+    const { count } = await preview(contentType, filters);
+    return { titles: page.items.map((i) => i.title), browsed: page.totalCount, previewed: count };
+  }
+
   it('browses movies to exactly what a query saved with the same entries previews', async () => {
     const filters: Filter[] = [
       { ruleKey: 'title', value: 'batman' },
       { ruleKey: 'hasFile', value: true },
     ];
 
-    const page = await browse('movie', filters);
-    const { count } = await preview('movie', filters);
+    const { titles, browsed, previewed } = await browseAndPreview('movie', filters);
 
-    expect(page.items.map((m) => m.title)).toEqual(['Batman Begins']);
-    expect(page.totalCount).toBe(count);
+    expect(titles).toEqual(['Batman Begins']);
+    expect(browsed).toBe(previewed);
   });
 
   it('browses series to exactly what a query saved with the same entries previews', async () => {
@@ -132,10 +159,27 @@ describe('Browse speaks the save encoding', () => {
       { ruleKey: 'title', value: 'b' },
     ];
 
-    const page = await browse('series', filters);
-    const { count } = await preview('series', filters);
+    const { titles, browsed, previewed } = await browseAndPreview('series', filters);
 
-    expect(page.items.map((s) => s.title)).toEqual(['Breaking Bad']);
-    expect(page.totalCount).toBe(count);
+    expect(titles).toEqual(['Breaking Bad']);
+    expect(browsed).toBe(previewed);
+  });
+
+  it('browses an instance-qualified entry to exactly what a query saved with it previews', async () => {
+    const filters: Filter[] = [{ ruleKey: 'tagIds', value: { providerId: radarrId, ids: [1] } }];
+
+    const { titles, browsed, previewed } = await browseAndPreview('movie', filters);
+
+    expect(titles).toEqual(['Batman Begins', 'Batman Returns']);
+    expect(browsed).toBe(previewed);
+  });
+
+  it('browses a range entry to exactly what a query saved with it previews', async () => {
+    const filters: Filter[] = [{ ruleKey: 'year', value: { min: 1995, max: 2010 } }];
+
+    const { titles, browsed, previewed } = await browseAndPreview('movie', filters);
+
+    expect(titles).toEqual(['Batman Begins', 'The Matrix']);
+    expect(browsed).toBe(previewed);
   });
 });
