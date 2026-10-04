@@ -305,4 +305,25 @@ describe('AutomationBuilder', () => {
     expect(screen.getByRole('checkbox', { name: /confirm/i })).not.toBeChecked();
     expect(screen.getByRole('button', { name: /create automation/i })).toBeDisabled();
   });
+
+  it('states how many items the destructive task will affect in its confirmation', async () => {
+    mockApi([makeProvider()], [{ providerId: 1, type: 'RADARR', tasks: [ENABLED_DELETE] }]);
+    server.use(
+      mockProcedure(contract.automations.preview, () => ({
+        count: 214,
+        contentType: 'movie' as const,
+      }))
+    );
+    const user = userEvent.setup();
+    renderBuilder();
+
+    await user.click(await screen.findByRole('radio', { name: /delete movie \+ files/i }));
+
+    const confirmation = screen.getByRole('checkbox', { name: /confirm/i });
+    await waitFor(() =>
+      expect(confirmation).toHaveAccessibleName(
+        'Confirm: Delete movie + files · will affect 214 movies'
+      )
+    );
+  });
 });

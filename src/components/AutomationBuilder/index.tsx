@@ -1,6 +1,7 @@
 import AutomationQueryList from '@app/components/AutomationQueryList';
 import type { AutomationQueryItem } from '@app/components/AutomationQueryList';
 import Badge from '@app/components/Badge';
+import { useAutomationPreview } from '@app/hooks/useAutomationPreview';
 import type { CreateAutomationInput } from '@app/hooks/useAutomations';
 import type { MediaQueryRecord } from '@app/hooks/useMediaQueries';
 import { useProviderSettings } from '@app/hooks/useProviderSettings';
@@ -172,6 +173,19 @@ export default function AutomationBuilder({
   const isValidCron = nextRunDate !== null;
 
   const hasValidInclude = automationQueries.some((s) => s.role === 'include' && s.queryId > 0);
+
+  // Only a destructive task states its blast radius, so only it asks the server to count.
+  const previewDraft =
+    selectedTask?.destructive && hasValidInclude
+      ? {
+          providerId: selectedTask.providerId,
+          taskId: selectedTask.taskId,
+          queries: automationQueries
+            .filter((q) => q.queryId > 0)
+            .map((q) => ({ queryId: q.queryId, role: q.role })),
+        }
+      : null;
+  const { data: preview } = useAutomationPreview(previewDraft);
 
   const hasRequiredParameter = !selectedTask?.parameter || taskParameterValue.trim().length > 0;
 
@@ -367,8 +381,7 @@ export default function AutomationBuilder({
               className="mt-0.5 flex-shrink-0 text-primary focus:ring-primary focus:ring-offset-0"
             />
             <span>
-              Confirm: &ldquo;{selectedTask.label}&rdquo; is destructive and runs on every matched
-              item.
+              Confirm: {selectedTask.label} · will affect {preview?.count} movies
             </span>
           </label>
         )}
