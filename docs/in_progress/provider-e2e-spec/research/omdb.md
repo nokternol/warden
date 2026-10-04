@@ -80,9 +80,9 @@ Verified directly:
 - Not referenced anywhere in `server/modules/media/enrichment/enricherAdapters.ts` or
   `server/modules/media/mediaFieldProvider.ts` (no `omdbFieldProvider`/`omdbFieldSource` exists,
   unlike `plexFieldProvider`, `tmdbFieldSource`, etc.).
-- `filterRegistry.ts` lists `MetadataProviderType.OMDB` as a `sourceProviders` entry on exactly one
+- `ruleRegistry.ts` lists `MetadataProviderType.OMDB` as a `providers` entry on exactly one
   rule: `certification` (line ~212). It is **not** listed on `imdbRating` (line ~285) — that rule's
-  `sourceProviders` is `[MetadataProviderType.RADARR]` only. **This corrects the ticket's "known
+  `providers` is `[MetadataProviderType.RADARR]` only. **This corrects the ticket's "known
   context" framing**: only `certification` has the stale "listed but nothing populates it from
   OMDB" gap; `imdbRating` is populated (from Radarr's own `ratings.imdb.value`, not OMDB) and
   doesn't list OMDB as a source at all today. The ticket's premise that both fields have this gap is
@@ -103,7 +103,7 @@ For each item: what layer it would touch if ever wired.
   would likely land as new EAV field keys rather than wide-table columns, but that's a decision for
   the follow-on ticket, not asserted here.
 - **UI filter / query engine**: none of OMDB's un-wired fields (RT%, Metacritic, box office,
-  director/actors/writer, `Rated` certification) have any `filterRegistry.ts` rule today. Adding any
+  director/actors/writer, `Rated` certification) have any `ruleRegistry.ts` rule today. Adding any
   of them means a new rule entry plus (per the recent Plex-added-date bug, commit 714fa4d) care
   around silent-drop behavior for items OMDB has no match for.
 - **Enrichment**: would require a new `omdbFieldProvider`/`omdbEnricher` following the
@@ -131,12 +131,12 @@ lookups:
   feature only" vs. "some hybrid" is exactly the kind of call this research ticket is not supposed
   to make. Flagging as the central decision for the follow-on ticket.
 
-## "Listed but not wired" filterRegistry correction
+## "Listed but not wired" ruleRegistry correction
 
-- `certification` rule: lists OMDB as a `sourceProviders` entry but no enricher populates it from
+- `certification` rule: lists OMDB as a `providers` entry but no enricher populates it from
   OMDB (OMDB's `Rated` field is never even parsed by `OmdbProvider` today — a double gap: not
   parsed *and* not wired). Decision ticket should choose: wire OMDB's `Rated` for real, or drop
-  OMDB from this rule's `sourceProviders` list as a stale entry.
+  OMDB from this rule's `providers` list as a stale entry.
 - `imdbRating` rule: **does not list OMDB** (contrary to how the ticket's "known context" framed
   it) — it's sourced from Radarr only. No correction needed here; noting for accuracy since the
   ticket text implied otherwise.
@@ -181,4 +181,4 @@ lookups:
   context): **~14** — `Rated`/certification gap, `Writer`, `Country` (typed but unread), `Genre`,
   `Runtime`, `Plot`, `Poster`, `DVD`, `Production`, `Website`, raw `Awards` text, ID-based lookup
   (`i=` param) as an alternative to title search, season/episode lookup mode, and the
-  `imdbRating`-does-not-actually-list-OMDB filterRegistry correction.
+  `imdbRating`-does-not-actually-list-OMDB ruleRegistry correction.

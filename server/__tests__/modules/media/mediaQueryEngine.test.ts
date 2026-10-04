@@ -17,7 +17,7 @@ const radarrSource = (movies: RadarrMovie[], providerId = 1): MediaSource => ({
 });
 
 describe('MediaQueryEngine', () => {
-  describe('evaluate — single include source', () => {
+  describe('evaluate — single included query', () => {
     it('returns the ids of the items satisfying the include predicate', async () => {
       const source = radarrSource([
         createRadarrMovie({ id: 1, title: 'Downloaded', hasFile: true }),
@@ -28,7 +28,7 @@ describe('MediaQueryEngine', () => {
       const result = await engine.evaluate({
         source,
         contentType: 'movie',
-        sources: [{ filterValues: [{ key: 'hasFile', value: true }], role: 'include' }],
+        clauses: [{ filters: [{ ruleKey: 'hasFile', value: true }], role: 'include' }],
       });
 
       expect(radarrIds(result as NormalizedMovie[])).toEqual([1]);
@@ -47,9 +47,12 @@ describe('MediaQueryEngine', () => {
       const result = await engine.evaluate({
         source,
         contentType: 'movie',
-        sources: [
-          { filterValues: [{ key: 'hasFile', value: true }], role: 'include' },
-          { filterValues: [{ key: 'qualityProfileIds', value: '20' }], role: 'exclude' },
+        clauses: [
+          { filters: [{ ruleKey: 'hasFile', value: true }], role: 'include' },
+          {
+            filters: [{ ruleKey: 'qualityProfileIds', value: { ids: [20] } }],
+            role: 'exclude',
+          },
         ],
       });
 
@@ -58,7 +61,7 @@ describe('MediaQueryEngine', () => {
   });
 
   describe('evaluate — empty filter values', () => {
-    it('matches every item when the include source has no predicates', async () => {
+    it('matches every item when the included query has no predicates', async () => {
       const source = radarrSource([
         createRadarrMovie({ id: 1, title: 'A' }),
         createRadarrMovie({ id: 2, title: 'B' }),
@@ -68,7 +71,7 @@ describe('MediaQueryEngine', () => {
       const result = await engine.evaluate({
         source,
         contentType: 'movie',
-        sources: [{ filterValues: [], role: 'include' }],
+        clauses: [{ filters: [], role: 'include' }],
       });
 
       expect(radarrIds(result as NormalizedMovie[])).toEqual([1, 2]);
@@ -88,25 +91,29 @@ describe('matchItems — per-entry provider gate', () => {
     ),
   ];
 
-  it('an unqualified entry (no providerId) matches items regardless of instance', () => {
-    const result = matchItems(items, [{ key: 'qualityProfileIds', value: '5' }], 'movie');
+  it('an unqualified value (no providerId) matches items regardless of instance', () => {
+    const result = matchItems(
+      items,
+      [{ ruleKey: 'qualityProfileIds', value: { ids: [5] } }],
+      'movie'
+    );
     expect(result).toHaveLength(2);
   });
 
-  it('a qualified entry matches only the items from that provider', () => {
+  it('a qualified value matches only the items from that provider', () => {
     const result = matchItems(
       items,
-      [{ key: 'qualityProfileIds', value: '5', providerId: 1 }],
+      [{ ruleKey: 'qualityProfileIds', value: { providerId: 1, ids: [5] } }],
       'movie'
     );
     expect(result).toHaveLength(1);
     expect(result[0]._sourceIds.providerId).toBe(1);
   });
 
-  it('a qualified entry rejects an item from another instance even when the predicate would pass', () => {
+  it('a qualified value rejects an item from another instance even when the predicate would pass', () => {
     const result = matchItems(
       items,
-      [{ key: 'qualityProfileIds', value: '5', providerId: 999 }],
+      [{ ruleKey: 'qualityProfileIds', value: { providerId: 999, ids: [5] } }],
       'movie'
     );
     expect(result).toHaveLength(0);

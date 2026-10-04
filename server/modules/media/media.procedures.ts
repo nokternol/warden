@@ -22,15 +22,6 @@ import {
   type SonarrTag,
 } from '@server/modules/providers';
 import type { z } from 'zod';
-import type {
-  FilterValue,
-  FilterValueEntry,
-  MovieRangeRuleKey,
-  NormalizedMovie,
-  NormalizedSeries,
-  RangeValue,
-  SeriesRangeRuleKey,
-} from './filterRegistry';
 import { paginateItems } from './media.pagination';
 import { sortMedia } from './media.sort';
 import { resolutionTier } from './mediaFieldProvider';
@@ -40,13 +31,23 @@ import { resetMediaData } from './mediaReset';
 import type { MediaSource } from './mediaSource';
 import { sourceOwnership } from './mediaSourceFactory';
 import { normalizeRadarrMovie, normalizeSonarrSeries } from './normalizeMedia';
+import type {
+  Filter,
+  FilterValue,
+  InstanceScopedValue,
+  MovieRangeRuleKey,
+  NormalizedMovie,
+  NormalizedSeries,
+  RangeValue,
+  SeriesRangeRuleKey,
+} from './ruleRegistry';
 
 const log = getChildLogger('MediaProcedures');
 
 // ─── Registry delegation ───────────────────────────────────────────────────────
 // The browse contract uses content-prefixed param names; the registry uses bare
 // keys. These maps bridge URL param → registry key so a single engine
-// (filterRegistry) backs both the browse path and the automation executor.
+// (ruleRegistry) backs both the browse path and the automation executor.
 
 // A URL param maps onto a registry key directly, or (for a range rule) contributes
 // one bound (`min`/`max`) of that key's `{ min?, max? }` value.
@@ -247,13 +248,20 @@ const _seriesSchemaCoversParams: SeriesSchemaShape & Record<SeriesSchemaMissing,
   {} as SeriesSchemaShape;
 
 // Project a browse query's content-prefixed params onto registry-keyed filter
-// values — the include source the MediaQueryEngine evaluates for the browse view.
+// values — the included query the MediaQueryEngine evaluates for the browse view.
 // Gte/Lte param pairs targeting the same range rule merge into one `{ min?, max? }` entry.
+function parseCsvIds(raw: unknown): number[] {
+  return String(raw)
+    .split(',')
+    .map((s) => Number(s.trim()))
+    .filter((n) => !Number.isNaN(n) && n > 0);
+}
+
 function toFilterValues(
   query: Record<string, unknown>,
   paramMap: Record<string, ParamMapping>
-): FilterValueEntry[] {
-  const entries: FilterValueEntry[] = [];
+): Filter[] {
+  const entries: Filter[] = [];
   const ranges = new Map<string, RangeValue>();
 
   for (const [param, { key, bound, providerIdParam }] of Object.entries(paramMap)) {
@@ -264,14 +272,18 @@ function toFilterValues(
       range[bound] = Number(raw);
       ranges.set(key, range);
     } else {
-      const entry: FilterValueEntry = { key, value: raw as FilterValue };
-      const rawProviderId = providerIdParam ? query[providerIdParam] : undefined;
-      if (rawProviderId !== undefined) entry.providerId = Number(rawProviderId);
-      entries.push(entry);
+      if (providerIdParam) {
+        const rawProviderId = query[providerIdParam];
+        const value: InstanceScopedValue = { ids: parseCsvIds(raw) };
+        if (rawProviderId !== undefined) value.providerId = Number(rawProviderId);
+        entries.push({ ruleKey: key, value });
+      } else {
+        entries.push({ ruleKey: key, value: raw as FilterValue });
+      }
     }
   }
   for (const [key, value] of ranges) {
-    entries.push({ key, value });
+    entries.push({ ruleKey: key, value });
   }
   return entries;
 }
@@ -550,7 +562,7 @@ export function createMediaProcedures(cradle: MediaCradle) {
       const matched = await mediaQueryEngine.evaluate({
         source,
         contentType: 'movie',
-        sources: [{ filterValues: toFilterValues(query, MOVIE_PARAM_TO_KEY), role: 'include' }],
+        clauses: [{ filters: toFilterValues(query, MOVIE_PARAM_TO_KEY), role: 'include' }],
       });
       const matchedKeys = new Set(matched.map((m) => itemKey(m)));
       const matchedRaw: Attributed<RadarrMovie>[] = sublists.flatMap(({ providerId, movies }) =>
@@ -582,7 +594,7 @@ export function createMediaProcedures(cradle: MediaCradle) {
       const matched = await mediaQueryEngine.evaluate({
         source,
         contentType: 'series',
-        sources: [{ filterValues: toFilterValues(query, SERIES_PARAM_TO_KEY), role: 'include' }],
+        clauses: [{ filters: toFilterValues(query, SERIES_PARAM_TO_KEY), role: 'include' }],
       });
       const matchedKeys = new Set(matched.map((s) => itemKey(s)));
       const matchedRaw: Attributed<SonarrSeries>[] = sublists.flatMap(({ providerId, series }) =>

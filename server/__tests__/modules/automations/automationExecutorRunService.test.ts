@@ -82,11 +82,11 @@ describe('AutomationExecutor writes to automation_runs', () => {
     const query = await mediaQueryService.create({
       name: 'Q',
       contentType: 'movie',
-      filterValues: [],
+      filters: [],
     });
     const automation = await automationService.create({
       name: 'Nightly',
-      querySources: [{ queryId: query.id, role: 'include' as const }],
+      queries: [{ queryId: query.id, role: 'include' as const }],
       providerId: provider.id,
       taskId: 'unmonitorMovie',
       schedule: '0 2 * * *',
@@ -116,11 +116,11 @@ describe('AutomationExecutor writes to automation_runs', () => {
     const query = await mediaQueryService.create({
       name: 'Q',
       contentType: 'movie',
-      filterValues: [],
+      filters: [],
     });
     const automation = await automationService.create({
       name: 'Nightly',
-      querySources: [{ queryId: query.id, role: 'include' as const }],
+      queries: [{ queryId: query.id, role: 'include' as const }],
       providerId: provider.id,
       taskId: 'unmonitorMovie',
       schedule: '0 2 * * *',
@@ -146,11 +146,11 @@ describe('AutomationExecutor writes to automation_runs', () => {
       const query = await mediaQueryService.create({
         name: 'Q',
         contentType: 'movie',
-        filterValues: [],
+        filters: [],
       });
       const automation = await automationService.create({
         name: 'Nightly',
-        querySources: [{ queryId: query.id, role: 'include' as const }],
+        queries: [{ queryId: query.id, role: 'include' as const }],
         providerId: provider.id,
         taskId: 'unmonitorMovie',
         schedule: '0 2 * * *',

@@ -2,7 +2,7 @@ import { buildContainer } from '@server/container';
 import { MetadataProviderType } from '@server/database/schema';
 /**
  * POST /api/automations — Session C API integration tests
- * Cycles 9–11: querySources array, cross-type rejection, legacy queryId conversion
+ * Cycles 9–11: queries array, cross-type rejection, legacy queryId conversion
  */
 import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
@@ -53,14 +53,14 @@ describe('POST /api/automations — Session C', () => {
     const movieQuery = await mediaQueryService.create({
       name: 'Movie Query',
       contentType: 'movie',
-      filterValues: [],
+      filters: [],
     });
     movieQueryId = movieQuery.id;
 
     const showQuery = await mediaQueryService.create({
       name: 'Show Query',
       contentType: 'series',
-      filterValues: [],
+      filters: [],
     });
     showQueryId = showQuery.id;
 
@@ -83,29 +83,29 @@ describe('POST /api/automations — Session C', () => {
 
   // ─── Cycle 9 ────────────────────────────────────────────────────────────────
 
-  it('Cycle 9: querySources array creates automation and returns sources in response', async () => {
+  it('Cycle 9: queries array creates automation and returns sources in response', async () => {
     const res = await client.post('/api/automations', {
-      name: 'Multi-source automation',
+      name: 'Multi-query automation',
       providerId: movieProviderId,
       taskId: 'unmonitorMovie',
       schedule: '0 2 * * *',
-      querySources: [{ queryId: movieQueryId, role: 'include', sortOrder: 0 }],
+      queries: [{ queryId: movieQueryId, role: 'include', sortOrder: 0 }],
     });
 
     expect(res.status).toBe(200);
-    const data = (res.body as { data: { querySources: unknown[] } }).data;
-    expect(data.querySources).toEqual([{ queryId: movieQueryId, role: 'include', sortOrder: 0 }]);
+    const data = (res.body as { data: { queries: unknown[] } }).data;
+    expect(data.queries).toEqual([{ queryId: movieQueryId, role: 'include', sortOrder: 0 }]);
   });
 
   // ─── Cycle 10 ───────────────────────────────────────────────────────────────
 
-  it('Cycle 10: cross-type querySources (movie + show) returns 400', async () => {
+  it('Cycle 10: cross-type queries (movie + show) returns 400', async () => {
     const res = await client.post('/api/automations', {
       name: 'Cross-type automation',
       providerId: movieProviderId,
       taskId: 'unmonitorMovie',
       schedule: '0 2 * * *',
-      querySources: [
+      queries: [
         { queryId: movieQueryId, role: 'include', sortOrder: 0 },
         { queryId: showQueryId, role: 'exclude', sortOrder: 1 },
       ],
@@ -122,7 +122,7 @@ describe('POST /api/automations — Session C', () => {
       providerId: movieProviderId,
       taskId: 'radarr.deleteUnmonitored',
       schedule: '0 2 * * *',
-      querySources: [{ queryId: movieQueryId, role: 'include', sortOrder: 0 }],
+      queries: [{ queryId: movieQueryId, role: 'include', sortOrder: 0 }],
     });
 
     expect(res.status).toBe(400);
@@ -130,7 +130,7 @@ describe('POST /api/automations — Session C', () => {
 
   // ─── Cycle 11 ───────────────────────────────────────────────────────────────
 
-  it('Cycle 11: legacy queryId converts to single include source in response', async () => {
+  it('Cycle 11: legacy queryId converts to single included query in response', async () => {
     const res = await client.post('/api/automations', {
       name: 'Legacy automation',
       providerId: movieProviderId,
@@ -140,7 +140,7 @@ describe('POST /api/automations — Session C', () => {
     });
 
     expect(res.status).toBe(200);
-    const data = (res.body as { data: { querySources: unknown[] } }).data;
-    expect(data.querySources).toEqual([{ queryId: movieQueryId, role: 'include', sortOrder: 0 }]);
+    const data = (res.body as { data: { queries: unknown[] } }).data;
+    expect(data.queries).toEqual([{ queryId: movieQueryId, role: 'include', sortOrder: 0 }]);
   });
 });

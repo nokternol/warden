@@ -17,15 +17,15 @@ Radarr is a `MediaSource` (movie) + `MediaActuator` — its own fields normalize
 
 | Bug | Fix |
 |---|---|
-| `monitored` filter rule is series-only (`contentTypes: ['series']`), so it never matches movies even though `NormalizedMovie.monitored` is already populated from Radarr. | Extend the rule's `contentTypes`/`sourceProviders` to include movies. |
-| `addedDaysAgo`'s `sourceProviders` lists `PLEX` alongside `RADARR`/`SONARR`, but nothing populates `NormalizedMovie.addedDate` from Plex — stale listing. | Remove `PLEX` from `addedDaysAgo`'s `sourceProviders`. Radarr's `added` (addedAt-to-source) and Plex's `plexAddedAt` (addedAt-to-library/import) are permanently distinct concepts, not one field with competing producers — they must never be merged under one precedence rule, in this ticket or the final precedence ticket. |
+| `monitored` filter rule is series-only (`contentTypes: ['series']`), so it never matches movies even though `NormalizedMovie.monitored` is already populated from Radarr. | Extend the rule's `contentTypes`/`providers` to include movies. |
+| `addedDaysAgo`'s `providers` lists `PLEX` alongside `RADARR`/`SONARR`, but nothing populates `NormalizedMovie.addedDate` from Plex — stale listing. | Remove `PLEX` from `addedDaysAgo`'s `providers`. Radarr's `added` (addedAt-to-source) and Plex's `plexAddedAt` (addedAt-to-library/import) are permanently distinct concepts, not one field with competing producers — they must never be merged under one precedence rule, in this ticket or the final precedence ticket. |
 
 ## Fields to wire
 
 All new fields follow the existing unprefixed pattern for source-owned movie fields (Radarr fields
 normalize straight onto `NormalizedMovie`, no `radarr`-prefix needed except where flagged for
 collision below). Flow: `radarrProvider.ts` (`RadarrMovie`) → `normalizeMedia.ts`
-(`normalizeRadarrMovie`) → `NormalizedMovie` → `filterRegistry.ts`.
+(`normalizeRadarrMovie`) → `NormalizedMovie` → `ruleRegistry.ts`.
 
 | Domain field | Source | Notes |
 |---|---|---|
@@ -174,7 +174,7 @@ Confirmed by reading `RuleControl`'s `string`/`number` branch and `ENUM_OPTIONS`
 picker keyed by `ENUM_OPTIONS[rule.key]`, never free text. A substring-match-on-filesystem-path
 filter is not enumerable, so `folderPath`'s `dataType: 'string'` classification in the mapping table
 above does not fit any control this codebase has today — confirmed by grepping every `dataType` in
-`filterRegistry.ts`: only `string` / `range` / `boolean` / `csv-strings` / `csv-ids` exist, no
+`ruleRegistry.ts`: only `string` / `range` / `boolean` / `csv-strings` / `csv-ids` exist, no
 free-text/substring type anywhere in the registry.
 
 **Decision: leave `folderName`/`path` unfiltered (display-only) for this pass**, rather than

@@ -10,7 +10,7 @@ Codebase entry points read: `server/modules/providers/connections/seerrProvider.
 `server/modules/providers/providerFactory.ts`, `server/modules/providers/connectionProbe.ts`
 (L4-15, L58-59), `server/modules/providers/providers.procedures.ts` (L117-122),
 `server/database/schema.ts` (`MetadataProviderType.SEERR`), `src/lib/provider-registry.ts`,
-`server/modules/media/enrichment/enricherAdapters.ts`, `server/modules/media/filterRegistry.ts`,
+`server/modules/media/enrichment/enricherAdapters.ts`, `server/modules/media/ruleRegistry.ts`,
 `docs/architecture/media-providers.md` (existing "Seerr" section, L144-266).
 
 ## Naming note — read this before anything else in this doc
@@ -57,8 +57,8 @@ This ambiguity is itself a flag for the decision ticket, not something this rese
 - `server/modules/media/enrichment/enricherAdapters.ts` has an `overseerrEnricher` function
   (L46-64) but no `seerrEnricher` — and couldn't have one today, since `ProviderFactory` can't
   construct a `SeerrProvider` instance in the first place.
-- `server/modules/media/filterRegistry.ts` has `overseerrRequestStatus`/`overseerrHasIssue` filter
-  rules (L446-469) with `sourceProviders: deriveSourceProviders(...)` scoped to Overseerr's field
+- `server/modules/media/ruleRegistry.ts` has `overseerrRequestStatus`/`overseerrHasIssue` filter
+  rules (L446-469) with `providers: deriveProviders(...)` scoped to Overseerr's field
   names only — no Seerr-scoped filter exists.
 - `src/lib/provider-registry.ts`'s `PROVIDER_REGISTRY` has exactly 8 keys (PLEX, JELLYFIN, RADARR,
   SONARR, TAUTULLI, OVERSEERR, TMDB, OMDB) — **confirmed no `SEERR` key**. This is the UI-facing
@@ -200,7 +200,7 @@ follow**:
 
 1. **Duplicate**: give Seerr its own full `MediaSource`/`MediaEnricher`/`MediaActuator`
    implementation, parallel to Overseerr's, wired independently through `ProviderFactory`,
-   `enricherAdapters.ts`, and `filterRegistry.ts` with `seerr`-prefixed field names.
+   `enricherAdapters.ts`, and `ruleRegistry.ts` with `seerr`-prefixed field names.
 2. **Share**: reuse Overseerr's enricher/actuator code paths against a Seerr-typed connection
    instance (extending `ProviderFactory`'s existing `instanceof OverseerrProvider` checks and
    `overseerrEnricher`'s field provider to also accept/produce Seerr-sourced data, given

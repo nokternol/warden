@@ -10,7 +10,7 @@ ScheduledTasks/Library-refresh docs, and this repo's `server/modules/providers/c
 `server/modules/providers/providerFactory.ts`, `server/modules/providers/roles.ts`,
 `server/modules/providers/identityResolutionJob.ts`, `server/modules/media/actuatorIdResolver.ts`,
 `server/database/schema.ts`, `server/modules/media/mediaFieldProvider.ts`,
-`server/modules/media/enrichment/enricherAdapters.ts`, `server/modules/media/filterRegistry.ts`,
+`server/modules/media/enrichment/enricherAdapters.ts`, `server/modules/media/ruleRegistry.ts`,
 `src/lib/provider-registry.ts`.
 
 ## Wiring status today (summary)
@@ -28,7 +28,7 @@ Jellyfin is wired only as:
   for task-target resolution.
 - `src/lib/provider-registry.ts` JELLYFIN entry (`order: 1`, `filterCapabilities: ['Library
   contents', 'Item metadata']`) — but those capabilities are **aspirational**: no filter rule in
-  `filterRegistry.ts` currently sources from Jellyfin, and no field in `mediaFieldProvider.ts` or
+  `ruleRegistry.ts` currently sources from Jellyfin, and no field in `mediaFieldProvider.ts` or
   `enricherAdapters.ts` is Jellyfin-sourced. Zero hits for "jellyfin" in all three files.
 - Jellyfin is **not** a `MediaSource` (`roles.ts:91-93` — only Radarr/Sonarr own catalogs), **not**
   in `ProviderFactory.ProviderSet` (`providerFactory.ts:34-39` — only plex/tautulli/overseerr/tmdb
@@ -41,7 +41,7 @@ Jellyfin is wired only as:
 
 Every field below is **not wired** unless marked wired. "Layers" lists what a full wire-up would
 touch: db/config, provider field (`mediaFieldProvider.ts` + `enricherAdapters.ts`), UI filter
-(`filterRegistry.ts` + `provider-registry.ts` capabilities), query engine (predicate + registry
+(`ruleRegistry.ts` + `provider-registry.ts` capabilities), query engine (predicate + registry
 entry), enrichment (decorate/join), task/actuator, automation option.
 
 | Field | Wired? | Notes / layers touched if not |
@@ -51,17 +51,17 @@ entry), enrichment (decorate/join), task/actuator, automation option.
 | `Name` | not wired | provider field, query engine (would duplicate `title` rule, which already lists Plex — naming-collision-adjacent, see below) |
 | `Type` (Movie/Series) | wired (partially) | Used only to filter `JELLYFIN_KIND` mapping in identity job; not exposed as a normalized-item field. |
 | `ProductionYear` | not wired | provider field; would duplicate `year` rule (already Plex/Radarr/Sonarr/TMDB-sourced) |
-| `Genres` / `GenreItems` | not wired | provider field, UI filter, query engine, enrichment. No existing `genres` rule in `filterRegistry.ts` at all — **new rule needed regardless of provider**. |
+| `Genres` / `GenreItems` | not wired | provider field, UI filter, query engine, enrichment. No existing `genres` rule in `ruleRegistry.ts` at all — **new rule needed regardless of provider**. |
 | `Studios` | not wired | same as Genres — no existing studio rule anywhere in the registry. |
 | `Tags` | not wired | **naming collision risk**: `EnrichmentFields.tags` already exists, sourced from Radarr (movie) / Sonarr (show) as `number[]` (quality-tag ids, `instanceScoped: true`, provider-defined id space). Jellyfin's `Tags` is a `string[]` of free-text labels — same field name, incompatible type and meaning. Flagging, not resolving. |
 | `Overview` | not wired | provider field only (no filter use case) |
 | `Taglines` | not wired | provider field |
-| `OfficialRating` (e.g. "PG-13") | not wired | **naming/semantic collision risk** with `certification` rule (`filterRegistry.ts` `key: 'certification'`), currently sourced from Radarr/Sonarr/TMDB/OMDB. Same concept, different field name today — but a Jellyfin wire-up should presumably feed the *same* `certification` rule rather than mint a new one; flagging the naming/merge question for the precedence ticket. |
+| `OfficialRating` (e.g. "PG-13") | not wired | **naming/semantic collision risk** with `certification` rule (`ruleRegistry.ts` `key: 'certification'`), currently sourced from Radarr/Sonarr/TMDB/OMDB. Same concept, different field name today — but a Jellyfin wire-up should presumably feed the *same* `certification` rule rather than mint a new one; flagging the naming/merge question for the precedence ticket. |
 | `CommunityRating` | not wired | **naming collision risk** against any future Plex/TMDB "rating" field — TMDB already has its own rating semantics elsewhere (not in `EnrichmentFields` today, but likely to appear). Flag only. |
 | `CriticRating` | not wired | provider field |
 | `RunTimeTicks` / `CumulativeRunTimeTicks` | not wired | provider field, UI filter (a "runtime" rule doesn't exist yet in the registry at all — new rule). Units gap: Jellyfin ticks (10,000,000 ticks/sec) vs. whatever unit a future runtime rule picks — flag as a units-normalization concern, not just naming. |
 | `People` (cast/crew) | not wired | provider field. **Structural schema gap**: no existing table models cast/crew for any provider; this is a new relational shape (one item -> many people), not a scalar column — flag. |
-| `DateCreated` | not wired | provider field, UI filter. **Naming collision risk**: conceptually parallels `plexAddedAt` (`EnrichmentFields.plexAddedAt`, its own `plexAddedDaysAgo` rule) and Radarr/Sonarr's `addedDate` (backing the generic `addedDaysAgo` rule per `filterRegistry.ts` comment at line ~504 documenting the `plexAddedDaysAgo`/`addedDaysAgo` mismatch precedent). A `jellyfinAddedAt` would need the same "added-by-whom" disambiguation this repo already got bitten by once (see `filterRegistry.ts` comment near line 504). |
+| `DateCreated` | not wired | provider field, UI filter. **Naming collision risk**: conceptually parallels `plexAddedAt` (`EnrichmentFields.plexAddedAt`, its own `plexAddedDaysAgo` rule) and Radarr/Sonarr's `addedDate` (backing the generic `addedDaysAgo` rule per `ruleRegistry.ts` comment at line ~504 documenting the `plexAddedDaysAgo`/`addedDaysAgo` mismatch precedent). A `jellyfinAddedAt` would need the same "added-by-whom" disambiguation this repo already got bitten by once (see `ruleRegistry.ts` comment near line 504). |
 | `DateLastMediaAdded` | not wired | provider field (folder-level, not item-level — different semantics from `DateCreated`) |
 | `PremiereDate` | not wired | provider field, UI filter (no existing "premiere/release date" rule distinct from `year`) |
 | `Path` | not wired | provider field (useful for de-dup/diagnostics, not filtering) |
@@ -140,7 +140,7 @@ Not wired beyond reading a single configured `userId` out of `provider.settings.
    `lastWatchedAt` (Plex/Tautulli-sourced) — likely mergeable (same meaning), but now three
    providers would write the same field; precedence/merge order needs deciding.
 5. **`DateCreated`** vs. `plexAddedAt` / generic `addedDate` (Radarr/Sonarr) — this repo already
-   hit exactly this class of bug once (`filterRegistry.ts` comment documents the
+   hit exactly this class of bug once (`ruleRegistry.ts` comment documents the
    `plexAddedDaysAgo`/`addedDaysAgo` mismatch precedent); a `jellyfinAddedAt` needs the same
    "added by which system" disambiguation from day one.
 

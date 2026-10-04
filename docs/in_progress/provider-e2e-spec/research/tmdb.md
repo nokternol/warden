@@ -10,7 +10,7 @@ Primary sources: [developer.themoviedb.org](https://developer.themoviedb.org) re
 field names below cross-confirmed via search-indexed mirrors/community references of the same stable,
 versioned public API). Codebase sources: `server/modules/providers/connections/tmdbProvider.ts`,
 `server/modules/media/enrichment/enricherAdapters.ts`, `server/modules/media/enrichment/mediaFieldProvider.ts`,
-`server/modules/media/activeFieldSet.ts`, `server/modules/media/filterRegistry.ts`,
+`server/modules/media/activeFieldSet.ts`, `server/modules/media/ruleRegistry.ts`,
 `server/modules/providers/ratingsAggregation.ts`, `server/modules/providers/tmdbService.ts`,
 `docs/architecture/media-providers.md`, `docs/architecture/media-enrichment-eav-model.md`.
 
@@ -25,7 +25,7 @@ versioned public API). Codebase sources: `server/modules/providers/connections/t
 
 | Field | Wired where |
 |---|---|
-| `tmdbStatus` (movie/tv release/airing status string) | `tmdbEnricher` (`server/modules/media/enrichment/enricherAdapters.ts:66-80`) calls `getStatus(tmdbId)`; declared in `EnrichmentFields` (`mediaFieldProvider.ts:22`); sole producer entry `fieldsByProviderType[TMDB] = ['tmdbStatus']` (`activeFieldSet.ts:20`); gated filter rule at `filterRegistry.ts:433-444`. |
+| `tmdbStatus` (movie/tv release/airing status string) | `tmdbEnricher` (`server/modules/media/enrichment/enricherAdapters.ts:66-80`) calls `getStatus(tmdbId)`; declared in `EnrichmentFields` (`mediaFieldProvider.ts:22`); sole producer entry `fieldsByProviderType[TMDB] = ['tmdbStatus']` (`activeFieldSet.ts:20`); gated filter rule at `ruleRegistry.ts:433-444`. |
 
 This is the entire wired surface. One field.
 
@@ -39,13 +39,13 @@ to land without a new key.
 
 | Field | Source method | Notes |
 |---|---|---|
-| `certification` | `getMovieDetailsEnriched`/`getTvDetailsEnriched` (`tmdbProvider.ts:232-297`), via `extractMovieCertification`/`extractTvCertification` (`tmdbProvider.ts:149-190`) | US-preferred, falls back to first available region. **`filterRegistry.ts:204-219`'s `certification` rule already lists `MetadataProviderType.TMDB` in `sourceProviders`** even though `fieldsByProviderType` (`activeFieldSet.ts:14-21`) has no TMDB entry for it and no enricher populates it — see "listed but not wired" section below. |
+| `certification` | `getMovieDetailsEnriched`/`getTvDetailsEnriched` (`tmdbProvider.ts:232-297`), via `extractMovieCertification`/`extractTvCertification` (`tmdbProvider.ts:149-190`) | US-preferred, falls back to first available region. **`ruleRegistry.ts:204-219`'s `certification` rule already lists `MetadataProviderType.TMDB` in `providers`** even though `fieldsByProviderType` (`activeFieldSet.ts:14-21`) has no TMDB entry for it and no enricher populates it — see "listed but not wired" section below. |
 | `keywords` (string array) | same enriched-details calls, `append_to_response: 'keywords'` | No `EnrichmentFields` key at all; no filter rule references `keywords` for TMDB. |
 | `collectionId` / `collectionName` (movie franchise/collection) | `getMovieDetailsEnriched` only (movie-only concept) | No `EnrichmentFields` key; no filter rule. |
 | `spokenLanguages` (string array, English names) | both enriched-details calls | No `EnrichmentFields` key; no filter rule. |
 | `originCountry` (string array, ISO country codes) | both enriched-details calls | No `EnrichmentFields` key; no filter rule. |
 | Streaming-service flags (`netflix`/`prime`/`disney`/`hulu`/`apple`/`hbo`/`paramount`/`peacock`) | `getMovieWatchProviders`/`getTvWatchProviders` (`tmdbProvider.ts:299-314`), region-scoped, provider-id-to-flag lookup table hand-maintained at `tmdbProvider.ts:106-117` | Region-parameterized — the enricher call site would need to decide/configure a region, an additional config surface not currently modeled anywhere for TMDB. No `EnrichmentFields` key. **Naming-collision risk:** a hypothetical `streamingServices`/`watchProviders` field would need a name distinct from any future Justwatch-style or other-provider streaming field if one is ever added; flag for precedence ticket. |
-| `movieRating`/`movieVotes`/`tvRating`/`tvVotes`/`popularity` (TMDB's own vote average/count, distinct from `imdbRating`) | `getRatings(title, year)` (`tmdbProvider.ts:316-365`), consumed today by `ratingsAggregation.ts` | Title-search based (not id-based), so accuracy depends on search-match quality — see `ratingsAggregation.ts:38-40`'s existing imdbId-mismatch warning logic, which already treats TMDB/OMDB disagreement as a real risk. **Naming-collision risk:** `filterRegistry.ts` already has an `imdbRating` field owned by Radarr (`filterRegistry.ts:281-292`, movie-only). A TMDB-sourced rating is a *different number from a different source* (TMDB's own vote average, not IMDb's) — if ever surfaced as a filter field, naming it something that reads as "the IMDB rating" (when it's actually TMDB's) would be a real collision/confusion risk, not just a string clash. Flag for precedence ticket. |
+| `movieRating`/`movieVotes`/`tvRating`/`tvVotes`/`popularity` (TMDB's own vote average/count, distinct from `imdbRating`) | `getRatings(title, year)` (`tmdbProvider.ts:316-365`), consumed today by `ratingsAggregation.ts` | Title-search based (not id-based), so accuracy depends on search-match quality — see `ratingsAggregation.ts:38-40`'s existing imdbId-mismatch warning logic, which already treats TMDB/OMDB disagreement as a real risk. **Naming-collision risk:** `ruleRegistry.ts` already has an `imdbRating` field owned by Radarr (`ruleRegistry.ts:281-292`, movie-only). A TMDB-sourced rating is a *different number from a different source* (TMDB's own vote average, not IMDb's) — if ever surfaced as a filter field, naming it something that reads as "the IMDB rating" (when it's actually TMDB's) would be a real collision/confusion risk, not just a string clash. Flag for precedence ticket. |
 | `imdb_id` crosswalk (present on `TmdbMovieDetails`/via `getMovieDetails`) | `tmdbProvider.ts:25`, surfaced today only inside `getRatings`'s cross-check against OMDB | Not itself unwired as a *filter* concept, but notable as TMDB's own id-crosswalk capability, distinct from the full `external_ids` endpoint below which this codebase never calls. |
 
 ## Not-implemented-at-all (TMDB API exposes, `tmdbProvider.ts` never calls)
@@ -62,35 +62,35 @@ these requires a new HTTP round trip to add — only new parsing/typing in `tmdb
 | Field / sub-resource | What it is | Layer(s) it would touch |
 |---|---|---|
 | `external_ids` (`imdb_id`, `wikidata_id`, `facebook_id`, `instagram_id`, `twitter_id`, plus TV-side `tvdb_id`) | Id crosswalk endpoint (`movie/{id}/external_ids`, `tv/{id}/external_ids`) | Provider field (new parse in `tmdbProvider.ts`); potential **structural** consideration — `tvdb_id` on the TV side is a genuine crosswalk to Sonarr's own id space (see `media_identity`'s `tvdbId` — confirm exact column name before building); this is the one candidate in this whole doc that could plausibly want a schema column rather than an EAV `enrichment_field` seed row, since it's an identity-matching key, not a display fact. Flag, don't design. |
-| `recommendations` (paginated list of related movie/show ids+titles) | `movie/{id}/recommendations`, `tv/{id}/recommendations` | New provider method; no current UI/filter concept for "related items" exists anywhere in `filterRegistry.ts` — would be a new query-engine/UI shape, not just a new field on an existing item. |
+| `recommendations` (paginated list of related movie/show ids+titles) | `movie/{id}/recommendations`, `tv/{id}/recommendations` | New provider method; no current UI/filter concept for "related items" exists anywhere in `ruleRegistry.ts` — would be a new query-engine/UI shape, not just a new field on an existing item. |
 | `similar` (paginated list, distinct algorithm from `recommendations` — genre/keyword-similarity vs. user-behavior-based) | `movie/{id}/similar`, `tv/{id}/similar` | Same shape as `recommendations` above; **naming-collision risk** between the two if both were ever built as one feature — TMDB itself treats them as distinct, non-interchangeable endpoints. |
 | `videos` (trailers/teasers/clips/featurettes; fields include `key`, `site` (YouTube/Vimeo), `type`, `official`, `published_at`, `iso_639_1`/`iso_3166_1`) | `movie/{id}/videos`, `tv/{id}/videos` | Provider field/UI surface (e.g., "has trailer" filter, or trailer-link display) — no current concept in this codebase; distinct from `TmdbService`'s existing trending-backdrops feature, which pulls stills, not video links. |
 | `images` (`backdrops`, `posters`, `logos` arrays, each with `file_path`, dimensions, `vote_average`, `iso_639_1`) | `movie/{id}/images`, `tv/{id}/images` | Overlaps conceptually with `TmdbService`'s existing trending-backdrops feature (`server/modules/providers/tmdbService.ts`), which already builds full backdrop URLs from `image.tmdb.org` — a per-item images call is a different capability (per-media-item art, not homepage trending) but shares the base-URL/sizing logic; **naming-collision risk** with a future Plex-native "poster"/"artwork" concept if either provider's images ever get filterable. |
 | `credits` (cast/crew) | `movie/{id}/credits`, `tv/{id}/credits`, `tv/{id}/aggregate_credits` (season-aware cast rollup, TV-only) | New provider field; would be the first "people" data type in this codebase — no analogous field on any other provider today, likely a genuinely new UI/filter concept (actor/director search), not a slot-in to an existing rule shape. |
 | `reviews` | `movie/{id}/reviews`, `tv/{id}/reviews` | User-generated text content — new provider field; no display surface exists for free-text reviews anywhere in this app today. |
-| `translations` | `movie/{id}/translations`, `tv/{id}/translations` | Localized title/overview per language; provider field only if i18n display is ever a goal — no current i18n concept in `filterRegistry.ts`/UI. |
+| `translations` | `movie/{id}/translations`, `tv/{id}/translations` | Localized title/overview per language; provider field only if i18n display is ever a goal — no current i18n concept in `ruleRegistry.ts`/UI. |
 | `alternative_titles` | `movie/{id}/alternative_titles`, `tv/{id}/alternative_titles` | Region-specific alternate titles; provider field, marginal utility beyond search-matching (could improve `getRatings`'s title-search accuracy, noted above as already a known weak point). |
 | `release_dates` full per-region table (already fetched for US-preferred certification, but the *other* regions' dates/types are discarded) | Already inside `getMovieDetailsEnriched`'s existing `release_dates` append call — `extractMovieCertification` only ever returns one region's value | Not a new API call — a **parsing gap**, not a missing capability. Per-region certification (e.g., separate US/UK/DE certification filters) would need `tmdbProvider.ts` to return the full per-region map instead of the collapsed single string it does today. Flag as a structural shape question: today's `certification` `EnrichmentFields`/filter concept is single-valued; multi-region certification wouldn't fit that shape without a design change (not necessarily a DB schema change under the EAV model, but definitely an `EnrichmentFields` type/shape change). |
 | `content_ratings` full per-region table (TV side, same gap as `release_dates` above) | Already inside `getTvDetailsEnriched`'s `content_ratings` append call | Same parsing-gap flag as above. |
 | Trending/popular/top-rated/upcoming discovery endpoints (`trending/movie/{time_window}`, `movie/popular`, `movie/top_rated`, `discover/movie`) | Bulk discovery, distinct from per-id lookups | `TmdbService` already uses `trending/movie/day` for backdrops — everything else in this bucket (`discover`, `popular`, `top_rated`) is unused. Would be a new automation/task shape (e.g., "suggest new acquisitions"), not an enrichment field — flag as a possible task/actuator or automation-option candidate for the decision ticket, distinct in kind from every field-shaped item above. |
 
-## The central open question: `filterRegistry.ts`'s "listed but not wired" TMDB entries
+## The central open question: `ruleRegistry.ts`'s "listed but not wired" TMDB entries
 
-`filterRegistry.ts` already declares `MetadataProviderType.TMDB` as a `sourceProviders` entry for
+`ruleRegistry.ts` already declares `MetadataProviderType.TMDB` as a `providers` entry for
 three rules, **despite no enricher populating any of them from TMDB today**:
 
-- `year` — `filterRegistry.ts:136-148` (`sourceProviders` includes `RADARR, SONARR, PLEX, TMDB`)
-- `certification` — `filterRegistry.ts:204-219` (`sourceProviders` includes `RADARR, SONARR, TMDB, OMDB`)
-- `genres` — both the movie rule (`filterRegistry.ts:268-279`, Radarr-only, no TMDB) and the show rule
-  (`filterRegistry.ts:346-356`, `sourceProviders: [SONARR, TMDB]`)
+- `year` — `ruleRegistry.ts:136-148` (`providers` includes `RADARR, SONARR, PLEX, TMDB`)
+- `certification` — `ruleRegistry.ts:204-219` (`providers` includes `RADARR, SONARR, TMDB, OMDB`)
+- `genres` — both the movie rule (`ruleRegistry.ts:268-279`, Radarr-only, no TMDB) and the show rule
+  (`ruleRegistry.ts:346-356`, `providers: [SONARR, TMDB]`)
 
 Cross-checked against `activeFieldSet.ts:14-21`'s `fieldsByProviderType`: TMDB's only declared
 producer entry there is `['tmdbStatus']`. That table is the compile-time source of truth
-`deriveSourceProviders` (used elsewhere in `filterRegistry.ts`) reads from — but `year`/`certification`/
-`genres` don't use `deriveSourceProviders` for their TMDB entry; they hand-list
-`MetadataProviderType.TMDB` directly in the rule's own `sourceProviders` array, bypassing that
+`deriveProviders` (used elsewhere in `ruleRegistry.ts`) reads from — but `year`/`certification`/
+`genres` don't use `deriveProviders` for their TMDB entry; they hand-list
+`MetadataProviderType.TMDB` directly in the rule's own `providers` array, bypassing that
 compile-time check entirely. So there are two independent copies of "does TMDB own this field" today
-(the hand-list in `filterRegistry.ts` and the derived table in `activeFieldSet.ts`), and they already
+(the hand-list in `ruleRegistry.ts` and the derived table in `activeFieldSet.ts`), and they already
 disagree for all three fields.
 
 **This ticket does not resolve it — presenting both branches for the decision ticket:**
@@ -99,7 +99,7 @@ disagree for all three fields.
    `getMovieDetailsEnriched`/`getTvDetailsEnriched` in addition to `getStatus`, `EnrichmentFields` gains
    a `certification`/`genres` (and possibly `year`, though TMDB's `release_date`/`first_air_date` would
    need a year-extraction step not currently in `tmdbProvider.ts`) key, `activeFieldSet.ts`'s
-   `fieldsByProviderType[TMDB]` is extended to match, and the `filterRegistry.ts` `sourceProviders`
+   `fieldsByProviderType[TMDB]` is extended to match, and the `ruleRegistry.ts` `providers`
    hand-lists become accurate. Under the EAV model (`docs/architecture/media-enrichment-eav-model.md`)
    this is a migration seed row per new key, not a schema/column change — cheap structurally, but real
    product-precedence work: Radarr/Sonarr already own `genres`/`certification` as source-provider fields
@@ -107,7 +107,7 @@ disagree for all three fields.
    raises the exact same precedence question `contestedFieldPrecedence` already solves for
    Plex-vs-Tautulli — deliberately left to the precedence ticket, not decided here.
 2. **Correct the stale registry entry** — remove `MetadataProviderType.TMDB` from these three rules'
-   `sourceProviders` arrays, since nothing populates them from TMDB today and the entries currently
+   `providers` arrays, since nothing populates them from TMDB today and the entries currently
    describe a plausible future source, not a wired one (this is exactly the wording
    `docs/architecture/media-providers.md`'s TMDB section already uses to characterize the gap).
 

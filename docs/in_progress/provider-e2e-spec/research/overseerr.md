@@ -7,7 +7,7 @@ at time of writing = `855d514` (post EAV-enrichment refactor).
 Codebase entry points read: `server/modules/providers/connections/overseerrProvider.ts`,
 `server/modules/media/mediaFieldProvider.ts` (`overseerrFieldProvider`, L117-147),
 `server/modules/media/enrichment/enricherAdapters.ts` (`overseerrEnricher`, L46-64),
-`server/modules/media/filterRegistry.ts` (L447-468), `server/modules/providers/providerFactory.ts`,
+`server/modules/media/ruleRegistry.ts` (L447-468), `server/modules/providers/providerFactory.ts`,
 `server/modules/media/activeFieldSet.ts` (L19), `src/lib/provider-registry.ts` (L57-65).
 
 ## Wired today
@@ -19,8 +19,8 @@ lookup, not field enrichment.
 
 | Field (API) | Codebase name | Wired at |
 |---|---|---|
-| `MediaRequest.status` (number, 1=PENDING/2=APPROVED/3=DECLINED) | `overseerrRequestStatus` | `overseerrProvider.ts:16` (`OverseerrRequest.status`) → `mediaFieldProvider.ts:139,144` (`overseerrFieldProvider`) → `enricherAdapters.ts:59` → `filterRegistry.ts:447-458` (filter `key: 'overseerrRequestStatus'`, numeric-equality predicate) → `activeFieldSet.ts:19` |
-| Issue existence (any issue on a title) | `overseerrHasIssue` (boolean, presence-only — collapses count/type) | `overseerrProvider.ts:35` (`OverseerrIssue.status` is fetched but never read) → `mediaFieldProvider.ts:140,145` → same enrichment/filter/activeFieldSet chain as above (`filterRegistry.ts:460-468`, boolean predicate) |
+| `MediaRequest.status` (number, 1=PENDING/2=APPROVED/3=DECLINED) | `overseerrRequestStatus` | `overseerrProvider.ts:16` (`OverseerrRequest.status`) → `mediaFieldProvider.ts:139,144` (`overseerrFieldProvider`) → `enricherAdapters.ts:59` → `ruleRegistry.ts:447-458` (filter `key: 'overseerrRequestStatus'`, numeric-equality predicate) → `activeFieldSet.ts:19` |
+| Issue existence (any issue on a title) | `overseerrHasIssue` (boolean, presence-only — collapses count/type) | `overseerrProvider.ts:35` (`OverseerrIssue.status` is fetched but never read) → `mediaFieldProvider.ts:140,145` → same enrichment/filter/activeFieldSet chain as above (`ruleRegistry.ts:460-468`, boolean predicate) |
 | `MediaRequest.media.tmdbId` | join key only | `overseerrProvider.ts:19` (`OverseerrMedia.tmdbId`), used as the map key in `overseerrFieldProvider.visit`, never surfaced as its own field |
 | `search` (`GET /api/v1/search`) — `id`, `mediaType`, `title`/`name`, `overview`, `mediaInfo` | not enrichment; used by `media.search.procedures.ts` (`searchProvider()`) for interactive search, separate from the field/filter/enrichment pipeline | `overseerrProvider.ts:74-83` |
 
@@ -145,7 +145,7 @@ it as a spec item here.
   `MediaInfo.status` (media availability) or issue open/resolved status get wired later, they need
   their own prefixed names too (e.g. `overseerrMediaStatus`, `overseerrIssueStatus`) — collision
   risk is with each other *and* with `tmdbStatus` (`mediaFieldProvider.ts:22`,
-  `filterRegistry.ts:439`), which is TMDB's own release-status enum (Rumored/Planned/In
+  `ruleRegistry.ts:439`), which is TMDB's own release-status enum (Rumored/Planned/In
   Production/Post Production/Released/Canceled) — a third, semantically distinct "status" already
   live in this codebase. All three "status"-shaped fields (request approval state, media
   availability state, TMDB release state) are plausible candidates for a UI filter literally

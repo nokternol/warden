@@ -14,7 +14,7 @@ parent: docs/in_progress/provider-e2e-spec/map.md
 Audit Jellyfin's full API surface (web research against its official API docs) and cross-check
 against what this codebase currently wires (`server/modules/providers/connections/jellyfinProvider.ts`
 if it exists, `server/modules/providers/providerFactory.ts`, `server/modules/media/enrichment/enricherAdapters.ts`,
-`server/modules/media/filterRegistry.ts`, `src/lib/provider-registry.ts`). Produce a markdown asset
+`server/modules/media/ruleRegistry.ts`, `src/lib/provider-registry.ts`). Produce a markdown asset
 (linked from this ticket, not pasted into it) enumerating, for every field and task/action Jellyfin's
 API exposes:
 
@@ -43,7 +43,7 @@ enumeration, not curation.
   It is not a `MediaSource`, has no `ProviderSet` slot, and has no `_sourceIds.jellyfin` key — so
   zero `BaseItemDto`/`UserItemDataDto` fields flow into filtering or enrichment despite
   `provider-registry.ts` advertising "Library contents" / "Item metadata" filter capabilities.
-- `filterRegistry.ts`, `mediaFieldProvider.ts`, and `enricherAdapters.ts` all have zero Jellyfin
+- `ruleRegistry.ts`, `mediaFieldProvider.ts`, and `enricherAdapters.ts` all have zero Jellyfin
   references — every metadata/user-data field (genres, studios, tags, ratings, overview, runtime,
   watch state, favorites, playback position) is a from-scratch wire-up.
 - Five naming collisions flagged: `Tags` (type mismatch vs. Radarr/Sonarr's numeric tag ids),

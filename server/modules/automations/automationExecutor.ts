@@ -22,7 +22,7 @@ import {
   readEnabledTaskIds,
 } from '../providers';
 import type { AutomationRunService, RunTargets } from './automationRunService';
-import type { AutomationQuerySourceDto, AutomationService } from './automationService';
+import type { AutomationQueryDto, AutomationService } from './automationService';
 
 const log = getChildLogger('AutomationExecutor');
 
@@ -128,14 +128,14 @@ export class AutomationExecutor {
         throw new Error(`Automation ${automationId} has no provider — cannot execute`);
       }
 
-      const sources = automation.querySources ?? [];
+      const automationQueries = automation.queries ?? [];
 
-      if (!sources.length) {
-        throw new Error(`Automation ${automationId} has no query sources — cannot execute`);
+      if (!automationQueries.length) {
+        throw new Error(`Automation ${automationId} has no queries — cannot execute`);
       }
 
       const providerSettings = await this.providerSettingsService.findById(automation.provider.id);
-      const plan = await this.planRun(automation.taskId, providerSettings, sources);
+      const plan = await this.planRun(automation.taskId, providerSettings, automationQueries);
       targets = plan.targets;
       itemCount = targets.items.length;
       await plan.task.run(plan.actuatorIds, automation.taskParameter);
@@ -171,15 +171,17 @@ export class AutomationExecutor {
   private async planRun(
     taskId: string,
     providerSettings: MetadataProvider,
-    sources: AutomationQuerySourceDto[]
+    automationQueries: AutomationQueryDto[]
   ): Promise<RunPlan> {
     const queryDtos = await Promise.all(
-      sources.map((s) => this.mediaQueryService.getById(s.queryId))
+      automationQueries.map((automationQuery) =>
+        this.mediaQueryService.getById(automationQuery.queryId)
+      )
     );
     const contentType = queryDtos[0].contentType;
-    const querySpecs = sources.map((s, i) => ({
-      filterValues: queryDtos[i].filterValues,
-      role: s.role,
+    const querySpecs = automationQueries.map((automationQuery, i) => ({
+      filters: queryDtos[i].filters,
+      role: automationQuery.role,
     }));
 
     const provider = this.providerFactory.create(providerSettings, log);
@@ -205,7 +207,7 @@ export class AutomationExecutor {
       const matched = await this.mediaQueryEngine.evaluate({
         source: mediaSource,
         contentType,
-        sources: querySpecs,
+        clauses: querySpecs,
       });
       const targetById = new Map(matched.map((item) => [mediaSource.idOf(item)!, item]));
       return {
@@ -234,7 +236,7 @@ export class AutomationExecutor {
     const matched = await this.mediaQueryEngine.evaluate({
       source: pooled,
       contentType,
-      sources: querySpecs,
+      clauses: querySpecs,
     });
     const { actuatorIds, addressed } = await resolveActuatorTargets(
       this.db,

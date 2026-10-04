@@ -211,7 +211,7 @@ six lists — diverges from the established per-field pattern and couples six in
 invalidation together for a marginal round-trip saving.
 
 **Known gap to not repeat**: `certification` already has `dataType: 'csv-strings'` in
-`filterRegistry.ts` but no lookup source wired in the frontend, so its control silently renders empty
+`ruleRegistry.ts` but no lookup source wired in the frontend, so its control silently renders empty
 today (`ref:src/components/MediaFilterBar/index.tsx#L966`). Each of the 6 new routes above must ship
 together with its `csvStringOptions` branch and `Lookups` field in the same change — not as a
 follow-up — so none of them repeat that gap.

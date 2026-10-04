@@ -66,7 +66,7 @@ const mockQuery: MediaQueryRecord = {
   id: 1,
   name: 'Old Movies',
   contentType: 'movie',
-  filterValues: [{ key: 'yearMax', value: 2015 }],
+  filters: [{ ruleKey: 'yearMax', value: 2015 }],
   health: { status: 'healthy', providerStatus: [], qualificationIssues: [] },
   createdAt: '2024-01-01T00:00:00Z',
 };
@@ -163,9 +163,7 @@ describe('AutomationBuilder', () => {
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'My Automation',
-        querySources: expect.arrayContaining([
-          expect.objectContaining({ queryId: 1, role: 'include' }),
-        ]),
+        queries: expect.arrayContaining([expect.objectContaining({ queryId: 1, role: 'include' })]),
         taskId: 'unmonitorMovie',
         providerId: 1,
       })

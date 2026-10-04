@@ -9,12 +9,12 @@ The set of media a query defines is not a stored entity — it is the *result* o
 specification against live source data.
 
 - **`MediaQuery`** — the specification: a **bound provider instance**, a `contentType`
-  (`'movie' | 'series'`), and one-or-more **sources**, each `{ filterValues, role: 'include' | 'exclude' }`.
-  A query is a single-source include `MediaQuery`; the browse view is the same with URL-derived
-  `filterValues`.
+  (`'movie' | 'series'`), and one-or-more **clauses** (`MediaQueryClause`), each `{ filters, role: 'include' | 'exclude' }`
+  where `filters` is a list of `Filter { ruleKey, value }`. A query is a single-clause include
+  `MediaQuery`; the browse view is the same with URL-derived `filters`.
 - **`MediaQueryEngine.evaluate(query): Promise<MediaItemSet>`** — the owner. Fetches the bound provider's
-  items, normalizes them, merges DB enrichment, applies the predicate registry per source (`matchItems`),
-  and combines include/exclude across sources (`evaluateCombination`).
+  items, normalizes them, merges DB enrichment, applies the rule registry per clause (`matchItems`),
+  and combines include/exclude across clauses (`evaluateCombination`).
 - **`MediaItemSet`** — the transient result: the matched normalized items (`NormalizedMovie |
   NormalizedSeries`). Callers project ids to act, or paginate/sort to display. No table.
 
@@ -38,13 +38,13 @@ post-match step then groups the surviving items into one row per title (see
 
 ## Internals
 
-- **`matchItems(items, filterValues, contentType)`** — the shared filter primitive: the subset
-  satisfying every predicate under `getFilterDef`. An empty `filterValues` matches all items (`[].every`
+- **`matchItems(items, filters, contentType)`** — the shared filter primitive: the subset
+  satisfying every predicate under `getRule`. A filter whose value names a `providerId` also fails any item from another instance. An empty `filters` matches all items (`[].every`
   is vacuously true). Exported for direct reuse.
-- **`combine`** (private) — maps each source through `matchItems`, projects source ids, runs
+- **`combine`** (private) — maps each clause through `matchItems`, projects item keys, runs
   `evaluateCombination` (include union minus exclude), and returns the surviving normalized items.
 - Unknown `contentType` resolves to an empty `MediaItemSet`.
-- Depends on [`filterRegistry`](ref:path:server/modules/media/filterRegistry.ts) (rule set) and `combinationEvaluator` (combination contract) — both
+- Depends on [`ruleRegistry`](ref:path:server/modules/media/ruleRegistry.ts) (rule set) and `combinationEvaluator` (combination contract) — both
   internal domain, never mocked. DB enrichment (`mergeEnrichment`) runs when a `db` is injected.
 
 ## Registration

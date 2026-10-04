@@ -29,7 +29,7 @@ than pasting them in.
   `tba`/`announced`/`inCinemas`/`released`/`deleted`.
 - **`folderName`/`path`** — dropped from filterable scope this pass rather than inventing a new
   free-text/substring `dataType`. Confirmed via `RuleControl` that `string` is strictly a fixed-enum
-  picker, never free text, and that no free-text dataType exists anywhere in `filterRegistry.ts`
+  picker, never free text, and that no free-text dataType exists anywhere in `ruleRegistry.ts`
   today. Left display-only, matching `overview`/title-variant fields' existing precedent. Inventing a
   shared free-text control is flagged as a future decision if a later provider independently hits the
   same need — not designed here.

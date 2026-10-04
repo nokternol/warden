@@ -15,7 +15,7 @@ const makeAutomation = (overrides: Partial<AutomationDto> = {}): AutomationDto =
   name: 'Test Automation',
   kind: 'user',
   query: { id: 1, name: 'My Query', contentType: 'movie' as const },
-  querySources: [{ queryId: 1, role: 'include', sortOrder: 0 }],
+  queries: [{ queryId: 1, role: 'include', sortOrder: 0 }],
   provider: { id: 1, name: 'Radarr', type: 'RADARR' },
   taskId: 'delete-movie',
   schedule: '0 * * * *',
@@ -25,8 +25,8 @@ const makeAutomation = (overrides: Partial<AutomationDto> = {}): AutomationDto =
   ...overrides,
 });
 
-describe('useAutomations — create sends querySources', () => {
-  it('sends querySources array in POST body when creating an automation', async () => {
+describe('useAutomations — create sends queries', () => {
+  it('sends queries array in POST body when creating an automation', async () => {
     let capturedBody: unknown;
     const newAutomation = makeAutomation({ id: 2, name: 'New' });
 
@@ -44,7 +44,7 @@ describe('useAutomations — create sends querySources', () => {
     await act(async () => {
       await result.current.create({
         name: 'New',
-        querySources: [{ queryId: 1, role: 'include', sortOrder: 0 }],
+        queries: [{ queryId: 1, role: 'include', sortOrder: 0 }],
         providerId: 1,
         taskId: 'delete-movie',
         schedule: '0 * * * *',
@@ -52,7 +52,7 @@ describe('useAutomations — create sends querySources', () => {
     });
 
     expect(capturedBody).toMatchObject({
-      querySources: [{ queryId: 1, role: 'include', sortOrder: 0 }],
+      queries: [{ queryId: 1, role: 'include', sortOrder: 0 }],
     });
     expect(capturedBody).not.toHaveProperty('queryId');
   });
@@ -75,7 +75,7 @@ describe('useAutomations — create sends querySources', () => {
     await act(async () => {
       await result.current.create({
         name: 'Parameterized',
-        querySources: [{ queryId: 1, role: 'include', sortOrder: 0 }],
+        queries: [{ queryId: 1, role: 'include', sortOrder: 0 }],
         providerId: 1,
         taskId: 'changeQualityProfile',
         taskParameter: '7',
@@ -152,7 +152,7 @@ describe('useAutomations — network call count', () => {
     await act(async () => {
       await result.current.create({
         name: 'New',
-        querySources: [{ queryId: 1, role: 'include', sortOrder: 0 }],
+        queries: [{ queryId: 1, role: 'include', sortOrder: 0 }],
         providerId: 1,
         taskId: 'delete-movie',
         schedule: '0 * * * *',

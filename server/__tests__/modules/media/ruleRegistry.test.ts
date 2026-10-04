@@ -3,9 +3,10 @@ import {
   MEDIA_RULES,
   type NormalizedMovie,
   type NormalizedSeries,
-  deriveSourceProviders,
+  deriveProviders,
   getRule,
-} from '@server/modules/media/filterRegistry';
+} from '@server/modules/media/ruleRegistry';
+import { MOCK_RULES } from '@tests/mocks/handlers/media';
 import { describe, expect, it } from 'vitest';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -73,7 +74,7 @@ describe('MEDIA_RULES', () => {
       expect(['boolean', 'number', 'string', 'csv-ids', 'csv-strings', 'range']).toContain(
         rule.dataType
       );
-      expect(rule.sourceProviders.length).toBeGreaterThan(0);
+      expect(rule.providers.length).toBeGreaterThan(0);
       expect(typeof rule.required).toBe('boolean');
       expect(typeof rule.predicate).toBe('function');
     }
@@ -134,22 +135,22 @@ describe('dataType classification', () => {
   });
 });
 
-// ─── sourceProviders accuracy ───────────────────────────────────────────────
-// sourceProviders must reflect the real owner of a field, confirmed against
+// ─── providers accuracy ───────────────────────────────────────────────
+// providers must reflect the real owner of a field, confirmed against
 // docs/architecture/media-providers.md — a stale entry implies an integration
 // that doesn't exist in this deployment.
 
-describe('sourceProviders accuracy', () => {
+describe('providers accuracy', () => {
   it('tagIds (movie) lists only Radarr — Sonarr cannot produce a movie tag', () => {
-    expect(getRule('tagIds', 'movie')!.sourceProviders).toEqual([MetadataProviderType.RADARR]);
+    expect(getRule('tagIds', 'movie')!.providers).toEqual([MetadataProviderType.RADARR]);
   });
 
   it('tagIds (series) lists only Sonarr — Radarr cannot produce a series tag', () => {
-    expect(getRule('tagIds', 'series')!.sourceProviders).toEqual([MetadataProviderType.SONARR]);
+    expect(getRule('tagIds', 'series')!.providers).toEqual([MetadataProviderType.SONARR]);
   });
 
   it('watched is derived from playCount — Tautulli, Plex, and Jellyfin all produce it', () => {
-    expect(getRule('watched', 'movie')!.sourceProviders).toEqual([
+    expect(getRule('watched', 'movie')!.providers).toEqual([
       MetadataProviderType.TAUTULLI,
       MetadataProviderType.PLEX,
       MetadataProviderType.JELLYFIN,
@@ -157,47 +158,45 @@ describe('sourceProviders accuracy', () => {
   });
 
   it('genres (movie) is Radarr-only — no TMDB genres call is wired', () => {
-    expect(getRule('genres', 'movie')!.sourceProviders).toEqual([MetadataProviderType.RADARR]);
+    expect(getRule('genres', 'movie')!.providers).toEqual([MetadataProviderType.RADARR]);
   });
 
   it('imdbRating is Radarr-only — no OMDB integration exists in this deployment', () => {
-    expect(getRule('imdbRating', 'movie')!.sourceProviders).toEqual([MetadataProviderType.RADARR]);
+    expect(getRule('imdbRating', 'movie')!.providers).toEqual([MetadataProviderType.RADARR]);
   });
 
   it('communityRating is Sonarr-only — Sonarr ratings is a single aggregate, no TMDB key configured', () => {
-    expect(getRule('communityRating', 'series')!.sourceProviders).toEqual([
-      MetadataProviderType.SONARR,
-    ]);
+    expect(getRule('communityRating', 'series')!.providers).toEqual([MetadataProviderType.SONARR]);
   });
 
   it('addedDaysAgo (movie) lists only Radarr/Sonarr — nothing populates addedDate from Plex', () => {
-    expect(getRule('addedDaysAgo', 'movie')!.sourceProviders).toEqual([
+    expect(getRule('addedDaysAgo', 'movie')!.providers).toEqual([
       MetadataProviderType.RADARR,
       MetadataProviderType.SONARR,
     ]);
   });
 
   it('addedDaysAgo (series) lists only Radarr/Sonarr — nothing populates addedDate from Plex', () => {
-    expect(getRule('addedDaysAgo', 'series')!.sourceProviders).toEqual([
+    expect(getRule('addedDaysAgo', 'series')!.providers).toEqual([
       MetadataProviderType.RADARR,
       MetadataProviderType.SONARR,
     ]);
   });
 });
 
-// ─── deriveSourceProviders ─────────────────────────────────────────────────
-// For a rule backed by an EnrichmentFields-tracked field, sourceProviders is
+// ─── deriveProviders ─────────────────────────────────────────────────
+// For a rule backed by an EnrichmentFields-tracked field, providers is
 // derived from fieldsByProviderType (the same declaration MediaFieldProvider/
 // MediaFieldSource adapters are checked against) instead of hand-listed —
 // a provider rename/removal there can't silently leave a rule's gating stale.
 
-describe('deriveSourceProviders', () => {
+describe('deriveProviders', () => {
   it('derives tmdbStatus to [TMDB]', () => {
-    expect(deriveSourceProviders('tmdbStatus')).toEqual([MetadataProviderType.TMDB]);
+    expect(deriveProviders('tmdbStatus')).toEqual([MetadataProviderType.TMDB]);
   });
 
   it('derives playCount to Tautulli, Plex, and Jellyfin — a contested field', () => {
-    expect(deriveSourceProviders('playCount')).toEqual([
+    expect(deriveProviders('playCount')).toEqual([
       MetadataProviderType.TAUTULLI,
       MetadataProviderType.PLEX,
       MetadataProviderType.JELLYFIN,
@@ -205,7 +204,7 @@ describe('deriveSourceProviders', () => {
   });
 
   it('derives tags to both Radarr and Sonarr — each owns tags on its own kind', () => {
-    expect(deriveSourceProviders('tags')).toEqual([
+    expect(deriveProviders('tags')).toEqual([
       MetadataProviderType.RADARR,
       MetadataProviderType.SONARR,
     ]);
@@ -283,16 +282,16 @@ describe('movie predicates', () => {
     expect(rule.predicate(baseMovie, false)).toBe(false);
   });
 
-  it('tagIds — passes when item has any of the csv tag ids', () => {
+  it('tagIds — passes when item has any of the tag ids', () => {
     const rule = getRule('tagIds', 'movie')!;
-    expect(rule.predicate(baseMovie, '10,30')).toBe(true);
-    expect(rule.predicate(baseMovie, '99,100')).toBe(false);
+    expect(rule.predicate(baseMovie, { ids: [10, 30] })).toBe(true);
+    expect(rule.predicate(baseMovie, { ids: [99, 100] })).toBe(false);
   });
 
-  it('qualityProfileIds — passes when item profile is in csv list', () => {
+  it('qualityProfileIds — passes when item profile is in the ids', () => {
     const rule = getRule('qualityProfileIds', 'movie')!;
-    expect(rule.predicate(baseMovie, '1,2')).toBe(true);
-    expect(rule.predicate(baseMovie, '5,6')).toBe(false);
+    expect(rule.predicate(baseMovie, { ids: [1, 2] })).toBe(true);
+    expect(rule.predicate(baseMovie, { ids: [5, 6] })).toBe(false);
   });
 
   it('genres — passes when item has any of the csv genres', () => {
@@ -415,7 +414,7 @@ describe('Radarr movie-only predicates', () => {
     expect(rule.predicate({ ...baseMovie, digitalReleaseDate: undefined }, { min: 5 })).toBe(false);
   });
 
-  it('collectionName — passes when item collection is in the csv list', () => {
+  it('collectionName — passes when item collection is in the ids', () => {
     const rule = getRule('collectionName', 'movie')!;
     expect(
       rule.predicate(
@@ -457,7 +456,7 @@ describe('Radarr movie-only predicates', () => {
       const rule = getRule(key, 'movie')!;
       expect(rule).toBeDefined();
       expect(rule.contentTypes).toEqual(['movie']);
-      expect(rule.sourceProviders).toEqual([MetadataProviderType.RADARR]);
+      expect(rule.providers).toEqual([MetadataProviderType.RADARR]);
     }
   });
 });
@@ -465,7 +464,7 @@ describe('Radarr movie-only predicates', () => {
 // ─── Series predicates ────────────────────────────────────────────────────────
 
 describe('studio predicates', () => {
-  it('movie — passes when item studio is in the csv list', () => {
+  it('movie — passes when item studio is in the ids', () => {
     const rule = getRule('studio', 'movie')!;
     expect(
       rule.predicate({ ...baseMovie, studio: 'Legendary Pictures' }, 'Legendary Pictures')
@@ -476,7 +475,7 @@ describe('studio predicates', () => {
     expect(rule.predicate(baseMovie, 'Legendary Pictures')).toBe(false);
   });
 
-  it('series — passes when item studio is in the csv list', () => {
+  it('series — passes when item studio is in the ids', () => {
     const rule = getRule('studio', 'series')!;
     expect(rule.predicate({ ...baseSeries, studio: 'AMC Studios' }, 'AMC Studios')).toBe(true);
     expect(rule.predicate({ ...baseSeries, studio: 'AMC Studios' }, 'HBO')).toBe(false);
@@ -505,14 +504,14 @@ describe('series predicates', () => {
 
   it('tagIds — series', () => {
     const rule = getRule('tagIds', 'series')!;
-    expect(rule.predicate(baseSeries, '5,99')).toBe(true);
-    expect(rule.predicate(baseSeries, '99')).toBe(false);
+    expect(rule.predicate(baseSeries, { ids: [5, 99] })).toBe(true);
+    expect(rule.predicate(baseSeries, { ids: [99] })).toBe(false);
   });
 
   it('qualityProfileIds — series', () => {
     const rule = getRule('qualityProfileIds', 'series')!;
-    expect(rule.predicate(baseSeries, '2,3')).toBe(true);
-    expect(rule.predicate(baseSeries, '99')).toBe(false);
+    expect(rule.predicate(baseSeries, { ids: [2, 3] })).toBe(true);
+    expect(rule.predicate(baseSeries, { ids: [99] })).toBe(false);
   });
 
   it('genres — series', () => {
@@ -532,7 +531,7 @@ describe('series predicates', () => {
     expect(rule).toBeDefined();
     expect(rule.predicate(baseMovie, true)).toBe(true); // baseMovie.monitored = true
     expect(rule.predicate(baseMovie, false)).toBe(false);
-    expect(rule.sourceProviders).toEqual(
+    expect(rule.providers).toEqual(
       expect.arrayContaining([MetadataProviderType.RADARR, MetadataProviderType.SONARR])
     );
   });
@@ -684,26 +683,26 @@ describe('file-tech and release-date predicates', () => {
     expect(rule.predicate({ ...baseMovie, releaseDate: undefined }, { min: 5 })).toBe(false);
   });
 
-  it('fileContainer — movie: passes when item container is in the csv list', () => {
+  it('fileContainer — movie: passes when item container is in the ids', () => {
     const rule = getRule('fileContainer', 'movie')!;
     expect(rule.predicate({ ...baseMovie, fileContainer: 'mkv' }, 'mkv,mp4')).toBe(true);
     expect(rule.predicate({ ...baseMovie, fileContainer: 'avi' }, 'mkv,mp4')).toBe(false);
     expect(rule.predicate(baseMovie, 'mkv')).toBe(false);
   });
 
-  it('videoCodec — movie: passes when item codec is in the csv list', () => {
+  it('videoCodec — movie: passes when item codec is in the ids', () => {
     const rule = getRule('videoCodec', 'movie')!;
     expect(rule.predicate({ ...baseMovie, videoCodec: 'h264' }, 'h264,hevc')).toBe(true);
     expect(rule.predicate({ ...baseMovie, videoCodec: 'mpeg2video' }, 'h264,hevc')).toBe(false);
   });
 
-  it('audioCodec — movie: passes when item codec is in the csv list', () => {
+  it('audioCodec — movie: passes when item codec is in the ids', () => {
     const rule = getRule('audioCodec', 'movie')!;
     expect(rule.predicate({ ...baseMovie, audioCodec: 'aac' }, 'aac,dts')).toBe(true);
     expect(rule.predicate({ ...baseMovie, audioCodec: 'mp3' }, 'aac,dts')).toBe(false);
   });
 
-  it('fileResolution — movie: passes when item resolution is in the csv list', () => {
+  it('fileResolution — movie: passes when item resolution is in the ids', () => {
     const rule = getRule('fileResolution', 'movie')!;
     expect(rule.predicate({ ...baseMovie, fileResolution: '1080' }, '1080,4k')).toBe(true);
     expect(rule.predicate({ ...baseMovie, fileResolution: '720' }, '1080,4k')).toBe(false);
@@ -803,13 +802,29 @@ describe('Sonarr-only predicates', () => {
     const rule = getRule('languageProfileIds', 'series')!;
     expect(rule.dataType).toBe('csv-ids');
     expect(rule.instanceScoped).toBe(true);
-    expect(rule.sourceProviders).toEqual([MetadataProviderType.SONARR]);
+    expect(rule.providers).toEqual([MetadataProviderType.SONARR]);
   });
 
-  it('languageProfileIds — series: passes when item languageProfileId is in the csv list', () => {
+  it('languageProfileIds — series: passes when item languageProfileId is in the ids', () => {
     const rule = getRule('languageProfileIds', 'series')!;
-    expect(rule.predicate({ ...baseSeries, languageProfileId: 3 }, '3,4')).toBe(true);
-    expect(rule.predicate({ ...baseSeries, languageProfileId: 3 }, '99')).toBe(false);
-    expect(rule.predicate(baseSeries, '3')).toBe(false); // no languageProfileId
+    expect(rule.predicate({ ...baseSeries, languageProfileId: 3 }, { ids: [3, 4] })).toBe(true);
+    expect(rule.predicate({ ...baseSeries, languageProfileId: 3 }, { ids: [99] })).toBe(false);
+    expect(rule.predicate(baseSeries, { ids: [3] })).toBe(false); // no languageProfileId
+  });
+});
+
+// ─── MSW rule mocks ────────────────────────────────────────────────────────────
+
+describe('MSW media.rules mock', () => {
+  it('declares the same instanceScoped class as the registry for every rule it lists', () => {
+    for (const mock of MOCK_RULES) {
+      for (const contentType of mock.contentTypes) {
+        const rule = getRule(mock.key, contentType);
+        expect(rule, `${mock.key}/${contentType}`).toBeDefined();
+        expect(Boolean(mock.instanceScoped), `${mock.key}/${contentType}`).toBe(
+          Boolean(rule!.instanceScoped)
+        );
+      }
+    }
   });
 });

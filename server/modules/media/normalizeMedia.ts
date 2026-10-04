@@ -5,7 +5,7 @@ import type { NormalizedSeries } from './series';
 
 /**
  * Translate provider DTOs into the canonical Normalized* domain shapes the
- * filterRegistry operates on. Shared by the automation executor and the media
+ * ruleRegistry operates on. Shared by the automation executor and the media
  * browse handler so both filter against the same projection. `_sourceIds` keeps
  * the provider id so matched items can be mapped back to their raw DTO.
  */

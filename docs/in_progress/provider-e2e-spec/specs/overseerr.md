@@ -17,15 +17,15 @@ stays deferred until upgrade/verification.
 
 | Domain field | Source | Flow |
 |---|---|---|
-| `overseerrRequestStatus` | `MediaRequest.status` (1/2/3 = pending/approved/declined) | `overseerrProvider.ts` → `mediaFieldProvider.ts` (`overseerrFieldProvider`) → `enricherAdapters.ts` (`overseerrEnricher`) → `filterRegistry.ts` (numeric-equality filter) → `activeFieldSet.ts` |
-| `overseerrHasIssue` | Presence of any `Issue` on a title (boolean, collapses type/count) | Same chain as above; boolean predicate in `filterRegistry.ts` |
+| `overseerrRequestStatus` | `MediaRequest.status` (1/2/3 = pending/approved/declined) | `overseerrProvider.ts` → `mediaFieldProvider.ts` (`overseerrFieldProvider`) → `enricherAdapters.ts` (`overseerrEnricher`) → `ruleRegistry.ts` (numeric-equality filter) → `activeFieldSet.ts` |
+| `overseerrHasIssue` | Presence of any `Issue` on a title (boolean, collapses type/count) | Same chain as above; boolean predicate in `ruleRegistry.ts` |
 
 ## New fields to wire
 
 All new fields follow the existing `overseerr`-prefix naming convention. Flow for every row below is
 the same shape as the two baseline fields: provider read (`overseerrProvider.ts`) → field provider
 (`mediaFieldProvider.ts`, `overseerrFieldProvider`) → enrichment (`enricherAdapters.ts`,
-`overseerrEnricher`) → filter (`filterRegistry.ts`) → `activeFieldSet.ts`.
+`overseerrEnricher`) → filter (`ruleRegistry.ts`) → `activeFieldSet.ts`.
 
 | Domain field | Source | Notes |
 |---|---|---|

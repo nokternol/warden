@@ -3,7 +3,7 @@ import type { EnrichmentFields } from './mediaFieldProvider';
 /**
  * Every `EnrichmentFields` key, not a hand-picked subset — no field is movie-only or
  * series-only within `EnrichmentFields` itself (that distinction lives in
- * `sourceProviders`/`contentTypes` instead), so `NormalizedSeries` extends the identical
+ * `providers`/`contentTypes` instead), so `NormalizedSeries` extends the identical
  * `Partial<EnrichmentFields>`. A new `EnrichmentFields` key is carried here
  * automatically; there is no separate list to remember to update, unlike the previous
  * hand-typed `Pick<EnrichmentFields, 'tags' | 'playCount' | ...>` union, which

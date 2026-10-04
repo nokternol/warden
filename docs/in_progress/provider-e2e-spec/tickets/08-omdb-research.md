@@ -14,7 +14,7 @@ parent: docs/in_progress/provider-e2e-spec/map.md
 Audit Omdb's full API surface (web research against its official API docs) and cross-check
 against what this codebase currently wires (`server/modules/providers/connections/omdbProvider.ts`
 if it exists, `server/modules/providers/providerFactory.ts`, `server/modules/media/enrichment/enricherAdapters.ts`,
-`server/modules/media/filterRegistry.ts`, `src/lib/provider-registry.ts`). Produce a markdown asset
+`server/modules/media/ruleRegistry.ts`, `src/lib/provider-registry.ts`). Produce a markdown asset
 (linked from this ticket, not pasted into it) enumerating, for every field and task/action Omdb's
 API exposes:
 
@@ -26,7 +26,7 @@ API exposes:
 - Any gap that would require a *structural* schema change (new column/table, not just a new config
   value in the existing `settings` JSON blob) — flag, don't design.
 
-Known context to start from: Inert toward the pipeline: OmdbProvider implements neither MediaSource, MediaEnricher, nor MediaActuator. Only used by ratingsAggregation.ts/providers.procedures.ts's getRatings route. filterRegistry.ts lists OMDB as a sourceProviders entry for certification/imdbRating even though nothing populates those fields from OMDB today — same 'listed but not wired' gap as TMDB's.
+Known context to start from: Inert toward the pipeline: OmdbProvider implements neither MediaSource, MediaEnricher, nor MediaActuator. Only used by ratingsAggregation.ts/providers.procedures.ts's getRatings route. ruleRegistry.ts lists OMDB as a providers entry for certification/imdbRating even though nothing populates those fields from OMDB today — same 'listed but not wired' gap as TMDB's.
 
 Do not decide what to build yet — that's the follow-on decision ticket. This ticket is exhaustive
 enumeration, not curation.
@@ -41,8 +41,8 @@ enumeration, not curation.
 - Confirmed known state: `OmdbProvider` implements none of `MediaSource`/`MediaEnricher`/
   `MediaActuator`; only consumed by `ratingsAggregation.ts` and `providers.procedures.ts`'s ad hoc
   `getRatings` route — zero fields reach the media-item pipeline today.
-- Correction to the ticket's framing: `filterRegistry.ts`'s `imdbRating` rule does **not** list
-  OMDB as a `sourceProviders` entry (it's Radarr-only) — only `certification` has the "listed but
+- Correction to the ticket's framing: `ruleRegistry.ts`'s `imdbRating` rule does **not** list
+  OMDB as a `providers` entry (it's Radarr-only) — only `certification` has the "listed but
   not populated" gap for OMDB. `certification` is a double gap: OMDB's `Rated` field isn't even
   parsed by `OmdbProvider` today, let alone wired.
 - OMDb's official docs confirm ID-based lookup (`i=<imdbID>`) is fully supported as an alternative

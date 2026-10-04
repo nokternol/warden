@@ -29,7 +29,7 @@ resolve, don't resolve it here.
 
 ## Resolution
 
-- **Stale filterRegistry listing resolved by wiring for real**, not by correcting the listing —
+- **Stale ruleRegistry listing resolved by wiring for real**, not by correcting the listing —
   `genres`/`certification`/`year` all become genuinely TMDB-produced, joining the existing
   multi-producer fields.
 - **Same-source dedup, not new redundancy**: TMDB's own direct API call for rating/collection data

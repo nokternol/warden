@@ -12,8 +12,8 @@ source mechanism for the "not on any" shape); this doc covers the remaining one 
 The original ask was explicitly **not** "is this on a watchlist somewhere" (`INVENTORY.md`'s
 `mediaInfo.watchlists` framing) — it's "not on the watchlist of any of a chosen set of *my* consumers, where
 choosing all consumers is just selecting all of them." That shape already exists in the engine: `tagIds`
-(`filterRegistry.ts`) is `csv-ids`, "item's tag list intersects the selected ids," and the `MediaQuerySource`
-`role: 'exclude'` (`mediaQueryEngine.ts:12-15`) already handles "exclude if any selected value matches." A
+(`ruleRegistry.ts`) is `csv-ids`, "item's tag list intersects the selected ids," and the `MediaQueryClause`
+`role: 'exclude'` (`mediaQueryEngine.ts`) already handles "exclude if any selected value matches." A
 `watchlistUserIds: number[]` field consumed by the same `csv-ids` shape needs no new engine mechanism — only
 the data.
 
@@ -76,7 +76,7 @@ for this predicate either way.
 5. `mediaEnrichment` schema: new `watchlistUserIds` column (JSON-encoded array — no existing array-column
    precedent in `schema.ts`, first one), migration.
 6. `enrichmentMerge.ts`: copy-through with JSON parse.
-7. `filterRegistry.ts`: new `watchlistUserIds` rule, `csv-ids`, same predicate shape as `tagIds`.
+7. `ruleRegistry.ts`: new `watchlistUserIds` rule, `csv-ids`, same predicate shape as `tagIds`.
 
 ### Open questions for whoever picks this up
 

@@ -5,7 +5,7 @@ import { MetadataProviderType } from '@server/database/schema';
  *
  * Captures CURRENT listMovies/listSeries behaviour for the parity predicates and
  * structural guarantees most likely to silently regress when the browse path is
- * swapped onto the canonical filterRegistry: genres, seriesType, network, sort
+ * swapped onto the canonical ruleRegistry: genres, seriesType, network, sort
  * ordering, pagination, yearRange independence, and the raw-item response shape.
  *
  * These are regression guards — they must be green BEFORE and AFTER the swap.

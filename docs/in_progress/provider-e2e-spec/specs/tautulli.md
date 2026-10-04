@@ -36,7 +36,7 @@ Task already wired: `deleteWatchHistory` (destructive, `get_history` lookup → 
 
 `get_library_media_info` is item-scoped (confirmed genuinely per-item, unlike the rest of Tautulli's
 unwired surface), so it fits the existing flow: provider read → `tautulliFieldProvider` →
-`tautulliEnricher` → `filterRegistry.ts`.
+`tautulliEnricher` → `ruleRegistry.ts`.
 
 **Explicitly dropped**: `get_metadata` (title/summary/ratings/cast/genres). Tautulli sits on top of
 Plex, and the domain model's `MediaSource` role for movies/shows now belongs to Radarr/Sonarr, not
@@ -64,7 +64,7 @@ excluded by the per-item-tasks-only premise.
   `undelete_user` — user-scoped or (user, item)-scoped, not per-item.
 - **Session/live data**: `get_activity`, `terminate_session` — transient server state, not a
   persisted per-item fact; would need its own "Now Playing" feature surface entirely, not
-  `filterRegistry`.
+  `ruleRegistry`.
 - **Aggregate/reporting**: `get_stream_data` (per-play, not per-item), `get_plays_by_stream_type`,
   `get_plays_by_source_resolution`, `get_plays_by_stream_resolution`.
 - **Library-level (not item-level) stats**: `get_libraries`, `get_library`,
@@ -136,7 +136,7 @@ far, matching the decision ticket's narrow scope.
   `NumberRangeFilter`, same shape as `sizeOnDiskGb`. No bounds decided, consistent with this map's
   precedent for numeric ranges. No widget or route decision beyond confirming the mapping.
 - **`tautulliRecentlyAdded`** — joins the existing `plexAddedDaysAgo` rule (`range`,
-  `ref:server/modules/media/filterRegistry.ts#L179`) as a second producer, per the spec's
+  `ref:server/modules/media/ruleRegistry.ts#L179`) as a second producer, per the spec's
   naming-collision note (Plex wins precedence; Tautulli doesn't get its own filter key). No new
   control, no new rule, no UI change at all — this is a query-time/precedence concern already
   resolved in the spec's "Filter type mapping" table, not a UI decision.

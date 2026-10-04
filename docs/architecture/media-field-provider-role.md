@@ -109,7 +109,7 @@ oversight: closing it is follow-on work, not part of what shipped.
 [`series.ts`](ref:path:server/modules/media/series.ts) no longer hand-type `tags`, `playCount`,
 `lastWatchedAt`, `overseerrHasIssue`, `overseerrRequestStatus`, `tmdbStatus`, `plexAddedAt` — each
 interface extends `Partial<EnrichmentFields>` directly (no field is movie-only or series-only within
-`EnrichmentFields` itself; that distinction lives in `sourceProviders`/`contentTypes` instead). This
+`EnrichmentFields` itself; that distinction lives in `providers`/`contentTypes` instead). This
 started as an explicit `Partial<Pick<EnrichmentFields, 'tags' | 'playCount' | ...>>` union, but `Pick`
 only constrains the *listed* keys to be real ones — it doesn't require the list to be complete, so a
 new `EnrichmentFields` key could be silently left off it and nothing would fail to compile. `Partial<
@@ -222,9 +222,9 @@ provider-type set), invalidated by a `provider:changed` domain event
 `providers → media`-illegal boundary the precedence validator crosses via the event bus instead of an
 import.
 
-## `filterRegistry.ts`: derived where possible, hand-listed where genuinely source-owned
+## `ruleRegistry.ts`: derived where possible, hand-listed where genuinely source-owned
 
-`deriveSourceProviders(field)` inverts `fieldsByProviderType` — every provider type whose declared
+`deriveProviders(field)` inverts `fieldsByProviderType` — every provider type whose declared
 fields include the given key. Every rule whose predicate reads an `EnrichmentFields`-tracked field
 calls it, either directly (`studio`, `runtimeMinutes`, `fileContainer`, `videoCodec`, `audioCodec`,
 `fileResolution`, `fileSizeBytes`, `labels`, `isFavorite` → `jellyfinIsFavorite`, `tmdbStatus`,
@@ -235,16 +235,15 @@ Every other rule — most of `NormalizedMovie`/`NormalizedSeries`'s fields (`tit
 `monitored`, `network`, `communityRating`, …) — stays hand-listed, correctly: they're source-owned
 fields with no `EnrichmentFields` entry to derive from.
 
-**Not content-type-scoped.** `deriveSourceProviders` has no awareness of which content type a rule
+**Not content-type-scoped.** `deriveProviders` has no awareness of which content type a rule
 applies to, so it's only safe to call for a field whose producer set doesn't vary by content type. The
 movie- and series-side `tagIds` rules both read the now-`EnrichmentFields`-backed `tags` field, but stay
 hand-listed (`[RADARR]` / `[SONARR]` respectively) rather than calling
-`deriveSourceProviders('tags')`, which would derive to `[RADARR, SONARR]` on *both* rules — wrong,
+`deriveProviders('tags')`, which would derive to `[RADARR, SONARR]` on *both* rules — wrong,
 since Sonarr can't produce a movie's tags and Radarr can't produce a series'.
 
-Three previously-stale `sourceProviders` entries were corrected as part of this work, confirmed
-against [`docs/architecture/media-providers.md`](ref:path:docs/architecture/media-providers.md)'s
-provider catalog: `genres` (movie) and `imdbRating` are Radarr-only (no TMDB genres call or OMDB
+Three hand-listed `providers` entries match the provider catalog in
+[`docs/architecture/media-providers.md`](ref:path:docs/architecture/media-providers.md): `genres` (movie) and `imdbRating` are Radarr-only (no TMDB genres call or OMDB
 integration exists); `communityRating` (series) is Sonarr-only (Sonarr's `ratings` is a single
 aggregate, no TMDB key configured). `network`'s `TVMAZE` entry is deliberately unchanged — real and
 buildable, just not yet wired to an adapter.

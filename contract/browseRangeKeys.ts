@@ -3,7 +3,7 @@
  * the client's browse-param translators.
  *
  * Hand-authored, not derived from `MEDIA_RULES`, because the contract depends on
- * nothing in `server/` — but not free-floating: `filterRegistry.ts` fails to
+ * nothing in `server/` — but not free-floating: `ruleRegistry.ts` fails to
  * compile if these lists and `MEDIA_RULES`' actual range-dataType rules disagree
  * in either direction, so this file can't silently drift from the registry.
  */

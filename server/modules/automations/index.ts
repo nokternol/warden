@@ -7,7 +7,7 @@
  * and a growing export list is a design smell to challenge.
  *
  * Automations *use* media queries; the logic stays separate — the join is
- * the `automation_query_sources` database relation plus the mediaQueries
+ * the `automation_queries` database relation plus the mediaQueries
  * public interface, never query internals. No other module currently
  * consumes automations' own DTOs, so none are exported yet; add them here
  * deliberately if that changes.

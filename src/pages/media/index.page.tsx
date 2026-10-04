@@ -849,7 +849,7 @@ export default function MediaPage() {
         onClose={() => setSaveDialogOpen(false)}
         onSave={(name) => {
           const contentType = activeTab === 'movies' ? 'movie' : 'series';
-          return saveQuery(name, contentType, toSaveValues(values, contentType));
+          return saveQuery(name, contentType, toSaveValues(values, contentType, rules));
         }}
       />
     </>

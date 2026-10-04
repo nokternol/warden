@@ -53,11 +53,11 @@ async function seedFixtures() {
   const query = await mediaQueryService.create({
     name: 'All Movies',
     contentType: 'movie',
-    filterValues: [],
+    filters: [],
   });
   const automation = await automationService.create({
     name: 'Nightly Cleanup',
-    querySources: [{ queryId: query.id, role: 'include' }],
+    queries: [{ queryId: query.id, role: 'include' }],
     providerId: provider.id,
     taskId: 'unmonitorMovie',
     schedule: '0 2 * * *',
@@ -194,19 +194,19 @@ describe('AutomationRunService', () => {
       const query = await mediaQueryService.create({
         name: 'Q',
         contentType: 'movie',
-        filterValues: [],
+        filters: [],
       });
 
       const auto1 = await automationService.create({
         name: 'Auto 1',
-        querySources: [{ queryId: query.id, role: 'include' }],
+        queries: [{ queryId: query.id, role: 'include' }],
         providerId: provider.id,
         taskId: 'unmonitorMovie',
         schedule: '* * * * *',
       });
       const auto2 = await automationService.create({
         name: 'Auto 2',
-        querySources: [{ queryId: query.id, role: 'include' }],
+        queries: [{ queryId: query.id, role: 'include' }],
         providerId: provider.id,
         taskId: 'unmonitorMovie',
         schedule: '* * * * *',

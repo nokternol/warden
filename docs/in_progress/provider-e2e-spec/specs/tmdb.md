@@ -9,8 +9,8 @@ source_research: docs/in_progress/provider-e2e-spec/research/tmdb.md
 
 # TMDB — E2E spec
 
-TMDB is a `MediaEnricher` today wired for exactly one field (`tmdbStatus`), despite `filterRegistry.ts`
-already hand-listing it as a `sourceProviders` entry on three other rules (`genres`, `certification`,
+TMDB is a `MediaEnricher` today wired for exactly one field (`tmdbStatus`), despite `ruleRegistry.ts`
+already hand-listing it as a `providers` entry on three other rules (`genres`, `certification`,
 `year`) that nothing populates — a stale-entry bug this spec resolves by wiring for real rather than
 correcting the listing. Applies the same standing principles as every provider this map: per-item
 fields only, and genuine redundancy across independently-configured sources is valuable (TMDB's own
@@ -108,7 +108,7 @@ None. TMDB is read-only metadata; no `MediaActuator` role is plausible.
 ## Naming-collision notes (for the final precedence ticket)
 
 - **`genres`/`certification`/`year`** — TMDB joins existing multi-producer rules; makes the current
-  stale `filterRegistry.ts` listing accurate. Precedence order not decided here.
+  stale `ruleRegistry.ts` listing accurate. Precedence order not decided here.
 - **`hasTrailer`/streaming flags** vs any future non-TMDB streaming-availability or video source —
   no current collision, flagged for whoever builds a second source later.
 - **`images`** vs `TmdbService`'s existing trending-backdrops feature and any future Plex/Jellyfin
@@ -120,13 +120,13 @@ None. TMDB is read-only metadata; no `MediaActuator` role is plausible.
 Tasks: N/A — no tasks (spec's own "Tasks / automation options" section: "None. TMDB is read-only
 metadata; no `MediaActuator` role is plausible.").
 
-`tmdbStatus` is already wired in `filterRegistry.ts` — not revisited here.
+`tmdbStatus` is already wired in `ruleRegistry.ts` — not revisited here.
 
 | Domain field | Filter key | dataType | Notes |
 |---|---|---|---|
-| `genres` | `genres` | `csv-strings` | Joins the existing shared `genres` rule (movie and show variants both already `csv-strings`) as an additional producer — TMDB was already hand-listed in `sourceProviders` with nothing populating it; this wiring makes that listing accurate, per the spec's own framing. No new key. |
-| `certification` | `certification` | `csv-strings` | Joins the existing shared `certification` rule (`csv-strings`, already lists TMDB in `sourceProviders`). No new key. |
-| `year` | `year` | `range` | Joins the existing shared `year` rule (`range` over the numeric year, already lists TMDB in `sourceProviders`). No new key — not a date; consistent with the "dates are `range`, never a raw picker" convention already covering this field. |
+| `genres` | `genres` | `csv-strings` | Joins the existing shared `genres` rule (movie and show variants both already `csv-strings`) as an additional producer — TMDB was already hand-listed in `providers` with nothing populating it; this wiring makes that listing accurate, per the spec's own framing. No new key. |
+| `certification` | `certification` | `csv-strings` | Joins the existing shared `certification` rule (`csv-strings`, already lists TMDB in `providers`). No new key. |
+| `year` | `year` | `range` | Joins the existing shared `year` rule (`range` over the numeric year, already lists TMDB in `providers`). No new key — not a date; consistent with the "dates are `range`, never a raw picker" convention already covering this field. |
 | `originCountry` | `originCountry` | `csv-strings` | New key. String array on the item (ISO country codes from TMDB `origin_country`); matches the existing `csv-strings` convention for multi-select-by-string-value filters (same shape as `genres`, `network`). Spec notes a future collision with OMDB's `Country` (`specs/omdb.md`) — not resolved here, precedence is a final-ticket concern. |
 | `keywords` | `keywords` | `csv-strings` | New key. String array (TMDB keyword tags), same shape as `genres` — multi-select "contains keyword X" is exactly the `csv-strings` use case. |
 | `spokenLanguages` | `spokenLanguages` | `csv-strings` | New key. String array (language codes/names) — same reasoning as `keywords`/`originCountry`. |
@@ -150,8 +150,8 @@ prior provider's UI pass.
 
 TMDB becomes an additional producer on all three already-shared rules (`csv-strings`, `csv-strings`,
 `range` respectively). No control decision to make — `RuleControl` already renders these for
-Radarr/Sonarr/Plex/Jellyfin/(Tautulli for some); TMDB just adds to `sourceProviders`, resolving the
-stale `filterRegistry.ts` listing this whole spec exists to fix. `genres` continues to resolve
+Radarr/Sonarr/Plex/Jellyfin/(Tautulli for some); TMDB just adds to `providers`, resolving the
+stale `ruleRegistry.ts` listing this whole spec exists to fix. `genres` continues to resolve
 through the existing `listGenres`-shaped lookup; `certification` remains the one live `csv-strings`
 rule with no lookup source (pre-existing gap flagged by Plex's and every subsequent UI pass — not
 TMDB's to fix).

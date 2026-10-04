@@ -35,8 +35,8 @@ else decides exposure, and un-deferring a feature is one line removed from that 
 | **Providers** | Add, edit, test and delete a provider of an offered type. Radarr/Sonarr allow multiple instances. Enable tasks per instance. |
 | **Media** | Browse movies and series from configured sources. Filter, filter by title, sort and paginate. |
 | **Queries** | Save a filter set as a query, list, preview and delete. |
-| **Automations** | Create from one or more include/exclude queries, a task (with its select parameter, if any) and a schedule. List, Run Now, Disable/Enable and Delete. A destructive task states its blast radius before saving. First-run guidance when setup is incomplete. |
-| **Runs** | History of runs with status, count, error and the items each run targeted, including items since removed from their source. |
+| **Automations** | Create from one or more include/exclude queries, a task (with its select parameter, if any) and a schedule. List, Run Now, Disable/Enable and Delete. A destructive task states its blast radius before saving. First-run guidance when setup is incomplete. An automation that cannot run as configured is skipped, not run. |
+| **Runs** | History of runs with status (succeeded, failed, or skipped as invalid with its reason), count, error and the items each run targeted, including items since removed from their source. |
 | **System** | System automations (identity resolution, enrichment) listed with Run Now, health status, and media data reset. |
 | **Delivery** | `docker compose up` with a persistent volume, a health check, graceful stop, migrations on boot, and an image published by CI. |
 
@@ -70,10 +70,6 @@ decided but not yet built; each slice moves its row into `VOCABULARY.md` when it
 
 | Concept | Canonical name | Retired names | Rationale | Slice |
 |---|---|---|---|---|
-| The engine's definition of something that can be filtered on: key, type, predicate, the field it reads, the providers producing that field, and their precedence when several do | **Rule** *(8a)* | `filterRegistry`, `filterFields`, `/api/filter-fields` | `MediaRule`/`MEDIA_RULES` keep their names. Engine-only: the client receives a `MediaRuleDescriptor` that carries presentation and never the predicate, field mapping, producers or precedence (C2). | B6 |
-| A key/value pair: a rule's key and a chosen value, as set in the UI and stored by a query | **Filter** *(8a)* | `FilterValueEntry` | Knows nothing about which provider supplies the data; the rule resolves that. `FilterValue` stays the name of the value itself. | B6 |
-| A query used by an automation, with role include/exclude | **Included / excluded query** *(8c)* | query source, `MediaQuerySource`, `automation_query_sources` | "Source" is reserved for one meaning (next row). | B6 |
-| A provider that owns media | **Source** *(8d)* | `sourceProviders` on rules (becomes `providers`) | Today "source" means four things. It keeps one. | B6 |
 | The request-manager provider | **Seerr** *(decided)* | Overseerr, `OVERSEERR`, `OverseerrProvider`, `overseerr*` rule keys | Decision 9a. Seerr is Overseerr's API-compatible successor, so one type serves both servers. | D3 |
 
 ## Destination scenario
@@ -143,9 +139,9 @@ principles become these acceptance checks on every UI slice:
 | F2 | **Movie/series has three spellings.** `ContentType` vs `MediaKind` (16 sites), the value `'show'` vs `/api/media/series`, `seriesSort`, `SERIES_PARAM_TO_KEY`, and UI copy "No series match". | `providers/roles.ts:101`, `filterRegistry.ts:11`, `media.routes.ts:33` |
 | F3 | **Three HTTP homes for providers and settings.** Provider CRUD lives at `/api/settings/providers` in a "transport-only" module, tasks at `/api/providers`, and system settings in an `appSettings` module **missing from `.dependency-cruiser.cjs`, so its boundaries are unenforced**. | `server/modules/index.ts`, `.dependency-cruiser.cjs:14`. **Healed by B3:** provider create/read/update/delete and the connection test are served at `/api/providers` from the providers module, the `settings` module is gone, and `boundaries.test.ts` fails when a module directory has no dependency rule (`appSettings` now has one). |
 | F4 | **Docs contradict code.** Core model: *"one active provider per type"* vs multi-instance sources, *"roles declared by the interfaces it `implements`"* vs adapter-bound roles, and an `addedBy=list` rule that doesn't exist. `precedence.ts` says `primaryMediaServer` "isn't built yet" while an unused `applyPrimaryMediaServer` exists. The implementation map says AutomationBuilder has no single-select parameter UI, but it does. The ledger cites the wrong path for `mediaQueryAdapters.ts`. Two intent docs link to missing files. The Dockerfile says `warden.db` vs config `maintainarr.db`. The README says port 5056 vs 5057. `INVENTORY.md` describes deleted files. | as cited |
-| F5 | **Rule vs filter used interchangeably.** `MediaRule`/`MEDIA_RULES`/`useMediaRules` beside `filterRegistry.ts`, `/api/filter-fields`, `FilterValue`, `MediaFilterBar` and the UI's "Add filter". | `filterRegistry.ts`, `useMediaRules.ts` |
+| F5 | **Rule vs filter used interchangeably.** `MediaRule`/`MEDIA_RULES`/`useMediaRules` beside `filterRegistry.ts`, `/api/filter-fields`, `FilterValue`, `MediaFilterBar` and the UI's "Add filter". | `filterRegistry.ts`, `useMediaRules.ts`. **Healed by B6:** the registry is `ruleRegistry.ts` and is served at `/api/rules`; a filter is `Filter { ruleKey, value }` with an instance-scoped value of `{ providerId?, ids }` (migration 0029 folded the `providerId` column into it), and the retired names are in `VOCABULARY.md`'s deprecated table. |
 | F6 | **"Saved queries"** in the live UI, a name `VOCABULARY.md` retired. | `pages/automations/index.page.tsx` |
-| F7 | **"Source" means four things:** the `MediaSource` role, an automation's include/exclude `MediaQuerySource`, `MediaQuerySpec.sources`, and a rule's `sourceProviders`. | `mediaQueryEngine.ts:27`, `filterRegistry.ts` |
+| F7 | **"Source" means four things:** the `MediaSource` role, an automation's include/exclude `MediaQuerySource`, `MediaQuerySpec.sources`, and a rule's `sourceProviders`. | `mediaQueryEngine.ts:27`, `filterRegistry.ts`. **Healed by B6:** "source" keeps the `MediaSource` role only. An automation has included and excluded `queries` (`AutomationQuery`, table `automation_queries` via migration 0028), a query spec holds `clauses`, and a rule lists its `providers`. |
 | F8 | **System automations are called "Tasks"** on the System page, while "Task" means a provider action everywhere else. Stories add "New Task" and "Active Tasks" for automations, plus "Collections". | `pages/system`, `*.stories.tsx` |
 | F9 | **The client re-declares the provider catalogue.** `PROVIDER_REGISTRY` lists 8 of the 10 types with hand-written labels and `filterCapabilities` strings, while the server's enum, factory and roles are the real authority. | `src/lib/provider-registry.ts` |
 | F10 | **Ratings have two mechanisms**: rating filters via enrichment, and an ad-hoc `/api/providers/ratings` aggregation feeding a separate page and panel. | `ratingsAggregation.ts`, `pages/ratings` |
@@ -264,6 +260,7 @@ flowchart LR
   B5[B5 glossary + UI names] --> E1
   B5 --> B6[B6 rule, filter, query, source names]
   B6 --> C2[C2 rule presentation on registry]
+  B6 --> D4[D4 invalid automations are skipped]
   C0 --> C3
   C0 --> D1[D1 destructive guard]
   C0 --> F1
@@ -273,7 +270,7 @@ flowchart LR
   B5 & C5 --> D3[D3 Seerr is the one request manager]
   E1[E1 image correct] --> E2[E2 compose] --> E3[E3 CI smoke + publish]
   A2 --> E3
-  C3 & C4 & C5 & D1 & D2 & D3 & F1 --> F2[F2 impeccable pass]
+  C3 & C4 & C5 & D1 & D2 & D3 & D4 & F1 --> F2[F2 impeccable pass]
   F2 & E3 --> G1[G1 acceptance + docs closure]
 ```
 
@@ -409,11 +406,14 @@ names, so nothing is renamed twice.
     profiles) names the configured instance its ids belong to inside the value itself.
   - Stored instance-scoped filters read back with the same meaning after migration.
 - **Expected end state:** rules live in `ruleRegistry.ts` (`MEDIA_RULES`, `MediaRule`,
-  `MediaRuleDescriptor` unchanged) and are served by the contract's `rules` procedure. A filter is
-  `Filter { ruleKey, value }`, and an instance-scoped value is `{ providerId, ids }` (`providerId`
-  being the codebase's existing name for a configured instance). The migration folds
-  `media_query_filter_values.providerId` into the value. An automation has included and excluded queries
-  (`AutomationQuery { queryId, role }`, table `automation_queries`). A rule lists its `providers`.
+  `MediaRuleDescriptor` unchanged apart from `providers`) and are served by the contract's `rules`
+  procedure at `/api/rules`. A filter is `Filter { ruleKey, value }`, and an instance-scoped value is
+  `{ providerId?, ids }` (`providerId` being the codebase's existing name for a configured instance;
+  absent means the value was unqualified, which the engine reads in each item's own instance, as before).
+  Migration 0029 folds `media_query_filter_values.providerId` into the value. An automation has
+  included and excluded `queries` (`AutomationQuery { queryId, role, sortOrder }`, table
+  `automation_queries` via migration 0028; `sortOrder` stays because it orders the list). A query spec
+  holds `clauses` (`MediaQueryClause`), and a rule lists its `providers`.
 
 ### Track C — One mechanism per job
 
@@ -483,6 +483,8 @@ names, so nothing is renamed twice.
 - **Expected end state:** `MediaRule` gains `valueLabels?`, `options?`, `shortLabel?`, `lookup?` and
   `group`. The descriptor is an explicit allowlist of presentation fields (key, label, content
   types, data type, instance scoping, and those five), built by `toDescriptor`, not `Omit`.
+  The `csv-ids` data type is renamed for what its value is (`{ providerId?, ids }` since B6, not a
+  CSV string), once, while the descriptor's data types are being reshaped.
 - **Deletes:** `BOOLEAN_VALUE_LABELS`, `SEGMENT_LABEL_OVERRIDES`, `ENUM_OPTIONS`, `groupsFor`, the key
   switches in `csvIdOptions`/`csvStringOptions`, the client's own `MediaRuleDescriptor` declaration, and `ruleRendersControl` (C5 makes renderability a server
   fact).
@@ -602,6 +604,33 @@ names, so nothing is renamed twice.
 - **Docs:** fold the provider e2e `seerr.md`/`overseerr.md` specs' status into the implementation
   map. Phase 9 is absorbed here.
 
+**D4 · An invalid automation is skipped and says why** (after B6; story first)
+- **Model:** Sonnet 5.5 (one executor guard, one run status, one Runs page state).
+- **Why:** an automation can stop being runnable after it is saved: a provider instance its filters
+  name is deleted or deactivated, a filter names an instance other than the automation's own, or a
+  provider type a required rule needs is no longer configured. Since B6 a filter's instance lives in
+  its value, so deleting an instance leaves the filter naming it and matching nothing. Today the
+  automation still runs on schedule, targets nothing, and records a success with no explanation.
+  `computeHealth` (`mediaQueryService.ts`) already detects every one of these cases, but nothing
+  consumes its result.
+- **Behaviours:**
+  - An automation whose queries, or own provider, have a blocking health problem is not run. A run
+    is recorded with status `skipped` and a reason that names the rule and the provider, such as
+    *"Tags filter names Radarr instance 3, which is not an active provider"*.
+  - Run Now on such an automation records the same skipped run instead of running.
+  - The skip and its reason are logged at warn level for diagnosis.
+  - An automation whose only problem is a missing optional provider (health `degraded` with no
+    qualification issue) still runs, as today.
+  - On the Runs page a skipped run shows a distinct *Invalid* status with its reason.
+- **Expected end state:** validity is derived at run time from the queries' health and never
+  stored, so it can't drift from the providers it describes: deleting an instance makes a linked
+  automation invalid on its next run, and fixing the filter makes it valid again. Blocking means
+  health `unavailable` or any qualification issue. `automation_runs.status` gains `skipped`, with
+  the reason in the run's existing `error` column unless cycles show it needs its own. The run's
+  status schema in the contract carries the third value.
+- **Out of MVP:** showing invalidity outside the Runs page (an Automations page badge, the reason,
+  a link to fix the query). See [Post-MVP](#post-mvp-parked-in-order).
+
 ### Track E — Containerised delivery
 
 **E1 · The image is correct** (after B5)
@@ -697,5 +726,7 @@ names, so nothing is renamed twice.
    is a server-only change.
 5. Un-deferring each deferred surface, resolving its duplicate mechanism first (ratings vs rating
    filters, search vs title filter).
-6. `docs/intent/`: automation archive, realtime run state, ratings provider, inter-provider
+6. Invalid automations surfaced as issues to solve: an Automations page badge with the reason and
+   a link to fix the offending query, beyond the skipped run D4 records on the Runs page.
+7. `docs/intent/`: automation archive, realtime run state, ratings provider, inter-provider
    dependency, editions, per-consumer watchlist.

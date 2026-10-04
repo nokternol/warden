@@ -8,7 +8,7 @@ import type { EnrichmentFields } from './mediaFieldProvider';
  * Hand-authored, mirroring `roles.ts`'s `SOURCE_OWNER` — an adapter's
  * field coverage lives in its generic type parameters, not something a
  * runtime scan of `mediaFieldProvider.ts`'s exports could discover, so this
- * is the compiled-in declaration every consumer (gating, `sourceProviders`)
+ * is the compiled-in declaration every consumer (gating, `providers`)
  * reads instead of re-deriving.
  */
 export const fieldsByProviderType = {
@@ -88,7 +88,7 @@ export interface ActiveTypesSource {
 }
 
 /**
- * Caches `activeFieldSet`'s union so `filterRegistry`/`gatedDescriptors` don't
+ * Caches `activeFieldSet`'s union so `ruleRegistry`/`gatedDescriptors` don't
  * recompute it (and re-query every provider's active state) per request.
  * Invalidates on `provider:changed` — the same event `ProviderSettingsService`
  * emits from `create`/`update`, kept decoupled via the kernel event bus so

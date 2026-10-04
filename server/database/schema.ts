@@ -151,13 +151,6 @@ export const mediaQueryFilterValues = sqliteTable(
       .references(() => mediaQueries.id, { onDelete: 'cascade' }),
     filterKey: text('filterKey').notNull(),
     value: text('value').notNull(),
-    /** Namespace qualification for provider-defined id spaces (quality profiles, tags).
-     *  Null means unqualified — the native id is interpreted in each item's own instance
-     *  namespace. SET NULL on provider deletion: deleting a provider must not silently
-     *  change what a query matches. */
-    providerId: integer('providerId').references(() => metadataProviders.id, {
-      onDelete: 'set null',
-    }),
   },
   (table) => [index('IDX_mqfv_queryId').on(table.mediaQueryId)]
 );
@@ -191,10 +184,10 @@ export const automations = sqliteTable(
 );
 
 // ---------------------------------------------------------------------------
-// automationQuerySources
+// automationQueries
 // ---------------------------------------------------------------------------
-export const automationQuerySources = sqliteTable(
-  'automation_query_sources',
+export const automationQueries = sqliteTable(
+  'automation_queries',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
     automationId: integer('automationId')
@@ -206,11 +199,11 @@ export const automationQuerySources = sqliteTable(
     role: text('role').notNull(), // 'include' | 'exclude'
     sortOrder: integer('sortOrder').notNull().default(0),
   },
-  (table) => [index('IDX_aqsources_automationId').on(table.automationId)]
+  (table) => [index('IDX_automation_queries_automationId').on(table.automationId)]
 );
 
-export type AutomationQuerySource = typeof automationQuerySources.$inferSelect;
-export type NewAutomationQuerySource = typeof automationQuerySources.$inferInsert;
+export type AutomationQueryRow = typeof automationQueries.$inferSelect;
+export type NewAutomationQueryRow = typeof automationQueries.$inferInsert;
 
 export type MediaQueryRow = typeof mediaQueries.$inferSelect;
 export type NewMediaQueryRow = typeof mediaQueries.$inferInsert;

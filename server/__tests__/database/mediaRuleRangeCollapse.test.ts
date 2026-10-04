@@ -1,151 +1,82 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { mediaQueries, mediaQueryFilterValues } from '@server/database/schema';
-import type { AppConfig } from '@server/kernel/config';
-import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
-import { eq } from 'drizzle-orm';
-import { sql } from 'drizzle-orm';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { Client } from '@libsql/client';
+import { describe, expect, it } from 'vitest';
+import { applyMigration, databaseBefore } from './migrationHarness';
 
-const testConfig: AppConfig = {
-  NODE_ENV: 'test',
-  PORT: 5057,
-  COMMIT_TAG: 'test',
-  LOG_LEVEL: 'error',
-  LOG_DIR: './config/logs',
-  DB_PATH: ':memory:',
-  DB_LOGGING: false,
-  TRUST_PROXY: false,
-  BYPASS_AUTH: false,
-  TMDB_API_KEY: '',
-  SESSION_SECRET: 'test-secret',
-};
+const MIGRATION = '0013_media_rule_range_collapse';
 
-// Replays migration 0013's SQL against rows shaped like a pre-migration install, to
-// guard the transform itself (not just that it runs without throwing on an empty DB,
-// which every other integration test already exercises via initializeDatabase).
-async function replayRangeCollapseMigration(db: ReturnType<typeof getDb>) {
-  const migrationPath = path.resolve(
-    __dirname,
-    '../../database/migrations/0013_media_rule_range_collapse.sql'
-  );
-  const contents = fs.readFileSync(migrationPath, 'utf-8');
-  const statements = contents
-    .split('--> statement-breakpoint')
-    .map((chunk) =>
-      chunk
-        .split('\n')
-        .filter((line) => !line.trim().startsWith('--'))
-        .join('\n')
-        .trim()
-    )
-    .filter((s) => s.length > 0);
-
-  for (const statement of statements) {
-    await db.run(sql.raw(statement));
+/** A pre-migration install holding one query whose filter rows are `filters`. */
+async function legacyQuery(client: Client, contentType: string, filters: [string, string][]) {
+  await client.execute({
+    sql: "INSERT INTO media_queries (name, contentType) VALUES ('legacy', ?)",
+    args: [contentType],
+  });
+  for (const [filterKey, value] of filters) {
+    await client.execute({
+      sql: 'INSERT INTO media_query_filter_values (mediaQueryId, filterKey, value) VALUES (1, ?, ?)',
+      args: [filterKey, value],
+    });
   }
 }
 
+async function storedFilters(client: Client) {
+  const result = await client.execute(
+    'SELECT filterKey, value FROM media_query_filter_values WHERE mediaQueryId = 1 ORDER BY filterKey'
+  );
+  return result.rows.map((r) => ({ key: r.filterKey as string, value: r.value as string }));
+}
+
 describe('migration 0013 — range rule collapse (data transform)', () => {
-  beforeEach(async () => {
-    await initializeDatabase(testConfig);
-  });
-
-  afterEach(async () => {
-    await _resetDatabase();
-  });
-
   it('merges a Gte/Lte pair into one range-shaped row', async () => {
-    const db = getDb();
-    const [query] = await db
-      .insert(mediaQueries)
-      .values({ name: 'Legacy Query', contentType: 'movie' })
-      .returning();
-
-    await db.insert(mediaQueryFilterValues).values([
-      { mediaQueryId: query.id, filterKey: 'imdbRatingGte', value: '7.5' },
-      { mediaQueryId: query.id, filterKey: 'imdbRatingLte', value: '9' },
+    const client = await databaseBefore(MIGRATION);
+    await legacyQuery(client, 'movie', [
+      ['imdbRatingGte', '7.5'],
+      ['imdbRatingLte', '9'],
     ]);
 
-    await replayRangeCollapseMigration(db);
+    await applyMigration(client, MIGRATION);
 
-    const rows = await db
-      .select()
-      .from(mediaQueryFilterValues)
-      .where(eq(mediaQueryFilterValues.mediaQueryId, query.id));
-
+    const rows = await storedFilters(client);
     expect(rows).toHaveLength(1);
-    expect(rows[0].filterKey).toBe('imdbRating');
+    expect(rows[0].key).toBe('imdbRating');
     expect(JSON.parse(rows[0].value)).toEqual({ min: 7.5, max: 9 });
   });
 
   it('preserves a lone bound (no matching Gte/Lte partner) as a partial range', async () => {
-    const db = getDb();
-    const [query] = await db
-      .insert(mediaQueries)
-      .values({ name: 'Min-only Query', contentType: 'series' })
-      .returning();
+    const client = await databaseBefore(MIGRATION);
+    await legacyQuery(client, 'series', [['lastAiredDaysAgoGte', '30']]);
 
-    await db
-      .insert(mediaQueryFilterValues)
-      .values([{ mediaQueryId: query.id, filterKey: 'lastAiredDaysAgoGte', value: '30' }]);
+    await applyMigration(client, MIGRATION);
 
-    await replayRangeCollapseMigration(db);
-
-    const rows = await db
-      .select()
-      .from(mediaQueryFilterValues)
-      .where(eq(mediaQueryFilterValues.mediaQueryId, query.id));
-
+    const rows = await storedFilters(client);
     expect(rows).toHaveLength(1);
-    expect(rows[0].filterKey).toBe('lastAiredDaysAgo');
+    expect(rows[0].key).toBe('lastAiredDaysAgo');
     expect(JSON.parse(rows[0].value)).toEqual({ min: 30 });
   });
 
   it('collapses yearMin/yearMax into a single year range row', async () => {
-    const db = getDb();
-    const [query] = await db
-      .insert(mediaQueries)
-      .values({ name: 'Year Query', contentType: 'movie' })
-      .returning();
-
-    await db.insert(mediaQueryFilterValues).values([
-      { mediaQueryId: query.id, filterKey: 'yearMin', value: '2000' },
-      { mediaQueryId: query.id, filterKey: 'yearMax', value: '2010' },
+    const client = await databaseBefore(MIGRATION);
+    await legacyQuery(client, 'movie', [
+      ['yearMin', '2000'],
+      ['yearMax', '2010'],
     ]);
 
-    await replayRangeCollapseMigration(db);
+    await applyMigration(client, MIGRATION);
 
-    const rows = await db
-      .select()
-      .from(mediaQueryFilterValues)
-      .where(eq(mediaQueryFilterValues.mediaQueryId, query.id));
-
+    const rows = await storedFilters(client);
     expect(rows).toHaveLength(1);
-    expect(rows[0].filterKey).toBe('year');
+    expect(rows[0].key).toBe('year');
     expect(JSON.parse(rows[0].value)).toEqual({ min: 2000, max: 2010 });
   });
 
   it('leaves unrelated (non-range) filter keys untouched', async () => {
-    const db = getDb();
-    const [query] = await db
-      .insert(mediaQueries)
-      .values({ name: 'Mixed Query', contentType: 'movie' })
-      .returning();
-
-    await db.insert(mediaQueryFilterValues).values([
-      { mediaQueryId: query.id, filterKey: 'hasFile', value: 'true' },
-      { mediaQueryId: query.id, filterKey: 'imdbRatingGte', value: '5' },
+    const client = await databaseBefore(MIGRATION);
+    await legacyQuery(client, 'movie', [
+      ['hasFile', 'true'],
+      ['imdbRatingGte', '5'],
     ]);
 
-    await replayRangeCollapseMigration(db);
+    await applyMigration(client, MIGRATION);
 
-    const rows = await db
-      .select()
-      .from(mediaQueryFilterValues)
-      .where(eq(mediaQueryFilterValues.mediaQueryId, query.id));
-
-    const keys = rows.map((r) => r.filterKey).sort();
-    expect(keys).toEqual(['hasFile', 'imdbRating']);
+    expect((await storedFilters(client)).map((r) => r.key)).toEqual(['hasFile', 'imdbRating']);
   });
 });

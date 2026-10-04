@@ -1,4 +1,5 @@
-import type { ContentType } from '@contract/schemas';
+import type { ContentType, FilterValue, InstanceScopedValue, RangeValue } from '@contract/schemas';
+import { isInstanceScopedValue } from '@contract/schemas';
 import { MetadataProviderType } from '../../database/schema';
 import { fieldsByProviderType } from './activeFieldSet';
 import type { EnrichmentFields } from './mediaFieldProvider';
@@ -8,20 +9,15 @@ import type { NormalizedSeries } from './series';
 export type { NormalizedMovie } from './movie';
 export type { NormalizedSeries } from './series';
 
-export type RangeValue = { min?: number; max?: number };
-export type FilterValue = string | number | boolean | RangeValue;
+export type { FilterValue, InstanceScopedValue, RangeValue };
 
 /**
- * One predicate application: a registry key paired with the value to test it against.
- * `providerId` qualifies which instance's namespace the value belongs to — set only on
- * `instanceScoped` rules; namespace qualification, not targeting (see `automations.providerId`
- * for that). Undefined means unqualified: the native id is interpreted in each item's own
- * instance namespace, today's behavior.
+ * A filter: a rule's key paired with the value to test it against. Nothing here knows
+ * which provider supplies the data — the rule resolves that.
  */
-export interface FilterValueEntry {
-  key: string;
+export interface Filter {
+  ruleKey: string;
   value: FilterValue;
-  providerId?: number;
 }
 
 export type Predicate<
@@ -35,7 +31,7 @@ export interface MediaRule<
   label: string;
   contentTypes: readonly ContentType[];
   dataType: 'boolean' | 'number' | 'string' | 'csv-ids' | 'csv-strings' | 'range';
-  sourceProviders: readonly MetadataProviderType[];
+  providers: readonly MetadataProviderType[];
   required: boolean;
   /** True for rules whose values are a provider-*defined* id space (a quality profile id is
    *  minted by one instance) — the client must qualify these per instance when more than one
@@ -62,12 +58,8 @@ export function toDescriptor(rule: MediaRule): MediaRuleDescriptor {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function parseCsvIds(value: FilterValue): number[] {
-  const csv = String(value);
-  return csv
-    .split(',')
-    .map((s) => Number(s.trim()))
-    .filter((n) => !Number.isNaN(n) && n > 0);
+function instanceIds(value: FilterValue): number[] {
+  return isInstanceScopedValue(value) ? value.ids : [];
 }
 
 function parseCsvStrings(value: FilterValue): string[] {
@@ -103,11 +95,11 @@ function inRange(actual: number, value: FilterValue): boolean {
 }
 
 /**
- * A rule's `sourceProviders` for a field `MediaFieldProvider`/`MediaFieldSource`
+ * A rule's `providers` for a field `MediaFieldProvider`/`MediaFieldSource`
  * tracks — every provider type whose `fieldsByProviderType` entry includes it,
  * the inverse lookup of that declaration. Rules backed by a source-owned field
  * outside `EnrichmentFields` (most of `NormalizedMovie`/`NormalizedSeries`) still
- * hand-list `sourceProviders` until `movie.ts`/`series.ts` derive from
+ * hand-list `providers` until `movie.ts`/`series.ts` derive from
  * `EnrichmentFields` too (see spec's Risks section).
  *
  * Not content-type-scoped: a field produced by two providers who never both
@@ -116,7 +108,7 @@ function inRange(actual: number, value: FilterValue): boolean {
  * when the field's producer set doesn't vary by content type — see the
  * movie/series `tagIds` rules, which stay hand-listed for exactly this reason.
  */
-export function deriveSourceProviders(field: keyof EnrichmentFields): MetadataProviderType[] {
+export function deriveProviders(field: keyof EnrichmentFields): MetadataProviderType[] {
   return (Object.entries(fieldsByProviderType) as [MetadataProviderType, readonly string[]][])
     .filter(([, fields]) => fields.includes(field))
     .map(([type]) => type);
@@ -131,7 +123,7 @@ export const MEDIA_RULES = [
     label: 'Title',
     contentTypes: ['movie', 'series'],
     dataType: 'string',
-    sourceProviders: [
+    providers: [
       MetadataProviderType.RADARR,
       MetadataProviderType.SONARR,
       MetadataProviderType.PLEX,
@@ -144,7 +136,7 @@ export const MEDIA_RULES = [
     label: 'Year',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    sourceProviders: [
+    providers: [
       MetadataProviderType.RADARR,
       MetadataProviderType.SONARR,
       MetadataProviderType.PLEX,
@@ -158,7 +150,7 @@ export const MEDIA_RULES = [
     label: 'Watched',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
-    sourceProviders: deriveSourceProviders('playCount'),
+    providers: deriveProviders('playCount'),
     sourceField: 'playCount',
     required: false,
     predicate: (item, value) => {
@@ -171,7 +163,7 @@ export const MEDIA_RULES = [
     label: 'Added (days ago)',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    sourceProviders: [MetadataProviderType.RADARR, MetadataProviderType.SONARR],
+    providers: [MetadataProviderType.RADARR, MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => {
       if (!item.addedDate) return false;
@@ -183,7 +175,7 @@ export const MEDIA_RULES = [
     label: 'Plex added (days ago)',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    sourceProviders: deriveSourceProviders('plexAddedAt'),
+    providers: deriveProviders('plexAddedAt'),
     sourceField: 'plexAddedAt',
     required: false,
     predicate: (item, value) => {
@@ -196,7 +188,7 @@ export const MEDIA_RULES = [
     label: 'Jellyfin added (days ago)',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    sourceProviders: deriveSourceProviders('jellyfinAddedAt'),
+    providers: deriveProviders('jellyfinAddedAt'),
     sourceField: 'jellyfinAddedAt',
     required: false,
     predicate: (item, value) => {
@@ -209,7 +201,7 @@ export const MEDIA_RULES = [
     label: 'Size on disk (GB)',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    sourceProviders: [MetadataProviderType.RADARR, MetadataProviderType.SONARR],
+    providers: [MetadataProviderType.RADARR, MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => {
       if (item.sizeOnDiskBytes === undefined) return false;
@@ -221,7 +213,7 @@ export const MEDIA_RULES = [
     label: 'Certification',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
-    sourceProviders: [
+    providers: [
       MetadataProviderType.RADARR,
       MetadataProviderType.SONARR,
       MetadataProviderType.TMDB,
@@ -239,7 +231,7 @@ export const MEDIA_RULES = [
     label: 'Has file',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
-    sourceProviders: [
+    providers: [
       MetadataProviderType.RADARR,
       MetadataProviderType.SONARR,
       MetadataProviderType.PLEX,
@@ -252,7 +244,7 @@ export const MEDIA_RULES = [
     label: 'File size (bytes)',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    sourceProviders: deriveSourceProviders('fileSizeBytes'),
+    providers: deriveProviders('fileSizeBytes'),
     sourceField: 'fileSizeBytes',
     required: false,
     predicate: (item, value) => {
@@ -265,7 +257,7 @@ export const MEDIA_RULES = [
     label: 'Release date (days ago)',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    sourceProviders: deriveSourceProviders('releaseDate'),
+    providers: deriveProviders('releaseDate'),
     sourceField: 'releaseDate',
     required: false,
     predicate: (item, value) => {
@@ -278,7 +270,7 @@ export const MEDIA_RULES = [
     label: 'File container',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
-    sourceProviders: deriveSourceProviders('fileContainer'),
+    providers: deriveProviders('fileContainer'),
     sourceField: 'fileContainer',
     required: false,
     predicate: (item, value) => {
@@ -291,7 +283,7 @@ export const MEDIA_RULES = [
     label: 'Video codec',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
-    sourceProviders: deriveSourceProviders('videoCodec'),
+    providers: deriveProviders('videoCodec'),
     sourceField: 'videoCodec',
     required: false,
     predicate: (item, value) => {
@@ -304,7 +296,7 @@ export const MEDIA_RULES = [
     label: 'Audio codec',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
-    sourceProviders: deriveSourceProviders('audioCodec'),
+    providers: deriveProviders('audioCodec'),
     sourceField: 'audioCodec',
     required: false,
     predicate: (item, value) => {
@@ -317,7 +309,7 @@ export const MEDIA_RULES = [
     label: 'File resolution',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
-    sourceProviders: deriveSourceProviders('fileResolution'),
+    providers: deriveProviders('fileResolution'),
     sourceField: 'fileResolution',
     required: false,
     predicate: (item, value) => {
@@ -330,7 +322,7 @@ export const MEDIA_RULES = [
     label: 'Labels',
     contentTypes: ['movie', 'series'],
     dataType: 'csv-strings',
-    sourceProviders: deriveSourceProviders('labels'),
+    providers: deriveProviders('labels'),
     sourceField: 'labels',
     required: false,
     predicate: (item, value) => {
@@ -343,7 +335,7 @@ export const MEDIA_RULES = [
     label: 'Monitored',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
-    sourceProviders: [MetadataProviderType.RADARR, MetadataProviderType.SONARR],
+    providers: [MetadataProviderType.RADARR, MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => item.monitored === asBool(value),
   },
@@ -352,7 +344,7 @@ export const MEDIA_RULES = [
     label: 'Jellyfin favorite',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
-    sourceProviders: deriveSourceProviders('isFavorite'),
+    providers: deriveProviders('isFavorite'),
     sourceField: 'isFavorite',
     required: false,
     predicate: (item, value) => Boolean(item.isFavorite) === asBool(value),
@@ -364,17 +356,17 @@ export const MEDIA_RULES = [
     label: 'Tags',
     contentTypes: ['movie'],
     dataType: 'csv-ids',
-    // Hand-listed, not deriveSourceProviders('tags'): tags is now produced by
+    // Hand-listed, not deriveProviders('tags'): tags is now produced by
     // both Radarr and Sonarr, one per content type — deriving here would
-    // wrongly list Sonarr on a movie-only rule. deriveSourceProviders has no
+    // wrongly list Sonarr on a movie-only rule. deriveProviders has no
     // content-type scoping; only safe for a field with one producer regardless
     // of content type (see the series-side tagIds rule for the same reasoning).
-    sourceProviders: [MetadataProviderType.RADARR],
+    providers: [MetadataProviderType.RADARR],
     sourceField: 'tags',
     required: false,
     instanceScoped: true,
     predicate: (item, value) => {
-      const ids = parseCsvIds(value);
+      const ids = instanceIds(value);
       return ids.some((id) => (item.tags ?? []).includes(id));
     },
   },
@@ -383,11 +375,11 @@ export const MEDIA_RULES = [
     label: 'Quality profile',
     contentTypes: ['movie'],
     dataType: 'csv-ids',
-    sourceProviders: [MetadataProviderType.RADARR],
+    providers: [MetadataProviderType.RADARR],
     required: false,
     instanceScoped: true,
     predicate: (item, value) => {
-      const ids = parseCsvIds(value);
+      const ids = instanceIds(value);
       return item.qualityProfileId !== undefined && ids.includes(item.qualityProfileId);
     },
   },
@@ -396,7 +388,7 @@ export const MEDIA_RULES = [
     label: 'Genres',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
-    sourceProviders: [MetadataProviderType.RADARR],
+    providers: [MetadataProviderType.RADARR],
     required: false,
     predicate: (item, value) => {
       const genres = parseCsvStrings(value);
@@ -408,7 +400,7 @@ export const MEDIA_RULES = [
     label: 'Studio',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
-    sourceProviders: deriveSourceProviders('studio'),
+    providers: deriveProviders('studio'),
     sourceField: 'studio',
     required: false,
     predicate: (item, value) => {
@@ -421,7 +413,7 @@ export const MEDIA_RULES = [
     label: 'Runtime (minutes)',
     contentTypes: ['movie'],
     dataType: 'range',
-    sourceProviders: deriveSourceProviders('runtimeMinutes'),
+    providers: deriveProviders('runtimeMinutes'),
     sourceField: 'runtimeMinutes',
     required: false,
     predicate: (item, value) => {
@@ -435,7 +427,7 @@ export const MEDIA_RULES = [
     label: 'IMDB rating',
     contentTypes: ['movie'],
     dataType: 'range',
-    sourceProviders: [MetadataProviderType.RADARR],
+    providers: [MetadataProviderType.RADARR],
     required: false,
     predicate: (item, value) => {
       const movie = item as NormalizedMovie;
@@ -448,7 +440,7 @@ export const MEDIA_RULES = [
     label: 'Movie file count',
     contentTypes: ['movie'],
     dataType: 'range',
-    sourceProviders: [MetadataProviderType.RADARR],
+    providers: [MetadataProviderType.RADARR],
     required: false,
     predicate: (item, value) => {
       const movie = item as NormalizedMovie;
@@ -461,7 +453,7 @@ export const MEDIA_RULES = [
     label: 'Release group',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
-    sourceProviders: [MetadataProviderType.RADARR],
+    providers: [MetadataProviderType.RADARR],
     required: false,
     predicate: (item, value) => {
       const movie = item as NormalizedMovie;
@@ -474,7 +466,7 @@ export const MEDIA_RULES = [
     label: 'In cinemas (days ago)',
     contentTypes: ['movie'],
     dataType: 'range',
-    sourceProviders: [MetadataProviderType.RADARR],
+    providers: [MetadataProviderType.RADARR],
     required: false,
     predicate: (item, value) => {
       const movie = item as NormalizedMovie;
@@ -487,7 +479,7 @@ export const MEDIA_RULES = [
     label: 'Physical release (days ago)',
     contentTypes: ['movie'],
     dataType: 'range',
-    sourceProviders: [MetadataProviderType.RADARR],
+    providers: [MetadataProviderType.RADARR],
     required: false,
     predicate: (item, value) => {
       const movie = item as NormalizedMovie;
@@ -500,7 +492,7 @@ export const MEDIA_RULES = [
     label: 'Digital release (days ago)',
     contentTypes: ['movie'],
     dataType: 'range',
-    sourceProviders: [MetadataProviderType.RADARR],
+    providers: [MetadataProviderType.RADARR],
     required: false,
     predicate: (item, value) => {
       const movie = item as NormalizedMovie;
@@ -513,7 +505,7 @@ export const MEDIA_RULES = [
     label: 'Collection',
     contentTypes: ['movie'],
     dataType: 'csv-strings',
-    sourceProviders: [MetadataProviderType.RADARR],
+    providers: [MetadataProviderType.RADARR],
     required: false,
     predicate: (item, value) => {
       const movie = item as NormalizedMovie;
@@ -526,7 +518,7 @@ export const MEDIA_RULES = [
     label: 'Available',
     contentTypes: ['movie'],
     dataType: 'boolean',
-    sourceProviders: [MetadataProviderType.RADARR],
+    providers: [MetadataProviderType.RADARR],
     required: false,
     predicate: (item, value) => {
       const movie = item as NormalizedMovie;
@@ -538,7 +530,7 @@ export const MEDIA_RULES = [
     label: 'Radarr status',
     contentTypes: ['movie'],
     dataType: 'string',
-    sourceProviders: [MetadataProviderType.RADARR],
+    providers: [MetadataProviderType.RADARR],
     required: false,
     predicate: (item, value) => {
       const movie = item as NormalizedMovie;
@@ -553,7 +545,7 @@ export const MEDIA_RULES = [
     label: 'Series status',
     contentTypes: ['series'],
     dataType: 'string',
-    sourceProviders: [MetadataProviderType.SONARR],
+    providers: [MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => {
       const series = item as NormalizedSeries;
@@ -566,13 +558,13 @@ export const MEDIA_RULES = [
     contentTypes: ['series'],
     dataType: 'csv-ids',
     // Hand-listed for the same reason as the movie-side tagIds rule above —
-    // deriveSourceProviders('tags') would wrongly include Radarr here.
-    sourceProviders: [MetadataProviderType.SONARR],
+    // deriveProviders('tags') would wrongly include Radarr here.
+    providers: [MetadataProviderType.SONARR],
     sourceField: 'tags',
     required: false,
     instanceScoped: true,
     predicate: (item, value) => {
-      const ids = parseCsvIds(value);
+      const ids = instanceIds(value);
       return ids.some((id) => (item.tags ?? []).includes(id));
     },
   },
@@ -581,11 +573,11 @@ export const MEDIA_RULES = [
     label: 'Quality profile',
     contentTypes: ['series'],
     dataType: 'csv-ids',
-    sourceProviders: [MetadataProviderType.SONARR],
+    providers: [MetadataProviderType.SONARR],
     required: false,
     instanceScoped: true,
     predicate: (item, value) => {
-      const ids = parseCsvIds(value);
+      const ids = instanceIds(value);
       return item.qualityProfileId !== undefined && ids.includes(item.qualityProfileId);
     },
   },
@@ -594,7 +586,7 @@ export const MEDIA_RULES = [
     label: 'Genres',
     contentTypes: ['series'],
     dataType: 'csv-strings',
-    sourceProviders: [MetadataProviderType.SONARR, MetadataProviderType.TMDB],
+    providers: [MetadataProviderType.SONARR, MetadataProviderType.TMDB],
     required: false,
     predicate: (item, value) => {
       const genres = parseCsvStrings(value);
@@ -606,7 +598,7 @@ export const MEDIA_RULES = [
     label: 'Series type',
     contentTypes: ['series'],
     dataType: 'string',
-    sourceProviders: [MetadataProviderType.SONARR],
+    providers: [MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => {
       const series = item as NormalizedSeries;
@@ -618,7 +610,7 @@ export const MEDIA_RULES = [
     label: 'Studio',
     contentTypes: ['series'],
     dataType: 'csv-strings',
-    sourceProviders: deriveSourceProviders('studio'),
+    providers: deriveProviders('studio'),
     sourceField: 'studio',
     required: false,
     predicate: (item, value) => {
@@ -632,7 +624,7 @@ export const MEDIA_RULES = [
     label: 'Network',
     contentTypes: ['series'],
     dataType: 'csv-strings',
-    sourceProviders: [MetadataProviderType.SONARR, MetadataProviderType.TVMAZE],
+    providers: [MetadataProviderType.SONARR, MetadataProviderType.TVMAZE],
     required: false,
     predicate: (item, value) => {
       const series = item as NormalizedSeries;
@@ -645,7 +637,7 @@ export const MEDIA_RULES = [
     label: 'Community rating',
     contentTypes: ['series'],
     dataType: 'range',
-    sourceProviders: [MetadataProviderType.SONARR],
+    providers: [MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => {
       const series = item as NormalizedSeries;
@@ -658,7 +650,7 @@ export const MEDIA_RULES = [
     label: 'Ended',
     contentTypes: ['series'],
     dataType: 'boolean',
-    sourceProviders: [MetadataProviderType.SONARR],
+    providers: [MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => {
       const series = item as NormalizedSeries;
@@ -670,7 +662,7 @@ export const MEDIA_RULES = [
     label: 'Last aired (days ago)',
     contentTypes: ['series'],
     dataType: 'range',
-    sourceProviders: [MetadataProviderType.SONARR],
+    providers: [MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => {
       const series = item as NormalizedSeries;
@@ -683,7 +675,7 @@ export const MEDIA_RULES = [
     label: 'Episode completion (%)',
     contentTypes: ['series'],
     dataType: 'range',
-    sourceProviders: [MetadataProviderType.SONARR],
+    providers: [MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => {
       const series = item as NormalizedSeries;
@@ -696,7 +688,7 @@ export const MEDIA_RULES = [
     label: 'Season count',
     contentTypes: ['series'],
     dataType: 'range',
-    sourceProviders: [MetadataProviderType.SONARR],
+    providers: [MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => {
       const series = item as NormalizedSeries;
@@ -709,7 +701,7 @@ export const MEDIA_RULES = [
     label: 'Episode count',
     contentTypes: ['series'],
     dataType: 'range',
-    sourceProviders: [MetadataProviderType.SONARR],
+    providers: [MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => {
       const series = item as NormalizedSeries;
@@ -723,7 +715,7 @@ export const MEDIA_RULES = [
     label: 'Next airing (days)',
     contentTypes: ['series'],
     dataType: 'range',
-    sourceProviders: [MetadataProviderType.SONARR],
+    providers: [MetadataProviderType.SONARR],
     required: false,
     predicate: (item, value) => {
       const series = item as NormalizedSeries;
@@ -736,12 +728,12 @@ export const MEDIA_RULES = [
     label: 'Language profile',
     contentTypes: ['series'],
     dataType: 'csv-ids',
-    sourceProviders: [MetadataProviderType.SONARR],
+    providers: [MetadataProviderType.SONARR],
     required: false,
     instanceScoped: true,
     predicate: (item, value) => {
       const series = item as NormalizedSeries;
-      const ids = parseCsvIds(value);
+      const ids = instanceIds(value);
       return series.languageProfileId !== undefined && ids.includes(series.languageProfileId);
     },
   },
@@ -750,7 +742,7 @@ export const MEDIA_RULES = [
     label: 'TMDB status',
     contentTypes: ['movie', 'series'],
     dataType: 'string',
-    sourceProviders: deriveSourceProviders('tmdbStatus'),
+    providers: deriveProviders('tmdbStatus'),
     sourceField: 'tmdbStatus',
     required: false,
     predicate: (item, value) => {
@@ -763,7 +755,7 @@ export const MEDIA_RULES = [
     label: 'Overseerr request status',
     contentTypes: ['movie', 'series'],
     dataType: 'number',
-    sourceProviders: deriveSourceProviders('overseerrRequestStatus'),
+    providers: deriveProviders('overseerrRequestStatus'),
     sourceField: 'overseerrRequestStatus',
     required: false,
     predicate: (item, value) => {
@@ -776,7 +768,7 @@ export const MEDIA_RULES = [
     label: 'Overseerr has issue',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
-    sourceProviders: deriveSourceProviders('overseerrHasIssue'),
+    providers: deriveProviders('overseerrHasIssue'),
     sourceField: 'overseerrHasIssue',
     required: false,
     // Truthy/falsy: "has issue" treats unknown (null/undefined) and false alike as "no issue".
@@ -787,7 +779,7 @@ export const MEDIA_RULES = [
     label: 'Last watched (days ago)',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    sourceProviders: deriveSourceProviders('lastWatchedAt'),
+    providers: deriveProviders('lastWatchedAt'),
     sourceField: 'lastWatchedAt',
     required: false,
     predicate: (item, value) => {

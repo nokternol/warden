@@ -187,7 +187,7 @@ export const MediaRuleDescriptorSchema = z.object({
   label: z.string(),
   contentTypes: z.array(ContentTypeSchema).readonly(),
   dataType: z.enum(['boolean', 'number', 'string', 'csv-ids', 'csv-strings', 'range']),
-  sourceProviders: z.array(ProviderTypeSchema).readonly(),
+  providers: z.array(ProviderTypeSchema).readonly(),
   required: z.boolean(),
   /** True for rules whose values are a provider-defined id space (quality profiles, tags) —
    *  the client must qualify these per instance when more than one is active. */
@@ -211,7 +211,7 @@ const lookup = (path: string) =>
 export const media = {
   /** The rules a configured, active provider can produce, optionally for one content type. */
   rules: base
-    .route({ method: 'GET', path: '/api/filter-fields' })
+    .route({ method: 'GET', path: '/api/rules' })
     .input(z.object({ contentType: ContentTypeSchema.optional() }))
     .output(z.array(MediaRuleDescriptorSchema)),
 

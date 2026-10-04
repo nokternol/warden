@@ -8,7 +8,7 @@ export const MOCK_AUTOMATIONS: AutomationDto[] = [
     name: 'Nightly cleanup',
     kind: 'user',
     query: { id: 1, name: 'Unwatched movies', contentType: 'movie' },
-    querySources: [{ queryId: 1, role: 'include', sortOrder: 0 }],
+    queries: [{ queryId: 1, role: 'include', sortOrder: 0 }],
     provider: { id: 1, name: 'Radarr Main', type: 'RADARR' },
     taskId: 'radarr.deleteUnmonitored',
     schedule: '0 2 * * *',
@@ -23,7 +23,7 @@ export const MOCK_AUTOMATIONS: AutomationDto[] = [
     name: 'Weekly report',
     kind: 'user',
     query: { id: 2, name: 'All series', contentType: 'series' },
-    querySources: [{ queryId: 2, role: 'include', sortOrder: 0 }],
+    queries: [{ queryId: 2, role: 'include', sortOrder: 0 }],
     provider: { id: 1, name: 'Radarr Main', type: 'RADARR' },
     taskId: 'radarr.deleteUnmonitored',
     schedule: '0 2 * * 0',
@@ -45,7 +45,7 @@ export const automationsHandlers = [
       name: String(body.name),
       kind: 'user',
       query: { id: Number(body.queryId), name: 'Query', contentType: 'movie' as const },
-      querySources: [{ queryId: Number(body.queryId), role: 'include', sortOrder: 0 }],
+      queries: [{ queryId: Number(body.queryId), role: 'include', sortOrder: 0 }],
       provider: { id: Number(body.providerId), name: 'Radarr Main', type: 'RADARR' },
       taskId: String(body.taskId),
       schedule: String(body.schedule),
@@ -74,7 +74,7 @@ export const MOCK_MEDIA_QUERIES: MediaQueryRecord[] = [
     id: 1,
     name: 'Unwatched movies',
     contentType: 'movie' as const,
-    filterValues: [],
+    filters: [],
     health: MOCK_HEALTH,
     createdAt: '2026-01-01T00:00:00Z',
   },
@@ -82,7 +82,7 @@ export const MOCK_MEDIA_QUERIES: MediaQueryRecord[] = [
     id: 2,
     name: 'All series',
     contentType: 'series' as const,
-    filterValues: [],
+    filters: [],
     health: MOCK_HEALTH,
     createdAt: '2026-01-01T00:00:00Z',
   },
@@ -94,13 +94,13 @@ export const mediaQueriesHandlers = [
   mockProcedure(contract.mediaQueries.create, async ({ request }) => {
     const body = (await request.json()) as Pick<
       MediaQueryRecord,
-      'name' | 'contentType' | 'filterValues'
+      'name' | 'contentType' | 'filters'
     >;
     return {
       id: 99,
       name: body.name,
       contentType: body.contentType,
-      filterValues: body.filterValues ?? [],
+      filters: body.filters ?? [],
       health: MOCK_HEALTH,
       createdAt: new Date().toISOString(),
     };

@@ -1,4 +1,5 @@
-import type { FilterValueEntry } from '@app/hooks/useMediaQueries';
+import type { Filter } from '@app/hooks/useMediaQueries';
+import { isInstanceScopedValue } from '@contract/schemas';
 
 const LABELS: Record<string, string> = {
   title: 'Title',
@@ -36,12 +37,13 @@ const LABELS: Record<string, string> = {
   plexAddedDaysAgoLte: 'Plex added ≤ days',
 };
 
-export function summarizeFilters(filterValues: FilterValueEntry[]): string[] {
-  return filterValues.map(({ key, value }) => {
-    const label = LABELS[key] ?? key;
+export function summarizeFilters(filters: Filter[]): string[] {
+  return filters.map(({ ruleKey, value }) => {
+    const label = LABELS[ruleKey] ?? ruleKey;
     if (typeof value === 'boolean') {
       return value ? label : `Not ${label.toLowerCase()}`;
     }
+    if (isInstanceScopedValue(value)) return `${label}: ${value.ids.join(',')}`;
     return `${label}: ${value}`;
   });
 }

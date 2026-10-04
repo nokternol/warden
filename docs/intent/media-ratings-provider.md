@@ -63,14 +63,14 @@ decision at the time this doc was written, not a state this doc changes.
 
 | Provider | Field(s) | Scale | Status |
 |---|---|---|---|
-| Radarr | `imdbRating` | IMDb 0–10 | **Already live** — wired today, movie-only, `filterRegistry.ts`'s `imdbRating` rule. |
+| Radarr | `imdbRating` | IMDb 0–10 | **Already live** — wired today, movie-only, `ruleRegistry.ts`'s `imdbRating` rule. |
 | Radarr | `imdbVotes` | vote count | Spec'd (`specs/radarr.md`), not yet built. |
 | Radarr | `tmdbRating` | TMDB 0–10 | Declared on `NormalizedMovie` today but **orphaned/unpopulated** — no source writes it yet. Spec'd via Radarr's bundled `ratings.tmdb` pull, superseded as primary producer by TMDB's own direct call (see below). |
 | Radarr | `tmdbRatingVotes` | vote count | Spec'd, not yet built. |
 | Radarr | `metacriticRating` / `metacriticVotes` | Metacritic 0–100 | Spec'd (`specs/radarr.md`), collision with OMDB's own Metacritic value. |
 | Radarr | `rottenTomatoesRating` / `rottenTomatoesVotes` | RT 0–100% | Spec'd, collision with OMDB's own RT value. |
 | Radarr | `traktRating` / `traktVotes` | Trakt scale (unconfirmed range) | Spec'd, no known collision. |
-| Sonarr | `communityRating` | Sonarr's own 0–10 | **Already live** — wired today, series-only, `filterRegistry.ts`'s `communityRating` rule. |
+| Sonarr | `communityRating` | Sonarr's own 0–10 | **Already live** — wired today, series-only, `ruleRegistry.ts`'s `communityRating` rule. |
 | Sonarr | `communityRatingVotes` | vote count | Spec'd (`specs/sonarr.md`), not yet built. |
 | Plex | `plexRating` / `plexAudienceRating` | Opaque — whatever the configured metadata agent supplies | Spec'd (`specs/plex.md`), kept provider-prefixed by design (scale/provenance too agent-dependent to merge into any specific-scale field). |
 | Jellyfin | `jellyfinCommunityRating` / `jellyfinCriticRating` | Opaque, same reasoning as Plex | Spec'd (`specs/jellyfin.md`), kept provider-prefixed by design. |

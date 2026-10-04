@@ -14,7 +14,7 @@ parent: docs/in_progress/provider-e2e-spec/map.md
 Audit Tautulli's full API surface (web research against its official API docs) and cross-check
 against what this codebase currently wires (`server/modules/providers/connections/tautulliProvider.ts`
 if it exists, `server/modules/providers/providerFactory.ts`, `server/modules/media/enrichment/enricherAdapters.ts`,
-`server/modules/media/filterRegistry.ts`, `src/lib/provider-registry.ts`). Produce a markdown asset
+`server/modules/media/ruleRegistry.ts`, `src/lib/provider-registry.ts`). Produce a markdown asset
 (linked from this ticket, not pasted into it) enumerating, for every field and task/action Tautulli's
 API exposes:
 
@@ -26,7 +26,7 @@ API exposes:
 - Any gap that would require a *structural* schema change (new column/table, not just a new config
   value in the existing `settings` JSON blob) — flag, don't design.
 
-Known context to start from: Wired: getHistory() runs through tautulliFieldProvider into contestedFieldPrecedence fields, gated into filterRegistry (watched, lastWatchedDaysAgo). Audit for other Tautulli API surface (e.g. per-user stats, transcode stats) not yet wired.
+Known context to start from: Wired: getHistory() runs through tautulliFieldProvider into contestedFieldPrecedence fields, gated into ruleRegistry (watched, lastWatchedDaysAgo). Audit for other Tautulli API surface (e.g. per-user stats, transcode stats) not yet wired.
 
 Do not decide what to build yet — that's the follow-on decision ticket. This ticket is exhaustive
 enumeration, not curation.

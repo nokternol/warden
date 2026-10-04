@@ -31,7 +31,7 @@ resolve, don't resolve it here.
 
 - **Two bug fixes in scope**: the `monitored` filter rule extended to movies (was show-only despite
   the data already being populated), and the stale `PLEX` entry removed from `addedDaysAgo`'s
-  `sourceProviders` (nothing populates it from Plex). Confirmed with the user: Radarr's `added`
+  `providers` (nothing populates it from Plex). Confirmed with the user: Radarr's `added`
   (addedAt-to-source) and Plex's `plexAddedAt` (addedAt-to-library/import) are permanently distinct
   concepts, never to be merged under one precedence rule.
 - **Broad field wiring accepted**: all already-typed-but-unread rating/statistics/path fields, plus

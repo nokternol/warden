@@ -98,7 +98,7 @@ server/
     providers/     # connections (BaseProviderConnection + per-system), roles (MediaActuator),
                    # provider settings service + instance CRUD and connection probe at
                    # /api/providers, task enablement, identity-resolution job
-    media/         # normalize + NormalizedMovie/NormalizedSeries shapes, filterRegistry,
+    media/         # normalize + NormalizedMovie/NormalizedSeries shapes, ruleRegistry,
                    # MediaSource/MediaEnricher role contracts + their provider adapters,
                    # mediaQueryEngine, enrichment job + merge, backdrops, search
     mediaQueries/  # MediaQueryRecord CRUD + query health
@@ -112,18 +112,18 @@ server/
 
 Boundary decisions this inventory encodes:
 
-- **`filterFields`, `backdrops`, `search` are media concerns**, not modules — they were separate only
+- **`rules`, `backdrops`, `search` are media concerns**, not modules — they were separate only
   because module boundaries used to be drawn by HTTP route, not by domain aggregate.
 - **`mediaQueries` stays its own module** (not folded into media, and never grouped with automations):
   it owns the *construction* of filters over enriched source data — `MediaQueryRecord` CRUD,
   filter-value persistence, query health — which is enough logic to live on its own. Automations *use*
   media queries but their logic is separate: the join is database entities
-  (`automation_query_sources` relates an automation to the queries it runs against) plus the
+  (`automation_queries` relates an automation to the queries it runs against) plus the
   mediaQueries public interface — automations never reach into query internals.
 - **Both `health` homes merged into `system`.** HTTP liveness and system self-healing
   (`ensureSystemJobs`, `failedStateMiddleware`) were two different processes sharing one name; `system`
   now owns both.
-- **`filterRegistry` lives in media**, not a shared `utils/` — the single authority for the rule
+- **`ruleRegistry` lives in media**, not a shared `utils/` — the single authority for the rule
   vocabulary is media-module domain logic.
 - **`server/cron/`, `server/jobs/`, `server/domain/`, `server/health/`, `server/services/`, and
   `server/utils/` are all gone.** Every file that used to live in one of them now lives inside the

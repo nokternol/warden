@@ -32,20 +32,42 @@ export const QueryIntSchema = z.union([
 export const ContentTypeSchema = z.enum(['movie', 'series']);
 export type ContentType = z.infer<typeof ContentTypeSchema>;
 
+export const RangeValueSchema = z
+  .object({ min: z.number().optional(), max: z.number().optional() })
+  .strict();
+export type RangeValue = z.infer<typeof RangeValueSchema>;
+
+// An instance-scoped rule's value (tags, quality and language profiles): ids minted by
+// one configured instance, which `providerId` names. Absent means unqualified.
+export const InstanceScopedValueSchema = z
+  .object({
+    providerId: z.number().int().positive().optional(),
+    ids: z.array(z.number().int().positive()),
+  })
+  .strict();
+export type InstanceScopedValue = z.infer<typeof InstanceScopedValueSchema>;
+
 export const FilterValueSchema = z.union([
   z.string(),
   z.number(),
   z.boolean(),
-  z.object({ min: z.number().optional(), max: z.number().optional() }).strict(),
+  RangeValueSchema,
+  InstanceScopedValueSchema,
 ]);
+export type FilterValue = z.infer<typeof FilterValueSchema>;
 
-export const FilterValueEntrySchema = z
+export function isInstanceScopedValue(value: FilterValue): value is InstanceScopedValue {
+  return typeof value === 'object' && 'ids' in value;
+}
+
+export function isRangeValue(value: FilterValue): value is RangeValue {
+  return typeof value === 'object' && !('ids' in value);
+}
+
+export const FilterSchema = z
   .object({
-    key: z.string(),
+    ruleKey: z.string(),
     value: FilterValueSchema,
-    // Namespace qualification for provider-defined id spaces (quality profiles, tags) —
-    // not targeting (see automations.providerId for that). Undefined means unqualified.
-    providerId: z.number().int().positive().optional(),
   })
   .strict();
 
@@ -79,7 +101,7 @@ export const MediaQueryRecordSchema = z
     id: z.number(),
     name: z.string(),
     contentType: ContentTypeSchema,
-    filterValues: z.array(FilterValueEntrySchema),
+    filters: z.array(FilterSchema),
     health: QueryHealthSchema,
     createdAt: z.string(),
   })
@@ -112,7 +134,7 @@ export const AutomationLastRunSchema = z
   })
   .strict();
 
-export const AutomationQuerySourceSchema = z
+export const AutomationQuerySchema = z
   .object({
     queryId: z.number(),
     role: z.enum(['include', 'exclude']),
@@ -128,7 +150,7 @@ export const AutomationSchema = z
     name: z.string(),
     kind: z.enum(['user', 'system']),
     query: AutomationQueryRefSchema,
-    querySources: z.array(AutomationQuerySourceSchema),
+    queries: z.array(AutomationQuerySchema),
     provider: ProviderRefSchema,
     taskId: z.string(),
     taskParameter: z.string().optional(),
@@ -146,7 +168,7 @@ export const AutomationSchema = z
 export const MediaQueryValueSchema = z.object({
   name: z.string().min(1).max(200),
   contentType: ContentTypeSchema,
-  filterValues: z.array(FilterValueEntrySchema),
+  filters: z.array(FilterSchema),
 });
 
 // ─── Additional response schemas ─────────────────────────────────────────────

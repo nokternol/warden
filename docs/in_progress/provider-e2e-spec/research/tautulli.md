@@ -14,7 +14,7 @@ this codebase currently wires. **Enumeration only — no curation, no build deci
 - `server/modules/media/mediaFieldProvider.ts:91-111` — `tautulliFieldProvider`.
 - `server/modules/media/enrichment/enricherAdapters.ts:85-97` — `tautulliEnricher`.
 - `server/modules/media/enrichment/precedence.ts:26-29` — `contestedFieldPrecedence`.
-- `server/modules/media/filterRegistry.ts:149-161,470-482` — `watched`, `lastWatchedDaysAgo` rules.
+- `server/modules/media/ruleRegistry.ts:149-161,470-482` — `watched`, `lastWatchedDaysAgo` rules.
 - `server/modules/providers/providerFactory.ts` — construction + `ProviderSet.tautulli` slot.
 - `server/modules/providers/roles.ts` — `MediaActuator`/`ActuatorTask` shape, `ActuatorTargetId`.
 - `server/modules/media/actuatorIdResolver.ts:14` — Tautulli addressed via `plexRatingKey`, no id
@@ -48,8 +48,8 @@ Filter rules consuming those fields:
 
 | Filter key | Source field | Wired at |
 |---|---|---|
-| `watched` | `playCount > 0` | `filterRegistry.ts:149-161` |
-| `lastWatchedDaysAgo` | `lastWatchedAt` | `filterRegistry.ts:470-482` |
+| `watched` | `playCount > 0` | `ruleRegistry.ts:149-161` |
+| `lastWatchedDaysAgo` | `lastWatchedAt` | `ruleRegistry.ts:470-482` |
 
 Task (actuator):
 
@@ -87,9 +87,9 @@ Grouped by Tautulli endpoint, each row tagged with the spec layer(s) it would to
 | Endpoint | Fields | Layers touched if built |
 |---|---|---|
 | `get_stream_data` | bitrate, codecs (video/audio), resolution, subtitle info, transcode decision (direct play/direct stream/transcode), device/player | provider field (per-play, not per-item — needs aggregation policy), UI filter (e.g. "ever transcoded", "max stream resolution"), query engine, enrichment |
-| `get_activity` | live currently-playing sessions: bandwidth, per-session codec/bitrate/resolution/user | **not item-scoped at all** — this is live server state, not a media field. Would be its own feature surface (a "Now Playing" view), not a `filterRegistry` field. Flag as out-of-shape for the enrichment pipeline entirely. |
+| `get_activity` | live currently-playing sessions: bandwidth, per-session codec/bitrate/resolution/user | **not item-scoped at all** — this is live server state, not a media field. Would be its own feature surface (a "Now Playing" view), not a `ruleRegistry` field. Flag as out-of-shape for the enrichment pipeline entirely. |
 | `terminate_session` | stop an active stream | task/actuator (session-scoped, not media-id-scoped — doesn't fit `ActuatorTargetId`/`plexRatingKey` addressing used today; **structural mismatch**, not just unwired) |
-| `get_plays_by_stream_type` | Direct Play / Direct Stream / Transcode counts over time | aggregate/reporting data, not a per-item field — would need a new "stats dashboard" surface, not `filterRegistry` |
+| `get_plays_by_stream_type` | Direct Play / Direct Stream / Transcode counts over time | aggregate/reporting data, not a per-item field — would need a new "stats dashboard" surface, not `ruleRegistry` |
 | `get_plays_by_source_resolution` / `get_plays_by_stream_resolution` | resolution-bucketed play counts over time | same — aggregate reporting, not item-level |
 
 ### Library stats
@@ -165,7 +165,7 @@ Grouped by Tautulli endpoint, each row tagged with the spec layer(s) it would to
 2. **Session/live-activity data doesn't fit the enrichment model at all.** `get_activity`,
    `terminate_session` describe transient server state (who's watching right now), not persisted
    per-item facts. No amount of new `EnrichmentFields` entries models this — it would need its own
-   feature surface (e.g. a live "Now Playing" view backed by polling, not enrichment/filterRegistry).
+   feature surface (e.g. a live "Now Playing" view backed by polling, not enrichment/ruleRegistry).
 3. **Notifier config is nested/agent-specific, not flat.** `get_notifier_config`/`set_notifier_config`
    carry an agent-dependent schema (different fields per notifier type: email, Discord, webhook,
    etc.). This doesn't fit cleanly into the flat `settings` JSON blob pattern used for provider
@@ -185,4 +185,4 @@ Operational/diagnostic endpoints (`get_logs`, `get_plex_log`, `status`, `update_
 `get_server_id`, `get_server_list`, `get_server_pref`, `server_status`, `get_date_formats`,
 `download_log`, `download_plex_log`) are enumerated in the source table above but not further
 broken out per-field — none of them describe media, users, or playback in a way that would touch
-`filterRegistry`, enrichment, or actuator tasks. Listed for completeness only.
+`ruleRegistry`, enrichment, or actuator tasks. Listed for completeness only.

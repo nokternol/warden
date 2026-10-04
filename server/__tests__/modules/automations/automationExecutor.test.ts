@@ -16,7 +16,7 @@ import { AutomationScheduler } from '@server/modules/automations/automationSched
 import { AutomationService } from '@server/modules/automations/automationService';
 import type { MediaItem } from '@server/modules/media';
 import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.queries';
-import type { FilterValueEntry } from '@server/modules/media/filterRegistry';
+import type { Filter } from '@server/modules/media/ruleRegistry';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import {
   type IProviderFactory,
@@ -133,10 +133,10 @@ async function seedSonarrProvider(providerSettingsService: ProviderSettingsServi
 
 async function seedMediaQuery(
   mediaQueryService: MediaQueryService,
-  filterValues: FilterValueEntry[] = [],
+  filters: Filter[] = [],
   contentType: ContentType = 'movie'
 ) {
-  return mediaQueryService.create({ name: 'Test Query', contentType, filterValues });
+  return mediaQueryService.create({ name: 'Test Query', contentType, filters });
 }
 
 async function seedAutomation(
@@ -145,7 +145,7 @@ async function seedAutomation(
 ) {
   return automationService.create({
     name: 'Test Automation',
-    querySources: [{ queryId: opts.queryId, role: 'include' }],
+    queries: [{ queryId: opts.queryId, role: 'include' }],
     providerId: opts.providerId,
     taskId: opts.taskId,
     taskParameter: opts.taskParameter,
@@ -338,7 +338,7 @@ describe('AutomationExecutor', () => {
       );
 
       const provider = await seedRadarrProvider(providerSettingsService);
-      const query = await seedMediaQuery(mediaQueryService, [{ key: 'hasFile', value: true }]);
+      const query = await seedMediaQuery(mediaQueryService, [{ ruleKey: 'hasFile', value: true }]);
       const automation = await seedAutomation(automationService, {
         queryId: query.id,
         providerId: provider.id,
@@ -366,7 +366,7 @@ describe('AutomationExecutor', () => {
       );
 
       const provider = await seedRadarrProvider(providerSettingsService);
-      const query = await seedMediaQuery(mediaQueryService, [{ key: 'hasFile', value: true }]);
+      const query = await seedMediaQuery(mediaQueryService, [{ ruleKey: 'hasFile', value: true }]);
       const automation = await seedAutomation(automationService, {
         queryId: query.id,
         providerId: provider.id,
@@ -568,7 +568,7 @@ describe('AutomationExecutor', () => {
       const provider = await seedSonarrProvider(providerSettingsService);
       const query = await seedMediaQuery(
         mediaQueryService,
-        [{ key: 'seriesStatus', value: 'ended' }],
+        [{ ruleKey: 'seriesStatus', value: 'ended' }],
         'series'
       );
       const automation = await seedAutomation(automationService, {
@@ -600,7 +600,7 @@ describe('AutomationExecutor', () => {
       const provider = await seedSonarrProvider(providerSettingsService);
       const query = await seedMediaQuery(
         mediaQueryService,
-        [{ key: 'monitored', value: false }],
+        [{ ruleKey: 'monitored', value: false }],
         'series'
       );
       const automation = await seedAutomation(automationService, {
@@ -780,7 +780,7 @@ describe('AutomationExecutor', () => {
   // ─── Legacy path removal ─────────────────────────────────────────────────
 
   describe('legacy path removal', () => {
-    it('records error when querySources is empty even if a legacy query field is defined', async () => {
+    it('records error when queries is empty even if a legacy query field is defined', async () => {
       const movies = [createRadarrMovie({ id: 7, title: 'Dune', year: 2021 })];
       const mockRadarr = radarrSource(movies, {
         unmonitorMovies: async (_: number[]) => {},
@@ -792,7 +792,7 @@ describe('AutomationExecutor', () => {
           id: 99,
           name: 'Legacy Path Test',
           kind: 'user' as const,
-          querySources: [],
+          queries: [],
           query: { id: 1, name: 'Q', contentType: 'movie' as const },
           provider: { id: 1, name: 'Radarr', type: 'RADARR' },
           taskId: 'unmonitorMovie',
@@ -809,7 +809,7 @@ describe('AutomationExecutor', () => {
           id: 1,
           name: 'Q',
           contentType: 'movie' as const,
-          filterValues: [],
+          filters: [],
           health: { status: 'healthy' as const, providerStatus: [] },
           createdAt: new Date().toISOString(),
         }),
@@ -843,7 +843,7 @@ describe('AutomationExecutor', () => {
         99,
         expect.objectContaining({
           status: 'error',
-          error: expect.stringMatching(/no query sources/i),
+          error: expect.stringMatching(/no queries/i),
         })
       );
     });
@@ -870,7 +870,7 @@ describe('AutomationExecutor', () => {
           id: 99,
           name: 'Discriminator Test',
           kind: 'user' as const,
-          querySources: [{ queryId: 1, role: 'include' as const, sortOrder: 0 }],
+          queries: [{ queryId: 1, role: 'include' as const, sortOrder: 0 }],
           query: { id: 1, name: 'Q', contentType: 'movie' as const },
           provider: { id: 1, name: 'Radarr', type: 'RADARR' },
           taskId: 'unmonitorMovie',
@@ -887,7 +887,7 @@ describe('AutomationExecutor', () => {
           id: 1,
           name: 'Q',
           contentType: 'movie' as const,
-          filterValues: [],
+          filters: [],
           health: { status: 'healthy' as const, providerStatus: [] },
           createdAt: new Date().toISOString(),
         }),
@@ -950,7 +950,7 @@ describe('AutomationExecutor', () => {
       });
       const mockFactory: IProviderFactory = { create: () => mockRadarr };
 
-      const query = await seedMediaQuery(mediaQueryService, [{ key: 'watched', value: true }]);
+      const query = await seedMediaQuery(mediaQueryService, [{ ruleKey: 'watched', value: true }]);
       const automation = await seedAutomation(automationService, {
         queryId: query.id,
         providerId: provider.id,
@@ -1012,7 +1012,7 @@ describe('AutomationExecutor', () => {
       const mockFactory: IProviderFactory = { create: () => mockRadarr };
 
       const query = await seedMediaQuery(mediaQueryService, [
-        { key: 'lastWatchedDaysAgo', value: { min: 7 } },
+        { ruleKey: 'lastWatchedDaysAgo', value: { min: 7 } },
       ]);
       const automation = await seedAutomation(automationService, {
         queryId: query.id,
@@ -1065,7 +1065,7 @@ describe('AutomationExecutor', () => {
       const mockFactory: IProviderFactory = { create: () => mockSonarr };
       const query = await seedMediaQuery(
         mediaQueryService,
-        [{ key: 'watched', value: true }],
+        [{ ruleKey: 'watched', value: true }],
         'series'
       );
       const automation = await seedAutomation(automationService, {
@@ -1091,7 +1091,7 @@ describe('AutomationExecutor', () => {
 
   // ─── Combination model ───────────────────────────────────────────────────
 
-  describe('CombinationModel — multiple include sources', () => {
+  describe('CombinationModel — multiple included queries', () => {
     it('executes task only on items surviving include-minus-exclude (difference semantics)', async () => {
       // Movie 1: hasFile:true,  qualityProfileId:10 → include set only → survives
       // Movie 2: hasFile:false, qualityProfileId:10 → neither set
@@ -1115,16 +1115,16 @@ describe('AutomationExecutor', () => {
       const provider = await seedRadarrProvider(providerSettingsService);
       // include: all hasFile:true movies → [1, 3]
       const includeQuery = await seedMediaQuery(mediaQueryService, [
-        { key: 'hasFile', value: true },
+        { ruleKey: 'hasFile', value: true },
       ]);
       // exclude: qualityProfileId 20 → [3]
       const excludeQuery = await seedMediaQuery(mediaQueryService, [
-        { key: 'qualityProfileIds', value: '20' },
+        { ruleKey: 'qualityProfileIds', value: { ids: [20] } },
       ]);
 
       const automation = await automationService.create({
         name: 'Difference Test',
-        querySources: [
+        queries: [
           { queryId: includeQuery.id, role: 'include' },
           { queryId: excludeQuery.id, role: 'exclude' },
         ],
@@ -1146,7 +1146,7 @@ describe('AutomationExecutor', () => {
       expect(unmonitored).toEqual([1]);
     });
 
-    it('executes task on the union of two non-overlapping include source results', async () => {
+    it('executes task on the union of two non-overlapping included query results', async () => {
       const movies = [
         createRadarrMovie({ id: 1, title: 'A', hasFile: true }),
         createRadarrMovie({ id: 2, title: 'B', hasFile: false }),
@@ -1164,13 +1164,15 @@ describe('AutomationExecutor', () => {
 
       const provider = await seedRadarrProvider(providerSettingsService);
       // Query A: only hasFile:true → movies 1 and 3
-      const queryA = await seedMediaQuery(mediaQueryService, [{ key: 'hasFile', value: true }]);
+      const queryA = await seedMediaQuery(mediaQueryService, [{ ruleKey: 'hasFile', value: true }]);
       // Query B: only hasFile:false → movie 2
-      const queryB = await seedMediaQuery(mediaQueryService, [{ key: 'hasFile', value: false }]);
+      const queryB = await seedMediaQuery(mediaQueryService, [
+        { ruleKey: 'hasFile', value: false },
+      ]);
 
       const automation = await automationService.create({
         name: 'Multi-include',
-        querySources: [
+        queries: [
           { queryId: queryA.id, role: 'include' },
           { queryId: queryB.id, role: 'include' },
         ],
@@ -1196,7 +1198,7 @@ describe('AutomationExecutor', () => {
   // ─── Provider creation hoist ─────────────────────────────────────────────
 
   describe('provider creation hoist', () => {
-    it('calls factory.create() exactly once even with two include sources', async () => {
+    it('calls factory.create() exactly once even with two included queries', async () => {
       const movies = [
         createRadarrMovie({ id: 1, title: 'A', hasFile: true }),
         createRadarrMovie({ id: 2, title: 'B', hasFile: false }),
@@ -1213,12 +1215,14 @@ describe('AutomationExecutor', () => {
       const mockFactory: IProviderFactory = { create: createSpy };
 
       const provider = await seedRadarrProvider(providerSettingsService);
-      const queryA = await seedMediaQuery(mediaQueryService, [{ key: 'hasFile', value: true }]);
-      const queryB = await seedMediaQuery(mediaQueryService, [{ key: 'hasFile', value: false }]);
+      const queryA = await seedMediaQuery(mediaQueryService, [{ ruleKey: 'hasFile', value: true }]);
+      const queryB = await seedMediaQuery(mediaQueryService, [
+        { ruleKey: 'hasFile', value: false },
+      ]);
 
       const automation = await automationService.create({
         name: 'Hoist Test',
-        querySources: [
+        queries: [
           { queryId: queryA.id, role: 'include' },
           { queryId: queryB.id, role: 'include' },
         ],

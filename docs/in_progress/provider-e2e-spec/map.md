@@ -34,7 +34,7 @@ against it is a separate, later effort (`/tdd` or `/plan-and-go`).
 - **Starting references** (partial gap analysis already exists for some providers — verify and
   extend, don't take as complete): `docs/architecture/media-providers.md`,
   `docs/architecture/media-field-provider-role.md`, `docs/architecture/provider-roles-and-identity.md`,
-  `server/modules/media/filterRegistry.ts` (`contestedFieldPrecedence`, `sourceProviders`),
+  `server/modules/media/ruleRegistry.ts` (`contestedFieldPrecedence`, `providers`),
   `src/lib/provider-registry.ts` (`PROVIDER_REGISTRY`), `server/database/schema.ts`
   (`MetadataProviderType`).
 - **Skills per ticket type:** research tickets — `WebSearch`/`WebFetch` against the provider's
@@ -62,7 +62,7 @@ against it is a separate, later effort (`/tdd` or `/plan-and-go`).
 - [Radarr — research](tickets/03-radarr-research.md) — most flat movie fields already wired; flagged the
   `monitored` show-only filter bug and other unwired path/statistics fields.
 - [Radarr — decision](tickets/03-radarr-decision.md) — two bug fixes (`monitored` extended to movies,
-  stale `PLEX` `sourceProviders` entry removed), broad field wiring accepted, `collection` flattened to
+  stale `PLEX` `providers` entry removed), broad field wiring accepted, `collection` flattened to
   a scalar pair, queue/history endpoints deferred as structural.
 - [Sonarr — research](tickets/04-sonarr-research.md) — wired as `MediaSource` + `MediaActuator` but no
   `MediaEnricher`; only `tags` reaches `EnrichmentFields`.
@@ -81,7 +81,7 @@ against it is a separate, later effort (`/tdd` or `/plan-and-go`).
   structural; `status` flagged as a four-way naming collision.
 - [TMDB — research](tickets/07-tmdb-research.md) — confirmed narrow wiring: only `tmdbStatus` reaches
   `EnrichmentFields`; rich detail/ratings/watch-provider data unused.
-- [TMDB — decision](tickets/07-tmdb-decision.md) — stale `filterRegistry` listing resolved by wiring for
+- [TMDB — decision](tickets/07-tmdb-decision.md) — stale `ruleRegistry` listing resolved by wiring for
   real; new system-wide `region` setting flagged as structural; `external_ids` wired as an identity
   crosswalk; established the "never filtered on → on-demand metadata" principle.
 - [OMDB — research](tickets/08-omdb-research.md) — confirmed zero OMDB fields reach the media-item
@@ -95,7 +95,7 @@ against it is a separate, later effort (`/tdd` or `/plan-and-go`).
   parallel wiring; `SEERR` is the go-forward type but doesn't replace `OVERSEERR` in the enum; live
   compatibility verification deferred to the user's eventual upgrade.
 - [TVMaze — research](tickets/10-tvmaze-research.md) — confirmed a buildable headline gap (`network`
-  already in `filterRegistry.ts`/`NormalizedSeries`) but no enricher exists yet to populate it.
+  already in `ruleRegistry.ts`/`NormalizedSeries`) but no enricher exists yet to populate it.
 - [TVMaze — decision](tickets/10-tvmaze-decision.md) — corrected the "keyless" premise (TVMaze needs a
   real API key, currently lost); `network`/`webChannel` merged; ratings deferred pending the new
   `media-ratings-provider` intent doc, which consolidates every provider's ratings fields.

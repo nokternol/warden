@@ -46,7 +46,7 @@ describe('media query routes', () => {
     expect(Array.isArray(res.body.data)).toBe(true);
   });
 
-  it('accepts and round-trips a providerId-qualified filter value entry', async () => {
+  it('accepts and round-trips an instance-scoped filter value', async () => {
     const db = getDb();
     const [provider] = await db
       .insert(metadataProviders)
@@ -58,10 +58,10 @@ describe('media query routes', () => {
       .send({
         name: 'Qualified',
         contentType: 'movie',
-        filterValues: [{ key: 'qualityProfileIds', value: '5', providerId: provider.id }],
+        filters: [{ ruleKey: 'qualityProfileIds', value: { providerId: provider.id, ids: [5] } }],
       });
 
     expect(res.status).toBe(200);
-    expect(res.body.data.filterValues[0].providerId).toBe(provider.id);
+    expect(res.body.data.filters[0].value).toEqual({ providerId: provider.id, ids: [5] });
   });
 });

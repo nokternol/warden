@@ -61,11 +61,11 @@ describe('GET /api/automations/runs', () => {
     const query = await mediaQueryService.create({
       name: 'Test Query',
       contentType: 'movie',
-      filterValues: [],
+      filters: [],
     });
     const automation = await automationService.create({
       name: 'Nightly Cleanup',
-      querySources: [{ queryId: query.id, role: 'include' }],
+      queries: [{ queryId: query.id, role: 'include' }],
       providerId: provider.id,
       taskId: 'unmonitorMovie',
       schedule: '0 2 * * *',

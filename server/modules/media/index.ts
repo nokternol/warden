@@ -8,7 +8,7 @@
  */
 
 // HTTP surface — the media procedures of the API contract. Absorbs the
-// filterFields, backdrops, and search route-drawn modules; each keeps its own URL.
+// rules, backdrops, and search route-drawn modules; each keeps its own URL.
 export { createMediaProcedures } from './media.procedures';
 export { createRulesProcedures } from './media.rules.procedures';
 export { createBackdropsProcedures } from './media.backdrops.procedures';
@@ -58,19 +58,20 @@ export {
 
 // The rule vocabulary and its client-facing projection.
 export type {
+  Filter,
   FilterValue,
-  FilterValueEntry,
+  InstanceScopedValue,
   MediaRule,
   MediaRuleDescriptor,
   MovieRangeRuleKey,
   RangeValue,
   SeriesRangeRuleKey,
-} from './filterRegistry';
-export { MEDIA_RULES, getRule, toDescriptor } from './filterRegistry';
+} from './ruleRegistry';
+export { MEDIA_RULES, getRule, toDescriptor } from './ruleRegistry';
 
 // The query engine — matches a MediaSource against a MediaQuerySpec.
 export { MediaQueryEngine, matchItems } from './mediaQueryEngine';
-export type { MediaQuery, MediaQuerySource, MediaQuerySpec } from './mediaQueryEngine';
+export type { MediaQuery, MediaQueryClause, MediaQuerySpec } from './mediaQueryEngine';
 
 // Enrichment — the identity → media_enrichment materialization.
 export { mergeEnrichment } from './enrichmentMerge';
@@ -87,6 +88,6 @@ export {
 export type { ContestedFieldPrecedence } from './enrichment/precedence';
 
 // Field ownership — which provider type produces which EnrichmentFields key,
-// and the cache the composition root derives sourceProviders/gating from.
+// and the cache the composition root derives providers/gating from.
 export { fieldsByProviderType, ActiveFieldSetCache } from './activeFieldSet';
 export type { EnrichmentFields } from './mediaFieldProvider';
