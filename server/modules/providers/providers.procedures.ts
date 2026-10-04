@@ -16,7 +16,7 @@ import { TautulliProvider } from './connections/tautulliProvider';
 import { TmdbProvider } from './connections/tmdbProvider';
 import { TvMazeProvider } from './connections/tvmazeProvider';
 import { resolveApiKey } from './keyResolver';
-import { PROVIDER_CATALOGUE } from './providerCatalogue';
+import { describeProviderTypes } from './providerCatalogue';
 import type { ProviderFactory } from './providerFactory';
 import type { ProviderSettingsService } from './providerSettingsService';
 import { aggregateRatings } from './ratingsAggregation';
@@ -105,7 +105,7 @@ export function createProvidersProcedures(
   return {
     // ─── Catalogue ─────────────────────────────────────────────────────────
     types: api.providers.types.handler(async () =>
-      PROVIDER_CATALOGUE.filter((entry) => !scope.deferred.providerTypes.includes(entry.type))
+      describeProviderTypes().filter((entry) => !scope.deferred.providerTypes.includes(entry.type))
     ),
 
     // ─── Configured instances ──────────────────────────────────────────────

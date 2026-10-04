@@ -1,18 +1,6 @@
 import { MetadataProviderType } from '@server/database/schema';
 import ky from 'ky';
-
-const API_SUFFIXES: Record<string, string> = {
-  SONARR: '/api/v3',
-  RADARR: '/api/v3',
-  PLEX: '',
-  JELLYFIN: '',
-  TAUTULLI: '',
-  OVERSEERR: '',
-  SEERR: '',
-  TMDB: '',
-  OMDB: '',
-  TVMAZE: '',
-};
+import { PROVIDER_CATALOGUE } from './providerCatalogue';
 
 /**
  * Probes a provider's connection details with one cheap call to its upstream
@@ -24,8 +12,7 @@ export async function probeConnection(
   host: string,
   apiKey?: string
 ): Promise<void> {
-  const suffix = API_SUFFIXES[type] ?? '';
-  const base = host.replace(/\/+$/, '') + suffix;
+  const base = host.replace(/\/+$/, '') + PROVIDER_CATALOGUE[type].apiPath;
   const key = apiKey ?? '';
   const timeout = 8000;
 

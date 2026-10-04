@@ -128,6 +128,12 @@ export const ProviderPatchSchema = ProviderSettingsInputSchema.partial();
 export const ProviderTypeDescriptorSchema = z.object({
   type: ProviderTypeSchema,
   label: z.string(),
+  /** The path appended to the host the user enters to reach the provider's API. */
+  apiPath: z.string(),
+  /** The URL every instance uses, for a hosted service; absent means the user enters a host. */
+  defaultUrl: z.string().optional(),
+  /** What the provider contributes to filtering, as short phrases. */
+  capabilities: z.array(z.string()),
 });
 
 export const providers = {

@@ -61,4 +61,23 @@ describe('GET /api/providers/types', () => {
       { type: 'OVERSEERR', label: 'Overseerr' },
     ]);
   });
+
+  it('serves each type with its connection defaults and the filter data it provides', async () => {
+    const res = await client.get('/api/providers/types');
+    const byType = (type: string) =>
+      res.body.data.find((entry: { type: string }) => entry.type === type);
+
+    expect(byType('RADARR')).toEqual({
+      type: 'RADARR',
+      label: 'Radarr',
+      apiPath: '/api/v3',
+      capabilities: ['Movie library', 'Quality profiles', 'Tags'],
+    });
+    expect(byType('PLEX')).toEqual({
+      type: 'PLEX',
+      label: 'Plex',
+      apiPath: '',
+      capabilities: ['Library contents', 'Item metadata'],
+    });
+  });
 });
