@@ -287,7 +287,7 @@ describe('AutomationService', () => {
       });
 
       const created = await automationService.create({
-        name: 'Multi-source Automation',
+        name: 'Multi-query Automation',
         queries: [
           { queryId: queryA.id, role: 'include', sortOrder: 0 },
           { queryId: queryB.id, role: 'exclude', sortOrder: 1 },

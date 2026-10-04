@@ -1091,7 +1091,7 @@ describe('AutomationExecutor', () => {
 
   // ─── Combination model ───────────────────────────────────────────────────
 
-  describe('CombinationModel — multiple include sources', () => {
+  describe('CombinationModel — multiple included queries', () => {
     it('executes task only on items surviving include-minus-exclude (difference semantics)', async () => {
       // Movie 1: hasFile:true,  qualityProfileId:10 → include set only → survives
       // Movie 2: hasFile:false, qualityProfileId:10 → neither set
@@ -1146,7 +1146,7 @@ describe('AutomationExecutor', () => {
       expect(unmonitored).toEqual([1]);
     });
 
-    it('executes task on the union of two non-overlapping include source results', async () => {
+    it('executes task on the union of two non-overlapping included query results', async () => {
       const movies = [
         createRadarrMovie({ id: 1, title: 'A', hasFile: true }),
         createRadarrMovie({ id: 2, title: 'B', hasFile: false }),
@@ -1198,7 +1198,7 @@ describe('AutomationExecutor', () => {
   // ─── Provider creation hoist ─────────────────────────────────────────────
 
   describe('provider creation hoist', () => {
-    it('calls factory.create() exactly once even with two include sources', async () => {
+    it('calls factory.create() exactly once even with two included queries', async () => {
       const movies = [
         createRadarrMovie({ id: 1, title: 'A', hasFile: true }),
         createRadarrMovie({ id: 2, title: 'B', hasFile: false }),

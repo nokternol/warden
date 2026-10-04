@@ -85,7 +85,7 @@ describe('POST /api/automations — Session C', () => {
 
   it('Cycle 9: queries array creates automation and returns sources in response', async () => {
     const res = await client.post('/api/automations', {
-      name: 'Multi-source automation',
+      name: 'Multi-query automation',
       providerId: movieProviderId,
       taskId: 'unmonitorMovie',
       schedule: '0 2 * * *',
@@ -130,7 +130,7 @@ describe('POST /api/automations — Session C', () => {
 
   // ─── Cycle 11 ───────────────────────────────────────────────────────────────
 
-  it('Cycle 11: legacy queryId converts to single include source in response', async () => {
+  it('Cycle 11: legacy queryId converts to single included query in response', async () => {
     const res = await client.post('/api/automations', {
       name: 'Legacy automation',
       providerId: movieProviderId,

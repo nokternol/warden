@@ -17,7 +17,7 @@ const radarrSource = (movies: RadarrMovie[], providerId = 1): MediaSource => ({
 });
 
 describe('MediaQueryEngine', () => {
-  describe('evaluate — single include source', () => {
+  describe('evaluate — single included query', () => {
     it('returns the ids of the items satisfying the include predicate', async () => {
       const source = radarrSource([
         createRadarrMovie({ id: 1, title: 'Downloaded', hasFile: true }),
@@ -61,7 +61,7 @@ describe('MediaQueryEngine', () => {
   });
 
   describe('evaluate — empty filter values', () => {
-    it('matches every item when the include source has no predicates', async () => {
+    it('matches every item when the included query has no predicates', async () => {
       const source = radarrSource([
         createRadarrMovie({ id: 1, title: 'A' }),
         createRadarrMovie({ id: 2, title: 'B' }),

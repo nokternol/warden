@@ -28,12 +28,12 @@ describe('evaluateCombination', () => {
     expect(result).toContain(1);
   });
 
-  it('returns empty when there are no include sources', () => {
+  it('returns empty when there are no included queries', () => {
     const result = evaluateCombination([{ role: 'exclude', items: [1, 2, 3] }]);
     expect(result).toEqual([]);
   });
 
-  it('returns all includes when there are no exclude sources', () => {
+  it('returns all includes when there are no excluded queries', () => {
     const result = evaluateCombination([{ role: 'include', items: [10, 20, 30] }]);
     expect(new Set(result)).toEqual(new Set([10, 20, 30]));
   });

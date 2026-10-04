@@ -21,7 +21,7 @@ export type AutomationQueryInput = z.input<typeof AutomationQueryInputSchema>;
 
 /**
  * A new automation's draft. `queryId` is the single-query shorthand: it becomes
- * one include source when `queries` is absent.
+ * one included query when `queries` is absent.
  */
 const CreateAutomationInputSchema = z
   .object({

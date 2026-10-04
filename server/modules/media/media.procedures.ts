@@ -248,7 +248,7 @@ const _seriesSchemaCoversParams: SeriesSchemaShape & Record<SeriesSchemaMissing,
   {} as SeriesSchemaShape;
 
 // Project a browse query's content-prefixed params onto registry-keyed filter
-// values — the include source the MediaQueryEngine evaluates for the browse view.
+// values — the included query the MediaQueryEngine evaluates for the browse view.
 // Gte/Lte param pairs targeting the same range rule merge into one `{ min?, max? }` entry.
 function parseCsvIds(raw: unknown): number[] {
   return String(raw)
