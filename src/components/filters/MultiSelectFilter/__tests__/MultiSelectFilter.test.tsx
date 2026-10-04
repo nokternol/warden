@@ -54,3 +54,38 @@ describe('MultiSelectFilter — grouped options', () => {
     ).toEqual(['Remux', 'HDR']);
   });
 });
+
+describe('MultiSelectFilter — keyboard', () => {
+  const GROUPED = [
+    { value: 10, label: 'Remux', group: 'Radarr 4K' },
+    { value: 11, label: 'HDR', group: 'Radarr 4K' },
+    { value: 20, label: 'Kids', group: 'Radarr Standard' },
+  ];
+
+  it('opens, moves between options across groups, toggles, and closes returning focus', async () => {
+    const onChange = vi.fn();
+    const user = setupUser();
+    render(<MultiSelectFilter label="Tags" options={GROUPED} selected={[]} onChange={onChange} />);
+    const trigger = screen.getByRole('button', { name: /tags/i });
+    trigger.focus();
+
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Remux' })).toHaveFocus();
+
+    await user.keyboard('{ArrowDown}{ArrowDown}');
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Kids' })).toHaveFocus();
+
+    await user.keyboard(' ');
+    expect(onChange).toHaveBeenLastCalledWith([20]);
+
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Kids' })).toHaveFocus();
+
+    await user.keyboard('{ArrowUp}{ArrowUp}{ArrowUp}');
+    expect(trigger).toHaveFocus();
+
+    await user.keyboard('{ArrowDown}{Escape}');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+});
