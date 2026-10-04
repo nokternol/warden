@@ -146,6 +146,7 @@ export default function AutomationBuilder({
   );
   const [selectedTask, setSelectedTask] = useState<BuilderTask | null>(null);
   const [taskParameterValue, setTaskParameterValue] = useState('');
+  const [effectConfirmed, setEffectConfirmed] = useState(false);
 
   const selectParameter =
     selectedTask?.parameter?.type === 'select' ? selectedTask.parameter : undefined;
@@ -179,7 +180,8 @@ export default function AutomationBuilder({
     hasValidInclude &&
     selectedTask !== null &&
     isValidCron &&
-    hasRequiredParameter;
+    hasRequiredParameter &&
+    (!selectedTask.destructive || effectConfirmed);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -352,6 +354,22 @@ export default function AutomationBuilder({
               ))}
             </select>
           </div>
+        )}
+
+        {/* ── Destructive confirmation ── */}
+        {selectedTask?.destructive && (
+          <label className="flex items-start gap-2.5 rounded border border-warning/40 bg-warning/10 px-3.5 py-3 text-sm text-text-primary cursor-pointer">
+            <input
+              type="checkbox"
+              checked={effectConfirmed}
+              onChange={(e) => setEffectConfirmed(e.target.checked)}
+              className="mt-0.5 flex-shrink-0 text-primary focus:ring-primary focus:ring-offset-0"
+            />
+            <span>
+              Confirm: &ldquo;{selectedTask.label}&rdquo; is destructive and runs on every matched
+              item.
+            </span>
+          </label>
         )}
 
         {/* ── Schedule ── */}

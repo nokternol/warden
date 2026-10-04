@@ -242,4 +242,16 @@ describe('AutomationBuilder', () => {
 
     expect(screen.getByRole('button', { name: /create automation/i })).toBeDisabled();
   });
+
+  it('disables submit for a destructive task until its effect is confirmed', async () => {
+    mockApi([makeProvider()], [{ providerId: 1, type: 'RADARR', tasks: [ENABLED_DELETE] }]);
+    const user = userEvent.setup();
+    renderBuilder();
+
+    await user.type(screen.getByLabelText('Name'), 'Purge');
+    await user.click(await screen.findByRole('radio', { name: /delete movie \+ files/i }));
+
+    expect(screen.getByRole('checkbox', { name: /confirm/i })).not.toBeChecked();
+    expect(screen.getByRole('button', { name: /create automation/i })).toBeDisabled();
+  });
 });

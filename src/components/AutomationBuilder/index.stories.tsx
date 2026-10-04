@@ -110,6 +110,27 @@ export const Populated: Story = () =>
     ]
   );
 
+/** Select "Delete movie + files" to see the confirmation that gates saving. */
+export const DestructiveTask: Story = () =>
+  withData(
+    [makeProvider({ id: 1, name: 'Radarr Main' })],
+    [
+      {
+        providerId: 1,
+        type: 'RADARR',
+        tasks: [
+          { id: 'unmonitorMovie', label: 'Unmonitor movie', destructive: false, enabled: true },
+          {
+            id: 'deleteMovieWithFiles',
+            label: 'Delete movie + files',
+            destructive: true,
+            enabled: true,
+          },
+        ],
+      },
+    ]
+  );
+
 export const MultipleInstances: Story = () =>
   withData(
     [makeProvider({ id: 1, name: 'Radarr 4K' }), makeProvider({ id: 2, name: 'Radarr 1080p' })],
