@@ -63,4 +63,12 @@ describe('quality gate workflow: publish', () => {
     expect(publish.if).toBe("github.event_name == 'push'");
     expect([publish.needs].flat().sort()).toEqual(['checks', 'container']);
   });
+
+  it('grants packages: write to the publish job alone, leaving the workflow read-only', () => {
+    expect(workflow.permissions).toEqual({ contents: 'read' });
+    expect(publish.permissions).toEqual({ contents: 'read', packages: 'write' });
+    for (const [name, job] of Object.entries(workflow.jobs)) {
+      if (name !== 'publish') expect(job.permissions).toBeUndefined();
+    }
+  });
 });
