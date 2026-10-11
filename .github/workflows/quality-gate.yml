@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches: [main]
+    tags: ['v*']
 
 permissions:
   contents: read
@@ -22,3 +23,72 @@ jobs:
       - run: yarn typecheck
       - run: yarn depcruise:ci
       - run: yarn test:run
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - run: docker build -t warden:smoke .
+      - run: SMOKE_SKIP_BUILD=1 IMAGE=warden:smoke scripts/container-smoke.sh
+      - run: SMOKE_SKIP_BUILD=1 IMAGE=warden:smoke scripts/container-smoke.sh --compose
+      # What is published is the image that was smoked: hand it to the publish job instead of
+      # rebuilding it there.
+      - if: github.event_name == 'push'
+        run: docker save warden:smoke | gzip > warden-image.tar.gz
+      - if: github.event_name == 'push'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: warden-image
+          path: warden-image.tar.gz
+          retention-days: 1
+
+  # Runs only for pushes to main and v* tags (the push triggers above), never for pull requests.
+  publish:
+    needs: [checks, container]
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+    # Publishes for one ref run one at a time, in push order. A version tag has its own ref, so a
+    # later push to main never cancels a pending release.
+    concurrency:
+      group: publish-${{ github.ref }}
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: warden-image
+      - run: docker load -i warden-image.tar.gz
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # latest moves only when this commit is still the head of main, so a publish that finishes
+      # after a newer commit's never rolls latest back. Version tags cut from main's head move it too.
+      - id: head
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          head=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          echo "is_main_head=$([ "$head" = "$GITHUB_SHA" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ghcr.io/nokternol/warden
+          flavor: latest=false
+          # sha-<short sha> is published from main only: a version tag on an already-published commit
+          # carries a rebuilt image, which must not replace the digest that sha tag already names.
+          tags: |
+            type=sha,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ steps.head.outputs.is_main_head }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+      - env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          while read -r tag; do
+            if [ -n "$tag" ]; then docker tag warden:smoke "$tag"; fi
+          done <<< "$TAGS"
+          docker push --all-tags ghcr.io/nokternol/warden

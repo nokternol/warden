@@ -47,6 +47,9 @@ RUN yarn build:server
 FROM node:24-alpine AS runner
 WORKDIR /app
 
+# Links the published GHCR package to its repository.
+LABEL org.opencontainers.image.source="https://github.com/nokternol/warden"
+
 # dumb-init: lightweight init that properly forwards signals as PID 1.
 # Ensures SIGTERM reaches the Node process for graceful shutdown.
 # su-exec: drops privileges to PUID:PGID in the entrypoint and execs, adding no process.
