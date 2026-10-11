@@ -71,5 +71,12 @@ describe('AutomationsPage', () => {
 
       expect(await screen.findAllByRole('button', { name: /cancel/i })).not.toHaveLength(0);
     });
+
+    it('shows no guidance once a source, a query and an automation exist', async () => {
+      render(<AutomationsPage />, { wrapper: Wrapper });
+      await waitFor(() => expect(screen.getByText('Nightly cleanup')).toBeInTheDocument());
+
+      expect(screen.queryByRole('list', { name: 'Setup' })).not.toBeInTheDocument();
+    });
   });
 });
