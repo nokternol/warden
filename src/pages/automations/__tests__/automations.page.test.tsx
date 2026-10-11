@@ -1,9 +1,10 @@
 import { contract } from '@contract/index';
 import userEvent from '@testing-library/user-event';
 import { render, screen, waitFor, within } from '@tests/helpers/component';
-import { mockProcedure } from '@tests/mocks/contract';
+import { mockProcedure, mockProcedureFailure } from '@tests/mocks/contract';
 import { MOCK_AUTOMATIONS } from '@tests/mocks/handlers/automations';
 import { server } from '@tests/mocks/server';
+import { delay } from 'msw';
 import { SWRConfig } from 'swr';
 import { describe, expect, it } from 'vitest';
 import AutomationsPage from '../index.page';
@@ -20,25 +21,6 @@ describe('AutomationsPage', () => {
     await waitFor(() => {
       expect(screen.getByText(/1 error/i)).toBeInTheDocument();
     });
-  });
-
-  it('POSTs /:id/run when a Run-now control is clicked', async () => {
-    let runUrl = '';
-    server.use(
-      mockProcedure(contract.automations.run, ({ request }) => {
-        runUrl = request.url;
-        return null;
-      })
-    );
-
-    render(<AutomationsPage />, { wrapper: Wrapper });
-    await waitFor(() => expect(screen.getByText('Nightly cleanup')).toBeInTheDocument());
-
-    await userEvent.click(screen.getAllByTitle('Run now')[0]);
-
-    await waitFor(() =>
-      expect(runUrl).toMatch(new RegExp(`/api/automations/${MOCK_AUTOMATIONS[0].id}/run$`))
-    );
   });
 
   describe('first-run guidance', () => {
@@ -85,16 +67,61 @@ describe('AutomationsPage', () => {
       ['queries', contract.mediaQueries.list],
       ['automations', contract.automations.list],
     ])('shows no guidance while the %s are still loading', async (_name, procedure) => {
+      // Every fact resolves to empty, so setup is incomplete; guidance is only withheld because
+      // one answer is still in flight.
+      server.use(
+        mockProcedure(procedure, async () => {
+          await delay(300);
+          return [];
+        }),
+        mockProcedure(contract.providers.list, () => [])
+      );
+
+      render(<AutomationsPage />, { wrapper: Wrapper });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      expect(screen.queryByRole('list', { name: 'Setup' })).not.toBeInTheDocument();
+
+      expect(await screen.findByRole('list', { name: 'Setup' })).toBeInTheDocument();
+    });
+
+    it.each([
+      ['providers', contract.providers.list],
+      ['sources', contract.media.sources],
+      ['queries', contract.mediaQueries.list],
+      ['automations', contract.automations.list],
+    ])('shows no guidance when the %s fail to load', async (_name, procedure) => {
       // Every other fact says setup is incomplete, so any guidance shown would be a guess.
       server.use(
-        mockProcedure(procedure, () => new Promise<never>(() => {})),
+        mockProcedureFailure(procedure, 500),
         mockProcedure(contract.providers.list, () => [])
       );
 
       render(<AutomationsPage />, { wrapper: Wrapper });
       await new Promise((resolve) => setTimeout(resolve, 100));
 
+      expect(screen.getByRole('heading', { name: 'Queries' })).toBeInTheDocument();
       expect(screen.queryByRole('list', { name: 'Setup' })).not.toBeInTheDocument();
     });
+  });
+
+  // Last in the file: Run now schedules revalidation timers (see useAutomations) that outlive the
+  // test's SWR cache, so a later test running past them would hit the torn-down cache.
+  it('POSTs /:id/run when a Run-now control is clicked', async () => {
+    let runUrl = '';
+    server.use(
+      mockProcedure(contract.automations.run, ({ request }) => {
+        runUrl = request.url;
+        return null;
+      })
+    );
+
+    render(<AutomationsPage />, { wrapper: Wrapper });
+    await waitFor(() => expect(screen.getByText('Nightly cleanup')).toBeInTheDocument());
+
+    await userEvent.click(screen.getAllByTitle('Run now')[0]);
+
+    await waitFor(() =>
+      expect(runUrl).toMatch(new RegExp(`/api/automations/${MOCK_AUTOMATIONS[0].id}/run$`))
+    );
   });
 });

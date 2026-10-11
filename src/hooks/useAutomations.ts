@@ -16,6 +16,7 @@ export function useAutomations(options?: { kind?: 'user' | 'system' }) {
   const {
     data: automations = [],
     isLoading,
+    error,
     mutate,
   } = useApi(api.automations.list, { kind: options?.kind });
   const [isCreating, setIsCreating] = useState(false);
@@ -51,5 +52,5 @@ export function useAutomations(options?: { kind?: 'user' | 'system' }) {
     }
   };
 
-  return { automations, isLoading, isCreating, create, setStatus, remove, run };
+  return { automations, isLoading, error, isCreating, create, setStatus, remove, run };
 }

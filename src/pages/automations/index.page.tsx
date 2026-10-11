@@ -25,28 +25,44 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   return { props: {} };
 };
 
+// A setup fact is only known once its fetch has settled without error; otherwise it must not
+// be mistaken for an empty result.
+function resolved<T>(isLoading: boolean, error: unknown, value: T): T | undefined {
+  return isLoading || error ? undefined : value;
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AutomationsPage() {
   const router = useRouter();
-  const { queries, isLoading: queriesLoading, remove: removeQuery } = useMediaQueries();
+  const {
+    queries,
+    isLoading: queriesLoading,
+    error: queriesError,
+    remove: removeQuery,
+  } = useMediaQueries();
   const {
     automations,
     isLoading: automationsLoading,
+    error: automationsError,
     isCreating,
     create,
     setStatus,
     remove: removeAutomation,
     run,
   } = useAutomations();
-  const { providers } = useProviderSettings();
-  const { sources } = useMediaSources();
+  const { providers, isLoading: providersLoading, error: providersError } = useProviderSettings();
+  const { sources, isLoading: sourcesLoading, error: sourcesError } = useMediaSources();
   const [showBuilder, setShowBuilder] = useState(false);
   const guidance = setupState({
-    providerCount: providers?.length,
-    hasSource: sources && Object.values(sources).some((source) => source.configured),
-    queryCount: queriesLoading ? undefined : queries.length,
-    automationCount: automationsLoading ? undefined : automations.length,
+    providerCount: resolved(providersLoading, providersError, providers?.length),
+    hasSource: resolved(
+      sourcesLoading,
+      sourcesError,
+      sources && Object.values(sources).some((source) => source.configured)
+    ),
+    queryCount: resolved(queriesLoading, queriesError, queries.length),
+    automationCount: resolved(automationsLoading, automationsError, automations.length),
   });
 
   const handleLoad = (_query: MediaQueryRecord) => {
