@@ -48,7 +48,7 @@ Examples:
 The system is fully operational but under-configured.
 
 Examples:
-- No providers configured → dashboard shows setup prompt
+- No source configured → the Automations page leads with the [setup checklist](ref:path:src/components/SetupChecklist/index.tsx)
 - A configured provider is unreachable → provider shown as disconnected in settings
 
 ## Rule

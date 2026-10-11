@@ -11,7 +11,7 @@ by the same underlying infrastructure, distinguished by a `kind` column.
 | Created by | Application startup (health check upsert) | User via UI |
 | Editable | No — schedule and task are fixed by the application | Yes — fully configurable |
 | Deletable via API | No | Yes |
-| Visible in UI | System panel (settings/system) | Main dashboard |
+| Visible in UI | System panel (settings/system) | Automations page |
 | Schedule source | Hardcoded default, upserted at startup | User-defined, stored in DB |
 | Purpose | Infrastructure that makes user automations possible | The reason the application exists |
 
@@ -48,7 +48,7 @@ tables (`server/database/schema.ts:153,204`).
 
 ## UI placement
 
-- **Main dashboard / Automations** ([`src/components/AutomationRow/index.tsx`](ref:path:src/components/AutomationRow/index.tsx)) — user automations,
+- **Automations page** ([`src/components/AutomationRow/index.tsx`](ref:path:src/components/AutomationRow/index.tsx)) — user automations,
   fully configurable, run history, Run Now + Disable/Enable + Delete (hard delete, behind an inline
   confirm step).
 - **System → Tasks** — system automations. Read-only **except Run Now** — the one operator action
