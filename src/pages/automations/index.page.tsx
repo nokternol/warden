@@ -2,12 +2,15 @@ import AppLayout from '@app/components/AppLayout';
 import AutomationBuilder from '@app/components/AutomationBuilder';
 import AutomationRow from '@app/components/AutomationRow';
 import QueryRow from '@app/components/QueryRow';
+import SetupChecklist from '@app/components/SetupChecklist';
 import SidebarNav from '@app/components/SidebarNav';
 import TopBar from '@app/components/TopBar';
 import { useAutomations } from '@app/hooks/useAutomations';
 import type { CreateAutomationInput } from '@app/hooks/useAutomations';
 import { useMediaQueries } from '@app/hooks/useMediaQueries';
 import type { MediaQueryRecord } from '@app/hooks/useMediaQueries';
+import { useProviderSettings } from '@app/hooks/useProviderSettings';
+import { setupState } from '@app/lib/setupGuidance';
 import { cn } from '@app/lib/utils/cn';
 import { requireAuth } from '@app/lib/utils/requireAuth';
 import { BookMarked, Clapperboard, Zap } from 'lucide-react';
@@ -34,7 +37,9 @@ export default function AutomationsPage() {
     remove: removeAutomation,
     run,
   } = useAutomations();
+  const { providers } = useProviderSettings();
   const [showBuilder, setShowBuilder] = useState(false);
+  const guidance = providers ? setupState({ providerCount: providers.length }) : undefined;
 
   const handleLoad = (_query: MediaQueryRecord) => {
     void router.push('/media');
@@ -76,6 +81,8 @@ export default function AutomationsPage() {
       }
     >
       <div className="p-6 space-y-8 max-w-4xl">
+        {guidance === 'no-providers' && <SetupChecklist state={guidance} />}
+
         {/* ── Builder ─────────────────────────────────────────────────────── */}
         {showBuilder && (
           <AutomationBuilder

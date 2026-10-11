@@ -1,6 +1,6 @@
 import { contract } from '@contract/index';
 import userEvent from '@testing-library/user-event';
-import { render, screen, waitFor } from '@tests/helpers/component';
+import { render, screen, waitFor, within } from '@tests/helpers/component';
 import { mockProcedure } from '@tests/mocks/contract';
 import { MOCK_AUTOMATIONS } from '@tests/mocks/handlers/automations';
 import { server } from '@tests/mocks/server';
@@ -39,5 +39,20 @@ describe('AutomationsPage', () => {
     await waitFor(() =>
       expect(runUrl).toMatch(new RegExp(`/api/automations/${MOCK_AUTOMATIONS[0].id}/run$`))
     );
+  });
+
+  describe('first-run guidance', () => {
+    it('leads with "Connect a source" as the current step when no provider is configured', async () => {
+      server.use(mockProcedure(contract.providers.list, () => []));
+
+      render(<AutomationsPage />, { wrapper: Wrapper });
+
+      const current = await screen.findByRole('listitem', { current: 'step' });
+      expect(current).toHaveTextContent('Connect a source');
+      expect(within(current).getByRole('link', { name: /settings/i })).toHaveAttribute(
+        'href',
+        '/settings'
+      );
+    });
   });
 });
