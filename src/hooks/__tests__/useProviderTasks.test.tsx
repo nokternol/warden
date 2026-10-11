@@ -1,10 +1,9 @@
 import { contract } from '@contract/index';
 import { renderHook, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
 import React from 'react';
 import { SWRConfig } from 'swr';
 import { describe, expect, it } from 'vitest';
-import { contractPath, mockProcedure } from '../../../tests/mocks/contract';
+import { mockProcedure, mockProcedureFailure } from '../../../tests/mocks/contract';
 import { server } from '../../../tests/mocks/server';
 import { tasksForProvider, useProviderTasks } from '../useProviderTasks';
 
@@ -59,12 +58,7 @@ describe('useProviderTasks', () => {
   });
 
   it('surfaces a fetch failure without throwing — availability stays undefined', async () => {
-    server.use(
-      http.get(
-        contractPath(contract.providers.tasks),
-        () => new HttpResponse(null, { status: 500 })
-      )
-    );
+    server.use(mockProcedureFailure(contract.providers.tasks, 500));
 
     const { result } = renderHook(() => useProviderTasks(), { wrapper });
     await waitFor(() => expect(result.current.error).toBeDefined());

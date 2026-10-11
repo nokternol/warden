@@ -5,11 +5,10 @@ import { contract } from '@contract/index';
 import type { ProviderTaskOptionsAvailability } from '@contract/providers';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
 import React from 'react';
 import { SWRConfig } from 'swr';
 import { describe, expect, it, vi } from 'vitest';
-import { contractPath, mockProcedure } from '../../../../tests/mocks/contract';
+import { mockProcedure, mockProcedureFailure } from '../../../../tests/mocks/contract';
 import { server } from '../../../../tests/mocks/server';
 import AutomationBuilder from '../index';
 
@@ -436,12 +435,7 @@ describe('AutomationBuilder', () => {
 
   it('says the count is unavailable when the preview fails, and save stays gated', async () => {
     mockApi([makeProvider()], [{ providerId: 1, type: 'RADARR', tasks: [ENABLED_DELETE] }]);
-    server.use(
-      http.post(
-        contractPath(contract.automations.preview),
-        () => new HttpResponse(null, { status: 500 })
-      )
-    );
+    server.use(mockProcedureFailure(contract.automations.preview, 500));
     const user = userEvent.setup();
     renderBuilder();
 
@@ -468,19 +462,18 @@ describe('AutomationBuilder', () => {
       [makeProvider()],
       [{ providerId: 1, type: 'RADARR', tasks: [ENABLED_DELETE, KEEP_FILES] }]
     );
-    server.use(
-      http.post(contractPath(contract.automations.preview), async ({ request }) => {
-        const draft = (await request.json()) as { taskId: string };
-        return draft.taskId === KEEP_FILES.id
-          ? HttpResponse.json({ status: 'ok', data: { count: 7, contentType: 'movie' } })
-          : new HttpResponse(null, { status: 500 });
-      })
-    );
+    server.use(mockProcedureFailure(contract.automations.preview, 500));
     const user = userEvent.setup();
     renderBuilder();
 
     await user.click(await screen.findByRole('radio', { name: /delete movie \+ files/i }));
     await screen.findByText(/couldn't count/i);
+    server.use(
+      mockProcedure(contract.automations.preview, () => ({
+        count: 7,
+        contentType: 'movie' as const,
+      }))
+    );
     await user.click(screen.getByRole('radio', { name: /keep files/i }));
 
     await waitFor(() =>

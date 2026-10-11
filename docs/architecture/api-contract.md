@@ -78,6 +78,10 @@ The contract uses [oRPC](https://orpc.dev) in contract-first mode, with Zod 4 sc
 - **Mocks.** [`mockProcedure(contract.<ns>.<procedure>, resolver)`](ref:path:tests/mocks/contract.ts)
   registers an MSW handler at the procedure's own method and path, answering inside the success
   envelope. The resolver is typed as the procedure's output, so a mock that drifts doesn't compile.
+  Its counterpart `mockProcedureFailure(procedure, status, error?)` mocks the same path failing: with an
+  error it answers the server's error envelope (typed as `ApiErrorResponse`), and without one a bare
+  status, as a proxy or crashed server would. Tests never hand-write a handler for Warden's own API;
+  the tests of the API client and `useApi` are the exception, since the envelope is what they test.
 
 ## Provider records pass through
 

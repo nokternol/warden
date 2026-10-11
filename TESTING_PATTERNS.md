@@ -320,22 +320,25 @@ export const automationsHandlers = [
   mockProcedure(contract.automations.list, () => MOCK_AUTOMATIONS),
 ];
 
-// Override per test — a raw failure goes at the procedure's own path
-import { contractPath } from '@tests/mocks/contract';
+// Override per test. A failure is mocked at the procedure's own method and path too:
+// with an error it answers the server's error envelope, without one a bare status.
+import { mockProcedureFailure } from '@tests/mocks/contract';
 import { server } from '@tests/mocks/server';
-import { http, HttpResponse } from 'msw';
 
 it('handles API error', async () => {
   server.use(
-    http.get(contractPath(contract.automations.list), () =>
-      HttpResponse.json(
-        { status: 'error', error: { type: 'NOT_FOUND', message: 'Not found' } },
-        { status: 404 }
-      )
-    )
+    mockProcedureFailure(contract.automations.list, 404, {
+      type: 'NOT_FOUND',
+      message: 'Not found',
+    })
   );
 
   // Test error handling...
+});
+
+it('handles a server that answers with no envelope', async () => {
+  server.use(mockProcedureFailure(contract.automations.list, 500));
+  // ...
 });
 ```
 
