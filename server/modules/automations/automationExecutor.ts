@@ -7,6 +7,7 @@ import { getChildLogger } from '../../kernel/logger';
 import {
   EnrichmentQueries,
   MediaQueryEngine,
+  getRule,
   mediaSourceFor,
   resolveActuatorTargets,
 } from '../media';
@@ -55,6 +56,12 @@ interface RunPlan {
   task: ActuatorTask;
   targets: RunTargets;
   actuatorIds: Parameters<ActuatorTask['run']>[0];
+}
+
+/** "Radarr instance 3" — a provider instance named by its type and id. */
+function instanceName(type: string | undefined, providerId: number): string {
+  const typeName = type ? type.charAt(0) + type.slice(1).toLowerCase() : 'Provider';
+  return `${typeName} instance ${providerId}`;
 }
 
 // ─── Executor ─────────────────────────────────────────────────────────────────
@@ -140,6 +147,16 @@ export class AutomationExecutor {
       }
 
       const providerSettings = await this.providerSettingsService.findById(automation.provider.id);
+      const problems = await this.blockingProblems(providerSettings.id, automationQueries);
+      if (problems.length > 0) {
+        await this.automationRunService.createRun({
+          automationId,
+          status: 'skipped',
+          error: problems.join('; '),
+          kind,
+        });
+        return;
+      }
       const plan = await this.planRun(automation.taskId, providerSettings, automationQueries);
       targets = plan.targets;
       itemCount = targets.items.length;
@@ -166,6 +183,27 @@ export class AutomationExecutor {
     } finally {
       this.inFlight.delete(automationId);
     }
+  }
+
+  /** Why a user automation cannot run, one line per problem; empty when it can. */
+  private async blockingProblems(
+    automationProviderId: number,
+    automationQueries: TargetingQuery[]
+  ): Promise<string[]> {
+    const problems: string[] = [];
+    for (const { queryId } of automationQueries) {
+      const { contentType } = await this.mediaQueryService.getById(queryId);
+      const health = await this.mediaQueryService.getHealthForAutomation(
+        queryId,
+        automationProviderId
+      );
+      for (const issue of health.qualificationIssues) {
+        const rule = getRule(issue.filterKey, contentType);
+        const instance = instanceName(rule?.providers[0], issue.providerId);
+        problems.push(`${rule?.label} filter names ${instance}, which is not an active provider`);
+      }
+    }
+    return problems;
   }
 
   /**

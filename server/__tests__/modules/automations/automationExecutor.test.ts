@@ -813,6 +813,11 @@ describe('AutomationExecutor', () => {
           health: { status: 'healthy' as const, providerStatus: [] },
           createdAt: new Date().toISOString(),
         }),
+        getHealthForAutomation: async () => ({
+          status: 'healthy' as const,
+          providerStatus: [],
+          qualificationIssues: [],
+        }),
       };
 
       const mockProviderSettingsService = {
@@ -890,6 +895,11 @@ describe('AutomationExecutor', () => {
           filters: [],
           health: { status: 'healthy' as const, providerStatus: [] },
           createdAt: new Date().toISOString(),
+        }),
+        getHealthForAutomation: async () => ({
+          status: 'healthy' as const,
+          providerStatus: [],
+          qualificationIssues: [],
         }),
       };
 

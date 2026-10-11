@@ -15,7 +15,7 @@ export interface AutomationRunDto {
   automationId: number;
   automationName: string;
   ranAt: Date;
-  status: 'success' | 'error';
+  status: 'success' | 'error' | 'skipped';
   itemCount: number | null;
   error: string | null;
   createdAt: Date;
@@ -34,7 +34,7 @@ export interface RunTargets {
 
 export interface CreateRunData {
   automationId: number;
-  status: 'success' | 'error';
+  status: 'success' | 'error' | 'skipped';
   itemCount?: number;
   error?: string;
   kind?: 'user' | 'system';
@@ -72,7 +72,7 @@ function rowToDto(row: {
     automationId: row.automationId,
     automationName: row.automationName,
     ranAt: toDate(row.ranAt),
-    status: row.status as 'success' | 'error',
+    status: row.status as AutomationRunDto['status'],
     itemCount: row.itemCount ?? null,
     error: row.error ?? null,
     createdAt: toDate(row.createdAt),
