@@ -4,7 +4,8 @@
 # given and is never re-owned recursively.
 #
 # A container already started as a non-root user (docker run --user, compose `user:`) skips the
-# drop. Anything else is exec'd directly so signals reach the process.
+# drop. Either way the command is exec'd (directly, or through su-exec) so it replaces this shell
+# and signals reach it.
 set -eu
 
 if [ "$(id -u)" != "0" ]; then
