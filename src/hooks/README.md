@@ -24,14 +24,14 @@ import { api } from '@app/lib/api/client';
 import { useApi } from '@app/lib/api/useApi';
 
 export function useMediaQueries() {
-  const { data: queries = [], isLoading, mutate } = useApi(api.mediaQueries.list, undefined);
+  const { data: queries = [], isLoading, error, mutate } = useApi(api.mediaQueries.list, undefined);
 
   const remove = async (id: number) => {
     await api.mediaQueries.delete({ id });
     await mutate();
   };
 
-  return { queries, isLoading, remove };
+  return { queries, isLoading, error, remove };
 }
 ```
 
