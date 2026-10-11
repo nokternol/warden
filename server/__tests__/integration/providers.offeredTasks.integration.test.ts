@@ -72,7 +72,7 @@ describe('GET /api/providers/tasks for the offered types', () => {
       MetadataProviderType.PLEX,
       MetadataProviderType.JELLYFIN,
       MetadataProviderType.TAUTULLI,
-      MetadataProviderType.OVERSEERR,
+      MetadataProviderType.SEERR,
     ];
     for (const type of offered) {
       await container.cradle.providerSettingsService.create({

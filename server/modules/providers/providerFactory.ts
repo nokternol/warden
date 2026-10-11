@@ -33,7 +33,7 @@ export interface ProviderSet {
   plex?: PlexProvider;
   jellyfin?: JellyfinProvider;
   tautulli?: TautulliProvider;
-  overseerr?: SeerrProvider;
+  seerr?: SeerrProvider;
   tmdb?: TmdbProvider;
 }
 
@@ -61,7 +61,6 @@ export class ProviderFactory implements IProviderFactory {
         return new JellyfinProvider(provider, logger);
       case MetadataProviderType.TAUTULLI:
         return new TautulliProvider(provider, logger);
-      case MetadataProviderType.OVERSEERR:
       case MetadataProviderType.SEERR:
         return new SeerrProvider(provider, logger);
       case MetadataProviderType.TMDB:
@@ -81,7 +80,7 @@ export class ProviderFactory implements IProviderFactory {
       if (provider instanceof PlexProvider) set.plex = provider;
       else if (provider instanceof JellyfinProvider) set.jellyfin = provider;
       else if (provider instanceof TautulliProvider) set.tautulli = provider;
-      else if (provider instanceof SeerrProvider) set.overseerr = provider;
+      else if (provider instanceof SeerrProvider) set.seerr = provider;
       else if (provider instanceof TmdbProvider) set.tmdb = provider;
     }
     return set;

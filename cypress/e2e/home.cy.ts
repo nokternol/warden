@@ -18,7 +18,7 @@ describe('Providers Page', () => {
     cy.contains('Sonarr').should('be.visible');
     cy.contains('Radarr').should('be.visible');
     cy.contains('Tautulli').should('be.visible');
-    cy.contains('Overseerr').should('be.visible');
+    cy.contains('Seerr').should('be.visible');
   });
 
   it('shows sidebar navigation', () => {

@@ -48,8 +48,8 @@ const TAUTULLI_RESPONSE = {
   },
 };
 
-const OVERSEERR_RESPONSE = {
-  type: 'OVERSEERR',
+const SEERR_RESPONSE = {
+  type: 'SEERR',
   data: {
     requests: [
       {
@@ -70,7 +70,7 @@ const RESPONSE_BY_TYPE: Record<string, ProcedureOutput<typeof contract.providers
   PLEX: PLEX_RESPONSE,
   JELLYFIN: JELLYFIN_RESPONSE,
   TAUTULLI: TAUTULLI_RESPONSE,
-  OVERSEERR: OVERSEERR_RESPONSE,
+  SEERR: SEERR_RESPONSE,
 };
 
 const RATINGS_RESPONSE: AggregatedRatings = {

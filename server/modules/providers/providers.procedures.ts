@@ -265,7 +265,6 @@ export function createProvidersProcedures(
           return { type, data: { libraryStats, homeStats, recentHistory } };
         }
 
-        case MetadataProviderType.OVERSEERR:
         case MetadataProviderType.SEERR: {
           const provider = new SeerrProvider(config, log);
           const requests = await provider.getRequests();

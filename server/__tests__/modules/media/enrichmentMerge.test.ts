@@ -58,8 +58,8 @@ describe('mergeEnrichment', () => {
       .values({ providerId: radarrId, externalId: 1, mediaIdentityId: identity.id });
     await queries.replaceFields(identity.id, {
       playCount: 3,
-      overseerrRequestStatus: 2,
-      overseerrHasIssue: true,
+      seerrRequestStatus: 2,
+      seerrHasIssue: true,
       tmdbStatus: 'Released',
       plexAddedAt: '2023-11-14T22:13:20.000Z',
     });
@@ -69,14 +69,14 @@ describe('mergeEnrichment', () => {
 
     expect(items[0]).toMatchObject({
       playCount: 3,
-      overseerrRequestStatus: 2,
-      overseerrHasIssue: true,
+      seerrRequestStatus: 2,
+      seerrHasIssue: true,
       tmdbStatus: 'Released',
       plexAddedAt: '2023-11-14T22:13:20.000Z',
     });
     // No item/enrichment for externalId 2 → left untouched.
     expect(items[1].playCount).toBeUndefined();
-    expect(items[1].overseerrRequestStatus).toBeUndefined();
+    expect(items[1].seerrRequestStatus).toBeUndefined();
   });
 
   it('leaves fields undefined when the enrichment row holds no value for them', async () => {
@@ -92,7 +92,7 @@ describe('mergeEnrichment', () => {
     await mergeEnrichment(db, queries, items);
 
     expect(items[0].playCount).toBeUndefined();
-    expect(items[0].overseerrRequestStatus).toBeUndefined();
+    expect(items[0].seerrRequestStatus).toBeUndefined();
     expect(items[0].tmdbStatus).toBeUndefined();
     expect(items[0].plexAddedAt).toBeUndefined();
   });

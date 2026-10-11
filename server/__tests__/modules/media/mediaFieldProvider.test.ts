@@ -1,8 +1,8 @@
 import {
   jellyfinFieldProvider,
-  overseerrFieldProvider,
   plexFieldProvider,
   radarrTagsFieldSource,
+  seerrFieldProvider,
   sonarrTagsFieldSource,
   tautulliFieldProvider,
   tmdbFieldSource,
@@ -78,7 +78,7 @@ describe('tautulliFieldProvider.toEnrichmentFields', () => {
   });
 });
 
-function overseerrRequest(tmdbId: number, status: number): SeerrRequest {
+function seerrRequest(tmdbId: number, status: number): SeerrRequest {
   return {
     id: 1,
     status,
@@ -89,15 +89,15 @@ function overseerrRequest(tmdbId: number, status: number): SeerrRequest {
   };
 }
 
-function overseerrIssue(tmdbId: number): SeerrIssue {
+function seerrIssue(tmdbId: number): SeerrIssue {
   return { id: 1, status: 1, media: { tmdbId } };
 }
 
-describe('overseerrFieldProvider.visit', () => {
+describe('seerrFieldProvider.visit', () => {
   it('maps request status and issue presence by tmdbId', () => {
-    const result = overseerrFieldProvider.visit([
-      [overseerrRequest(100, 2), overseerrRequest(999, 3)],
-      [overseerrIssue(100)],
+    const result = seerrFieldProvider.visit([
+      [seerrRequest(100, 2), seerrRequest(999, 3)],
+      [seerrIssue(100)],
     ]);
 
     expect(result.get(100)).toEqual({ requestStatus: 2, hasIssue: true });

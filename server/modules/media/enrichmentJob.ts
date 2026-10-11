@@ -81,8 +81,8 @@ export class EnrichmentJob {
       const values: EnrichmentWriteValues = {
         playCount: resolved?.playCount ?? null,
         lastWatchedAt: resolved?.lastWatchedAt ?? null,
-        overseerrRequestStatus: resolved?.overseerrRequestStatus ?? null,
-        overseerrHasIssue: resolved?.overseerrHasIssue ?? null,
+        seerrRequestStatus: resolved?.seerrRequestStatus ?? null,
+        seerrHasIssue: resolved?.seerrHasIssue ?? null,
         tmdbStatus: resolved?.tmdbStatus ?? null,
         plexAddedAt: resolved?.plexAddedAt ?? null,
         studio: resolved?.studio ?? null,

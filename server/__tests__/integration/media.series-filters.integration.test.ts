@@ -304,12 +304,12 @@ describe('Media browse — series registry predicates', () => {
   });
 
   describe('enriched predicates (overseerr / tmdbStatus / lastWatched) on series', () => {
-    it('overseerrRequestStatus narrows by merged SONARR enrichment', async () => {
+    it('seerrRequestStatus narrows by merged SONARR enrichment', async () => {
       const client = clientWithSeries([series(1, 'Requested', {}), series(2, 'Other', {})]);
-      await seedEnrichment(1, { overseerrRequestStatus: 2 });
-      await seedEnrichment(2, { overseerrRequestStatus: 1 });
+      await seedEnrichment(1, { seerrRequestStatus: 2 });
+      await seedEnrichment(2, { seerrRequestStatus: 1 });
       const res = await client.get(
-        browsePath('series', [{ ruleKey: 'overseerrRequestStatus', value: 2 }], { pageSize: 100 })
+        browsePath('series', [{ ruleKey: 'seerrRequestStatus', value: 2 }], { pageSize: 100 })
       );
       expect(expectSuccessResponse(res).items.map((s: { title: string }) => s.title)).toEqual([
         'Requested',
@@ -331,7 +331,7 @@ describe('Media browse — series registry predicates', () => {
     it('returns 0 series when an enriched filter has no enrichment data', async () => {
       const client = clientWithSeries([series(1, 'A', {}), series(2, 'B', {})]);
       const res = await client.get(
-        browsePath('series', [{ ruleKey: 'overseerrRequestStatus', value: 2 }], { pageSize: 100 })
+        browsePath('series', [{ ruleKey: 'seerrRequestStatus', value: 2 }], { pageSize: 100 })
       );
       expect(expectSuccessResponse(res).totalCount).toBe(0);
     });

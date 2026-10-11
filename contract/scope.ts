@@ -31,8 +31,6 @@ export interface Scope {
 export const scope: Scope = {
   deferred: {
     providerTypes: [
-      // Unbuildable through ProviderFactory; the request manager is offered as OVERSEERR.
-      'SEERR',
       // Not in the stack the offered types are verified against.
       'TMDB',
       // Feeds only the deferred ratings path.

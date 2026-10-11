@@ -43,7 +43,7 @@ const mockProviderTypes: ProviderTypeDescriptor[] = [
     apiPath: '',
     filterData: ['Watch history', 'Play statistics', 'User activity'],
   },
-  { type: 'OVERSEERR', label: 'Overseerr', apiPath: '', filterData: ['Request queue'] },
+  { type: 'SEERR', label: 'Seerr', apiPath: '', filterData: ['Request queue'] },
 ];
 
 export const settingsHandlers = [

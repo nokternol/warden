@@ -33,7 +33,7 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
   RADARR: <Clapperboard size={15} strokeWidth={1.75} />,
   SONARR: <Tv size={15} strokeWidth={1.75} />,
   TAUTULLI: <BarChart2 size={15} strokeWidth={1.75} />,
-  OVERSEERR: <Bell size={15} strokeWidth={1.75} />,
+  SEERR: <Bell size={15} strokeWidth={1.75} />,
   TMDB: <Star size={15} strokeWidth={1.75} />,
   OMDB: <Database size={15} strokeWidth={1.75} />,
 };

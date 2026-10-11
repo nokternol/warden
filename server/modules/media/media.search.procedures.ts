@@ -25,7 +25,7 @@ const SEARCHABLE_TYPES = [
   MetadataProviderType.PLEX,
   MetadataProviderType.JELLYFIN,
   MetadataProviderType.TAUTULLI,
-  MetadataProviderType.OVERSEERR,
+  MetadataProviderType.SEERR,
 ];
 
 async function searchProvider(provider: MetadataProvider, title: string): Promise<SearchResult> {
@@ -72,7 +72,7 @@ async function searchProvider(provider: MetadataProvider, title: string): Promis
         const data = await p.searchHistory(title);
         return { ...base, status: 'ok', data };
       }
-      case MetadataProviderType.OVERSEERR: {
+      case MetadataProviderType.SEERR: {
         const p = new SeerrProvider(provider, log);
         const data = await p.search(title);
         return { ...base, status: 'ok', data };

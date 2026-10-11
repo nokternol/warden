@@ -238,7 +238,7 @@ const ALL_RULES: GatedRule[] = [
     providers: ['TMDB'],
   },
   {
-    key: 'overseerrRequestStatus',
+    key: 'seerrRequestStatus',
     label: 'Status',
     group: 'Requests',
     contentTypes: ['movie', 'series'],
@@ -250,16 +250,16 @@ const ALL_RULES: GatedRule[] = [
       { value: '4', label: 'Available' },
     ],
     shortLabel: 'Status',
-    providers: ['OVERSEERR'],
+    providers: ['SEERR'],
   },
   {
-    key: 'overseerrHasIssue',
+    key: 'seerrHasIssue',
     label: 'Has Issue',
     group: 'Requests',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     valueLabels: { true: 'Has Issue', false: 'No Issue' },
-    providers: ['OVERSEERR'],
+    providers: ['SEERR'],
   },
   {
     key: 'lastWatchedDaysAgo',
@@ -1361,26 +1361,22 @@ describe('MediaFilterBar — play history controls', () => {
   });
 });
 
-describe('MediaFilterBar — Overseerr controls', () => {
-  it('shows Has Issue filter when OVERSEERR is configured', async () => {
+describe('MediaFilterBar — Seerr controls', () => {
+  it('shows Has Issue filter when SEERR is configured', async () => {
     const user = setupUser();
-    render(
-      <MediaFilterBar {...makeProps({ ...propsFor(['OVERSEERR']), lookups: EMPTY_LOOKUPS })} />
-    );
+    render(<MediaFilterBar {...makeProps({ ...propsFor(['SEERR']), lookups: EMPTY_LOOKUPS })} />);
     await addFilter(user, /has issue/i);
     expect(screen.getByRole('button', { name: /has issue/i })).toBeInTheDocument();
   });
 
-  it('shows Request Status options (e.g. Approved) when OVERSEERR is configured', async () => {
+  it('shows Request Status options (e.g. Approved) when SEERR is configured', async () => {
     const user = setupUser();
-    render(
-      <MediaFilterBar {...makeProps({ ...propsFor(['OVERSEERR']), lookups: EMPTY_LOOKUPS })} />
-    );
+    render(<MediaFilterBar {...makeProps({ ...propsFor(['SEERR']), lookups: EMPTY_LOOKUPS })} />);
     await addFilter(user, 'Status');
     expect(screen.getByRole('button', { name: 'Approved' })).toBeInTheDocument();
   });
 
-  it('does not show Overseerr controls when OVERSEERR is not configured', () => {
+  it('does not show Seerr controls when SEERR is not configured', () => {
     render(<MediaFilterBar {...makeProps({ ...propsFor(['RADARR']), lookups: EMPTY_LOOKUPS })} />);
     expect(screen.queryByRole('button', { name: /has issue/i })).not.toBeInTheDocument();
   });

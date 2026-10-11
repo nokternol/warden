@@ -34,11 +34,6 @@ export const PROVIDER_CATALOGUE = {
     apiPath: '',
     filterData: ['Watch history', 'Play statistics', 'User activity'],
   },
-  [MetadataProviderType.OVERSEERR]: {
-    label: 'Overseerr',
-    apiPath: '',
-    filterData: ['Request queue'],
-  },
   [MetadataProviderType.SEERR]: {
     label: 'Seerr',
     apiPath: '',

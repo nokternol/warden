@@ -85,7 +85,7 @@ describe('ProviderFactory.createMany', () => {
 
     expect(set.plex).toBeInstanceOf(PlexProvider);
     expect(set.tautulli).toBeInstanceOf(TautulliProvider);
-    expect(set.overseerr).toBeUndefined();
+    expect(set.seerr).toBeUndefined();
   });
 
   it('places an active Jellyfin provider into its typed slot', () => {

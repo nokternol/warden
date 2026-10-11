@@ -9,8 +9,8 @@ import type {
 import type { EnrichmentFields, MediaFieldProvider } from '../mediaFieldProvider';
 import {
   jellyfinFieldProvider,
-  overseerrFieldProvider,
   plexFieldProvider,
+  seerrFieldProvider,
   tautulliFieldProvider,
   tmdbFieldSource,
 } from '../mediaFieldProvider';
@@ -82,20 +82,15 @@ export function jellyfinEnricher(jellyfin: JellyfinProvider): MediaEnricher<Jell
   };
 }
 
-export function overseerrEnricher(
-  overseerr: SeerrProvider
-): MediaEnricher<'overseerrRequestStatus' | 'overseerrHasIssue'> {
+export function seerrEnricher(
+  seerr: SeerrProvider
+): MediaEnricher<'seerrRequestStatus' | 'seerrHasIssue'> {
   return {
-    enrich: async (
-      items
-    ): Promise<EnrichmentResult<'overseerrRequestStatus' | 'overseerrHasIssue'>> => {
-      const [requests, issues] = await Promise.all([
-        overseerr.getRequests(),
-        overseerr.getIssues(),
-      ]);
-      const fieldsByKey = toFieldsByKey(overseerrFieldProvider, [requests, issues]);
+    enrich: async (items): Promise<EnrichmentResult<'seerrRequestStatus' | 'seerrHasIssue'>> => {
+      const [requests, issues] = await Promise.all([seerr.getRequests(), seerr.getIssues()]);
+      const fieldsByKey = toFieldsByKey(seerrFieldProvider, [requests, issues]);
       return {
-        provider: MetadataProviderType.OVERSEERR,
+        provider: MetadataProviderType.SEERR,
         items: decorate(items, (i) => i._sourceIds.tmdb, fieldsByKey),
       };
     },

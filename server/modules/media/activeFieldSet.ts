@@ -44,7 +44,7 @@ export const fieldsByProviderType = {
     'labels',
     'isFavorite',
   ],
-  [MetadataProviderType.OVERSEERR]: ['overseerrRequestStatus', 'overseerrHasIssue'],
+  [MetadataProviderType.SEERR]: ['seerrRequestStatus', 'seerrHasIssue'],
   [MetadataProviderType.TMDB]: ['tmdbStatus'],
 } as const satisfies Partial<Record<MetadataProviderType, readonly (keyof EnrichmentFields)[]>>;
 

@@ -50,7 +50,7 @@ export { ensureSourceCopies } from './sourceCopies';
 export { EnrichmentQueries } from './enrichment/enrichment.queries';
 export type { EnrichableField, EnrichmentResult, MediaEnricher } from './enrichment/enricher';
 export {
-  overseerrEnricher,
+  seerrEnricher,
   plexEnricher,
   tautulliEnricher,
   tmdbEnricher,

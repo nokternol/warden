@@ -626,25 +626,37 @@ describe('series predicates', () => {
     expect(rule.predicate({ ...baseMovie, tmdbStatus: undefined }, 'Ended')).toBe(false);
   });
 
-  it('overseerrRequestStatus — movie: true when overseerrRequestStatus equals value', () => {
-    const rule = getRule('overseerrRequestStatus', 'movie')!;
-    expect(rule.predicate({ ...baseMovie, overseerrRequestStatus: 2 }, 2)).toBe(true);
-    expect(rule.predicate({ ...baseMovie, overseerrRequestStatus: 1 }, 2)).toBe(false);
-    expect(rule.predicate({ ...baseMovie, overseerrRequestStatus: undefined }, 2)).toBe(false);
+  it('seerrRequestStatus — movie: true when seerrRequestStatus equals value', () => {
+    const rule = getRule('seerrRequestStatus', 'movie')!;
+    expect(rule.predicate({ ...baseMovie, seerrRequestStatus: 2 }, 2)).toBe(true);
+    expect(rule.predicate({ ...baseMovie, seerrRequestStatus: 1 }, 2)).toBe(false);
+    expect(rule.predicate({ ...baseMovie, seerrRequestStatus: undefined }, 2)).toBe(false);
   });
 
-  it('overseerrHasIssue — movie: true when overseerrHasIssue matches value', () => {
-    const rule = getRule('overseerrHasIssue', 'movie')!;
-    expect(rule.predicate({ ...baseMovie, overseerrHasIssue: true }, true)).toBe(true);
-    expect(rule.predicate({ ...baseMovie, overseerrHasIssue: false }, true)).toBe(false);
-    expect(rule.predicate({ ...baseMovie, overseerrHasIssue: undefined }, true)).toBe(false);
+  it('seerrHasIssue — movie: true when seerrHasIssue matches value', () => {
+    const rule = getRule('seerrHasIssue', 'movie')!;
+    expect(rule.predicate({ ...baseMovie, seerrHasIssue: true }, true)).toBe(true);
+    expect(rule.predicate({ ...baseMovie, seerrHasIssue: false }, true)).toBe(false);
+    expect(rule.predicate({ ...baseMovie, seerrHasIssue: undefined }, true)).toBe(false);
   });
 
-  it('overseerrHasIssue — movie: unknown (null/undefined) reads as "no issue" (truthy/falsy)', () => {
-    const rule = getRule('overseerrHasIssue', 'movie')!;
-    // Data stores truth (null = Overseerr said nothing); the filter treats unknown as falsy,
+  it('the request-manager rules are labelled and produced by Seerr alone', () => {
+    const requestStatus = getRule('seerrRequestStatus', 'movie')!;
+    const hasIssue = getRule('seerrHasIssue', 'movie')!;
+    expect([requestStatus.label, hasIssue.label]).toEqual([
+      'Seerr request status',
+      'Seerr has issue',
+    ]);
+    expect(requestStatus.providers).toEqual([MetadataProviderType.SEERR]);
+    expect(hasIssue.providers).toEqual([MetadataProviderType.SEERR]);
+    expect(MEDIA_RULES.filter((r) => r.key.startsWith('overseerr'))).toEqual([]);
+  });
+
+  it('seerrHasIssue — movie: unknown (null/undefined) reads as "no issue" (truthy/falsy)', () => {
+    const rule = getRule('seerrHasIssue', 'movie')!;
+    // Data stores truth (null = Seerr said nothing); the filter treats unknown as falsy,
     // so "has issue = false" includes items with no reported issue.
-    expect(rule.predicate({ ...baseMovie, overseerrHasIssue: undefined }, false)).toBe(true);
+    expect(rule.predicate({ ...baseMovie, seerrHasIssue: undefined }, false)).toBe(true);
   });
 
   it('lastWatchedDaysAgo — movie: passes within min/max bounds', () => {

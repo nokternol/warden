@@ -5,8 +5,8 @@ import type { EnrichmentJobFactoryLike } from '../../modules/system';
 import type { ProviderFactory, ProviderSettingsService } from '../providers';
 import {
   jellyfinEnricher,
-  overseerrEnricher,
   plexEnricher,
+  seerrEnricher,
   tautulliEnricher,
   tmdbEnricher,
 } from './enrichment/enricherAdapters';
@@ -38,18 +38,18 @@ export class EnrichmentJobFactory implements EnrichmentJobFactoryLike {
   async create(): Promise<EnrichmentJob> {
     const providers = await this.providerSettingsService.findActiveByTypes([
       MetadataProviderType.TAUTULLI,
-      MetadataProviderType.OVERSEERR,
+      MetadataProviderType.SEERR,
       MetadataProviderType.PLEX,
       MetadataProviderType.JELLYFIN,
       MetadataProviderType.TMDB,
     ]);
-    const { tautulli, overseerr, plex, jellyfin, tmdb } = this.providerFactory.createMany(
+    const { tautulli, seerr, plex, jellyfin, tmdb } = this.providerFactory.createMany(
       providers,
       log
     );
     const enrichers = [
       tautulli && tautulliEnricher(tautulli),
-      overseerr && overseerrEnricher(overseerr),
+      seerr && seerrEnricher(seerr),
       plex && plexEnricher(plex),
       jellyfin && jellyfinEnricher(jellyfin),
       tmdb && tmdbEnricher(tmdb),

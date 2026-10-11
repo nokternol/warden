@@ -68,6 +68,17 @@ describe('GET /api/providers/test', () => {
   // A type that is not offered
   // ---------------------------------------------------------------------------
 
+  it('probes a Seerr provider at its status endpoint', async () => {
+    const SEERR_URL = 'http://seerr.local';
+    server.use(http.get(`${SEERR_URL}/api/v1/status`, () => HttpResponse.json({ status: 'ok' })));
+
+    const res = await request(authedApp)
+      .get('/api/providers/test')
+      .query({ type: MetadataProviderType.SEERR, url: SEERR_URL, apiKey: 'k' });
+
+    expect(res.status).toBe(200);
+  });
+
   it('refuses to probe a type that is not offered, without contacting it', async () => {
     const OMDB_URL = 'http://omdb.local';
     let contacted = false;

@@ -2,8 +2,8 @@ import { MetadataProviderType } from '@server/database/schema';
 import { getChildLogger } from '@server/kernel/logger';
 import {
   jellyfinEnricher,
-  overseerrEnricher,
   plexEnricher,
+  seerrEnricher,
   tautulliEnricher,
   tmdbEnricher,
 } from '@server/modules/media/enrichment/enricherAdapters';
@@ -245,10 +245,10 @@ describe('jellyfinEnricher', () => {
   });
 });
 
-describe('overseerrEnricher', () => {
+describe('seerrEnricher', () => {
   it('decorates a matched item with request status and issue flag, tagged by provider', async () => {
-    const overseerr = new SeerrProvider(mockConfig, mockLogger);
-    vi.spyOn(overseerr, 'getRequests').mockResolvedValue([
+    const seerr = new SeerrProvider(mockConfig, mockLogger);
+    vi.spyOn(seerr, 'getRequests').mockResolvedValue([
       {
         id: 1,
         status: 2,
@@ -258,16 +258,14 @@ describe('overseerrEnricher', () => {
         createdAt: '',
       },
     ]);
-    vi.spyOn(overseerr, 'getIssues').mockResolvedValue([
-      { id: 1, status: 1, media: { tmdbId: 100 } },
-    ]);
+    vi.spyOn(seerr, 'getIssues').mockResolvedValue([{ id: 1, status: 1, media: { tmdbId: 100 } }]);
     const item: NormalizedMovie = { _sourceIds: { tmdb: 100 }, title: 'M' };
 
-    const result = await overseerrEnricher(overseerr).enrich([item]);
+    const result = await seerrEnricher(seerr).enrich([item]);
 
-    expect(result.provider).toBe(MetadataProviderType.OVERSEERR);
-    expect(result.items[0].overseerrRequestStatus).toBe(2);
-    expect(result.items[0].overseerrHasIssue).toBe(true);
+    expect(result.provider).toBe(MetadataProviderType.SEERR);
+    expect(result.items[0].seerrRequestStatus).toBe(2);
+    expect(result.items[0].seerrHasIssue).toBe(true);
   });
 });
 
