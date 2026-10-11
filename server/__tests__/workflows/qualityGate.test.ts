@@ -84,4 +84,17 @@ describe('quality gate workflow: publish', () => {
       'type=semver,pattern={{major}}.{{minor}}',
     ]);
   });
+
+  it('pushes the very image the smoke ran, handed over as an artifact, and never rebuilds it', () => {
+    const container = workflow.jobs.container;
+    const uses = (job: Job, action: string) => job.steps.some((s) => s.uses?.startsWith(action));
+    const commands = publish.steps.map((s) => s.run ?? '').join('\n');
+
+    expect(uses(container, 'actions/upload-artifact@')).toBe(true);
+    expect(uses(publish, 'actions/download-artifact@')).toBe(true);
+    expect(commands).toContain('docker load');
+    expect(commands).toContain('docker push');
+    expect(commands).not.toContain('docker build');
+    expect(uses(publish, 'docker/build-push-action@')).toBe(false);
+  });
 });

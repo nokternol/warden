@@ -31,6 +31,16 @@ jobs:
       - run: docker build -t warden:smoke .
       - run: SMOKE_SKIP_BUILD=1 IMAGE=warden:smoke scripts/container-smoke.sh
       - run: SMOKE_SKIP_BUILD=1 IMAGE=warden:smoke scripts/container-smoke.sh --compose
+      # What is published is the image that was smoked: hand it to the publish job instead of
+      # rebuilding it there.
+      - if: github.event_name == 'push'
+        run: docker save warden:smoke | gzip > warden-image.tar.gz
+      - if: github.event_name == 'push'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: warden-image
+          path: warden-image.tar.gz
+          retention-days: 1
 
   # Runs only for pushes to main and v* tags (the push triggers above), never for pull requests.
   publish:
@@ -41,6 +51,10 @@ jobs:
       packages: write
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: warden-image
+      - run: docker load -i warden-image.tar.gz
       - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
@@ -57,3 +71,10 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+      - env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          while read -r tag; do
+            docker tag warden:smoke "$tag"
+            docker push "$tag"
+          done <<< "$TAGS"
