@@ -9,6 +9,13 @@ import styles from './RunRow.module.css';
 /** The run table's columns, in order — the header and every row's cells follow it. */
 const COLUMNS = ['Automation', 'Status', 'Ran At', 'Items', 'Error'] as const;
 
+/** How each run status reads on its badge. */
+const STATUS_BADGE = {
+  success: { variant: 'success', label: 'success' },
+  error: { variant: 'error', label: 'error' },
+  skipped: { variant: 'warning', label: 'Invalid' },
+} as const;
+
 function formatDate(dateStr: string): string {
   try {
     return new Intl.DateTimeFormat(undefined, {
@@ -45,17 +52,26 @@ function Root({ run, defaultExpanded = false }: RunRowProps) {
           </div>
         </td>
         <td className={styles.badgeCell}>
-          <Badge variant={run.status === 'success' ? 'success' : 'error'} size="sm">
-            {run.status}
+          <Badge variant={STATUS_BADGE[run.status].variant} size="sm">
+            {STATUS_BADGE[run.status].label}
           </Badge>
         </td>
         <td className={styles.cell}>{formatDate(run.ranAt)}</td>
         <td className={styles.cell}>{run.itemCount !== null ? run.itemCount : '—'}</td>
-        <td className={cn(styles.cell, styles.errorCell)}>
+        <td
+          className={cn(
+            styles.cell,
+            run.status === 'skipped' ? styles.reasonCell : styles.errorCell
+          )}
+        >
           {run.error ? (
-            <span className={styles.error} title={run.error}>
-              {run.error.length > 60 ? `${run.error.slice(0, 60)}…` : run.error}
-            </span>
+            run.status === 'skipped' ? (
+              <span className={styles.reason}>{run.error}</span>
+            ) : (
+              <span className={styles.error} title={run.error}>
+                {run.error.length > 60 ? `${run.error.slice(0, 60)}…` : run.error}
+              </span>
+            )
           ) : (
             '—'
           )}

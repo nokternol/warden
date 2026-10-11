@@ -22,6 +22,15 @@ const failed: AutomationRunDto = {
   error: 'Connection refused',
 };
 
+const skipped: AutomationRunDto = {
+  ...succeeded,
+  id: 3,
+  ranAt: '2026-06-05T02:00:00.000Z',
+  status: 'skipped',
+  itemCount: 0,
+  error: 'Tags filter names Radarr instance 3, which is not an active provider',
+};
+
 function RunsTable({ children }: { children: React.ReactNode }) {
   return (
     <div className="p-6 max-w-4xl">
@@ -52,3 +61,10 @@ export const ExpandedWithRemovedItem: Story = () => (
   </RunsTable>
 );
 ExpandedWithRemovedItem.storyName = 'Expanded (one title since removed)';
+
+export const Skipped: Story = () => (
+  <RunsTable>
+    <RunRow run={skipped} />
+  </RunsTable>
+);
+Skipped.storyName = 'Skipped (automation was invalid)';
