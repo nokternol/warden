@@ -145,4 +145,19 @@ describe('AutomationExecutor — invalid automations', () => {
       })
     );
   });
+
+  it("skips an automation whose filter names an instance other than the automation's own", async () => {
+    const own = await seedRadarr('Own Radarr');
+    const other = await seedRadarr('Other Radarr');
+    const automation = await seedAutomationOver(own.id, [tagsOf(other.id)]);
+
+    await executor.execute(automation.id);
+
+    const [run] = await getDb().select().from(automationRuns);
+    expect(run.status).toBe('skipped');
+    expect(run.error).toBe(
+      `Tags filter names Radarr instance ${other.id}, which is not this automation's provider (Radarr instance ${own.id})`
+    );
+    expect(unmonitorCalls).toBe(0);
+  });
 });

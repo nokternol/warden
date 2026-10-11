@@ -1,4 +1,5 @@
 import type { AutomationPreview } from '@contract/automations';
+import type { ContentType } from '@contract/schemas';
 import type { MetadataProvider } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
 import { ValidationError } from '../../kernel/errors';
@@ -12,7 +13,7 @@ import {
   resolveActuatorTargets,
 } from '../media';
 import type { MediaSource, MediaSourceFactory } from '../media';
-import type { MediaQueryService } from '../mediaQueries';
+import type { MediaQueryService, QueryHealth } from '../mediaQueries';
 import {
   type ActuatorTask,
   type IProviderFactory,
@@ -62,6 +63,21 @@ interface RunPlan {
 function instanceName(type: string | undefined, providerId: number): string {
   const typeName = type ? type.charAt(0) + type.slice(1).toLowerCase() : 'Provider';
   return `${typeName} instance ${providerId}`;
+}
+
+type QualificationIssue = QueryHealth['qualificationIssues'][number];
+
+/** One line saying why a filter's instance qualification keeps the automation from running. */
+function describeQualificationIssue(
+  { filterKey, providerId, reason }: QualificationIssue,
+  contentType: ContentType,
+  automationProviderId: number
+): string {
+  const rule = getRule(filterKey, contentType);
+  const filter = `${rule?.label} filter names ${instanceName(rule?.providers[0], providerId)}`;
+  return reason === 'not_active'
+    ? `${filter}, which is not an active provider`
+    : `${filter}, which is not this automation's provider (${instanceName(rule?.providers[0], automationProviderId)})`;
 }
 
 // ─── Executor ─────────────────────────────────────────────────────────────────
@@ -211,9 +227,7 @@ export class AutomationExecutor {
         automationProviderId
       );
       for (const issue of health.qualificationIssues) {
-        const rule = getRule(issue.filterKey, contentType);
-        const instance = instanceName(rule?.providers[0], issue.providerId);
-        problems.push(`${rule?.label} filter names ${instance}, which is not an active provider`);
+        problems.push(describeQualificationIssue(issue, contentType, automationProviderId));
       }
     }
     return problems;
