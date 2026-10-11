@@ -71,4 +71,17 @@ describe('quality gate workflow: publish', () => {
       if (name !== 'publish') expect(job.permissions).toBeUndefined();
     }
   });
+
+  it('tags the image ghcr.io/nokternol/warden with the commit sha, latest from main, and semver from v* tags', () => {
+    const meta = publish.steps.find((s) => s.uses?.startsWith('docker/metadata-action@'));
+    const rules = (meta?.with?.tags ?? '').split('\n').filter(Boolean);
+
+    expect(meta?.with?.images).toBe('ghcr.io/nokternol/warden');
+    expect(rules).toEqual([
+      'type=sha',
+      'type=raw,value=latest,enable={{is_default_branch}}',
+      'type=semver,pattern={{version}}',
+      'type=semver,pattern={{major}}.{{minor}}',
+    ]);
+  });
 });
