@@ -719,6 +719,17 @@ names, so nothing is renamed twice.
   health `unavailable` or any qualification issue. `automation_runs.status` gains `skipped`, with
   the reason in the run's existing `error` column unless cycles show it needs its own. The run's
   status schema in the contract carries the third value.
+- **As built:** the guard runs in `AutomationExecutor.execute` before `planRun`, so the scheduler and
+  Run Now share it. It collects one reason per problem and joins them with `; `: the automation's own
+  provider being inactive, each query's `getHealthForAutomation` qualification issues (`not_active`,
+  `wrong_automation_provider`), and any provider status that is `required` and not configured. No
+  `computeHealth` change was needed, and no rule is `required` today, so the missing-required-provider
+  branch is only exercised against a stubbed health. A skipped run writes only the `automation_runs`
+  row, with the reason in `error` and `itemCount` 0, no run items, and `run:completed` carries status
+  `skipped`. It does **not** update the automation's last-run summary: `AutomationLastRunSchema` stays
+  `success | error`, so the Dashboard and Automations page are unchanged. `AutomationRunSchema.status`
+  gains `skipped`. `automation_runs.status` is an unconstrained text column, so no migration was
+  needed. On the Runs page a skipped run shows an *Invalid* warning badge and its full reason.
 - **Out of MVP:** showing invalidity outside the Runs page (an Automations page badge, the reason,
   a link to fix the query). See [Post-MVP](#post-mvp-parked-in-order).
 
