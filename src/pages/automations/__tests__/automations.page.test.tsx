@@ -54,6 +54,19 @@ describe('AutomationsPage', () => {
       expect(await screen.findAllByRole('button', { name: /cancel/i })).not.toHaveLength(0);
     });
 
+    it('asks for an automation when only system automations exist', async () => {
+      server.use(
+        mockProcedure(contract.automations.list, () =>
+          MOCK_AUTOMATIONS.map((a) => ({ ...a, kind: 'system' as const }))
+        )
+      );
+
+      render(<AutomationsPage />, { wrapper: Wrapper });
+
+      const current = await screen.findByRole('listitem', { current: 'step' });
+      expect(current).toHaveTextContent('Create an automation');
+    });
+
     it('shows no guidance once a source, a query and an automation exist', async () => {
       render(<AutomationsPage />, { wrapper: Wrapper });
       await waitFor(() => expect(screen.getByText('Nightly cleanup')).toBeInTheDocument());

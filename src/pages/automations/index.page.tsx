@@ -62,7 +62,11 @@ export default function AutomationsPage() {
       sources && Object.values(sources).some((source) => source.configured)
     ),
     queryCount: resolved(queriesLoading, queriesError, queries.length),
-    automationCount: resolved(automationsLoading, automationsError, automations.length),
+    automationCount: resolved(
+      automationsLoading,
+      automationsError,
+      automations.filter((a) => a.kind === 'user').length
+    ),
   });
 
   const handleLoad = (_query: MediaQueryRecord) => {
