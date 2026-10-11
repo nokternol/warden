@@ -1,3 +1,4 @@
+import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { type Client, createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
@@ -25,10 +26,14 @@ export async function initializeDatabase(config: AppConfig): Promise<DrizzleDb> 
   }
 
   try {
-    const url =
-      config.DB_PATH === ':memory:'
-        ? ':memory:'
-        : `file:${path.resolve(process.cwd(), config.DB_PATH)}`;
+    let url = ':memory:';
+    if (config.DB_PATH !== ':memory:') {
+      const dbFile = path.resolve(process.cwd(), config.DB_PATH);
+      // SQLite creates the file but not its directory, so a fresh config volume would otherwise
+      // fail to open.
+      mkdirSync(path.dirname(dbFile), { recursive: true });
+      url = `file:${dbFile}`;
+    }
 
     log.info('Initializing database connection', { url });
 

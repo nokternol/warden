@@ -17,7 +17,7 @@ server/database/
 ## Core pattern: fail-fast init, guarded access
 
 `initializeDatabase(config)` is called once at startup: it creates the libSQL client
-(`file:` path from `DB_PATH`, or `:memory:` for tests), builds the Drizzle handle with the full schema,
+(`file:` path from `DB_PATH`, creating its parent directory first, or `:memory:` for tests), builds the Drizzle handle with the full schema,
 and **runs pending migrations** from `migrations/`. It throws on failure — the server does not start on
 a broken database. After startup, code gets the handle via `getDb()`, which throws if initialization
 never ran. The handle type is `DrizzleDb` (`LibSQLDatabase<typeof schema>` plus the raw `$client`).

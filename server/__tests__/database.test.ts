@@ -1,3 +1,6 @@
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { AppConfig } from '../kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '../kernel/db';
@@ -31,6 +34,19 @@ describe('database', () => {
       const first = await initializeDatabase(testConfig);
       const second = await initializeDatabase(testConfig);
       expect(second).toBe(first);
+    });
+
+    it('creates the missing directory of a file DB_PATH and migrates into it', async () => {
+      const root = mkdtempSync(path.join(tmpdir(), 'warden-db-'));
+      const dbPath = path.join(root, 'nested', 'db', 'warden.db');
+      try {
+        const db = await initializeDatabase({ ...testConfig, DB_PATH: dbPath });
+        expect(db).toBeDefined();
+        expect(existsSync(dbPath)).toBe(true);
+      } finally {
+        await _resetDatabase();
+        rmSync(root, { recursive: true, force: true });
+      }
     });
 
     it('accepts :memory: as DB_PATH for in-memory testing', async () => {
