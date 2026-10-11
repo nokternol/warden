@@ -19,6 +19,9 @@ NAME="warden-smoke-$$"
 SECRET="smoke-secret-$$"
 HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-90}"
 STOP_BUDGET_SECONDS=10
+# A zone whose offset is never UTC and has no daylight saving, so the expectation is constant.
+ZONE="Asia/Tokyo"
+ZONE_OFFSET_MINUTES=-540
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 pass() { echo "ok: $*"; }
@@ -31,7 +34,7 @@ cleanup() {
 trap cleanup EXIT
 
 start_container() {
-  docker run -d --name "$NAME" -e SESSION_SECRET="$SECRET" \
+  docker run -d --name "$NAME" -e SESSION_SECRET="$SECRET" -e TZ="$ZONE" \
     -v "$NAME-config:/app/config" -p 127.0.0.1::5057 "$IMAGE" >/dev/null
 }
 
@@ -65,5 +68,32 @@ check_healthy_and_serves_login() {
   pass "login page served"
 }
 
+check_runs_unprivileged_with_writable_volume() {
+  local user
+  user="$(docker exec "$NAME" id -un)"
+  [[ "$user" == "node" ]] || fail "container runs as '$user', expected node"
+  docker exec "$NAME" test -f /app/config/db/warden.db \
+    || fail "database file was not created in the config volume"
+  pass "runs as node and writes to the config volume"
+}
+
+check_honours_tz() {
+  local offset
+  offset="$(docker exec "$NAME" node -e 'process.stdout.write(String(new Date().getTimezoneOffset()))')"
+  [[ "$offset" == "$ZONE_OFFSET_MINUTES" ]] \
+    || fail "TZ=$ZONE gave offset $offset minutes, expected $ZONE_OFFSET_MINUTES"
+  pass "TZ=$ZONE is honoured inside the image"
+
+  # A wall-clock schedule fires at 09:00 in that zone, which is 00:00 UTC for Tokyo.
+  local utc_time
+  utc_time="$(docker exec "$NAME" node -e \
+    "const { Cron } = require('croner'); process.stdout.write(new Cron('0 9 * * *').nextRun().toISOString().slice(11, 19))")"
+  [[ "$utc_time" == "00:00:00" ]] \
+    || fail "croner fired '0 9 * * *' at $utc_time UTC under TZ=$ZONE, expected 00:00:00"
+  pass "croner schedules in wall-clock time under TZ=$ZONE"
+}
+
 start_container
 check_healthy_and_serves_login
+check_runs_unprivileged_with_writable_volume
+check_honours_tz
