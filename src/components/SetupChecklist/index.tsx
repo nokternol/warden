@@ -1,3 +1,4 @@
+import Button from '@app/components/Button';
 import type { SetupState } from '@app/lib/setupGuidance';
 import { cn } from '@app/lib/utils/cn';
 import { Check } from 'lucide-react';
@@ -10,14 +11,53 @@ interface SetupChecklistProps {
 type StepStatus = 'done' | 'current' | 'upcoming';
 
 const LINK_CLASS =
-  'mt-2 inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-sm bg-primary text-white hover:bg-primary-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-bg';
+  'mt-2 inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-sm bg-primary text-white hover:bg-primary-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-bg';
 
-const CURRENT_STEP_INDEX: Record<SetupChecklistProps['state'], number> = {
-  'no-providers': 0,
-  'no-source': 0,
-  'no-query': 1,
-  'no-automation': 2,
-};
+type IncompleteState = SetupChecklistProps['state'];
+
+interface StepDefinition {
+  title: string;
+  /** The states in which this step is the one next action. */
+  currentIn: readonly IncompleteState[];
+  hint: (state: IncompleteState) => string;
+  action: (onCreateAutomation: () => void) => React.ReactNode;
+}
+
+const STEPS: readonly StepDefinition[] = [
+  {
+    title: 'Connect a source',
+    currentIn: ['no-providers', 'no-source'],
+    hint: (state) =>
+      state === 'no-source'
+        ? 'None of your providers is an active source. Add or enable Radarr or Sonarr.'
+        : 'Add Radarr or Sonarr so Warden has media to work with.',
+    action: () => (
+      <a href="/settings" className={LINK_CLASS}>
+        Open settings
+      </a>
+    ),
+  },
+  {
+    title: 'Save a query',
+    currentIn: ['no-query'],
+    hint: () => 'Filter your media, then save the filters as a query.',
+    action: () => (
+      <a href="/media" className={LINK_CLASS}>
+        Go to Media
+      </a>
+    ),
+  },
+  {
+    title: 'Create an automation',
+    currentIn: ['no-automation'],
+    hint: () => 'Pair a query with a task and a schedule.',
+    action: (onCreateAutomation) => (
+      <Button type="button" size="sm" className="mt-2" onClick={onCreateAutomation}>
+        New automation
+      </Button>
+    ),
+  },
+];
 
 function stepStatus(index: number, current: number): StepStatus {
   if (index < current) return 'done';
@@ -74,51 +114,28 @@ function Step({
 }
 
 export default function SetupChecklist({ state, onCreateAutomation }: SetupChecklistProps) {
-  const current = CURRENT_STEP_INDEX[state];
+  const current = STEPS.findIndex((step) => step.currentIn.includes(state));
 
   return (
     <ol
       aria-label="Setup"
       className="rounded-lg border border-border bg-surface-panel divide-y divide-divider"
     >
-      <Step number={1} status={stepStatus(0, current)} title="Connect a source">
-        {current === 0 && (
-          <>
-            <p className="mt-1 text-xs text-text-secondary">
-              {state === 'no-source'
-                ? 'None of your providers is an active source. Add or enable Radarr or Sonarr.'
-                : 'Add Radarr or Sonarr so Warden has media to work with.'}
-            </p>
-            <a href="/settings" className={LINK_CLASS}>
-              Open settings
-            </a>
-          </>
-        )}
-      </Step>
-      <Step number={2} status={stepStatus(1, current)} title="Save a query">
-        {current === 1 && (
-          <>
-            <p className="mt-1 text-xs text-text-secondary">
-              Filter your media, then save the filters as a query.
-            </p>
-            <a href="/media" className={LINK_CLASS}>
-              Go to Media
-            </a>
-          </>
-        )}
-      </Step>
-      <Step number={3} status={stepStatus(2, current)} title="Create an automation">
-        {current === 2 && (
-          <>
-            <p className="mt-1 text-xs text-text-secondary">
-              Pair a query with a task and a schedule.
-            </p>
-            <button type="button" onClick={onCreateAutomation} className={LINK_CLASS}>
-              New automation
-            </button>
-          </>
-        )}
-      </Step>
+      {STEPS.map((step, index) => (
+        <Step
+          key={step.title}
+          number={index + 1}
+          status={stepStatus(index, current)}
+          title={step.title}
+        >
+          {index === current && (
+            <>
+              <p className="mt-1 text-xs text-text-secondary">{step.hint(state)}</p>
+              {step.action(onCreateAutomation)}
+            </>
+          )}
+        </Step>
+      ))}
     </ol>
   );
 }
