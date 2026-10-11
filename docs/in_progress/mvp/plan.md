@@ -737,6 +737,7 @@ names, so nothing is renamed twice.
     test proves croner follows the `TZ` environment zone.
   - Layers follow change boundaries: a source edit reuses both dependency installs, and an edit
     outside the build inputs reuses every build step.
+  - The image optimiser permits the configured poster hosts.
   - Compose mode runs the same checks through the unmodified `compose.yaml`, and an unset
     `SESSION_SECRET` fails loudly.
 - **Expected end state:**
@@ -746,7 +747,8 @@ names, so nothing is renamed twice.
   - The runner starts as root through `docker/entrypoint.sh`, which drops to `PUID:PGID` with
     `su-exec` under `dumb-init`. It does not re-own the mapped folder's contents.
   - A `HEALTHCHECK` uses busybox `wget` against `/api/health`.
-  - `next.config.js` is not copied into the runner: `/login` is served without it.
+  - `next.config.js` is copied into the runner, because `next({ dev: false })` reads it at runtime
+    for `images.remotePatterns`; without it the image optimiser refuses every poster URL.
   - `build:server` copies migrations to `dist/server/database/`, and `CMD` and `yarn start` run
     `dist/server/index.js`.
   - `compose.yaml` has one service, `./config:/app/config`, `SESSION_SECRET: ${SESSION_SECRET:?}`,

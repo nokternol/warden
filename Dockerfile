@@ -57,6 +57,10 @@ ENV NODE_ENV=production
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY package.json ./
 
+# next({ dev: false }) loads this at runtime for images.remotePatterns (poster hosts) and the
+# page extensions.
+COPY next.config.js ./
+
 # Express compiled output, including the Drizzle migration SQL that build:server places beside
 # the compiled database module
 COPY --from=builder /app/dist ./dist

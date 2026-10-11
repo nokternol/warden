@@ -119,6 +119,17 @@ check_healthy_and_serves_login() {
   pass "login page served"
 }
 
+# The image optimiser reads images.remotePatterns from next.config.js at runtime. Without that file
+# every remote poster is refused with 400 "url" parameter is not allowed. Reachability of the remote
+# host does not matter here, only that the URL is permitted.
+check_image_optimiser_allows_poster_hosts() {
+  local url body
+  url="http://127.0.0.1:$(host_port)/_next/image?url=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2Fw500%2Fx.png&w=640&q=75"
+  body="$(curl -s "$url")"
+  [[ "$body" != *"not allowed"* ]] || fail "image optimiser refused a TMDB poster URL: $body"
+  pass "image optimiser permits configured poster hosts"
+}
+
 # Prints "uid:gid" of the node server process in container $1.
 app_identity() {
   docker exec "$1" sh -c '
@@ -289,6 +300,7 @@ fi
 
 start_container
 check_healthy_and_serves_login
+check_image_optimiser_allows_poster_hosts
 check_runs_as_configured_identity
 check_honours_tz
 check_restart_keeps_data
