@@ -7,6 +7,7 @@
 import { MetadataProviderType, automationRunItems, automationRuns } from '@server/database/schema';
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
+import { DomainEventBus, type DomainEvents } from '@server/kernel/eventBus';
 import logger from '@server/kernel/logger';
 import { AutomationExecutor } from '@server/modules/automations/automationExecutor';
 import { AutomationRunService } from '@server/modules/automations/automationRunService';
@@ -234,5 +235,34 @@ describe('AutomationExecutor — invalid automations', () => {
 
     const runs = await getDb().select().from(automationRuns).orderBy(automationRuns.id);
     expect(runs.map((r) => r.status)).toEqual(['skipped', 'success']);
+  });
+
+  it('announces the skipped run on the event bus, carrying the reason', async () => {
+    const bus = new DomainEventBus();
+    const completed: DomainEvents['run:completed'][] = [];
+    bus.on('run:completed', (event) => completed.push(event));
+    const db = getDb();
+    const publishing = new AutomationExecutor({
+      automationService,
+      automationRunService: new AutomationRunService({ db }),
+      providerSettingsService,
+      mediaQueryService,
+      eventBus: bus,
+    });
+    const own = await seedRadarr('Own Radarr');
+    const automation = await seedAutomationOver(own.id, []);
+    await providerSettingsService.update(own.id, { isActive: false });
+
+    await publishing.execute(automation.id);
+
+    const [run] = await db.select().from(automationRuns);
+    expect(completed).toHaveLength(1);
+    expect(completed[0]).toMatchObject({
+      automationId: automation.id,
+      status: 'skipped',
+      itemCount: 0,
+      error: run.error,
+      runId: run.id,
+    });
   });
 });

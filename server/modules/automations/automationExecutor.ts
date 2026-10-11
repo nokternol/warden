@@ -179,7 +179,7 @@ export class AutomationExecutor {
       const providerSettings = await this.providerSettingsService.findById(automation.provider.id);
       const problems = await this.blockingProblems(providerSettings, automationQueries);
       if (problems.length > 0) {
-        await this.recordSkip(automationId, kind, problems.join('; '));
+        await this.recordSkip(automationId, taskId, problems.join('; '));
         return;
       }
       const plan = await this.planRun(automation.taskId, providerSettings, automationQueries);
@@ -210,21 +210,14 @@ export class AutomationExecutor {
     }
   }
 
-  /**
-   * Records that an invalid automation was not run. Only the run row is written:
-   * the automation's last-run summary keeps describing its last executed run.
-   */
-  private async recordSkip(
-    automationId: number,
-    kind: 'user' | 'system',
-    reason: string
-  ): Promise<void> {
+  /** Records that an invalid user automation was not run, and why. */
+  private async recordSkip(automationId: number, taskId: string, reason: string): Promise<void> {
     log.warn('Automation skipped as invalid', { automationId, reason });
-    await this.automationRunService.createRun({
-      automationId,
+    await this.recordResult(automationId, taskId, {
+      itemCount: 0,
       status: 'skipped',
       error: reason,
-      kind,
+      kind: 'user',
     });
   }
 
@@ -371,14 +364,18 @@ export class AutomationExecutor {
     taskId: string,
     result: {
       itemCount: number;
-      status: 'success' | 'error';
+      status: 'success' | 'error' | 'skipped';
       error?: string;
       kind: 'user' | 'system';
       targets?: RunTargets;
     }
   ): Promise<void> {
+    // A skip describes the automation's validity, not an execution, so the
+    // last-run summary keeps describing the last run that did execute.
     const [, run] = await Promise.all([
-      this.automationService.recordRun(automationId, result),
+      result.status === 'skipped'
+        ? undefined
+        : this.automationService.recordRun(automationId, { ...result, status: result.status }),
       this.automationRunService.createRun({
         automationId,
         status: result.status,

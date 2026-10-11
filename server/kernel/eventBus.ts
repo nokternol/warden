@@ -11,7 +11,7 @@ export interface DomainEvents {
     automationId: number;
     kind: 'user' | 'system';
     taskId: string;
-    status: 'success' | 'error';
+    status: 'success' | 'error' | 'skipped';
     itemCount: number;
     error?: string;
     finishedAt: Date;
