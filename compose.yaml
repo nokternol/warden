@@ -2,6 +2,9 @@
 #
 #   SESSION_SECRET=$(openssl rand -hex 32) docker compose up -d
 #
+# Images are published from CI to ghcr.io/nokternol/warden. To use a local build instead, run
+# `docker build -t warden .` and set `image: warden` below.
+#
 # The app runs as PUID:PGID (default 1000:1000) and needs to own ./config. If the folder's owner
 # is not the IDs you run with, set PUID/PGID to the owner (id -u / id -g) or chown the folder.
 services:

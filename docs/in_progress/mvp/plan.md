@@ -159,7 +159,7 @@ principles become these acceptance checks on every UI slice:
 | D3 | **Browse and save encode filter state two ways.** `MOVIE_PARAM_TO_KEY`/`SERIES_PARAM_TO_KEY` + `toFilterValues()`, a range satellite map and its coverage check, and the client mirror `toBrowseParams()`. | `media.handler.ts:169-345`, `src/lib/mediaQueryAdapters.ts:194` |
 | D4 | **Three multi-select controls** in one 1,829-line file. | `MediaFilterBar/index.tsx:136,342`, `filters/OptionFilter` |
 | D5 | **`'active' \| 'paused'` declared in four places**, and `z.enum(['movie','show'])` re-declared beside `ContentTypeSchema`. | F1 sites, `mediaQueries.schemas.ts:15` |
-| D6 | **Migrations copied into the image twice**, and `nodemon` ships in production dependencies. | `package.json` `build:server`, `Dockerfile`. **Healed by E1.** Neither migrations copy landed where `server/database/index.ts` reads, and `CMD` and `yarn start` ran a `dist/index.js` that is really `dist/server/index.js`. `build:server` now copies migrations beside the compiled module, the paths are fixed, and `nodemon` is removed. |
+| D6 | **Migrations copied into the image twice**, and `nodemon` ships in production dependencies. | `package.json` `build:server`, `Dockerfile`. **Healed by E1.** Neither migrations copy landed where `server/database/index.ts` reads, and `CMD` and `yarn start` named a `dist/index.js` that is really `dist/server/index.js`. `build:server` copies migrations beside the compiled module, `CMD` and `yarn start` run `dist/server/index.js`, and `nodemon` is not a dependency. |
 
 ### Loose ends (reachable but broken, or unreachable but present)
 
@@ -724,7 +724,7 @@ names, so nothing is renamed twice.
 
 ### Track E — Containerised delivery
 
-**E1 · The image is correct, with compose and run docs** (after B5; absorbed the former E2)
+**E1 · The image is correct, with compose and run docs** (after B5)
 - **Model:** Sonnet 5.5 (container plumbing).
 - **Behaviours** (asserted by `scripts/container-smoke.sh`, run locally against a locally built image):
   - Started with a config volume and `SESSION_SECRET`, the container reports healthy and serves the
