@@ -9,29 +9,18 @@ source_research: docs/in_progress/provider-e2e-spec/research/seerr.md
 
 # Seerr — E2E spec (migration note)
 
-Seerr is the go-forward `MetadataProviderType` — the upstream Overseerr/Jellyseerr merger (Feb 2026,
-`seerr-team/seerr`) means Seerr is where this provider is headed — but the live build target for this
-pass is [Overseerr](overseerr.md), since that's the instance actually running today. This file records
-what changes once Seerr is wired, not a parallel field-by-field spec.
+Seerr is the one request-manager `MetadataProviderType` — the upstream Overseerr/Jellyseerr merger
+(Feb 2026, `seerr-team/seerr`) is where this provider is headed. The live instance is Overseerr until
+the NAS upgrades, and the same type serves it. Field-by-field and task decisions live in
+[`specs/overseerr.md`](overseerr.md); this file records what is deferred until the upgrade.
 
 ## What sharing means
 
-- `SEERR` stays a distinct `MetadataProviderType` alongside `OVERSEERR` (not a replacement) — someone
-  still on Overseerr and someone on merged Seerr can each configure their own instance.
-- Seerr routes through the **same** implementation as Overseerr: the same enricher, the same actuator
-  tasks, the same `overseerr`-prefixed field names (`overseerrRequestStatus`, `overseerrHasIssue`,
-  `overseerrRequestedAt`, etc. — see [`specs/overseerr.md`](overseerr.md) for the full field/task
-  list). `SeerrProvider` already re-exports `OverseerrProvider` wholesale in the code today; this
-  spec extends that pattern rather than replacing it.
-- Implementation-time work this implies (not decided further here): add a `SEERR` case to
-  `ProviderFactory.create()` alongside the existing `OVERSEERR` case (both constructing the shared
-  provider class), and remove `SEERR` from the deferred provider types in `contract/scope.ts` so it's
-  offered and configurable in the UI (its entry in the server's provider-type catalogue,
-  `server/modules/providers/providerCatalogue.ts`, already exists).
-- Because both types write into the same `overseerr`-prefixed fields, running Overseerr and Seerr
-  simultaneously against two different instances would have one overwrite the other's enrichment
-  data with no way to distinguish which provider a value came from. Not a concern today (nobody runs
-  both), but worth a note if that ever becomes a real scenario.
+- `SEERR` is the only request-manager type. `ProviderFactory` builds `SeerrProvider` for it, and
+  `contract/scope.ts` offers it. There is no separate Overseerr type: an Overseerr server is
+  configured as a Seerr provider, since the APIs this codebase calls match.
+- Seerr's fields and rule keys take the `seerr` prefix (`seerrRequestStatus`, `seerrHasIssue`, and the
+  unbuilt fields in [`specs/overseerr.md`](overseerr.md)).
 
 ## What's deferred until upgrade/verification
 
@@ -51,7 +40,7 @@ what changes once Seerr is wired, not a parallel field-by-field spec.
 ## Filter type mapping
 
 None — Seerr introduces zero net-new fields of its own; it shares Overseerr's exact field set and
-`overseerr`-prefixed EnrichmentFields keys once wired (see `specs/overseerr.md`'s filter type mapping
+`seerr`-prefixed EnrichmentFields keys (see `specs/overseerr.md`'s filter type mapping
 for the actual widget/dataType decisions). Nothing to map here until Seerr is promoted from a
 migration note to a full spec.
 
@@ -59,7 +48,7 @@ migration note to a full spec.
 
 No `/prototype` session and no `impeccable` pass needed — Seerr has no fields or tasks of its own to
 run a UI pass against. Per the "What sharing means" section above, Seerr shares Overseerr's exact
-implementation (same enricher, same actuator tasks, same `overseerr`-prefixed field names), so the
+implementation (same enricher, same actuator tasks, same `seerr`-prefixed field names), so the
 actual widget/parameter decisions already live in [`specs/overseerr.md`](overseerr.md)'s "UI
 decisions" section — that is the source of truth, not this file. Nothing to record here until Seerr
 is promoted from a migration note to a full spec (see "Trigger to revisit this file" below).
@@ -67,6 +56,6 @@ is promoted from a migration note to a full spec (see "Trigger to revisit this f
 ## Trigger to revisit this file
 
 Upgrade the container to the merged Seerr project, then: (1) confirm `request`/`issue`/`search`
-responses still match what `overseerrFieldProvider` expects, (2) decide whether the Jellyfin/Emby and
+responses still match what `seerrFieldProvider` expects, (2) decide whether the Jellyfin/Emby and
 multi-Plex surfaces above are worth wiring, (3) promote this from a migration note to a full spec if
 Seerr-specific surface work is scoped in.

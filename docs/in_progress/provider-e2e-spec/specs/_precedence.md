@@ -49,13 +49,13 @@ a parameter) consumes it.
 ## Naming disambiguation (not a precedence merge — distinct concepts, distinct names)
 
 - **`seriesStatus`** — renamed from bare `status` (`NormalizedSeries.status`, series continuing/ended).
-  The only unprefixed "status" field; now sits alongside `overseerrRequestStatus`,
-  `overseerrIssueStatus`, `radarrStatus`, and `tmdbStatus` — none of which it merges with, each a
+  The only unprefixed "status" field; now sits alongside `seerrRequestStatus`,
+  `seerrIssueStatus`, `radarrStatus`, and `tmdbStatus` — none of which it merges with, each a
   distinct concept. TVMaze's status also maps onto this field's vocabulary (`Ended`→`ended`,
   `Running`→`continuing`, `To Be Determined`→`upcoming`) — same mapping already decided in
   `specs/tvmaze.md`, now documented at this field's new name.
-- **`overseerrMediaStatus`** (reserved, not built) — the name to use if `MediaInfo.status`
-  (Overseerr's media-availability enum, distinct from `overseerrRequestStatus`) is ever wired as a
+- **`seerrMediaStatus`** (reserved, not built) — the name to use if `MediaInfo.status`
+  (Overseerr's media-availability enum, distinct from `seerrRequestStatus`) is ever wired as a
   filter. No current field to rename; recorded so nobody picks a colliding name later.
 - **`jellyfinLabels` vs `tagIds`** — permanently separate. String labels vs. numeric per-instance
   tag ids are not the same type and don't merge under one field or precedence entry.
@@ -72,8 +72,8 @@ a parameter) consumes it.
 
 ## Flagged, no action needed (forward-looking only, no current collision)
 
-- `overseerrRequestedBy` vs a hypothetical future arr-stack "added by" field.
-- `overseerrRequestId` vs `tmdbId` as canonical identity, if request-level identity is ever
+- `seerrRequestedBy` vs a hypothetical future arr-stack "added by" field.
+- `seerrRequestId` vs `tmdbId` as canonical identity, if request-level identity is ever
   surfaced directly.
 - `images` — TMDB's trending-backdrops feature vs. any future Plex/Jellyfin artwork concept; none
   of the three is a real filterable field today.

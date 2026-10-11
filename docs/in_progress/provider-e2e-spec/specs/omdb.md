@@ -127,7 +127,7 @@ implemented.
 
 ### `awardWinner` / `oscarWinner` — confirmed `boolean`, both need `BOOLEAN_VALUE_LABELS` entries
 
-Same shape as `hasTrailer`/`overseerrHasIssue` — generic "Yes"/"No" would read ambiguously in an
+Same shape as `hasTrailer`/`seerrHasIssue` — generic "Yes"/"No" would read ambiguously in an
 active-filter chip, and the two rules are independent signals (a title can be industry-award-winning
 without having won an Oscar specifically, or vice versa in edge cases like nominations counted
 differently), so they need distinct copy, not a shared pair. Add:

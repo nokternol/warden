@@ -94,7 +94,9 @@ against it is a separate, later effort (`/tdd` or `/plan-and-go`).
   bare re-export with no `SEERR` case in `ProviderFactory`.
 - [Seerr — decision](tickets/09-seerr-decision.md) — shares Overseerr's implementation rather than
   parallel wiring; `SEERR` is the go-forward type but doesn't replace `OVERSEERR` in the enum; live
-  compatibility verification deferred to the user's eventual upgrade.
+  compatibility verification deferred to the user's eventual upgrade. Superseded by MVP decision 9a:
+  `SEERR` is the only request-manager type and `OVERSEERR` is retired (see
+  [`specs/_implementation-map.md`](specs/_implementation-map.md)).
 - [TVMaze — research](tickets/10-tvmaze-research.md) — confirmed a buildable headline gap (`network`
   already in `ruleRegistry.ts`/`NormalizedSeries`) but no enricher exists yet to populate it.
 - [TVMaze — decision](tickets/10-tvmaze-decision.md) — corrected the "keyless" premise (TVMaze needs a
@@ -172,7 +174,7 @@ against it is a separate, later effort (`/tdd` or `/plan-and-go`).
   `region` in the system-wide settings table to break every Plex-vs-Jellyfin tie. `releaseDate`
   merges Plex/Jellyfin as one field, stays separate from Radarr's milestone dates. `status`
   (`NormalizedSeries`) renamed `seriesStatus` to finish disambiguating the four-way "status" overload
-  alongside `overseerrRequestStatus`/`overseerrIssueStatus`/`radarrStatus`/`tmdbStatus`. Written as
+  alongside `seerrRequestStatus`/`seerrIssueStatus`/`radarrStatus`/`tmdbStatus`. Written as
   `specs/_precedence.md` — last ticket on the map, destination reached.
 
 ## Not yet specified

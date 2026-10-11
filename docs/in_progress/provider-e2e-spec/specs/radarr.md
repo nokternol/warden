@@ -210,7 +210,7 @@ that design.
 Confirmed the concern: `number` dataType (per `RuleControl`'s `string`/`number` branch) is the same
 fixed-`ENUM_OPTIONS`-picker shape as `string`, not a numeric input — `movieFileCount`'s actual value
 space (0, 1, 2, 3…) has no natural small enum, so an `ENUM_OPTIONS` entry doesn't fit the way
-`overseerrRequestStatus`'s small fixed status-code set does.
+`seerrRequestStatus`'s small fixed status-code set does.
 
 **Decision: reclassify `movieFileCount` to `range` dataType**, same shape as `sizeOnDiskGb`. A
 `NumberRangeFilter` with equal min/max still expresses an exact-count match (e.g. "movieFileCount = 0"

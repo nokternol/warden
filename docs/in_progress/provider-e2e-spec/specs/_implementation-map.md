@@ -104,8 +104,8 @@ lookup shipped; only the two task actions wait — revisit once `_automation-par
 **Overseerr and Seerr are one provider, partially done, still `implementing`.** MVP slice D3 (#70)
 absorbed the migration note (`seerr.md`) and the baseline of `overseerr.md`, under MVP decision 9a:
 the request manager is the single provider type `SEERR`, class `SeerrProvider`, and there is no
-`OVERSEERR` type. This supersedes `seerr.md`'s "stays a distinct type alongside `OVERSEERR`" and
-`overseerr.md`'s `overseerr`-prefixed key names; the specs keep the names as history. Done:
+`OVERSEERR` type. Both specs describe that one type and use the `seerr` prefix for every field and
+rule key. Done:
 
 - `SEERR` is built by `ProviderFactory`, offered by the provider-type catalogue and no longer deferred
   in `contract/scope.ts`; the connection test probes it.
@@ -117,7 +117,7 @@ the request manager is the single provider type `SEERR`, class `SeerrProvider`, 
   against both.
 
 Still open, not built: every row of `overseerr.md`'s "New fields to wire" and "Tasks / automation
-options" (MVP decision 10 offers no Seerr tasks, enrichment only), and its known limitations. New
-fields take the `seerr` prefix. `seerr.md`'s live-compatibility check against a real Seerr server
+options" (MVP decision 10 offers no Seerr tasks, enrichment only), and its known limitations.
+`seerr.md`'s live-compatibility check against a real Seerr server
 belongs to MVP slice G1, after the NAS upgrade; its Seerr-only surfaces (Jellyfin/Emby auth,
 multi-Plex-server settings) stay out of scope.
