@@ -223,7 +223,7 @@ export const automationRuns = sqliteTable(
       .notNull()
       .references(() => automations.id, { onDelete: 'cascade' }),
     ranAt: createdAt('ranAt'),
-    status: text('status').notNull(), // 'success' | 'error'
+    status: text('status').notNull(), // 'success' | 'error' | 'skipped'
     itemCount: integer('itemCount'),
     error: text('error'),
     kind: text('kind').notNull().default('user'), // 'user' | 'system'
