@@ -307,6 +307,22 @@ describe('AutomationBuilder', () => {
     expect(screen.getByRole('button', { name: /create automation/i })).toBeDisabled();
   });
 
+  it('asks again when the queries change after a confirmation', async () => {
+    mockApi([makeProvider()], [{ providerId: 1, type: 'RADARR', tasks: [ENABLED_DELETE] }]);
+    const user = userEvent.setup();
+    renderBuilder();
+
+    await user.type(screen.getByLabelText('Name'), 'Purge');
+    await user.click(await screen.findByRole('radio', { name: /delete movie \+ files/i }));
+    await user.click(screen.getByRole('checkbox', { name: /confirm/i }));
+    const role = screen.getByRole('combobox');
+    await user.selectOptions(role, 'exclude');
+    await user.selectOptions(role, 'include');
+
+    expect(screen.getByRole('checkbox', { name: /confirm/i })).not.toBeChecked();
+    expect(screen.getByRole('button', { name: /create automation/i })).toBeDisabled();
+  });
+
   it('states how many items the destructive task will affect in its confirmation', async () => {
     mockApi([makeProvider()], [{ providerId: 1, type: 'RADARR', tasks: [ENABLED_DELETE] }]);
     server.use(

@@ -289,7 +289,12 @@ export default function AutomationBuilder({
           <AutomationQueryList
             automationQueries={automationQueries}
             queries={queries.map((q) => ({ id: q.id, name: q.name }))}
-            onChange={setAutomationQueries}
+            onChange={(next) => {
+              // The confirmation states a count for the queries it was given;
+              // a different set of queries needs confirming afresh.
+              setAutomationQueries(next);
+              setSelection((current) => current && { ...current, confirmed: false });
+            }}
           />
         </div>
 

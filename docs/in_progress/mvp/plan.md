@@ -620,7 +620,7 @@ names, so nothing is renamed twice.
     *"Delete movie + files · will affect 214 movies"* (singular for one; no number while counting or
     when the count fails).
   - A destructive automation can't be saved until its effect is explicitly confirmed. Changing the
-    task clears the confirmation.
+    task or the queries clears the confirmation, since the count it stated no longer holds.
   - A non-destructive task never asks for confirmation and is never counted.
 - **Expected end state:** the count is exact, not estimated. No existing endpoint could express a
   multi-query automation or a non-source actuator's addressing, so `POST /api/automations/preview`

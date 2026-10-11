@@ -140,7 +140,7 @@ The descriptor's `destructive` flag is what asks for the count: the automation b
 ([`src/components/AutomationBuilder/index.tsx`](ref:path:src/components/AutomationBuilder/index.tsx))
 fetches a preview only for a destructive task, states it in a confirmation (*"Delete movie + files · will
 affect 214 movies"*), and will not save a destructive automation until that confirmation is ticked.
-Choosing a different task clears the confirmation. A non-destructive task asks nothing.
+Choosing a different task, or changing the queries, clears the confirmation: the count it stated no longer holds. A non-destructive task asks nothing.
 
 ## Non-source execution: id translation through the identity graph
 
