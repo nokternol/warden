@@ -119,8 +119,9 @@ principles become these acceptance checks on every UI slice:
 ## Baseline (verified 2026-10-03, `main` @ `2fc775a`)
 
 - `yarn typecheck` ✅, `yarn depcruise:ci` ✅, `yarn test:run` ✅ (166 files, 1,420 tests).
-- The container image has **never been built in CI**, and Docker is not installed on the dev box.
-  E1 makes the image verifiable.
+- The container image has **never been built in CI** and had never been built and run: its `CMD`
+  named a file that did not exist. E1 makes the image verifiable locally, and E3 runs the same smoke
+  script in CI.
 
 ## Findings this plan heals
 
@@ -158,7 +159,7 @@ principles become these acceptance checks on every UI slice:
 | D3 | **Browse and save encode filter state two ways.** `MOVIE_PARAM_TO_KEY`/`SERIES_PARAM_TO_KEY` + `toFilterValues()`, a range satellite map and its coverage check, and the client mirror `toBrowseParams()`. | `media.handler.ts:169-345`, `src/lib/mediaQueryAdapters.ts:194` |
 | D4 | **Three multi-select controls** in one 1,829-line file. | `MediaFilterBar/index.tsx:136,342`, `filters/OptionFilter` |
 | D5 | **`'active' \| 'paused'` declared in four places**, and `z.enum(['movie','show'])` re-declared beside `ContentTypeSchema`. | F1 sites, `mediaQueries.schemas.ts:15` |
-| D6 | **Migrations copied into the image twice**, and `nodemon` ships in production dependencies. | `package.json` `build:server`, `Dockerfile` |
+| D6 | **Migrations copied into the image twice**, and `nodemon` ships in production dependencies. | `package.json` `build:server`, `Dockerfile`. **Healed by E1.** Neither migrations copy landed where `server/database/index.ts` reads, and `CMD` and `yarn start` ran a `dist/index.js` that is really `dist/server/index.js`. `build:server` now copies migrations beside the compiled module, the paths are fixed, and `nodemon` is removed. |
 
 ### Loose ends (reachable but broken, or unreachable but present)
 
@@ -268,7 +269,7 @@ flowchart LR
   C2 & B3 --> C5[C5 server decides exposure]
   D2[D2 run lists what changed]
   B5 & C5 --> D3[D3 Seerr is the one request manager]
-  E1[E1 image correct] --> E2[E2 compose] --> E3[E3 CI smoke + publish]
+  E1[E1 image correct + compose] --> E3[E3 CI smoke + publish]
   A2 --> E3
   C3 & C4 & C5 & D1 & D2 & D3 & D4 & F1 --> F2[F2 impeccable pass]
   F2 & E3 --> G1[G1 acceptance + docs closure]
@@ -723,31 +724,45 @@ names, so nothing is renamed twice.
 
 ### Track E — Containerised delivery
 
-**E1 · The image is correct** (after B5)
+**E1 · The image is correct, with compose and run docs** (after B5; absorbed the former E2)
 - **Model:** Sonnet 5.5 (container plumbing).
-- **Behaviours** (asserted by `scripts/container-smoke.sh` in CI, since Docker isn't available
-  locally):
+- **Behaviours** (asserted by `scripts/container-smoke.sh`, run locally against a locally built image):
   - Started with a config volume and `SESSION_SECRET`, the container reports healthy and serves the
-    login page.
+    login page, including on an empty volume (the app creates the database directory).
   - Restarted, it re-runs migrations harmlessly and keeps its data.
-  - Stopped, it exits within 10 seconds.
-- **Expected end state:** move `nodemon`/`tsx` to devDependencies, copy `next.config.js` into the runner if
-  `next({dev:false})` needs it (the smoke test decides), add `USER node`, and add a `HEALTHCHECK`
-  using busybox `wget` against `/api/health`.
-- **Deletes:** the duplicate migrations `COPY` (D6).
-
-**E2 · Compose and run docs**
-- **Model:** Sonnet 5.5 (container plumbing).
-- `compose.yaml`: one service, `./config:/app/config`, `SESSION_SECRET: ${SESSION_SECRET:?}` (fails
-  loudly when unset), `TZ` (cron schedules are wall-clock; a scheduler test proves croner honours
-  it), `TRUST_PROXY`, port 5057.
-- README leads with *Run with Docker*. The dev quickstart moves below it.
-- The smoke script gains a compose mode, so CI tests the file users actually run.
+  - Stopped, it exits gracefully within 10 seconds.
+  - It runs as `PUID:PGID` (default 1000:1000) and files it creates in the mapped folder belong to
+    that identity; a container already started non-root skips the privilege drop.
+  - `TZ` is honoured inside the image, for both `Date` and croner's next-run time. A scheduler unit
+    test proves croner follows the `TZ` environment zone.
+  - Layers follow change boundaries: a source edit reuses both dependency installs, and an edit
+    outside the build inputs reuses every build step.
+  - Compose mode runs the same checks through the unmodified `compose.yaml`, and an unset
+    `SESSION_SECRET` fails loudly.
+- **Expected end state:**
+  - The Dockerfile has manifest-first `deps` and `prod-deps` stages (cached, locked yarn mount), a
+    builder that copies only explicit build inputs (Next.js app first, then server), and a runner
+    that takes pruned production `node_modules` and never runs yarn.
+  - The runner starts as root through `docker/entrypoint.sh`, which drops to `PUID:PGID` with
+    `su-exec` under `dumb-init`. It does not re-own the mapped folder's contents.
+  - A `HEALTHCHECK` uses busybox `wget` against `/api/health`.
+  - `next.config.js` is not copied into the runner: `/login` is served without it.
+  - `build:server` copies migrations to `dist/server/database/`, and `CMD` and `yarn start` run
+    `dist/server/index.js`.
+  - `compose.yaml` has one service, `./config:/app/config`, `SESSION_SECRET: ${SESSION_SECRET:?}`,
+    `TZ`, `TRUST_PROXY`, `PUID`/`PGID` and port 5057.
+  - The README leads with *Run with Docker*; the development quickstart follows it.
+  - `nodemon` and `dev:nodemon` are removed, and `dev:debug` is `tsx watch --inspect`.
+- **Deletes:** the migrations `COPY` in the Dockerfile and `nodemon` (D6). The copy was not a
+  harmless duplicate: neither copy landed where the code reads, which is the build output layout
+  (`dist/server/...`).
+- **Local note:** where build containers cannot resolve DNS (rootless Docker on WSL), pass
+  `SMOKE_BUILD_FLAGS="--network host"`.
 
 **E3 · CI builds, smokes and publishes** *(decision 5)*
 - **Model:** Sonnet 5.5 (CI wiring).
-- A `container` job in `quality-gate.yml` runs the smoke test on every PR. On pushes to `main` or
-  `v*` tags it publishes `ghcr.io/nokternol/warden:{sha,latest,semver}`. **Gated on A2:** no image is
+- **After E1 and A2.** A `container` job in `quality-gate.yml` runs `scripts/container-smoke.sh`
+  (image and `--compose` modes) on every PR. On pushes to `main` or `v*` tags it publishes `ghcr.io/nokternol/warden:{sha,latest,semver}`. **Gated on A2:** no image is
   published before sign-in is owner-only.
 
 ### Track F — UI pass (impeccable)
