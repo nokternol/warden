@@ -1,0 +1,21 @@
+# Warden: one service, state in ./config (database and logs).
+#
+#   SESSION_SECRET=$(openssl rand -hex 32) docker compose up -d
+#
+# ./config must be writable by uid 1000 (the image runs as the node user):
+#   mkdir -p config && chown -R 1000:1000 config
+services:
+  warden:
+    image: ghcr.io/nokternol/warden:latest
+    restart: unless-stopped
+    ports:
+      - "5057:5057"
+    volumes:
+      - ./config:/app/config
+    environment:
+      # Required. Signs session cookies; compose refuses to start without it.
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET to a long random string}
+      # Cron schedules run in wall-clock time of this zone, e.g. Europe/London.
+      TZ: ${TZ:-UTC}
+      # Set to true when running behind a reverse proxy so client IPs are read from X-Forwarded-For.
+      TRUST_PROXY: ${TRUST_PROXY:-false}

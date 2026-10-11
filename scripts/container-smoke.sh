@@ -16,6 +16,7 @@ MODE=image
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORK="$(mktemp -d)"
 NAME="warden-smoke-$$"
+CID="$NAME" # container to inspect; compose mode points it at the compose-created container
 SECRET="smoke-secret-$$"
 HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-90}"
 STOP_BUDGET_SECONDS=10
@@ -27,6 +28,12 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 pass() { echo "ok: $*"; }
 
 cleanup() {
+  if [[ "$MODE" == compose ]]; then
+    compose down -v >/dev/null 2>&1 || true
+    # Files the container wrote to the bind mount belong to its mapped uid; remove them as root.
+    docker run --rm --user root -v "$COMPOSE_DIR/config:/c" --entrypoint sh "$IMAGE" \
+      -c 'rm -rf /c/* /c/.[!.]*' >/dev/null 2>&1 || true
+  fi
   docker rm -f "$NAME" >/dev/null 2>&1 || true
   docker rmi -f "$IMAGE-layering" >/dev/null 2>&1 || true
   docker volume rm -f "$NAME-config" >/dev/null 2>&1 || true
@@ -34,15 +41,41 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Compose mode runs the repo's compose.yaml unmodified, overriding only the image (the local build
+# instead of the published one) and the port (an ephemeral host port instead of 5057).
+COMPOSE_DIR="$WORK/compose"
+# compose.yaml reads these from the environment, as a user would supply them.
+export SESSION_SECRET="$SECRET" TZ="$ZONE"
+compose() {
+  docker compose -p "$NAME" --project-directory "$COMPOSE_DIR" \
+    -f "$ROOT/compose.yaml" -f "$COMPOSE_DIR/override.yaml" "$@"
+}
+
+start_compose() {
+  mkdir -p "$COMPOSE_DIR/config"
+  # Rootless Docker maps the node user to a subordinate uid, so a bind mount must be world-writable.
+  chmod 777 "$COMPOSE_DIR/config"
+  cat >"$COMPOSE_DIR/override.yaml" <<YAML
+services:
+  warden:
+    image: $IMAGE
+    ports: !override
+      - "127.0.0.1::5057"
+YAML
+  compose up -d >/dev/null
+  CID="$(compose ps -q warden)"
+}
+
 start_container() {
+  if [[ "$MODE" == compose ]]; then start_compose; return; fi
   docker run -d --name "$NAME" -e SESSION_SECRET="$SECRET" -e TZ="$ZONE" \
     -v "$NAME-config:/app/config" -p 127.0.0.1::5057 "$IMAGE" >/dev/null
 }
 
-host_port() { docker port "$NAME" 5057/tcp | head -n1 | sed 's/.*://'; }
+host_port() { docker port "$CID" 5057/tcp | head -n1 | sed 's/.*://'; }
 
 health_status() {
-  docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$NAME"
+  docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$CID"
 }
 
 wait_healthy() {
@@ -71,23 +104,23 @@ check_healthy_and_serves_login() {
 
 check_runs_unprivileged_with_writable_volume() {
   local user
-  user="$(docker exec "$NAME" id -un)"
+  user="$(docker exec "$CID" id -un)"
   [[ "$user" == "node" ]] || fail "container runs as '$user', expected node"
-  docker exec "$NAME" test -f /app/config/db/warden.db \
+  docker exec "$CID" test -f /app/config/db/warden.db \
     || fail "database file was not created in the config volume"
   pass "runs as node and writes to the config volume"
 }
 
 check_honours_tz() {
   local offset
-  offset="$(docker exec "$NAME" node -e 'process.stdout.write(String(new Date().getTimezoneOffset()))')"
+  offset="$(docker exec "$CID" node -e 'process.stdout.write(String(new Date().getTimezoneOffset()))')"
   [[ "$offset" == "$ZONE_OFFSET_MINUTES" ]] \
     || fail "TZ=$ZONE gave offset $offset minutes, expected $ZONE_OFFSET_MINUTES"
   pass "TZ=$ZONE is honoured inside the image"
 
   # A wall-clock schedule fires at 09:00 in that zone, which is 00:00 UTC for Tokyo.
   local utc_time
-  utc_time="$(docker exec "$NAME" node -e \
+  utc_time="$(docker exec "$CID" node -e \
     "const { Cron } = require('croner'); process.stdout.write(new Cron('0 9 * * *').nextRun().toISOString().slice(11, 19))")"
   [[ "$utc_time" == "00:00:00" ]] \
     || fail "croner fired '0 9 * * *' at $utc_time UTC under TZ=$ZONE, expected 00:00:00"
@@ -97,7 +130,7 @@ check_honours_tz() {
 # Runs a libsql statement against the container's database and prints the first column of the
 # first row, if any.
 db_exec() {
-  docker exec "$NAME" node -e "
+  docker exec "$CID" node -e "
     const { createClient } = require('@libsql/client');
     const c = createClient({ url: 'file:/app/config/db/warden.db' });
     c.execute(process.argv[1]).then((r) => {
@@ -109,7 +142,7 @@ db_exec() {
 check_restart_keeps_data() {
   db_exec 'CREATE TABLE IF NOT EXISTS smoke_marker (v TEXT)' >/dev/null
   db_exec "INSERT INTO smoke_marker VALUES ('kept')" >/dev/null
-  docker restart "$NAME" >/dev/null
+  docker restart "$CID" >/dev/null
   wait_healthy
   local kept
   kept="$(db_exec 'SELECT v FROM smoke_marker LIMIT 1')"
@@ -119,9 +152,9 @@ check_restart_keeps_data() {
 
 check_stops_within_budget() {
   local started=$SECONDS elapsed exit_code
-  docker stop -t "$STOP_BUDGET_SECONDS" "$NAME" >/dev/null
+  docker stop -t "$STOP_BUDGET_SECONDS" "$CID" >/dev/null
   elapsed=$((SECONDS - started))
-  exit_code="$(docker inspect --format '{{.State.ExitCode}}' "$NAME")"
+  exit_code="$(docker inspect --format '{{.State.ExitCode}}' "$CID")"
   [[ "$exit_code" == "0" ]] || fail "container was killed (exit $exit_code) instead of stopping gracefully"
   ((elapsed < STOP_BUDGET_SECONDS)) || fail "stop took ${elapsed}s, budget ${STOP_BUDGET_SECONDS}s"
   pass "stops gracefully in ${elapsed}s"
@@ -182,8 +215,21 @@ check_layers_follow_change_boundaries() {
   pass "an edit outside the build inputs reuses every build step"
 }
 
+check_unset_secret_fails_loudly() {
+  local output
+  if output="$(unset SESSION_SECRET; compose config 2>&1)"; then
+    fail "compose.yaml accepted an unset SESSION_SECRET"
+  fi
+  [[ "$output" == *SESSION_SECRET* ]] || fail "compose error does not name SESSION_SECRET: $output"
+  pass "compose.yaml fails loudly without SESSION_SECRET"
+}
+
 if [[ "$MODE" == image ]]; then
   check_layers_follow_change_boundaries
+else
+  mkdir -p "$COMPOSE_DIR"
+  printf 'services: {}\n' >"$COMPOSE_DIR/override.yaml"
+  check_unset_secret_fails_loudly
 fi
 
 start_container
