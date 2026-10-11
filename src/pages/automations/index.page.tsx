@@ -14,7 +14,7 @@ import { useProviderSettings } from '@app/hooks/useProviderSettings';
 import { setupState } from '@app/lib/setupGuidance';
 import { cn } from '@app/lib/utils/cn';
 import { requireAuth } from '@app/lib/utils/requireAuth';
-import { BookMarked, Clapperboard, Zap } from 'lucide-react';
+import { BookMarked, Zap } from 'lucide-react';
 import type { GetServerSideProps } from 'next';
 import { useRouter } from 'next/router';
 import { useState } from 'react';
@@ -205,17 +205,6 @@ export default function AutomationsPage() {
                   aria-hidden="true"
                 />
                 <p className="text-sm font-medium text-text-secondary">No queries yet</p>
-                <p className="text-xs text-text-muted max-w-xs">
-                  Go to the Media page, apply any combination of filters, and use the "Save as
-                  query" button to save them here.
-                </p>
-                <a
-                  href="/media"
-                  className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-sm bg-primary text-white hover:bg-primary-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-bg"
-                >
-                  <Clapperboard size={12} strokeWidth={2} aria-hidden="true" />
-                  Go to Media
-                </a>
               </div>
             </div>
           ) : (

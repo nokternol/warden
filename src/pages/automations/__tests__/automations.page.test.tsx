@@ -74,6 +74,16 @@ describe('AutomationsPage', () => {
       expect(screen.queryByText(/select a query above/i)).not.toBeInTheDocument();
     });
 
+    it('keeps first-run instructions out of the empty queries list', async () => {
+      server.use(mockProcedure(contract.mediaQueries.list, () => []));
+
+      render(<AutomationsPage />, { wrapper: Wrapper });
+
+      expect(await screen.findByText('No queries yet')).toBeInTheDocument();
+      expect(screen.queryByText(/save as query/i)).not.toBeInTheDocument();
+      expect(screen.getAllByRole('link', { name: /go to media/i })).toHaveLength(1);
+    });
+
     it.each([
       ['providers', contract.providers.list],
       ['sources', contract.media.sources],
