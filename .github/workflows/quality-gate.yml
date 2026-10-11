@@ -31,3 +31,15 @@ jobs:
       - run: docker build -t warden:smoke .
       - run: SMOKE_SKIP_BUILD=1 IMAGE=warden:smoke scripts/container-smoke.sh
       - run: SMOKE_SKIP_BUILD=1 IMAGE=warden:smoke scripts/container-smoke.sh --compose
+
+  # Runs only for pushes to main and v* tags (the push triggers above), never for pull requests.
+  publish:
+    needs: [checks, container]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}

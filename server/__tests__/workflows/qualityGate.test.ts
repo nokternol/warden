@@ -55,3 +55,12 @@ describe('quality gate workflow: triggers', () => {
     expect(workflow.on.push?.tags).toEqual(['v*']);
   });
 });
+
+describe('quality gate workflow: publish', () => {
+  const publish = workflow.jobs.publish ?? ({ steps: [] } as Job);
+
+  it('publishes only on pushes, and only after the checks and the container smoke pass', () => {
+    expect(publish.if).toBe("github.event_name == 'push'");
+    expect([publish.needs].flat().sort()).toEqual(['checks', 'container']);
+  });
+});
