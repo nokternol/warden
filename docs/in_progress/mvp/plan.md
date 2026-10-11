@@ -613,13 +613,22 @@ names, so nothing is renamed twice.
 ### Track D — Finish the in-scope features
 
 **D1 · Destructive tasks state their blast radius** (after C0; story first)
-- **Model:** Sonnet 5.5 (one component behaviour on an existing endpoint).
+- **Model:** Sonnet 5.5.
 - **Why:** state clarity. `ActuatorTaskDescriptor.destructive` exists but the builder ignores it.
 - **Behaviours:**
   - With a destructive task selected, the builder states how many items it will affect, as in
-    *"Deletes files for 214 movies"*.
-  - A destructive automation can't be saved until its effect is explicitly confirmed.
-  - A non-destructive task never asks for confirmation.
+    *"Delete movie + files · will affect 214 movies"* (singular for one; no number while counting or
+    when the count fails).
+  - A destructive automation can't be saved until its effect is explicitly confirmed. Changing the
+    task clears the confirmation.
+  - A non-destructive task never asks for confirmation and is never counted.
+- **Expected end state:** the count is exact, not estimated. No existing endpoint could express a
+  multi-query automation or a non-source actuator's addressing, so `POST /api/automations/preview`
+  (`automations.preview` in the contract) runs `AutomationExecutor.planRun`, the planning a real run
+  uses, and counts its actuator ids without running the task or recording a run. A draft with no
+  included query, or a task not enabled on the instance, answers 400; an unknown provider answers
+  404. The builder reads it through `useAutomationPreview`, and holds the chosen task, its parameter
+  value and its confirmation together, so choosing another task starts fresh.
 
 **D2 · A run says what changed** *(decisions 4, 4a)*
 - **Model:** Opus 5.5 (schema + identity-job behaviour + transaction).
