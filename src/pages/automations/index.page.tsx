@@ -150,11 +150,6 @@ export default function AutomationsPage() {
               <div className="flex flex-col items-center justify-center py-12 gap-3 text-center px-6">
                 <Zap size={28} strokeWidth={1.25} className="text-text-muted" aria-hidden="true" />
                 <p className="text-sm font-medium text-text-secondary">No automations yet</p>
-                <p className="text-xs text-text-muted max-w-xs">
-                  {queries.length === 0
-                    ? 'Save a query from the media page, then create an automation to run it on a schedule.'
-                    : 'Select a query above and click "+ New automation" to get started.'}
-                </p>
               </div>
             </div>
           ) : (

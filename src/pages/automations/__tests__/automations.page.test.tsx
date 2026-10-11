@@ -61,6 +61,19 @@ describe('AutomationsPage', () => {
       expect(screen.queryByRole('list', { name: 'Setup' })).not.toBeInTheDocument();
     });
 
+    it('keeps first-run instructions out of the empty automations list', async () => {
+      server.use(
+        mockProcedure(contract.automations.list, () => []),
+        mockProcedure(contract.mediaQueries.list, () => [])
+      );
+
+      render(<AutomationsPage />, { wrapper: Wrapper });
+
+      expect(await screen.findByText('No automations yet')).toBeInTheDocument();
+      expect(screen.queryByText(/save a query from the media page/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/select a query above/i)).not.toBeInTheDocument();
+    });
+
     it.each([
       ['providers', contract.providers.list],
       ['sources', contract.media.sources],
