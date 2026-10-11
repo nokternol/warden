@@ -1,8 +1,8 @@
 import { MetadataProviderType } from '../../../database/schema';
 import type {
   JellyfinProvider,
-  OverseerrProvider,
   PlexProvider,
+  SeerrProvider,
   TautulliProvider,
   TmdbProvider,
 } from '../../providers';
@@ -83,7 +83,7 @@ export function jellyfinEnricher(jellyfin: JellyfinProvider): MediaEnricher<Jell
 }
 
 export function overseerrEnricher(
-  overseerr: OverseerrProvider
+  overseerr: SeerrProvider
 ): MediaEnricher<'overseerrRequestStatus' | 'overseerrHasIssue'> {
   return {
     enrich: async (

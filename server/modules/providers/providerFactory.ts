@@ -3,9 +3,9 @@ import { MetadataProviderType } from '@server/database/schema';
 import type { Logger } from 'winston';
 import { JellyfinProvider } from './connections/jellyfinProvider';
 import { OmdbProvider } from './connections/omdbProvider';
-import { OverseerrProvider } from './connections/overseerrProvider';
 import { PlexProvider } from './connections/plexProvider';
 import { RadarrProvider } from './connections/radarrProvider';
+import { SeerrProvider } from './connections/seerrProvider';
 import { SonarrProvider } from './connections/sonarrProvider';
 import { TautulliProvider } from './connections/tautulliProvider';
 import { TmdbProvider } from './connections/tmdbProvider';
@@ -19,7 +19,7 @@ export type AnyProvider =
   | PlexProvider
   | JellyfinProvider
   | TautulliProvider
-  | OverseerrProvider
+  | SeerrProvider
   | TmdbProvider
   | OmdbProvider;
 
@@ -33,7 +33,7 @@ export interface ProviderSet {
   plex?: PlexProvider;
   jellyfin?: JellyfinProvider;
   tautulli?: TautulliProvider;
-  overseerr?: OverseerrProvider;
+  overseerr?: SeerrProvider;
   tmdb?: TmdbProvider;
 }
 
@@ -62,7 +62,8 @@ export class ProviderFactory implements IProviderFactory {
       case MetadataProviderType.TAUTULLI:
         return new TautulliProvider(provider, logger);
       case MetadataProviderType.OVERSEERR:
-        return new OverseerrProvider(provider, logger);
+      case MetadataProviderType.SEERR:
+        return new SeerrProvider(provider, logger);
       case MetadataProviderType.TMDB:
         return new TmdbProvider(provider, logger);
       case MetadataProviderType.OMDB:
@@ -80,7 +81,7 @@ export class ProviderFactory implements IProviderFactory {
       if (provider instanceof PlexProvider) set.plex = provider;
       else if (provider instanceof JellyfinProvider) set.jellyfin = provider;
       else if (provider instanceof TautulliProvider) set.tautulli = provider;
-      else if (provider instanceof OverseerrProvider) set.overseerr = provider;
+      else if (provider instanceof SeerrProvider) set.overseerr = provider;
       else if (provider instanceof TmdbProvider) set.tmdb = provider;
     }
     return set;

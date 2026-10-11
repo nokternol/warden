@@ -1,10 +1,10 @@
 import type {
   JellyfinItem,
   JellyfinMediaSource,
-  OverseerrIssue,
-  OverseerrRequest,
   PlexMedia,
   PlexMediaItem,
+  SeerrIssue,
+  SeerrRequest,
   TautulliHistoryItem,
 } from '../providers';
 
@@ -135,7 +135,7 @@ interface OverseerrNativeFields {
 }
 
 export const overseerrFieldProvider: MediaFieldProvider<
-  [OverseerrRequest[], OverseerrIssue[]],
+  [SeerrRequest[], SeerrIssue[]],
   OverseerrNativeFields,
   Partial<Pick<EnrichmentFields, 'overseerrRequestStatus' | 'overseerrHasIssue'>>,
   number

@@ -9,9 +9,9 @@ import {
 } from '@server/modules/media/mediaFieldProvider';
 import type {
   JellyfinItem,
-  OverseerrIssue,
-  OverseerrRequest,
   PlexMediaItem,
+  SeerrIssue,
+  SeerrRequest,
   TautulliHistoryItem,
 } from '@server/modules/providers';
 import { describe, expect, it } from 'vitest';
@@ -78,7 +78,7 @@ describe('tautulliFieldProvider.toEnrichmentFields', () => {
   });
 });
 
-function overseerrRequest(tmdbId: number, status: number): OverseerrRequest {
+function overseerrRequest(tmdbId: number, status: number): SeerrRequest {
   return {
     id: 1,
     status,
@@ -89,7 +89,7 @@ function overseerrRequest(tmdbId: number, status: number): OverseerrRequest {
   };
 }
 
-function overseerrIssue(tmdbId: number): OverseerrIssue {
+function overseerrIssue(tmdbId: number): SeerrIssue {
   return { id: 1, status: 1, media: { tmdbId } };
 }
 

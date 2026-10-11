@@ -9,9 +9,9 @@ import { getChildLogger } from '@server/kernel/logger';
 import { probeConnection } from './connectionProbe';
 import { JellyfinProvider } from './connections/jellyfinProvider';
 import { OmdbProvider } from './connections/omdbProvider';
-import { OverseerrProvider } from './connections/overseerrProvider';
 import { PlexProvider } from './connections/plexProvider';
 import { RadarrProvider } from './connections/radarrProvider';
+import { SeerrProvider } from './connections/seerrProvider';
 import { SonarrProvider } from './connections/sonarrProvider';
 import { TautulliProvider } from './connections/tautulliProvider';
 import { TmdbProvider } from './connections/tmdbProvider';
@@ -267,7 +267,7 @@ export function createProvidersProcedures(
 
         case MetadataProviderType.OVERSEERR:
         case MetadataProviderType.SEERR: {
-          const provider = new OverseerrProvider(config, log);
+          const provider = new SeerrProvider(config, log);
           const requests = await provider.getRequests();
           return { type, data: { requests } };
         }

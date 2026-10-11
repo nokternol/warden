@@ -10,8 +10,8 @@ import {
 import type { NormalizedMovie } from '@server/modules/media/movie';
 import type { ProviderConfig } from '@server/modules/providers/connections/baseProviderConnection';
 import { JellyfinProvider } from '@server/modules/providers/connections/jellyfinProvider';
-import { OverseerrProvider } from '@server/modules/providers/connections/overseerrProvider';
 import { PlexProvider } from '@server/modules/providers/connections/plexProvider';
+import { SeerrProvider } from '@server/modules/providers/connections/seerrProvider';
 import { TautulliProvider } from '@server/modules/providers/connections/tautulliProvider';
 import { TmdbProvider } from '@server/modules/providers/connections/tmdbProvider';
 import { describe, expect, it, vi } from 'vitest';
@@ -247,7 +247,7 @@ describe('jellyfinEnricher', () => {
 
 describe('overseerrEnricher', () => {
   it('decorates a matched item with request status and issue flag, tagged by provider', async () => {
-    const overseerr = new OverseerrProvider(mockConfig, mockLogger);
+    const overseerr = new SeerrProvider(mockConfig, mockLogger);
     vi.spyOn(overseerr, 'getRequests').mockResolvedValue([
       {
         id: 1,

@@ -4,10 +4,10 @@ import { automationsHandlers, mediaQueriesHandlers } from './automations';
 import { backdropsHandlers } from './backdrops';
 import { jellyfinHandlers } from './jellyfin';
 import { mediaHandlers } from './media';
-import { overseerrHandlers } from './overseerr';
 import { plexProviderHandlers } from './plex';
 import { providersHandlers } from './providers';
 import { radarrHandlers } from './radarr';
+import { seerrHandlers } from './seerr';
 import { settingsHandlers } from './settings';
 import { sonarrHandlers } from './sonarr';
 import { tautulliHandlers } from './tautulli';
@@ -22,7 +22,7 @@ export const handlers = [
   ...sonarrHandlers,
   ...tautulliHandlers,
   ...jellyfinHandlers,
-  ...overseerrHandlers,
+  ...seerrHandlers,
   ...plexProviderHandlers,
   ...providersHandlers,
   ...settingsHandlers,

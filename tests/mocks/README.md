@@ -21,7 +21,7 @@ mocks/
     sonarr.ts     # Sonarr API mocks (outbound)
     tautulli.ts   # Tautulli API mocks (outbound)
     jellyfin.ts   # Jellyfin API mocks (outbound)
-    overseerr.ts  # Overseerr & Seerr API mocks (outbound)
+    seerr.ts      # Seerr API mocks, served as an Overseerr and a Seerr server (outbound)
   browser.ts      # MSW browser worker (Cypress, Ladle)
   server.ts       # MSW Node server (Vitest — both client and server tests)
 ```
