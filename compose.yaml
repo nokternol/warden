@@ -2,8 +2,8 @@
 #
 #   SESSION_SECRET=$(openssl rand -hex 32) docker compose up -d
 #
-# ./config must be writable by uid 1000 (the image runs as the node user):
-#   mkdir -p config && chown -R 1000:1000 config
+# The app runs as PUID:PGID (default 1000:1000) and needs to own ./config. If the folder's owner
+# is not the IDs you run with, set PUID/PGID to the owner (id -u / id -g) or chown the folder.
 services:
   warden:
     image: ghcr.io/nokternol/warden:latest
@@ -15,6 +15,9 @@ services:
     environment:
       # Required. Signs session cookies; compose refuses to start without it.
       SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET to a long random string}
+      # The user and group the app runs as. See the note at the top.
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
       # Cron schedules run in wall-clock time of this zone, e.g. Europe/London.
       TZ: ${TZ:-UTC}
       # Set to true when running behind a reverse proxy so client IPs are read from X-Forwarded-For.

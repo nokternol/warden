@@ -49,7 +49,8 @@ WORKDIR /app
 
 # dumb-init: lightweight init that properly forwards signals as PID 1.
 # Ensures SIGTERM reaches the Node process for graceful shutdown.
-RUN apk add --no-cache dumb-init
+# su-exec: drops privileges to PUID:PGID in the entrypoint and execs, adding no process.
+RUN apk add --no-cache dumb-init su-exec
 
 ENV NODE_ENV=production
 
@@ -61,17 +62,19 @@ COPY package.json ./
 COPY --from=builder /app/dist ./dist
 
 # Next.js compiled output and static assets
-COPY --from=builder --chown=node:node /app/.next ./.next
+COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 
 # config/ is mounted as a volume at runtime for SQLite db and logs.
 # DB_PATH defaults to ./config/db/warden.db
 # LOG_DIR defaults to ./config/logs
-# Created and owned by node so a fresh named volume inherits write access.
-RUN mkdir -p /app/config && chown node:node /app/config
+RUN mkdir -p /app/config
 VOLUME ["/app/config"]
 
-USER node
+# Next.js writes its image-optimisation cache here as whichever user the entrypoint selects.
+RUN mkdir -p /app/.next/cache && chmod 1777 /app/.next/cache
+
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 EXPOSE 5057
 
@@ -80,6 +83,7 @@ EXPOSE 5057
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
   CMD wget -q -O /dev/null http://127.0.0.1:5057/api/health || exit 1
 
-# dumb-init wraps node so signals are forwarded correctly.
-ENTRYPOINT ["dumb-init", "--"]
+# The container starts as root so the entrypoint can adopt PUID/PGID, then runs the server as that
+# user. dumb-init stays PID 1 so signals are forwarded correctly.
+ENTRYPOINT ["dumb-init", "--", "entrypoint.sh"]
 CMD ["node", "dist/server/index.js"]

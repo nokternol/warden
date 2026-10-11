@@ -36,7 +36,8 @@ cleanup() {
   fi
   docker rm -f "$NAME" >/dev/null 2>&1 || true
   docker rmi -f "$IMAGE-layering" >/dev/null 2>&1 || true
-  docker volume rm -f "$NAME-config" >/dev/null 2>&1 || true
+  docker rm -f "$NAME-id" >/dev/null 2>&1 || true
+  docker volume rm -f "$NAME-config" "$NAME-id-config" >/dev/null 2>&1 || true
   rm -rf "$WORK"
 }
 trap cleanup EXIT
@@ -46,6 +47,22 @@ trap cleanup EXIT
 COMPOSE_DIR="$WORK/compose"
 # compose.yaml reads these from the environment, as a user would supply them.
 export SESSION_SECRET="$SECRET" TZ="$ZONE"
+if [[ "$MODE" == compose ]]; then
+  export PUID=1026 PGID=100
+  EXPECT_IDENTITY="1026:100"
+else
+  EXPECT_IDENTITY="1000:1000" # the default when PUID/PGID are unset
+fi
+
+# Gives a host directory or named volume an existing db/ folder owned by $2 (uid:gid), from inside a
+# throwaway container, because under rootless Docker a host-owned directory appears as root. The
+# folder is created so a named volume is non-empty: Docker re-applies the image directory's
+# ownership to an empty volume on every mount.
+chown_as_root() {
+  docker run --rm --user root --entrypoint sh -v "$1:/app/config" "$IMAGE" \
+    -c 'mkdir -p /app/config/db && chown "$0" /app/config /app/config/db' "$2"
+}
+
 compose() {
   docker compose -p "$NAME" --project-directory "$COMPOSE_DIR" \
     -f "$ROOT/compose.yaml" -f "$COMPOSE_DIR/override.yaml" "$@"
@@ -53,8 +70,8 @@ compose() {
 
 start_compose() {
   mkdir -p "$COMPOSE_DIR/config"
-  # Rootless Docker maps the node user to a subordinate uid, so a bind mount must be world-writable.
-  chmod 777 "$COMPOSE_DIR/config"
+  # The config folder belongs to PUID:PGID, as a user's would; the container adapts to it.
+  chown_as_root "$COMPOSE_DIR/config" "$PUID:$PGID"
   cat >"$COMPOSE_DIR/override.yaml" <<YAML
 services:
   warden:
@@ -102,13 +119,51 @@ check_healthy_and_serves_login() {
   pass "login page served"
 }
 
-check_runs_unprivileged_with_writable_volume() {
-  local user
-  user="$(docker exec "$CID" id -un)"
-  [[ "$user" == "node" ]] || fail "container runs as '$user', expected node"
-  docker exec "$CID" test -f /app/config/db/warden.db \
+# Prints "uid:gid" of the node server process in container $1.
+app_identity() {
+  docker exec "$1" sh -c '
+    pid=$(ps -o pid,args | awk "/ node dist\\/server\\/index.js\$/ && !/dumb-init/ {print \$1; exit}")
+    uid=$(awk "/^Uid:/ {print \$2}" /proc/$pid/status)
+    gid=$(awk "/^Gid:/ {print \$2}" /proc/$pid/status)
+    printf "%s:%s" "$uid" "$gid"'
+}
+
+# Asserts container $1 runs the server as $2 (uid:gid) and that the files it created in the config
+# volume are owned by that identity.
+assert_identity_and_ownership() {
+  local cid="$1" expected="$2" identity owner
+  identity="$(app_identity "$cid")"
+  [[ "$identity" == "$expected" ]] || fail "server runs as $identity, expected $expected"
+  owner="$(docker exec "$cid" stat -c '%u:%g' /app/config/db/warden.db)" \
     || fail "database file was not created in the config volume"
-  pass "runs as node and writes to the config volume"
+  [[ "$owner" == "$expected" ]] || fail "database file is owned by $owner, expected $expected"
+}
+
+check_runs_as_configured_identity() {
+  assert_identity_and_ownership "$CID" "$EXPECT_IDENTITY"
+  pass "server runs as $EXPECT_IDENTITY and owns what it writes to the config volume"
+}
+
+# Starts a separate container on a volume owned by $2 (uid:gid) with extra docker run flags $3 and
+# asserts it adapts to that owner.
+check_adapts_to_volume_owner() {
+  local label="$1" owner="$2" flags="$3" name="$NAME-id" cid
+  docker volume create "$name-config" >/dev/null
+  chown_as_root "$name-config" "$owner"
+  # shellcheck disable=SC2086 # flags are intentionally word-split
+  docker run -d --name "$name" -e SESSION_SECRET="$SECRET" $flags \
+    -v "$name-config:/app/config" "$IMAGE" >/dev/null
+  local deadline=$((SECONDS + HEALTH_TIMEOUT)) status=""
+  while ((SECONDS < deadline)); do
+    status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$name")"
+    [[ "$status" == "healthy" ]] && break
+    sleep 2
+  done
+  [[ "$status" == "healthy" ]] || fail "$label: container health is '$status'"
+  assert_identity_and_ownership "$name" "$owner"
+  docker rm -f "$name" >/dev/null
+  docker volume rm -f "$name-config" >/dev/null
+  pass "$label"
 }
 
 check_honours_tz() {
@@ -197,8 +252,8 @@ check_layers_follow_change_boundaries() {
   snapshot_context
   build_context # primes the cache for an unchanged context
 
-  # A server source edit reuses both dependency installs and the Next.js build.
-  echo "// smoke edit" >>"$CONTEXT/server/index.ts"
+  # A server source edit (unique per run, so an earlier run's cache cannot satisfy it) reuses both dependency installs and the Next.js build.
+  echo "// smoke edit $NAME $(date +%s%N)" >>"$CONTEXT/server/index.ts"
   build_context
   expect_cached "yarn install --frozen-lockfile" "a source edit must not reinstall dependencies"
   expect_cached "yarn build:next" "a server-only edit must not rebuild the Next.js app"
@@ -234,7 +289,11 @@ fi
 
 start_container
 check_healthy_and_serves_login
-check_runs_unprivileged_with_writable_volume
+check_runs_as_configured_identity
 check_honours_tz
 check_restart_keeps_data
 check_stops_within_budget
+if [[ "$MODE" == image ]]; then
+  check_adapts_to_volume_owner "PUID/PGID select the runtime identity" "1026:100" "-e PUID=1026 -e PGID=100"
+  check_adapts_to_volume_owner "an already non-root container skips the privilege drop" "1234:1234" "--user 1234:1234"
+fi
