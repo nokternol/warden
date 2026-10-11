@@ -71,13 +71,13 @@ type QualificationIssue = QueryHealth['qualificationIssues'][number];
 function describeQualificationIssue(
   { filterKey, providerId, reason }: QualificationIssue,
   contentType: ContentType,
-  automationProviderId: number
+  automationProvider: MetadataProvider
 ): string {
   const rule = getRule(filterKey, contentType);
   const filter = `${rule?.label} filter names ${instanceName(rule?.providers[0], providerId)}`;
   return reason === 'not_active'
     ? `${filter}, which is not an active provider`
-    : `${filter}, which is not this automation's provider (${instanceName(rule?.providers[0], automationProviderId)})`;
+    : `${filter}, which is not this automation's provider (${instanceName(automationProvider.type, automationProvider.id)})`;
 }
 
 // ─── Executor ─────────────────────────────────────────────────────────────────
@@ -163,7 +163,7 @@ export class AutomationExecutor {
       }
 
       const providerSettings = await this.providerSettingsService.findById(automation.provider.id);
-      const problems = await this.blockingProblems(providerSettings.id, automationQueries);
+      const problems = await this.blockingProblems(providerSettings, automationQueries);
       if (problems.length > 0) {
         await this.recordSkip(automationId, kind, problems.join('; '));
         return;
@@ -216,10 +216,16 @@ export class AutomationExecutor {
 
   /** Why a user automation cannot run, one line per problem; empty when it can. */
   private async blockingProblems(
-    automationProviderId: number,
+    automationProvider: MetadataProvider,
     automationQueries: TargetingQuery[]
   ): Promise<string[]> {
+    const automationProviderId = automationProvider.id;
     const problems: string[] = [];
+    if (!automationProvider.isActive) {
+      problems.push(
+        `${instanceName(automationProvider.type, automationProviderId)}, this automation's provider, is not an active provider`
+      );
+    }
     for (const { queryId } of automationQueries) {
       const { contentType } = await this.mediaQueryService.getById(queryId);
       const health = await this.mediaQueryService.getHealthForAutomation(
@@ -227,7 +233,7 @@ export class AutomationExecutor {
         automationProviderId
       );
       for (const issue of health.qualificationIssues) {
-        problems.push(describeQualificationIssue(issue, contentType, automationProviderId));
+        problems.push(describeQualificationIssue(issue, contentType, automationProvider));
       }
     }
     return problems;

@@ -160,4 +160,19 @@ describe('AutomationExecutor — invalid automations', () => {
     );
     expect(unmonitorCalls).toBe(0);
   });
+
+  it('skips an automation whose own provider has been deactivated, naming that provider', async () => {
+    const own = await seedRadarr('Own Radarr');
+    const automation = await seedAutomationOver(own.id, []);
+    await providerSettingsService.update(own.id, { isActive: false });
+
+    await executor.execute(automation.id);
+
+    const [run] = await getDb().select().from(automationRuns);
+    expect(run.status).toBe('skipped');
+    expect(run.error).toBe(
+      `Radarr instance ${own.id}, this automation's provider, is not an active provider`
+    );
+    expect(unmonitorCalls).toBe(0);
+  });
 });
