@@ -1,5 +1,5 @@
 import type { AutomationPreview } from '@contract/automations';
-import type { ContentType } from '@contract/schemas';
+import type { AutomationRunStatus, ContentType } from '@contract/schemas';
 import type { MetadataProvider } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
 import { ValidationError } from '../../kernel/errors';
@@ -368,7 +368,7 @@ export class AutomationExecutor {
     taskId: string,
     result: {
       itemCount: number;
-      status: 'success' | 'error' | 'skipped';
+      status: AutomationRunStatus;
       error?: string;
       kind: 'user' | 'system';
       targets?: RunTargets;

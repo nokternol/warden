@@ -1,4 +1,4 @@
-import type { ContentType, RunItemDto } from '@contract/schemas';
+import type { AutomationRunStatus, ContentType, RunItemDto } from '@contract/schemas';
 import { asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import {
   automationRunItems,
@@ -15,7 +15,7 @@ export interface AutomationRunDto {
   automationId: number;
   automationName: string;
   ranAt: Date;
-  status: 'success' | 'error' | 'skipped';
+  status: AutomationRunStatus;
   itemCount: number | null;
   error: string | null;
   createdAt: Date;
@@ -34,7 +34,7 @@ export interface RunTargets {
 
 export interface CreateRunData {
   automationId: number;
-  status: 'success' | 'error' | 'skipped';
+  status: AutomationRunStatus;
   itemCount?: number;
   error?: string;
   kind?: 'user' | 'system';
@@ -72,7 +72,7 @@ function rowToDto(row: {
     automationId: row.automationId,
     automationName: row.automationName,
     ranAt: toDate(row.ranAt),
-    status: row.status as AutomationRunDto['status'],
+    status: row.status as AutomationRunStatus,
     itemCount: row.itemCount ?? null,
     error: row.error ?? null,
     createdAt: toDate(row.createdAt),

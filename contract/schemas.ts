@@ -203,14 +203,16 @@ export const ProviderSchema = z
   })
   .strict();
 
+/** `skipped`: the automation was invalid when due, so it never ran; the run's `error` holds why. */
+export const AutomationRunStatusSchema = z.enum(['success', 'error', 'skipped']);
+
 export const AutomationRunSchema = z
   .object({
     id: z.number(),
     automationId: z.number(),
     automationName: z.string(),
     ranAt: IsoDateSchema,
-    // `skipped`: the automation was invalid when due, so it never ran; `error` holds why.
-    status: z.enum(['success', 'error', 'skipped']),
+    status: AutomationRunStatusSchema,
     itemCount: z.number().nullable(),
     error: z.string().nullable(),
     createdAt: IsoDateSchema,
@@ -228,6 +230,7 @@ export const RunItemSchema = z
   .strict();
 
 export type AutomationStatus = z.infer<typeof AutomationStatusSchema>;
+export type AutomationRunStatus = z.infer<typeof AutomationRunStatusSchema>;
 export type AutomationDto = z.infer<typeof AutomationSchema>;
 export type AutomationRunDto = z.infer<typeof AutomationRunSchema>;
 export type RunItemDto = z.infer<typeof RunItemSchema>;

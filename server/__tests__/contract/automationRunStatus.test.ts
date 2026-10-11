@@ -1,4 +1,8 @@
-import { AutomationLastRunSchema, AutomationRunSchema } from '@contract/schemas';
+import {
+  AutomationLastRunSchema,
+  AutomationRunSchema,
+  AutomationRunStatusSchema,
+} from '@contract/schemas';
 import { describe, expect, it } from 'vitest';
 
 const run = {
@@ -25,5 +29,10 @@ describe('automation run status', () => {
       false
     );
     expect(AutomationLastRunSchema.safeParse({ ...lastRun, status: 'error' }).success).toBe(true);
+  });
+
+  it('is declared once, as the status a recorded run carries', () => {
+    expect(AutomationRunSchema.shape.status).toBe(AutomationRunStatusSchema);
+    expect(AutomationRunStatusSchema.options).toEqual(['success', 'error', 'skipped']);
   });
 });
