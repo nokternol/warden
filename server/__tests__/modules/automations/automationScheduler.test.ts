@@ -63,11 +63,15 @@ describe('AutomationScheduler', () => {
     });
   });
   describe('wall-clock time zone', () => {
+    let scheduler: AutomationScheduler | undefined;
+
     beforeEach(() => {
       vi.useFakeTimers();
     });
 
     afterEach(() => {
+      scheduler?.stopAll();
+      scheduler = undefined;
       vi.useRealTimers();
       vi.unstubAllEnvs();
     });
@@ -77,13 +81,12 @@ describe('AutomationScheduler', () => {
       // 23:59 UTC is 08:59 in Tokyo, so the next 09:00 Tokyo is one minute away.
       vi.setSystemTime(new Date('2026-03-10T23:59:00Z'));
       const executor = { execute: vi.fn<(id: number) => Promise<void>>().mockResolvedValue() };
-      const scheduler = new AutomationScheduler({ automationExecutor: executor });
+      scheduler = new AutomationScheduler({ automationExecutor: executor });
 
       scheduler.schedule({ id: 1, name: 'Nine', schedule: '0 9 * * *' });
       await vi.advanceTimersByTimeAsync(2 * 60 * 1000);
 
       expect(executor.execute).toHaveBeenCalledTimes(1);
-      scheduler.stopAll();
     });
   });
 });
