@@ -1,9 +1,8 @@
 import { contract } from '@contract/index';
 import userEvent from '@testing-library/user-event';
 import { render, screen } from '@tests/helpers/component';
-import { contractPath } from '@tests/mocks/contract';
+import { mockProcedureFailure } from '@tests/mocks/contract';
 import { server } from '@tests/mocks/server';
-import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import LoginPage from '../index.page';
 
@@ -18,29 +17,17 @@ vi.mock('@app/lib/utils/plexOAuth', () => ({
   },
 }));
 
-function answerWithError(
-  procedure: Parameters<typeof contractPath>[0],
-  status: number,
-  type: string,
-  message: string
-) {
-  const { method = 'POST' } = procedure['~orpc'].route;
-  const handle = http[method.toLowerCase() as 'get' | 'post'];
-  return handle(contractPath(procedure), () =>
-    HttpResponse.json({ status: 'error', error: { type, message } }, { status })
-  );
-}
-
 describe('LoginPage', () => {
   it('tells an account the server refuses that it is not the owner, and why', async () => {
     server.use(
-      answerWithError(contract.auth.me, 401, 'UNAUTHORIZED', 'Authentication required'),
-      answerWithError(
-        contract.auth.plexLogin,
-        403,
-        'FORBIDDEN',
-        'This Warden instance belongs to another Plex account'
-      )
+      mockProcedureFailure(contract.auth.me, 401, {
+        type: 'UNAUTHORIZED',
+        message: 'Authentication required',
+      }),
+      mockProcedureFailure(contract.auth.plexLogin, 403, {
+        type: 'FORBIDDEN',
+        message: 'This Warden instance belongs to another Plex account',
+      })
     );
     render(<LoginPage />);
 

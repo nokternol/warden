@@ -127,6 +127,21 @@ drives the `media:changed` event. `SYSTEM_TASKS` (`system:enrichment`, `system:i
 separate: internal jobs run via `SystemTaskRunner`, not actuator tasks, and absent from the discovery
 surface.
 
+**Previewing a run.** `AutomationExecutor.preview` answers "how many items would this unsaved automation
+act on now" by running the same private `planRun` a real run uses (task lookup, enablement, include-minus-
+exclude query evaluation, actuator id translation) and counting the actuator ids it hands back. It never
+calls `task.run` and records no run, so the count and the run cannot drift: a Plex or Tautulli preview
+counts only matches with a Plex id, exactly as a run would target them. It is served as
+`POST /api/automations/preview`
+([`automations.procedures.ts`](ref:path:server/modules/automations/automations.procedures.ts)). A task not
+enabled on the instance is a `ValidationError` (400), the same refusal a run records.
+
+The descriptor's `destructive` flag is what asks for the count: the automation builder
+([`src/components/AutomationBuilder/index.tsx`](ref:path:src/components/AutomationBuilder/index.tsx))
+fetches a preview only for a destructive task, states it in a confirmation (*"Delete movie + files · will
+affect 214 movies"*), and will not save a destructive automation until that confirmation is ticked.
+Choosing a different task, or changing the queries, clears the confirmation: the count it stated no longer holds. A non-destructive task asks nothing.
+
 ## Non-source execution: id translation through the identity graph
 
 Earlier phases derived target ids by evaluating the automation's query against the provider instance **as

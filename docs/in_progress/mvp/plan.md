@@ -246,7 +246,7 @@ does not define its own TDD process. Each slice supplies the *input* to that ski
 - **Plan sign-off:** merging the PR that adds this file. Issues are created from the merged version.
 - **Slice sign-off:** reviewing and merging its PR. The issue's checklist must be met: the step
   list posted to the issue, one commit per green cycle, deletes done, gates green, docs updated,
-  design debt filed, and screenshots for UI slices.
+  design debt filed, and, for UI slices, screenshots shown to the user (not attached to the PR).
 - **MVP sign-off:** ticking G1's checklist (every In-scope feature, offered provider type and offered
   task, verified on the published image on the NAS), then closing the milestone. `docs-lifecycle`
   then folds this plan's lasting content into `docs/architecture/` and deletes it.
@@ -613,13 +613,22 @@ names, so nothing is renamed twice.
 ### Track D — Finish the in-scope features
 
 **D1 · Destructive tasks state their blast radius** (after C0; story first)
-- **Model:** Sonnet 5.5 (one component behaviour on an existing endpoint).
+- **Model:** Sonnet 5.5.
 - **Why:** state clarity. `ActuatorTaskDescriptor.destructive` exists but the builder ignores it.
 - **Behaviours:**
   - With a destructive task selected, the builder states how many items it will affect, as in
-    *"Deletes files for 214 movies"*.
-  - A destructive automation can't be saved until its effect is explicitly confirmed.
-  - A non-destructive task never asks for confirmation.
+    *"Delete movie + files · will affect 214 movies"* (singular for one; no number while counting or
+    when the count fails).
+  - A destructive automation can't be saved until its effect is explicitly confirmed. Changing the
+    task or the queries clears the confirmation, since the count it stated no longer holds.
+  - A non-destructive task never asks for confirmation and is never counted.
+- **Expected end state:** the count is exact, not estimated. No existing endpoint could express a
+  multi-query automation or a non-source actuator's addressing, so `POST /api/automations/preview`
+  (`automations.preview` in the contract) runs `AutomationExecutor.planRun`, the planning a real run
+  uses, and counts its actuator ids without running the task or recording a run. A draft with no
+  included query, or a task not enabled on the instance, answers 400; an unknown provider answers
+  404. The builder reads it through `useAutomationPreview`, and holds the chosen task, its parameter
+  value and its confirmation together, so choosing another task starts fresh.
 
 **D2 · A run says what changed** *(decisions 4, 4a)*
 - **Model:** Opus 5.5 (schema + identity-job behaviour + transaction).

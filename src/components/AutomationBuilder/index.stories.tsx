@@ -1,3 +1,4 @@
+import type { AutomationPreview } from '@app/hooks/useAutomationPreview';
 import type { MediaQueryRecord } from '@app/hooks/useMediaQueries';
 import type { ProviderSummary } from '@app/hooks/useProviderSettings';
 import type { ProviderTaskAvailability } from '@app/hooks/useProviderTasks';
@@ -5,12 +6,13 @@ import { api } from '@app/lib/api/client';
 import { apiKey } from '@app/lib/api/useApi';
 import type { ProviderTaskOptionsAvailability, TaskOptionsRoute } from '@contract/providers';
 import type { Story } from '@ladle/react';
-import { SWRConfig, unstable_serialize } from 'swr';
+import { type Middleware, SWRConfig, unstable_serialize } from 'swr';
 import AutomationBuilder from './index';
 
 // Stories drive the real hooks from a preloaded SWR cache (no network), keyed
 // exactly as `useApi` keys the procedures the hooks call, so each state is
-// deterministic for the visual pass.
+// deterministic for the visual pass. The count request is answered by
+// `answerPreview` instead.
 function makeProvider(overrides: Partial<ProviderSummary> = {}): ProviderSummary {
   return {
     id: 1,
@@ -37,10 +39,34 @@ const queries: MediaQueryRecord[] = [
   },
 ];
 
+/** How the builder's count request is answered: with a count, never, or with a failure. */
+type PreviewAnswer = AutomationPreview | 'pending' | 'failed';
+
+/**
+ * Answers the builder's count request in place of the API. The request is
+ * matched by its procedure's identity, since a serialized fallback key for a
+ * function is not stable across Ladle's module graph.
+ */
+function answerPreview(answer: PreviewAnswer): Middleware {
+  const fetchAnswer = () =>
+    answer === 'pending'
+      ? new Promise<never>(() => {})
+      : answer === 'failed'
+        ? Promise.reject(new Error('Preview unavailable'))
+        : Promise.resolve(answer);
+  return (useSWRNext) => (key, fetcher, config) => {
+    const isPreview = Array.isArray(key) && key[0] === api.automations.preview;
+    return isPreview
+      ? useSWRNext(key, fetchAnswer as typeof fetcher, { ...config, revalidateOnMount: true })
+      : useSWRNext(key, fetcher, config);
+  };
+}
+
 function withData(
   providers: ProviderSummary[],
   availability: ProviderTaskAvailability[],
-  taskOptions: Partial<Record<TaskOptionsRoute, ProviderTaskOptionsAvailability[]>> = {}
+  taskOptions: Partial<Record<TaskOptionsRoute, ProviderTaskOptionsAvailability[]>> = {},
+  preview: PreviewAnswer = 'pending'
 ): React.ReactNode {
   const optionsFallback = Object.fromEntries(
     Object.entries(taskOptions).map(([route, data]) => [
@@ -57,7 +83,9 @@ function withData(
           [unstable_serialize(apiKey(api.providers.tasks, undefined))]: availability,
           ...optionsFallback,
         },
+        use: [answerPreview(preview)],
         revalidateOnMount: false,
+        shouldRetryOnError: false,
         revalidateOnFocus: false,
         revalidateIfStale: false,
       }}
@@ -109,6 +137,39 @@ export const Populated: Story = () =>
       },
     ]
   );
+
+const destructiveProviders = [makeProvider({ id: 1, name: 'Radarr Main' })];
+const destructiveAvailability: ProviderTaskAvailability[] = [
+  {
+    providerId: 1,
+    type: 'RADARR',
+    tasks: [
+      { id: 'unmonitorMovie', label: 'Unmonitor movie', destructive: false, enabled: true },
+      {
+        id: 'deleteMovieWithFiles',
+        label: 'Delete movie + files',
+        destructive: true,
+        enabled: true,
+      },
+    ],
+  },
+];
+
+/** Select "Delete movie + files": the confirmation states the exact count and gates saving. */
+export const DestructiveTask: Story = () =>
+  withData(destructiveProviders, destructiveAvailability, {}, { count: 214, contentType: 'movie' });
+
+/** Select "Delete movie + files": a count of one is singular. */
+export const DestructiveTaskSingular: Story = () =>
+  withData(destructiveProviders, destructiveAvailability, {}, { count: 1, contentType: 'movie' });
+
+/** Select "Delete movie + files": the count has not answered yet, so no number is shown. */
+export const DestructiveTaskCounting: Story = () =>
+  withData(destructiveProviders, destructiveAvailability);
+
+/** Select "Delete movie + files": the count request fails, and the confirmation says so. */
+export const DestructiveTaskCountFailed: Story = () =>
+  withData(destructiveProviders, destructiveAvailability, {}, 'failed');
 
 export const MultipleInstances: Story = () =>
   withData(

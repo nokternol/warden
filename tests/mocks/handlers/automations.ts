@@ -38,6 +38,8 @@ export const MOCK_AUTOMATIONS: AutomationDto[] = [
 export const automationsHandlers = [
   mockProcedure(contract.automations.list, () => MOCK_AUTOMATIONS),
 
+  mockProcedure(contract.automations.preview, () => ({ count: 3, contentType: 'movie' as const })),
+
   mockProcedure(contract.automations.create, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
     const created: AutomationDto = {

@@ -1,6 +1,7 @@
 import AutomationQueryList from '@app/components/AutomationQueryList';
 import type { AutomationQueryItem } from '@app/components/AutomationQueryList';
 import Badge from '@app/components/Badge';
+import { type AutomationPreview, useAutomationPreview } from '@app/hooks/useAutomationPreview';
 import type { CreateAutomationInput } from '@app/hooks/useAutomations';
 import type { MediaQueryRecord } from '@app/hooks/useMediaQueries';
 import { useProviderSettings } from '@app/hooks/useProviderSettings';
@@ -60,6 +61,23 @@ function relativeTime(isoOrDate: string | Date): string {
   return past ? `${d}d ago` : `in ${d}d`;
 }
 
+const ITEM_NOUNS: Record<AutomationPreview['contentType'], { one: string; many: string }> = {
+  movie: { one: 'movie', many: 'movies' },
+  series: { one: 'series', many: 'series' },
+};
+
+/**
+ * The blast-radius phrase for a preview request, e.g. "will affect 214 movies".
+ * Until the count arrives, or if it cannot be had, it states that instead of a number.
+ */
+function blastRadius({ data, error }: { data?: AutomationPreview; error?: Error }): string {
+  if (data) {
+    const nouns = ITEM_NOUNS[data.contentType];
+    return `will affect ${data.count} ${data.count === 1 ? nouns.one : nouns.many}`;
+  }
+  return error ? "couldn't count the affected items" : 'counting affected items…';
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface BuilderTask {
@@ -70,6 +88,17 @@ interface BuilderTask {
   providerName: string;
   providerType: string;
   parameter?: ProviderTaskParameter;
+}
+
+/**
+ * The chosen task with the answers that belong to it: its parameter value and
+ * whether its destructive effect is confirmed. Choosing a task starts a fresh
+ * selection, so neither answer carries over to a different task.
+ */
+interface TaskSelection {
+  task: BuilderTask;
+  parameterValue: string;
+  confirmed: boolean;
 }
 
 function SettingsLink() {
@@ -144,8 +173,10 @@ export default function AutomationBuilder({
   const [automationQueries, setAutomationQueries] = useState<AutomationQueryItem[]>(
     queries.length === 1 ? [{ queryId: queries[0].id, role: 'include', sortOrder: 0 }] : []
   );
-  const [selectedTask, setSelectedTask] = useState<BuilderTask | null>(null);
-  const [taskParameterValue, setTaskParameterValue] = useState('');
+  const [selection, setSelection] = useState<TaskSelection | null>(null);
+  const selectedTask = selection?.task ?? null;
+  const taskParameterValue = selection?.parameterValue ?? '';
+  const effectConfirmed = selection?.confirmed ?? false;
 
   const selectParameter =
     selectedTask?.parameter?.type === 'select' ? selectedTask.parameter : undefined;
@@ -172,6 +203,19 @@ export default function AutomationBuilder({
 
   const hasValidInclude = automationQueries.some((s) => s.role === 'include' && s.queryId > 0);
 
+  // Only a destructive task states its blast radius, so only it asks the server to count.
+  const previewDraft =
+    selectedTask?.destructive && hasValidInclude
+      ? {
+          providerId: selectedTask.providerId,
+          taskId: selectedTask.taskId,
+          queries: automationQueries
+            .filter((q) => q.queryId > 0)
+            .map((q) => ({ queryId: q.queryId, role: q.role })),
+        }
+      : null;
+  const preview = useAutomationPreview(previewDraft);
+
   const hasRequiredParameter = !selectedTask?.parameter || taskParameterValue.trim().length > 0;
 
   const canSubmit =
@@ -179,7 +223,8 @@ export default function AutomationBuilder({
     hasValidInclude &&
     selectedTask !== null &&
     isValidCron &&
-    hasRequiredParameter;
+    hasRequiredParameter &&
+    (!selectedTask.destructive || effectConfirmed);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -244,7 +289,12 @@ export default function AutomationBuilder({
           <AutomationQueryList
             automationQueries={automationQueries}
             queries={queries.map((q) => ({ id: q.id, name: q.name }))}
-            onChange={setAutomationQueries}
+            onChange={(next) => {
+              // The confirmation states a count for the queries it was given;
+              // a different set of queries needs confirming afresh.
+              setAutomationQueries(next);
+              setSelection((current) => current && { ...current, confirmed: false });
+            }}
           />
         </div>
 
@@ -289,10 +339,9 @@ export default function AutomationBuilder({
                             type="radio"
                             name="task"
                             checked={selected}
-                            onChange={() => {
-                              setSelectedTask(bt);
-                              setTaskParameterValue('');
-                            }}
+                            onChange={() =>
+                              setSelection({ task: bt, parameterValue: '', confirmed: false })
+                            }
                             className="flex-shrink-0 text-primary focus:ring-primary focus:ring-offset-0"
                           />
                           <div className="flex flex-1 min-w-0 items-center gap-2">
@@ -338,7 +387,10 @@ export default function AutomationBuilder({
             <select
               id="task-parameter"
               value={taskParameterValue}
-              onChange={(e) => setTaskParameterValue(e.target.value)}
+              onChange={(e) => {
+                const parameterValue = e.target.value;
+                setSelection((current) => current && { ...current, parameterValue });
+              }}
               className="w-full max-w-md px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
               required
             >
@@ -352,6 +404,24 @@ export default function AutomationBuilder({
               ))}
             </select>
           </div>
+        )}
+
+        {/* ── Destructive confirmation ── */}
+        {selectedTask?.destructive && (
+          <label className="flex items-start gap-2.5 rounded border border-warning/40 bg-warning/10 px-3.5 py-3 text-sm text-text-primary cursor-pointer">
+            <input
+              type="checkbox"
+              checked={effectConfirmed}
+              onChange={(e) => {
+                const confirmed = e.target.checked;
+                setSelection((current) => current && { ...current, confirmed });
+              }}
+              className="mt-0.5 flex-shrink-0 text-primary focus:ring-primary focus:ring-offset-0"
+            />
+            <span>
+              Confirm: {selectedTask.label} · {blastRadius(preview)}
+            </span>
+          </label>
         )}
 
         {/* ── Schedule ── */}

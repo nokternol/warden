@@ -1,5 +1,6 @@
 import type { ContractProcedure, ErrorMap, InferSchemaOutput, Meta, Schema } from '@orpc/contract';
 import { http, HttpResponse, type PathParams } from 'msw';
+import type { ApiErrorResponse } from '../../server/types/api';
 
 type AnyProcedure = ContractProcedure<
   Schema<unknown, unknown>,
@@ -23,6 +24,12 @@ export function contractPath(procedure: AnyProcedure): string {
   return (procedure['~orpc'].route.path ?? '').replace(/\{(\w+)\}/g, ':$1');
 }
 
+/** An MSW handler factory for a procedure's own method. */
+function handlerFor(procedure: AnyProcedure) {
+  const { method = 'POST' } = procedure['~orpc'].route;
+  return http[method.toLowerCase() as Lowercase<typeof method>];
+}
+
 /**
  * Mocks a contract procedure at its own method and path, answering the
  * resolver's output inside the success envelope. The resolver must return the
@@ -35,13 +42,29 @@ export function mockProcedure<P extends AnyProcedure>(
     request: Request;
   }) => ProcedureOutput<P> | Promise<ProcedureOutput<P>>
 ) {
-  const { method = 'POST', successStatus = 200 } = procedure['~orpc'].route;
-  const handle = http[method.toLowerCase() as Lowercase<typeof method>];
+  const { successStatus = 200 } = procedure['~orpc'].route;
 
-  return handle(contractPath(procedure), async ({ params, request }) =>
+  return handlerFor(procedure)(contractPath(procedure), async ({ params, request }) =>
     HttpResponse.json(
       { status: 'ok', data: await resolve({ params, request }) },
       { status: successStatus }
     )
+  );
+}
+
+/**
+ * Mocks a contract procedure failing at its own method and path. Given an
+ * error, it answers the server's error envelope with that status; without one,
+ * it answers the bare status, as a proxy or a crashed server would.
+ */
+export function mockProcedureFailure(
+  procedure: AnyProcedure,
+  status: number,
+  error?: ApiErrorResponse['error']
+) {
+  return handlerFor(procedure)(contractPath(procedure), () =>
+    error
+      ? HttpResponse.json<ApiErrorResponse>({ status: 'error', error }, { status })
+      : new HttpResponse(null, { status })
   );
 }

@@ -4,6 +4,7 @@ import {
   AutomationRunSchema,
   AutomationSchema,
   AutomationStatusSchema,
+  ContentTypeSchema,
   IdSchema,
   QueryIntSchema,
   RunItemSchema,
@@ -46,6 +47,27 @@ const CreateAutomationInputSchema = z
 
 export type CreateAutomationInput = z.input<typeof CreateAutomationInputSchema>;
 
+/** An unsaved automation's targeting: the queries it draws from and the task it would run. */
+const AutomationPreviewInputSchema = z.object({
+  providerId: z.number().int().positive(),
+  taskId: z.string().min(1),
+  queries: z
+    .array(AutomationQueryInputSchema)
+    .refine((queries) => queries.some((q) => q.role === 'include'), {
+      message: 'At least one query must be included',
+    }),
+});
+
+export type AutomationPreviewInput = z.input<typeof AutomationPreviewInputSchema>;
+
+const AutomationPreviewSchema = z.object({
+  /** How many items a run would hand the task now. */
+  count: z.number().int().nonnegative(),
+  contentType: ContentTypeSchema,
+});
+
+export type AutomationPreview = z.infer<typeof AutomationPreviewSchema>;
+
 export const automations = {
   list: base
     .route({ method: 'GET', path: '/api/automations' })
@@ -66,6 +88,16 @@ export const automations = {
     .route({ method: 'DELETE', path: '/api/automations/{id}' })
     .input(z.object({ id: IdSchema }))
     .output(z.null()),
+
+  /**
+   * What an unsaved automation would act on if it ran now, resolved exactly as
+   * a run resolves its targets. Nothing runs and no run is recorded. A POST
+   * because the draft (several queries with roles) is a body, not a resource id.
+   */
+  preview: base
+    .route({ method: 'POST', path: '/api/automations/preview' })
+    .input(AutomationPreviewInputSchema)
+    .output(AutomationPreviewSchema),
 
   /** Starts a run in the background; answers 202 once the automation is known to exist. */
   run: base
