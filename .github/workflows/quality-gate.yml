@@ -27,4 +27,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - run: scripts/container-smoke.sh
+      - run: docker build -t warden:smoke .
+      - run: SMOKE_SKIP_BUILD=1 IMAGE=warden:smoke scripts/container-smoke.sh
+      - run: SMOKE_SKIP_BUILD=1 IMAGE=warden:smoke scripts/container-smoke.sh --compose

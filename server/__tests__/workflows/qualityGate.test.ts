@@ -37,4 +37,14 @@ describe('quality gate workflow: container smoke', () => {
     expect(workflow.on).toHaveProperty('pull_request');
     expect(smokeRuns(workflow.jobs.container ?? { steps: [] })).not.toHaveLength(0);
   });
+
+  it('smokes the compose file as well, against the image already built rather than rebuilding it', () => {
+    const container = workflow.jobs.container;
+    const runs = smokeRuns(container);
+    const builds = container.steps.filter((s) => /docker build/.test(s.run ?? ''));
+
+    expect(runs.some((run) => run.includes('--compose'))).toBe(true);
+    expect(builds).toHaveLength(1);
+    for (const run of runs) expect(run).toMatch(/SMOKE_SKIP_BUILD=1/);
+  });
 });
