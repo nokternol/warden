@@ -4,7 +4,8 @@ Task automation and metadata-driven grouping for the \*arr ecosystem.
 
 ## Run with Docker
 
-Warden runs as one container. Images are published from CI to `ghcr.io/nokternol/warden`. To use a
+Warden runs as one container. Images are published from CI to `ghcr.io/nokternol/warden`: `latest` follows `main`, `sha-<commit>`
+pins a commit, and a `v1.2.3` tag publishes `1.2.3` and `1.2`. To use a
 local build instead, run `docker build -t warden .` and set `image: warden` in `compose.yaml`.
 
 Save [`compose.yaml`](compose.yaml), then:

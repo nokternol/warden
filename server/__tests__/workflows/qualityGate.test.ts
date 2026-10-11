@@ -98,3 +98,17 @@ describe('quality gate workflow: publish', () => {
     expect(uses(publish, 'docker/build-push-action@')).toBe(false);
   });
 });
+
+describe('quality gate workflow: supply chain', () => {
+  it('pins every action by full commit sha with a version comment', () => {
+    const lines = readFileSync(
+      path.join(__dirname, '../../../.github/workflows/quality-gate.yml'),
+      'utf8'
+    )
+      .split('\n')
+      .filter((line) => /\buses:/.test(line));
+
+    expect(lines).not.toHaveLength(0);
+    for (const line of lines) expect(line).toMatch(/uses: [\w./-]+@[0-9a-f]{40} # v\d+\.\d+\.\d+$/);
+  });
+});

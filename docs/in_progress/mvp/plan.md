@@ -763,9 +763,16 @@ names, so nothing is renamed twice.
 
 **E3 · CI builds, smokes and publishes** *(decision 5)*
 - **Model:** Sonnet 5.5 (CI wiring).
-- **After E1 and A2.** A `container` job in `quality-gate.yml` runs `scripts/container-smoke.sh`
-  (image and `--compose` modes) on every PR. On pushes to `main` or `v*` tags it publishes `ghcr.io/nokternol/warden:{sha,latest,semver}`. **Gated on A2:** no image is
-  published before sign-in is owner-only.
+- **After E1 and A2.** A `container` job in `quality-gate.yml` builds the image once and runs
+  `scripts/container-smoke.sh` (image and `--compose` modes) against it on every PR. Pushes to `main`
+  and `v*` tags also run the workflow; a `publish` job (the only one with `packages: write`) needs
+  `checks` and `container`, loads the exact image the smoke ran (handed over as a one-day artifact,
+  never rebuilt) and pushes `ghcr.io/nokternol/warden` tagged `sha-<commit>`, `latest` (main only),
+  and `{{version}}` / `{{major}}.{{minor}}` (v* tags). Pull requests never publish. **Gated on A2:**
+  no image is published before sign-in is owner-only; A2 has merged.
+- **Verification:** `server/__tests__/workflows/qualityGate.test.ts` parses the workflow and asserts
+  triggers, gating, permissions, tag rules, image hand-over and SHA-pinned actions. The workflow
+  itself only runs on GitHub.
 
 ### Track F — UI pass (impeccable)
 
