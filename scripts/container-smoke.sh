@@ -28,6 +28,7 @@ pass() { echo "ok: $*"; }
 
 cleanup() {
   docker rm -f "$NAME" >/dev/null 2>&1 || true
+  docker rmi -f "$IMAGE-layering" >/dev/null 2>&1 || true
   docker volume rm -f "$NAME-config" >/dev/null 2>&1 || true
   rm -rf "$WORK"
 }
@@ -125,6 +126,65 @@ check_stops_within_budget() {
   ((elapsed < STOP_BUDGET_SECONDS)) || fail "stop took ${elapsed}s, budget ${STOP_BUDGET_SECONDS}s"
   pass "stops gracefully in ${elapsed}s"
 }
+
+# Builds a copy of the build context (tracked and untracked-but-not-ignored files) with plain
+# progress output, so a test can edit the copy and read which steps were served from cache.
+CONTEXT="$WORK/context"
+BUILD_LOG="$WORK/build.log"
+
+snapshot_context() {
+  mkdir -p "$CONTEXT"
+  (cd "$ROOT" && git ls-files -z --cached --others --exclude-standard \
+    | while IFS= read -r -d '' f; do [[ -e "$f" ]] && printf '%s\0' "$f"; done \
+    | xargs -0 cp --parents -t "$CONTEXT")
+}
+
+build_context() {
+  # shellcheck disable=SC2086 # flags are intentionally word-split
+  docker build ${SMOKE_BUILD_FLAGS:-} --progress=plain -t "$IMAGE-layering" "$CONTEXT" >"$BUILD_LOG" 2>&1 \
+    || { cat "$BUILD_LOG" >&2; fail "build of the context copy failed"; }
+}
+
+# True when every build step whose command matches $1 was served from cache.
+step_cached() {
+  local pattern="$1" ids id found=0
+  ids="$(grep -E "^#[0-9]+ \[.*\] RUN .*${pattern}" "$BUILD_LOG" | sed -E 's/^#([0-9]+) .*/\1/')"
+  [[ -n "$ids" ]] || fail "no build step matches '$pattern'"
+  for id in $ids; do
+    found=1
+    grep -q "^#$id CACHED" "$BUILD_LOG" || return 1
+  done
+  ((found))
+}
+
+expect_cached() { step_cached "$1" || fail "'$1' was rebuilt: $2"; }
+expect_rebuilt() { step_cached "$1" && fail "'$1' was served from cache but its inputs changed"; return 0; }
+
+check_layers_follow_change_boundaries() {
+  snapshot_context
+  build_context # primes the cache for an unchanged context
+
+  # A server source edit reuses both dependency installs and the Next.js build.
+  echo "// smoke edit" >>"$CONTEXT/server/index.ts"
+  build_context
+  expect_cached "yarn install --frozen-lockfile" "a source edit must not reinstall dependencies"
+  expect_cached "yarn build:next" "a server-only edit must not rebuild the Next.js app"
+  expect_rebuilt "yarn build:server"
+  pass "a server edit reuses dependency and Next.js layers"
+
+  # A change outside every build input reuses every build step.
+  mkdir -p "$CONTEXT/docs" && echo "unrelated" >"$CONTEXT/docs/smoke-unrelated.txt"
+  echo "unrelated" >"$CONTEXT/LICENSE.smoke"
+  build_context
+  expect_cached "yarn install --frozen-lockfile" "an unrelated edit must not reinstall dependencies"
+  expect_cached "yarn build:next" "an unrelated edit must not rebuild the Next.js app"
+  expect_cached "yarn build:server" "an unrelated edit must not rebuild the server"
+  pass "an edit outside the build inputs reuses every build step"
+}
+
+if [[ "$MODE" == image ]]; then
+  check_layers_follow_change_boundaries
+fi
 
 start_container
 check_healthy_and_serves_login

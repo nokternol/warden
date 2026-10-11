@@ -30,7 +30,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY package.json ./
 
 # Build configuration
-COPY tsconfig.json next.config.js postcss.config.js tailwind.config.js global.d.ts next-env.d.ts ./
+COPY tsconfig.json next.config.js postcss.config.js tailwind.config.js global.d.ts ./
 
 # Next.js app: its sources and the contract it shares with the server
 COPY contract ./contract
