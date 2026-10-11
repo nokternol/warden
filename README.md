@@ -4,7 +4,10 @@ Task automation and metadata-driven grouping for the \*arr ecosystem.
 
 ## Run with Docker
 
-Warden runs as one container. Save [`compose.yaml`](compose.yaml), then:
+Warden runs as one container. Images are published from CI to `ghcr.io/nokternol/warden`. To use a
+local build instead, run `docker build -t warden .` and set `image: warden` in `compose.yaml`.
+
+Save [`compose.yaml`](compose.yaml), then:
 
 ```bash
 export SESSION_SECRET=$(openssl rand -hex 32)   # keep this value: it signs session cookies
@@ -23,7 +26,7 @@ Open <http://localhost:5057>. The database and logs live in `./config`, so it su
 
 **Permissions.** The app runs as `PUID:PGID` and needs to own the mapped `./config` folder. If the
 folder's owner is not the IDs you run with, either set `PUID`/`PGID` to the owner (`id -u` / `id -g`)
-or run `chown -R <PUID>:<PGID> ./config` so existing subfolders match too.
+or run `chown -R <PUID>:<PGID> ./config` so existing subfolders match too. If the folder is owned by root (for example Docker created `./config` on first run), the container gives that folder, top level only, to `PUID:PGID`.
 
 To run the image without compose:
 

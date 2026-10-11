@@ -159,7 +159,7 @@ principles become these acceptance checks on every UI slice:
 | D3 | **Browse and save encode filter state two ways.** `MOVIE_PARAM_TO_KEY`/`SERIES_PARAM_TO_KEY` + `toFilterValues()`, a range satellite map and its coverage check, and the client mirror `toBrowseParams()`. | `media.handler.ts:169-345`, `src/lib/mediaQueryAdapters.ts:194` |
 | D4 | **Three multi-select controls** in one 1,829-line file. | `MediaFilterBar/index.tsx:136,342`, `filters/OptionFilter` |
 | D5 | **`'active' \| 'paused'` declared in four places**, and `z.enum(['movie','show'])` re-declared beside `ContentTypeSchema`. | F1 sites, `mediaQueries.schemas.ts:15` |
-| D6 | **Migrations copied into the image twice**, and `nodemon` ships in production dependencies. | `package.json` `build:server`, `Dockerfile`. **Healed by E1.** Neither migrations copy landed where `server/database/index.ts` reads, and `CMD` and `yarn start` ran a `dist/index.js` that is really `dist/server/index.js`. `build:server` now copies migrations beside the compiled module, the paths are fixed, and `nodemon` is removed. |
+| D6 | **Migrations copied into the image twice**, and `nodemon` ships in production dependencies. | `package.json` `build:server`, `Dockerfile`. **Healed by E1.** Neither migrations copy landed where `server/database/index.ts` reads, and `CMD` and `yarn start` named a `dist/index.js` that is really `dist/server/index.js`. `build:server` copies migrations beside the compiled module, `CMD` and `yarn start` run `dist/server/index.js`, and `nodemon` is not a dependency. |
 
 ### Loose ends (reachable but broken, or unreachable but present)
 
@@ -724,7 +724,7 @@ names, so nothing is renamed twice.
 
 ### Track E — Containerised delivery
 
-**E1 · The image is correct, with compose and run docs** (after B5; absorbed the former E2)
+**E1 · The image is correct, with compose and run docs** (after B5)
 - **Model:** Sonnet 5.5 (container plumbing).
 - **Behaviours** (asserted by `scripts/container-smoke.sh`, run locally against a locally built image):
   - Started with a config volume and `SESSION_SECRET`, the container reports healthy and serves the
@@ -737,6 +737,7 @@ names, so nothing is renamed twice.
     test proves croner follows the `TZ` environment zone.
   - Layers follow change boundaries: a source edit reuses both dependency installs, and an edit
     outside the build inputs reuses every build step.
+  - The image optimiser permits the configured poster hosts.
   - Compose mode runs the same checks through the unmodified `compose.yaml`, and an unset
     `SESSION_SECRET` fails loudly.
 - **Expected end state:**
@@ -746,7 +747,8 @@ names, so nothing is renamed twice.
   - The runner starts as root through `docker/entrypoint.sh`, which drops to `PUID:PGID` with
     `su-exec` under `dumb-init`. It does not re-own the mapped folder's contents.
   - A `HEALTHCHECK` uses busybox `wget` against `/api/health`.
-  - `next.config.js` is not copied into the runner: `/login` is served without it.
+  - `next.config.js` is copied into the runner, because `next({ dev: false })` reads it at runtime
+    for `images.remotePatterns`; without it the image optimiser refuses every poster URL.
   - `build:server` copies migrations to `dist/server/database/`, and `CMD` and `yarn start` run
     `dist/server/index.js`.
   - `compose.yaml` has one service, `./config:/app/config`, `SESSION_SECRET: ${SESSION_SECRET:?}`,
