@@ -23,7 +23,7 @@ export default function LoginPage() {
     api.auth
       .me()
       .then(() => {
-        window.location.href = '/dashboard';
+        window.location.href = '/automations';
       })
       .catch(() => {
         /* not authenticated, stay on login */
@@ -44,7 +44,7 @@ export default function LoginPage() {
 
       await api.auth.plexLogin({ authToken });
 
-      window.location.href = '/dashboard';
+      window.location.href = '/automations';
     } catch (err) {
       if (err instanceof Error && err.message === 'Authentication cancelled') return;
       setFailure(signInFailure(err));

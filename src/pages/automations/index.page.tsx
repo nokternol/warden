@@ -2,15 +2,19 @@ import AppLayout from '@app/components/AppLayout';
 import AutomationBuilder from '@app/components/AutomationBuilder';
 import AutomationRow from '@app/components/AutomationRow';
 import QueryRow from '@app/components/QueryRow';
+import SetupChecklist from '@app/components/SetupChecklist';
 import SidebarNav from '@app/components/SidebarNav';
 import TopBar from '@app/components/TopBar';
 import { useAutomations } from '@app/hooks/useAutomations';
 import type { CreateAutomationInput } from '@app/hooks/useAutomations';
 import { useMediaQueries } from '@app/hooks/useMediaQueries';
 import type { MediaQueryRecord } from '@app/hooks/useMediaQueries';
+import { useMediaSources } from '@app/hooks/useMediaSources';
+import { useProviderSettings } from '@app/hooks/useProviderSettings';
+import { setupState } from '@app/lib/setupGuidance';
 import { cn } from '@app/lib/utils/cn';
 import { requireAuth } from '@app/lib/utils/requireAuth';
-import { BookMarked, Clapperboard, Zap } from 'lucide-react';
+import { BookMarked, Zap } from 'lucide-react';
 import type { GetServerSideProps } from 'next';
 import { useRouter } from 'next/router';
 import { useState } from 'react';
@@ -21,20 +25,49 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   return { props: {} };
 };
 
+// A setup fact is only known once its fetch has settled without error; otherwise it must not
+// be mistaken for an empty result.
+function resolved<T>(isLoading: boolean, error: unknown, value: T): T | undefined {
+  return isLoading || error ? undefined : value;
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AutomationsPage() {
   const router = useRouter();
-  const { queries, remove: removeQuery } = useMediaQueries();
+  const {
+    queries,
+    isLoading: queriesLoading,
+    error: queriesError,
+    remove: removeQuery,
+  } = useMediaQueries();
   const {
     automations,
+    isLoading: automationsLoading,
+    error: automationsError,
     isCreating,
     create,
     setStatus,
     remove: removeAutomation,
     run,
   } = useAutomations();
+  const { providers, isLoading: providersLoading, error: providersError } = useProviderSettings();
+  const { sources, isLoading: sourcesLoading, error: sourcesError } = useMediaSources();
   const [showBuilder, setShowBuilder] = useState(false);
+  const guidance = setupState({
+    providerCount: resolved(providersLoading, providersError, providers?.length),
+    hasSource: resolved(
+      sourcesLoading,
+      sourcesError,
+      sources && Object.values(sources).some((source) => source.configured)
+    ),
+    queryCount: resolved(queriesLoading, queriesError, queries.length),
+    automationCount: resolved(
+      automationsLoading,
+      automationsError,
+      automations.filter((a) => a.kind === 'user').length
+    ),
+  });
 
   const handleLoad = (_query: MediaQueryRecord) => {
     void router.push('/media');
@@ -76,6 +109,10 @@ export default function AutomationsPage() {
       }
     >
       <div className="p-6 space-y-8 max-w-4xl">
+        {guidance !== 'unknown' && guidance !== 'complete' && (
+          <SetupChecklist state={guidance} onCreateAutomation={() => setShowBuilder(true)} />
+        )}
+
         {/* ── Builder ─────────────────────────────────────────────────────── */}
         {showBuilder && (
           <AutomationBuilder
@@ -117,11 +154,6 @@ export default function AutomationsPage() {
               <div className="flex flex-col items-center justify-center py-12 gap-3 text-center px-6">
                 <Zap size={28} strokeWidth={1.25} className="text-text-muted" aria-hidden="true" />
                 <p className="text-sm font-medium text-text-secondary">No automations yet</p>
-                <p className="text-xs text-text-muted max-w-xs">
-                  {queries.length === 0
-                    ? 'Save a query from the media page, then create an automation to run it on a schedule.'
-                    : 'Select a query above and click "+ New automation" to get started.'}
-                </p>
               </div>
             </div>
           ) : (
@@ -177,17 +209,6 @@ export default function AutomationsPage() {
                   aria-hidden="true"
                 />
                 <p className="text-sm font-medium text-text-secondary">No queries yet</p>
-                <p className="text-xs text-text-muted max-w-xs">
-                  Go to the Media page, apply any combination of filters, and use the "Save as
-                  query" button to save them here.
-                </p>
-                <a
-                  href="/media"
-                  className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-sm bg-primary text-white hover:bg-primary-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-bg"
-                >
-                  <Clapperboard size={12} strokeWidth={2} aria-hidden="true" />
-                  Go to Media
-                </a>
               </div>
             </div>
           ) : (
