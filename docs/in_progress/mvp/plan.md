@@ -767,9 +767,11 @@ names, so nothing is renamed twice.
   `scripts/container-smoke.sh` (image and `--compose` modes) against it on every PR. Pushes to `main`
   and `v*` tags also run the workflow; a `publish` job (the only one with `packages: write`) needs
   `checks` and `container`, loads the exact image the smoke ran (handed over as a one-day artifact,
-  never rebuilt) and pushes `ghcr.io/nokternol/warden` tagged `sha-<commit>`, `latest` (main only),
-  and `{{version}}` / `{{major}}.{{minor}}` (v* tags). Pull requests never publish. **Gated on A2:**
-  no image is published before sign-in is owner-only; A2 has merged.
+  never rebuilt) and pushes `ghcr.io/nokternol/warden` tagged `sha-<short sha>` (main only),
+  `latest` (whenever the commit is still the head of main, so a version tag cut from main's head
+  moves it too) and `{{version}}` / `{{major}}.{{minor}}` (v* tags). Publishes for one ref run in
+  push order. Pull requests never publish. **Gated on A2:** no image is published before sign-in is
+  owner-only.
 - **Verification:** `server/__tests__/workflows/qualityGate.test.ts` parses the workflow and asserts
   triggers, gating, permissions, tag rules, image hand-over and SHA-pinned actions. The workflow
   itself only runs on GitHub.

@@ -49,6 +49,11 @@ jobs:
     permissions:
       contents: read
       packages: write
+    # Publishes for one ref run one at a time, in push order. A version tag has its own ref, so a
+    # later push to main never cancels a pending release.
+    concurrency:
+      group: publish-${{ github.ref }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -60,21 +65,30 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # latest moves only when this commit is still the head of main, so a publish that finishes
+      # after a newer commit's never rolls latest back. Version tags cut from main's head move it too.
+      - id: head
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          head=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          echo "is_main_head=$([ "$head" = "$GITHUB_SHA" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
       - id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
           images: ghcr.io/nokternol/warden
-          # latest follows main only; a v* tag publishes its version tags without moving latest.
           flavor: latest=false
+          # sha-<short sha> is published from main only: a version tag on an already-published commit
+          # carries a rebuilt image, which must not replace the digest that sha tag already names.
           tags: |
-            type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ steps.head.outputs.is_main_head }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
       - env:
           TAGS: ${{ steps.meta.outputs.tags }}
         run: |
           while read -r tag; do
-            docker tag warden:smoke "$tag"
-            docker push "$tag"
+            if [ -n "$tag" ]; then docker tag warden:smoke "$tag"; fi
           done <<< "$TAGS"
+          docker push --all-tags ghcr.io/nokternol/warden
