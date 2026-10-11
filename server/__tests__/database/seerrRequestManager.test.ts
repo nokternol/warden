@@ -61,4 +61,25 @@ describe('migration 0030 — the request manager becomes Seerr', () => {
       { name: 'Radarr', type: 'RADARR', url: 'http://radarr', apiKey: null, isActive: 1 },
     ]);
   });
+
+  it('keeps a saved query’s request filters, now under seerr rule keys, with other filters untouched', async () => {
+    const client = await databaseBefore(MIGRATION);
+    await client.execute("INSERT INTO media_queries (name, contentType) VALUES ('q', 'movie')");
+    await client.execute(
+      `INSERT INTO media_query_filter_values (mediaQueryId, filterKey, value) VALUES
+         (1, 'overseerrRequestStatus', '2'),
+         (1, 'overseerrHasIssue', 'true'),
+         (1, 'monitored', 'true')`
+    );
+
+    await applyMigration(client, MIGRATION);
+
+    expect(
+      await rows(client, 'SELECT filterKey, value FROM media_query_filter_values ORDER BY id')
+    ).toEqual([
+      { filterKey: 'seerrRequestStatus', value: '2' },
+      { filterKey: 'seerrHasIssue', value: 'true' },
+      { filterKey: 'monitored', value: 'true' },
+    ]);
+  });
 });
