@@ -13,11 +13,11 @@ import { createAutomationProcedures } from '@server/modules/automations';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
 import { createMockConfig, createRadarrMovie } from '@tests/factories';
-import { createApiClient } from '@tests/helpers/api';
+import { createApiClient, expectErrorResponse, expectSuccessResponse } from '@tests/helpers/api';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, it } from 'vitest';
 
 const RADARR_URL = 'http://localhost:7878/api/v3';
 
@@ -95,8 +95,7 @@ describe('POST /api/automations/preview', () => {
       queries: [{ queryId: hasFileQueryId, role: 'include' }],
     });
 
-    expect(res.status).toBe(200);
-    expect(res.body.data).toEqual({ count: 2, contentType: 'movie' });
+    expectSuccessResponse(res, { count: 2, contentType: 'movie' });
   });
 
   it('answers 404 for an unknown provider', async () => {
@@ -106,7 +105,7 @@ describe('POST /api/automations/preview', () => {
       queries: [{ queryId: hasFileQueryId, role: 'include' }],
     });
 
-    expect(res.status).toBe(404);
+    expectErrorResponse(res, 404, 'NOT_FOUND');
   });
 
   it('answers 400 for a task not enabled on the provider instance', async () => {
@@ -116,7 +115,7 @@ describe('POST /api/automations/preview', () => {
       queries: [{ queryId: hasFileQueryId, role: 'include' }],
     });
 
-    expect(res.status).toBe(400);
+    expectErrorResponse(res, 400, 'VALIDATION_ERROR');
   });
 
   it('answers 400 for a draft with no included query', async () => {
@@ -126,6 +125,6 @@ describe('POST /api/automations/preview', () => {
       queries: [{ queryId: hasFileQueryId, role: 'exclude' }],
     });
 
-    expect(res.status).toBe(400);
+    expectErrorResponse(res, 400, 'VALIDATION_ERROR');
   });
 });
