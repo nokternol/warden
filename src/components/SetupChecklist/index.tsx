@@ -32,7 +32,7 @@ function StepMarker({ number, status }: { number: number; status: StepStatus }) 
         'flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border text-xs font-semibold',
         status === 'current' && 'border-primary bg-primary text-white',
         status === 'done' && 'border-success text-success',
-        status === 'upcoming' && 'border-border text-text-muted'
+        status === 'upcoming' && 'border-border text-text-secondary'
       )}
     >
       {status === 'done' ? <Check size={12} strokeWidth={2.5} /> : number}
@@ -61,7 +61,7 @@ function Step({
         <p
           className={cn(
             'text-sm',
-            status === 'current' ? 'font-semibold text-text-primary' : 'text-text-muted'
+            status === 'current' ? 'font-semibold text-text-primary' : 'text-text-secondary'
           )}
         >
           {title}
