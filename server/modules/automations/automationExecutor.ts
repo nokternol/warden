@@ -149,12 +149,7 @@ export class AutomationExecutor {
       const providerSettings = await this.providerSettingsService.findById(automation.provider.id);
       const problems = await this.blockingProblems(providerSettings.id, automationQueries);
       if (problems.length > 0) {
-        await this.automationRunService.createRun({
-          automationId,
-          status: 'skipped',
-          error: problems.join('; '),
-          kind,
-        });
+        await this.recordSkip(automationId, kind, problems.join('; '));
         return;
       }
       const plan = await this.planRun(automation.taskId, providerSettings, automationQueries);
@@ -183,6 +178,24 @@ export class AutomationExecutor {
     } finally {
       this.inFlight.delete(automationId);
     }
+  }
+
+  /**
+   * Records that an invalid automation was not run. Only the run row is written:
+   * the automation's last-run summary keeps describing its last executed run.
+   */
+  private async recordSkip(
+    automationId: number,
+    kind: 'user' | 'system',
+    reason: string
+  ): Promise<void> {
+    log.warn('Automation skipped as invalid', { automationId, reason });
+    await this.automationRunService.createRun({
+      automationId,
+      status: 'skipped',
+      error: reason,
+      kind,
+    });
   }
 
   /** Why a user automation cannot run, one line per problem; empty when it can. */

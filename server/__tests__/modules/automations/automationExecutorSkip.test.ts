@@ -7,6 +7,7 @@
 import { MetadataProviderType, automationRunItems, automationRuns } from '@server/database/schema';
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
+import logger from '@server/kernel/logger';
 import { AutomationExecutor } from '@server/modules/automations/automationExecutor';
 import { AutomationRunService } from '@server/modules/automations/automationRunService';
 import { AutomationService } from '@server/modules/automations/automationService';
@@ -14,7 +15,7 @@ import type { Filter } from '@server/modules/media/ruleRegistry';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
 import { http, HttpResponse } from 'msw';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRadarrMovie } from '../../../../tests/factories';
 import { server } from '../../../../tests/mocks/server';
 
@@ -125,5 +126,23 @@ describe('AutomationExecutor — invalid automations', () => {
     const [reloaded] = (await automationService.list()).filter((a) => a.id === automation.id);
     expect(reloaded.lastRun).toBeUndefined();
     expect(await getDb().select().from(automationRunItems)).toHaveLength(0);
+  });
+
+  it('logs the skip and its reason at warn level', async () => {
+    const warn = vi.spyOn(logger, 'warn');
+    const own = await seedRadarr('Own Radarr');
+    const removed = await seedRadarr('Removed Radarr');
+    const automation = await seedAutomationOver(own.id, [tagsOf(removed.id)]);
+    await providerSettingsService.delete(removed.id);
+
+    await executor.execute(automation.id);
+
+    expect(warn).toHaveBeenCalledWith(
+      'Automation skipped as invalid',
+      expect.objectContaining({
+        automationId: automation.id,
+        reason: `Tags filter names Radarr instance ${removed.id}, which is not an active provider`,
+      })
+    );
   });
 });
