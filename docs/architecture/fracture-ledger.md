@@ -458,6 +458,25 @@ Earlier entries in this ledger use the names that were current when they healed 
   server and a Seerr server from one set of mock payloads; behaviour against a live Seerr server is
   checked in the acceptance run after the NAS upgrade.
 
+### Container image — three descriptions of the built server (recorded and healed 2026-10-11, MVP slice E1)
+
+- **Fracture:** one process (turning the repo into a running server) was described three times and never
+  executed. `build:server` copied migrations to `dist/database/`, the Dockerfile copied them again to
+  `dist/database/migrations`, and the compiled database module reads `dist/server/database/migrations`.
+  `yarn start` and the image `CMD` ran `dist/index.js`, but `tsc` roots at the repo (the server shares
+  `contract/` and `tests/` paths), so the entry point is `dist/server/index.js`. `nodemon` shipped in
+  production dependencies beside a duplicate `dev:nodemon` script.
+- **How it misled:** the plan described the second migrations `COPY` as a duplicate of the first, when
+  neither landed where the code looks. The image had never been built and run, so nothing showed that it
+  could not start. On a first run the database directory did not exist, so a fresh config volume ended in
+  the failed-state page.
+- **Healed by:** `build:server` copies migrations beside the compiled database module, and the Dockerfile
+  and `start` run `dist/server/index.js`. `initializeDatabase` creates the database file's directory. The
+  image runs as `PUID:PGID` through `docker/entrypoint.sh`, declares a `HEALTHCHECK` on `/api/health`, and
+  is layered by change boundary. `scripts/container-smoke.sh` builds it and asserts health, restart,
+  graceful stop, runtime identity, `TZ` and layer reuse, directly and through `compose.yaml`. `nodemon`
+  and `dev:nodemon` are gone; `dev:debug` is `tsx watch --inspect`.
+
 ## Open
 
 No fracture is currently open.

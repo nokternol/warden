@@ -62,4 +62,28 @@ describe('AutomationScheduler', () => {
       expect(mockExecutor.execute).not.toHaveBeenCalled();
     });
   });
+  describe('wall-clock time zone', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.unstubAllEnvs();
+    });
+
+    it('fires a 09:00 schedule at 09:00 in the TZ environment zone, not at 09:00 UTC', async () => {
+      vi.stubEnv('TZ', 'Asia/Tokyo'); // UTC+9, no daylight saving
+      // 23:59 UTC is 08:59 in Tokyo, so the next 09:00 Tokyo is one minute away.
+      vi.setSystemTime(new Date('2026-03-10T23:59:00Z'));
+      const executor = { execute: vi.fn<(id: number) => Promise<void>>().mockResolvedValue() };
+      const scheduler = new AutomationScheduler({ automationExecutor: executor });
+
+      scheduler.schedule({ id: 1, name: 'Nine', schedule: '0 9 * * *' });
+      await vi.advanceTimersByTimeAsync(2 * 60 * 1000);
+
+      expect(executor.execute).toHaveBeenCalledTimes(1);
+      scheduler.stopAll();
+    });
+  });
 });

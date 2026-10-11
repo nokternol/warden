@@ -2,7 +2,37 @@
 
 Task automation and metadata-driven grouping for the \*arr ecosystem.
 
-## Quick Start
+## Run with Docker
+
+Warden runs as one container. Save [`compose.yaml`](compose.yaml), then:
+
+```bash
+export SESSION_SECRET=$(openssl rand -hex 32)   # keep this value: it signs session cookies
+docker compose up -d
+```
+
+Open <http://localhost:5057>. The database and logs live in `./config`, so it survives upgrades
+(`docker compose pull && docker compose up -d`). Compose refuses to start while `SESSION_SECRET` is unset.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `SESSION_SECRET` | none, required | Signs session cookies. |
+| `TZ` | `UTC` | Time zone cron schedules run in, e.g. `Europe/London`. |
+| `TRUST_PROXY` | `false` | Set to `true` behind a reverse proxy so client IPs come from `X-Forwarded-For`. |
+| `PUID` / `PGID` | `1000` / `1000` | User and group the app runs as. |
+
+**Permissions.** The app runs as `PUID:PGID` and needs to own the mapped `./config` folder. If the
+folder's owner is not the IDs you run with, either set `PUID`/`PGID` to the owner (`id -u` / `id -g`)
+or run `chown -R <PUID>:<PGID> ./config` so existing subfolders match too.
+
+To run the image without compose:
+
+```bash
+docker run -d -p 5057:5057 -e SESSION_SECRET="$SESSION_SECRET" -v "$PWD/config:/app/config" \
+  ghcr.io/nokternol/warden:latest
+```
+
+## Develop locally
 
 ### Prerequisites
 
@@ -33,7 +63,7 @@ Task automation and metadata-driven grouping for the \*arr ecosystem.
 ### Development
 
 ```bash
-# Start dev server (port 5056)
+# Start dev server (port 5057)
 yarn dev
 
 # Run all tests and checks (GOD SCRIPT)
@@ -101,9 +131,12 @@ sudo apt-get install -y \
 ## Scripts Reference
 
 ### Development
-- `yarn dev` - Start dev server on port 5056
+- `yarn dev` - Start dev server on port 5057
 - `yarn build` - Build for production
 - `yarn start` - Run production build
+
+### Container
+- `scripts/container-smoke.sh` - Build the image and check it end to end (health, restart, stop, identity, layering); `--compose` runs the same checks through `compose.yaml`. Needs Docker; pass `SMOKE_BUILD_FLAGS="--network host"` where build containers cannot resolve DNS.
 
 ### Testing
 - `yarn test` - Unit tests (watch mode)

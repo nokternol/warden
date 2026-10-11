@@ -24,9 +24,18 @@ tmp
 .DS_Store
 *.log
 
-# Dev tooling config that doesn't belong in the image
+# Dev tooling, agent and knowledge-graph state that doesn't belong in the image
 .husky
 .ladle
+.github
+.claude
+.impeccable
+.pairing
+.graphifyignore
+graphify-out
+
+# Runtime state (database, logs) is mounted at /app/config, never baked in
+config
 biome.json
 tsconfig.tsbuildinfo
 
