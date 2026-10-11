@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import type { AutomationRunStatus } from '@contract/schemas';
 
 export interface DomainEvents {
   'run:started': {
@@ -11,7 +12,7 @@ export interface DomainEvents {
     automationId: number;
     kind: 'user' | 'system';
     taskId: string;
-    status: 'success' | 'error';
+    status: AutomationRunStatus;
     itemCount: number;
     error?: string;
     finishedAt: Date;

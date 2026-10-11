@@ -1,4 +1,5 @@
 import type { AutomationPreview } from '@contract/automations';
+import type { AutomationRunStatus, ContentType } from '@contract/schemas';
 import type { MetadataProvider } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
 import { ValidationError } from '../../kernel/errors';
@@ -7,11 +8,12 @@ import { getChildLogger } from '../../kernel/logger';
 import {
   EnrichmentQueries,
   MediaQueryEngine,
+  getRule,
   mediaSourceFor,
   resolveActuatorTargets,
 } from '../media';
 import type { MediaSource, MediaSourceFactory } from '../media';
-import type { MediaQueryService } from '../mediaQueries';
+import type { MediaQueryService, QueryHealth } from '../mediaQueries';
 import {
   type ActuatorTask,
   type IProviderFactory,
@@ -55,6 +57,45 @@ interface RunPlan {
   task: ActuatorTask;
   targets: RunTargets;
   actuatorIds: Parameters<ActuatorTask['run']>[0];
+}
+
+/** "RADARR" as "Radarr". */
+function providerTypeName(type: string): string {
+  return type.charAt(0) + type.slice(1).toLowerCase();
+}
+
+/** "Radarr instance 3" — a provider instance named by its type and id. */
+function instanceName(type: string | undefined, providerId: number): string {
+  return `${type ? providerTypeName(type) : 'Provider'} instance ${providerId}`;
+}
+
+/** A filter's rule label, or its raw key when no rule is registered for it. */
+function filterLabel(filterKey: string, contentType: ContentType): string {
+  return getRule(filterKey, contentType)?.label ?? filterKey;
+}
+
+type ProviderStatus = QueryHealth['providerStatus'][number];
+type QualificationIssue = QueryHealth['qualificationIssues'][number];
+
+/** One line saying which rule needs a provider type that is not configured. */
+function describeMissingProvider(
+  { providerType, affectedFilterKeys }: ProviderStatus,
+  contentType: ContentType
+): string {
+  return `${filterLabel(affectedFilterKeys[0], contentType)} filter needs a ${providerTypeName(providerType)} provider, which is not configured`;
+}
+
+/** One line saying why a filter's instance qualification keeps the automation from running. */
+function describeQualificationIssue(
+  { filterKey, providerId, reason }: QualificationIssue,
+  contentType: ContentType,
+  automationProvider: MetadataProvider
+): string {
+  const rule = getRule(filterKey, contentType);
+  const filter = `${filterLabel(filterKey, contentType)} filter names ${instanceName(rule?.providers[0], providerId)}`;
+  return reason === 'not_active'
+    ? `${filter}, which is not an active provider`
+    : `${filter}, which is not this automation's provider (${instanceName(automationProvider.type, automationProvider.id)})`;
 }
 
 // ─── Executor ─────────────────────────────────────────────────────────────────
@@ -140,6 +181,11 @@ export class AutomationExecutor {
       }
 
       const providerSettings = await this.providerSettingsService.findById(automation.provider.id);
+      const problems = await this.blockingProblems(providerSettings, automationQueries);
+      if (problems.length > 0) {
+        await this.recordSkip(automationId, taskId, problems.join('; '));
+        return;
+      }
       const plan = await this.planRun(automation.taskId, providerSettings, automationQueries);
       targets = plan.targets;
       itemCount = targets.items.length;
@@ -166,6 +212,47 @@ export class AutomationExecutor {
     } finally {
       this.inFlight.delete(automationId);
     }
+  }
+
+  /** Records that an invalid user automation was not run, and why. */
+  private async recordSkip(automationId: number, taskId: string, reason: string): Promise<void> {
+    log.warn('Automation skipped as invalid', { automationId, reason });
+    await this.recordResult(automationId, taskId, {
+      itemCount: 0,
+      status: 'skipped',
+      error: reason,
+      kind: 'user',
+    });
+  }
+
+  /** Why a user automation cannot run, one line per problem; empty when it can. */
+  private async blockingProblems(
+    automationProvider: MetadataProvider,
+    automationQueries: TargetingQuery[]
+  ): Promise<string[]> {
+    const automationProviderId = automationProvider.id;
+    const problems: string[] = [];
+    if (!automationProvider.isActive) {
+      problems.push(
+        `${instanceName(automationProvider.type, automationProviderId)}, this automation's provider, is not an active provider`
+      );
+    }
+    for (const { queryId } of automationQueries) {
+      const { contentType } = await this.mediaQueryService.getById(queryId);
+      const health = await this.mediaQueryService.getHealthForAutomation(
+        queryId,
+        automationProviderId
+      );
+      for (const status of health.providerStatus) {
+        if (status.required && !status.configured) {
+          problems.push(describeMissingProvider(status, contentType));
+        }
+      }
+      for (const issue of health.qualificationIssues) {
+        problems.push(describeQualificationIssue(issue, contentType, automationProvider));
+      }
+    }
+    return problems;
   }
 
   /**
@@ -281,14 +368,18 @@ export class AutomationExecutor {
     taskId: string,
     result: {
       itemCount: number;
-      status: 'success' | 'error';
+      status: AutomationRunStatus;
       error?: string;
       kind: 'user' | 'system';
       targets?: RunTargets;
     }
   ): Promise<void> {
+    // A skip describes the automation's validity, not an execution, so the
+    // last-run summary keeps describing the last run that did execute.
     const [, run] = await Promise.all([
-      this.automationService.recordRun(automationId, result),
+      result.status === 'skipped'
+        ? undefined
+        : this.automationService.recordRun(automationId, { ...result, status: result.status }),
       this.automationRunService.createRun({
         automationId,
         status: result.status,

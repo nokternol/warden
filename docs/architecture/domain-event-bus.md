@@ -23,7 +23,7 @@ Two orthogonal families — never conflated, later exposed as two SSE channels (
 | Event | Payload | Emitted |
 |---|---|---|
 | `run:started` | `{ automationId, kind, taskId, startedAt }` | at the top of the run body, after the automation is loaded |
-| `run:completed` | `{ automationId, kind, taskId, status, itemCount, error?, finishedAt, runId, ranAt }` | **post-commit**, from `recordResult`, carrying the persisted `runId`/`ranAt` — for both success and error |
+| `run:completed` | `{ automationId, kind, taskId, status, itemCount, error?, finishedAt, runId, ranAt }` | **post-commit**, from `recordResult`, carrying the persisted `runId`/`ranAt` — for success, error and skipped runs (a skipped run is an invalid automation that was not run; `error` carries the reason) |
 
 `run:completed` is emitted post-commit with the real persisted identifiers so a client can apply it
 authoritatively without diverging from a later refetch. Both success and failure flow through the
