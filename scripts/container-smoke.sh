@@ -93,7 +93,42 @@ check_honours_tz() {
   pass "croner schedules in wall-clock time under TZ=$ZONE"
 }
 
+# Runs a libsql statement against the container's database and prints the first column of the
+# first row, if any.
+db_exec() {
+  docker exec "$NAME" node -e "
+    const { createClient } = require('@libsql/client');
+    const c = createClient({ url: 'file:/app/config/db/warden.db' });
+    c.execute(process.argv[1]).then((r) => {
+      if (r.rows[0]) process.stdout.write(String(Object.values(r.rows[0])[0]));
+      c.close();
+    });" "$1"
+}
+
+check_restart_keeps_data() {
+  db_exec 'CREATE TABLE IF NOT EXISTS smoke_marker (v TEXT)' >/dev/null
+  db_exec "INSERT INTO smoke_marker VALUES ('kept')" >/dev/null
+  docker restart "$NAME" >/dev/null
+  wait_healthy
+  local kept
+  kept="$(db_exec 'SELECT v FROM smoke_marker LIMIT 1')"
+  [[ "$kept" == "kept" ]] || fail "data written before restart was not found afterwards"
+  pass "restart re-runs migrations and keeps data"
+}
+
+check_stops_within_budget() {
+  local started=$SECONDS elapsed exit_code
+  docker stop -t "$STOP_BUDGET_SECONDS" "$NAME" >/dev/null
+  elapsed=$((SECONDS - started))
+  exit_code="$(docker inspect --format '{{.State.ExitCode}}' "$NAME")"
+  [[ "$exit_code" == "0" ]] || fail "container was killed (exit $exit_code) instead of stopping gracefully"
+  ((elapsed < STOP_BUDGET_SECONDS)) || fail "stop took ${elapsed}s, budget ${STOP_BUDGET_SECONDS}s"
+  pass "stops gracefully in ${elapsed}s"
+}
+
 start_container
 check_healthy_and_serves_login
 check_runs_unprivileged_with_writable_volume
 check_honours_tz
+check_restart_keeps_data
+check_stops_within_budget
