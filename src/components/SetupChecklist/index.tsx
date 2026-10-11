@@ -15,6 +15,7 @@ const CURRENT_STEP_INDEX: Record<SetupChecklistProps['state'], number> = {
   'no-providers': 0,
   'no-source': 0,
   'no-query': 1,
+  'no-automation': 2,
 };
 
 function stepStatus(index: number, current: number): StepStatus {

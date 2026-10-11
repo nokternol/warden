@@ -9,4 +9,10 @@ describe('setupState', () => {
   it('asks for a query once a source is configured and none is saved', () => {
     expect(setupState({ providerCount: 1, hasSource: true, queryCount: 0 })).toBe('no-query');
   });
+
+  it('asks for an automation once a source and a query exist', () => {
+    expect(
+      setupState({ providerCount: 1, hasSource: true, queryCount: 1, automationCount: 0 })
+    ).toBe('no-automation');
+  });
 });
