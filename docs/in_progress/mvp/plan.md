@@ -246,7 +246,7 @@ does not define its own TDD process. Each slice supplies the *input* to that ski
 - **Plan sign-off:** merging the PR that adds this file. Issues are created from the merged version.
 - **Slice sign-off:** reviewing and merging its PR. The issue's checklist must be met: the step
   list posted to the issue, one commit per green cycle, deletes done, gates green, docs updated,
-  design debt filed, and screenshots for UI slices.
+  design debt filed, and, for UI slices, screenshots shown to the user (not attached to the PR).
 - **MVP sign-off:** ticking G1's checklist (every In-scope feature, offered provider type and offered
   task, verified on the published image on the NAS), then closing the milestone. `docs-lifecycle`
   then folds this plan's lasting content into `docs/architecture/` and deletes it.
