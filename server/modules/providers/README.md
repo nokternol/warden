@@ -34,7 +34,7 @@ internals directly; nothing else should.
 
 ## Connections
 
-Each external system (Radarr, Sonarr, Tautulli, Jellyfin, Plex, Overseerr, Seerr, TMDB, OMDB,
+Each external system (Radarr, Sonarr, Tautulli, Jellyfin, Plex, Seerr, TMDB, OMDB,
 TVmaze) gets one class in `connections/` extending `BaseProviderConnection`, which supplies a
 pre-configured [`ky`](https://github.com/sindresorhus/ky) client (`prefixUrl` from the stored URL +
 optional `urlBase` for reverse-proxy installs), a 10-second timeout, JSON `Accept` header, and error
@@ -52,7 +52,7 @@ so a connection implements nothing from media directly. See
 |---|---|
 | Radarr, Sonarr, Tautulli | `?apikey=` query param |
 | Jellyfin | `X-Emby-Authorization` header |
-| Overseerr, Seerr | `X-Api-Key` header |
+| Seerr (and Overseerr servers) | `X-Api-Key` header |
 | Plex (metadata) | `X-Plex-Token` header |
 
 ### The Plex split

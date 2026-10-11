@@ -303,7 +303,7 @@ describe('Media browse — series registry predicates', () => {
     });
   });
 
-  describe('enriched predicates (overseerr / tmdbStatus / lastWatched) on series', () => {
+  describe('enriched predicates (seerr / tmdbStatus / lastWatched) on series', () => {
     it('seerrRequestStatus narrows by merged SONARR enrichment', async () => {
       const client = clientWithSeries([series(1, 'Requested', {}), series(2, 'Other', {})]);
       await seedEnrichment(1, { seerrRequestStatus: 2 });

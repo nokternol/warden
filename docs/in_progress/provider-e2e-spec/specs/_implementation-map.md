@@ -69,8 +69,8 @@ lifecycle:
 | [radarr](radarr.md) | implementing | `implement/radarr-provider-spec` | [#49](https://github.com/nokternol/warden/pull/49) (merged) |
 | [sonarr](sonarr.md) | implementing | `implement/sonarr-provider-spec` | [#50](https://github.com/nokternol/warden/pull/50) (merged) |
 | [tautulli](tautulli.md) | draft | — | — |
-| [overseerr](overseerr.md) | draft | — | — |
-| [seerr](seerr.md) | draft | — | — |
+| [overseerr](overseerr.md) | implementing | `mvp/D3-seerr-request-manager` | MVP slice D3 (#70) |
+| [seerr](seerr.md) | implementing | `mvp/D3-seerr-request-manager` | MVP slice D3 (#70) |
 | [tmdb](tmdb.md) | draft | — | — |
 | [omdb](omdb.md) | draft | — | — |
 | [tvmaze](tvmaze.md) | draft | — | — |
@@ -100,3 +100,24 @@ parameter `AutomationBuilder` has no UI for yet (mirrors Radarr's `moveMovie`, s
 on `tickets/11-automation-task-parameters.md`'s implementation, not `_precedence` — no Sonarr
 field collided with an already-enriched single-producer field this time. The `getLanguageProfiles()`
 lookup shipped; only the two task actions wait — revisit once `_automation-parameters.md` ships.
+
+**Overseerr and Seerr are one provider, partially done, still `implementing`.** MVP slice D3 (#70)
+absorbed the migration note (`seerr.md`) and the baseline of `overseerr.md`, under MVP decision 9a:
+the request manager is the single provider type `SEERR`, class `SeerrProvider`, and there is no
+`OVERSEERR` type. This supersedes `seerr.md`'s "stays a distinct type alongside `OVERSEERR`" and
+`overseerr.md`'s `overseerr`-prefixed key names; the specs keep the names as history. Done:
+
+- `SEERR` is built by `ProviderFactory`, offered by the provider-type catalogue and no longer deferred
+  in `contract/scope.ts`; the connection test probes it.
+- The baseline fields `overseerrRequestStatus` and `overseerrHasIssue` are `seerrRequestStatus` and
+  `seerrHasIssue`, produced by `seerrEnricher` and served as rules labelled "Seerr request status" and
+  "Seerr has issue".
+- Migration 0030 rewrites stored provider types, saved-query filter keys and enrichment field keys.
+- The tests serve an Overseerr server and a Seerr server from MSW handlers and run the provider
+  against both.
+
+Still open, not built: every row of `overseerr.md`'s "New fields to wire" and "Tasks / automation
+options" (MVP decision 10 offers no Seerr tasks, enrichment only), and its known limitations. New
+fields take the `seerr` prefix. `seerr.md`'s live-compatibility check against a real Seerr server
+belongs to MVP slice G1, after the NAS upgrade; its Seerr-only surfaces (Jellyfin/Emby auth,
+multi-Plex-server settings) stay out of scope.

@@ -9,7 +9,7 @@ import {
 /**
  * Phase 2 — enriched predicates on the browse path.
  *
- * The parallel engine never declared the overseerr or tmdbStatus predicates, so
+ * The parallel engine never declared the seerr or tmdbStatus predicates, so
  * these controls did nothing. After the swap the handler merges media_enrichment
  * the normalized items and filters through the registry. Critically: when there
  * is NO enrichment data, an enriched filter returns 0 items (not "keep all").

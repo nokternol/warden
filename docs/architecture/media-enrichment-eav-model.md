@@ -7,8 +7,8 @@ field.
 ## Why this shape, not a wide table
 
 Which enrichment fields ever have data for a given media item is a fact about which providers are
-*configured*, not a fixed property of the schema — a server with no Overseerr instance will never
-populate `overseerrRequestStatus`, and that's true for however many fields a future provider might add.
+*configured*, not a fixed property of the schema — a server with no Seerr instance will never
+populate `seerrRequestStatus`, and that's true for however many fields a future provider might add.
 A column-per-field table encodes that variability as schema (one column per field, `NULL` when the
 owning provider isn't configured), when it's actually data: a field's existence for the catalog is
 sparse by construction, not by accident. `enrichment_field`
@@ -23,7 +23,7 @@ per deployment.
 
 A secondary, supporting consequence: a wide table also means every new field is a schema change
 (`ALTER TABLE`, a migration) no matter how small — `INVENTORY.md` (repo root) catalogs roughly 80–90
-candidate fields across Radarr, Sonarr, Tautulli, Plex, Jellyfin, Overseerr, TMDB, OMDB, and TVMaze that
+candidate fields across Radarr, Sonarr, Tautulli, Plex, Jellyfin, Seerr, TMDB, OMDB, and TVMaze that
 aren't yet fetched or filterable; today's 6 keys are the early edge of that backlog. Under the EAV shape,
 adding a field is a seed row in a migration, never a schema change again.
 

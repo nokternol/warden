@@ -21,7 +21,7 @@ matched only by a logical key both sides speak.
 
 | System | MediaEnricher? | Why |
 |---|---|---|
-| Plex, Tautulli, Overseerr, TMDB | **yes** | contribute data about media owned by Radarr/Sonarr, matched by logical key |
+| Plex, Tautulli, Seerr, TMDB | **yes** | contribute data about media owned by Radarr/Sonarr, matched by logical key |
 | Radarr, Sonarr | **no** | they are `MediaSource` (+ `MediaActuator`); their tags/quality/genres are Source fields on their own `MediaItem` rows |
 
 The rule that draws the line: a field carried on a system's **own** Source rows is Source data;
@@ -48,7 +48,7 @@ The reason there is no separate enrichment transport type is that the canonical 
 (`_sourceIds: { radarr?, plex?, tmdb?, imdb?, providerId?, identity? }` — `providerId` on
 source-produced items identifies the instance; `identity` on job-hydrated items is the group's own
 surrogate id, set only by `hydrate` below, never by a source) and the fill slots (`playCount`,
-`lastWatchedAt`, `overseerrHasIssue`, `overseerrRequestStatus`, `tmdbStatus`, …). The item **is** the
+`lastWatchedAt`, `seerrHasIssue`, `seerrRequestStatus`, `tmdbStatus`, …). The item **is** the
 contract — each enricher owns its own match-and-decorate, so no central lingua franca has to carry
 fragments between them.
 
@@ -111,7 +111,7 @@ It is upstream of, and separate from, enrichment — an ownership/identity conce
 
 - [`server/modules/media/enrichment/enricher.ts`](ref:path:server/modules/media/enrichment/enricher.ts) — `MediaEnricher` / `EnrichmentResult` contracts.
 - [`enrichment/enricherAdapters.ts`](ref:path:server/modules/media/enrichment/enricherAdapters.ts) — `plexEnricher`, `tautulliEnricher`,
-  `overseerrEnricher`, `tmdbEnricher`, each a thin shell binding a provider connection to the role: fetch,
+  `seerrEnricher`, `tmdbEnricher`, each a thin shell binding a provider connection to the role: fetch,
   run its `MediaFieldProvider`/`MediaFieldSource` adapter's `visit`/`toEnrichmentFields`, then `enrichment/decorate.ts`.
 - [`enrichment/precedence.ts`](ref:path:server/modules/media/enrichment/precedence.ts) — `resolvePrecedence` + the per-field `contestedFieldPrecedence`.
 - `EnrichmentJob` — hydrates stale identities into `MediaItem`s, runs every enricher, resolves per field,

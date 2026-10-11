@@ -76,7 +76,7 @@ it operates on. That exception no longer exists: `MediaSource` and `MediaEnriche
 role contracts ([`media/mediaSource.ts`](ref:path:server/modules/media/mediaSource.ts),
 [`media/enrichment/enricher.ts`](ref:path:server/modules/media/enrichment/enricher.ts)). Provider
 connection classes (`RadarrProvider`, `SonarrProvider`, `PlexProvider`, `TautulliProvider`,
-`OverseerrProvider`, `TmdbProvider`) implement nothing directly — they are *bound* to these roles by
+`SeerrProvider`, `TmdbProvider`) implement nothing directly — they are *bound* to these roles by
 media-owned adapters ([`sourceAdapters.ts`](ref:path:server/modules/media/sourceAdapters.ts),
 [`enrichment/enricherAdapters.ts`](ref:path:server/modules/media/enrichment/enricherAdapters.ts)) that
 import the provider connection classes from providers' public interface — ordinary `media → providers`,

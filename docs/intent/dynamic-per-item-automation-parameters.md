@@ -12,7 +12,7 @@ a fixed status enum). There is no mechanism for a parameter value that instead n
 *computed per matched item* at run time — read from the item's own data rather than picked once
 by the user in `AutomationBuilder`.
 
-Overseerr's `Update request` task is the concrete case that exposed this: `MediaRequest.seasons`
+Seerr's `Update request` task is the concrete case that exposed this: `MediaRequest.seasons`
 is inherently per-request (different shows have different season counts, different existing
 requested-season sets). A single automation runs against many matched items, so "update to seasons
 3 and 4" chosen once at creation time is only correct for whichever matched items happen to already
@@ -23,7 +23,7 @@ control at all, rather than exposing a chooser that would misbehave per item.
 
 ## Why it matters
 
-This isn't unique to Overseerr — any future task whose "correct" parameter value legitimately
+This isn't unique to Seerr — any future task whose "correct" parameter value legitimately
 varies by which item it's acting on will hit the same wall. Building `_automation-parameters.md`'s
 static mechanism without at least naming this gap risks it being rediscovered (and re-litigated)
 the next time a task like this comes up, or worse, worked around ad hoc per-task instead of once,
@@ -46,5 +46,5 @@ generally.
 
 ## Known concrete motivating case
 
-- Overseerr `Update request`'s season selection — see `_automation-parameters.md`'s "Known
+- Seerr `Update request`'s season selection — see `_automation-parameters.md`'s "Known
   limitation" section for the current static-only workaround.

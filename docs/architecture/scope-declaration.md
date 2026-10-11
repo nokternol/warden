@@ -10,9 +10,9 @@ Un-deferring something means removing one entry from that declaration.
 because both sides of the API depend on the contract, so either side can consult it. It lists three
 kinds of deferred things:
 
-- **`providerTypes`** — provider types that cannot be configured: `SEERR`, `TMDB`, `OMDB`, `TVMAZE`.
-  The request manager is offered under its current type name, `OVERSEERR`, while `SEERR` (same API,
-  but `ProviderFactory` cannot build it) stays deferred.
+- **`providerTypes`** — provider types that cannot be configured: `TMDB`, `OMDB`, `TVMAZE`.
+  The request manager is offered as `SEERR`, the one request-manager type, which serves an Overseerr
+  server as well as a Seerr server.
 - **`rules`** — rule keys that are never served: `certification` (a multi-value rule with no lookup,
   so it has no control) and `tmdbStatus` (produced only by TMDB).
 - **`tasks`** — provider tasks not offered for enablement or automation, each named by provider type
@@ -51,7 +51,7 @@ the list complete, equal to exactly the set of rules with no control or no offer
 a checked inventory too: un-deferring TMDB fails that test until `tmdbStatus` is removed from the list.
 
 The probe itself, `probeConnection` ([`connectionProbe.ts`](ref:path:server/modules/providers/connectionProbe.ts)),
-still knows every type. Its SEERR and TVMAZE cases are tested against the probe directly
+still knows every type. Its TVMAZE case is tested against the probe directly
 ([`connectionProbe.test.ts`](ref:path:server/__tests__/modules/providers/connectionProbe.test.ts)), so
 the deferred code stays covered while no route reaches it.
 

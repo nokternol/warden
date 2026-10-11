@@ -27,7 +27,7 @@ every other surface derives from it — never re-declares it.
 | Tier | Providers (today) | Role in code |
 |---|---|---|
 | **Catalog owner** (`MediaSource`) | Radarr (movies), Sonarr (series) | Define what *exists* and its canonical id; the catalog is the union of every active instance's library |
-| **Enricher** | Tautulli, Plex, Jellyfin, Overseerr, TMDB / OMDB / TVMaze | Decorate owner rows by shared key; contribute nothing standalone |
+| **Enricher** | Tautulli, Plex, Jellyfin, Seerr, TMDB / OMDB / TVMaze | Decorate owner rows by shared key; contribute nothing standalone |
 | **Inert toward catalog** | Plex-as-*owner*, Jellyfin-as-*owner* | Cannot produce a catalog row at all |
 
 With no Radarr and no Sonarr configured, the app is effectively empty: browse lists, identity
@@ -54,7 +54,7 @@ map; every consumer above inherits the change without its own edit.
 
 `ProviderSettingsService.assertNoActiveConflict` ([`server/modules/providers/providerSettingsService.ts`](ref:path:server/modules/providers/providerSettingsService.ts))
 early-returns for `isMediaSourceType(type)` — Radarr and Sonarr carry **no** single-active invariant.
-Every other provider type (TMDB, Overseerr, Tautulli, Plex-as-enricher, Jellyfin) still enforces it: at
+Every other provider type (TMDB, Seerr, Tautulli, Plex-as-enricher, Jellyfin) still enforces it: at
 most one active instance, or `assertNoActiveConflict` throws `ValidationError`. This is role-scoped, not
 type-hardcoded, so it reads directly off the one authority above.
 

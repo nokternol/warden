@@ -155,47 +155,28 @@ Gated into `ruleRegistry.ts` (`studio`, `runtimeMinutes`, `fileContainer`, `vide
 `fileResolution`, `fileSizeBytes`, `releaseDaysAgo`, `labels`, `watched`, `lastWatchedDaysAgo`,
 `jellyfinAddedDaysAgo`, `jellyfinIsFavorite`).
 
-## Overseerr
+## Seerr
 
-**What it is:** media request/discovery front-end that sits in front of Radarr/Sonarr.
+**What it is:** media request/discovery front-end that sits in front of Radarr/Sonarr. Seerr is
+Overseerr's API-compatible successor, so one provider type (`SEERR`) and one connection class serve a
+Seerr server and an Overseerr server alike; there is no separate Overseerr type.
 
-**Role:** `MediaEnricher`. No `MediaActuator` implementation — `OverseerrProvider` does not implement
+**Role:** `MediaEnricher`. No `MediaActuator` implementation — `SeerrProvider` does not implement
 `MediaActuator` or declare `tasks()`.
 
 **Auth:** API key (`X-Api-Key` header).
 
-**What the app can pull today** ([`connections/overseerrProvider.ts`](ref:path:server/modules/providers/connections/overseerrProvider.ts)):
+**What the app can pull today** ([`connections/seerrProvider.ts`](ref:path:server/modules/providers/connections/seerrProvider.ts)):
 `getRequests()`, `getIssues()`, `search(query)`.
 
-**Wired into the media-item pipeline?** Yes — `overseerrEnricher`
+**Wired into the media-item pipeline?** Yes — `seerrEnricher`
 ([`enrichment/enricherAdapters.ts`](ref:path:server/modules/media/enrichment/enricherAdapters.ts)) calls
-`getRequests()`+`getIssues()`, runs them through `overseerrFieldProvider`
+`getRequests()`+`getIssues()`, runs them through `seerrFieldProvider`
 ([`mediaFieldProvider.ts`](ref:path:server/modules/media/mediaFieldProvider.ts)) into
-`overseerrRequestStatus`/`overseerrHasIssue` keyed by `tmdbId`. Gated into `ruleRegistry.ts`.
-
-## Seerr
-
-**What it is:** a fork of Overseerr with an identical API surface — a separate `MetadataProviderType` so
-the two can be configured and constrained (single-active) independently, not a different system.
-
-**Role:** same as Overseerr in every respect the code can express — `OverseerrProvider` is directly
-re-exported as `SeerrProvider`
-([`connections/seerrProvider.ts`](ref:path:server/modules/providers/connections/seerrProvider.ts)): "Seerr
-is a fork of Overseerr with an identical API. Re-export `OverseerrProvider` under a distinct name so the DI
-container can register it as a separate SEERR-typed provider."
-
-**Auth:** API key (`X-Api-Key` header), identical to Overseerr.
-
-**What the app can pull today:** identical method set to Overseerr (same class).
-
-**Wired into the media-item pipeline?** No. `ProviderFactory.create`
-([`server/modules/providers/providerFactory.ts`](ref:path:server/modules/providers/providerFactory.ts))'s
-switch has no `SEERR` case — Seerr is only constructed ad hoc in
-`providers.procedures.ts`'s ad-hoc `metadata` procedure (`OVERSEERR`/`SEERR` share one case there, calling
-`getRequests()` to prove connectivity). It is absent from `enricherAdapters.ts`, `ProviderSet`, and
-`ruleRegistry.ts` entirely — configuring Seerr today gets you a working connection test and nothing
-else; even the `overseerrEnricher` role Overseerr itself plays is not extended to a configured Seerr
-instance.
+`seerrRequestStatus`/`seerrHasIssue` keyed by `tmdbId`. Gated into `ruleRegistry.ts`.
+[`ProviderFactory`](ref:path:server/modules/providers/providerFactory.ts) builds it for the `SEERR` type, and
+the connection probe checks `/api/v1/status`. The tests mock both an Overseerr server and a Seerr server; behaviour against a live Seerr
+server is not yet verified.
 
 ## TMDB (The Movie Database)
 
@@ -284,8 +265,7 @@ reaches them.
 | Tautulli | MediaEnricher, MediaActuator | Yes — `tautulliEnricher` | Yes |
 | Plex | MediaEnricher, MediaActuator | Yes — `plexEnricher` + identity stamping | Yes |
 | Jellyfin | MediaEnricher, MediaActuator | Yes — `jellyfinEnricher` | Yes |
-| Overseerr | MediaEnricher | Yes — `overseerrEnricher` | Yes (the request manager) |
-| Seerr | (same API as Overseerr; role not extended in code) | No — no `ProviderFactory`/enricher wiring; the connection probe handles it | No |
+| Seerr | MediaEnricher | Yes — `seerrEnricher` | Yes (the request manager) |
 | TMDB | MediaEnricher | Partially — only `getStatus` wired; richer surface used by ratings aggregation only | No |
 | OMDB | inert | No — ratings aggregation only | No |
 | TVMaze | inert | No — ratings aggregation only; `network` data is real and buildable | No |
@@ -299,7 +279,4 @@ connection method) before assuming a new enrichable field is easy to add. In par
 `network` data is real and already half-declared in `ruleRegistry.ts` but has no adapter; TMDB and
 OMDB's ratings/details surfaces are fully implemented in their connection classes but sit behind the
 separate ratings-aggregation feature, not the enrichment job, so wiring them into a
-`MediaFieldProvider` is plausible future work, not a rebuild from nothing; Seerr has no adapter at all
-despite sharing Overseerr's exact API — the cheapest of all these gaps to close, since `overseerrEnricher`
-would work unmodified against a Seerr-typed instance if `ProviderFactory` and `enricherAdapters.ts` were
-extended to construct and bind one.
+`MediaFieldProvider` is plausible future work, not a rebuild from nothing — the Seerr adapter is the model: a thin shell binding a connection to the role.

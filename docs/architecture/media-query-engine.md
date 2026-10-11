@@ -67,5 +67,5 @@ returns the engine's real count. All three sites now resolve through `evaluate` 
 `_sourceIds.providerId`. The single-active-provider invariant no longer holds for `movie`/`series`
 (`RADARR`/`SONARR` — the `MediaSource` role, `isMediaSourceType`): any number of instances may be active,
 and `evaluate` is called once per instance by each caller that fans out (preview, per-instance browse
-sublists). Every other provider type (TMDB, Overseerr, Tautulli, Plex-as-enricher, Jellyfin) keeps the
+sublists). Every other provider type (TMDB, Seerr, Tautulli, Plex-as-enricher, Jellyfin) keeps the
 invariant — at most one active instance, so those lookups stay unambiguous.
