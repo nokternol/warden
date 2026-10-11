@@ -7,3 +7,5 @@
 UPDATE `enrichment_field` SET `key` = 'seerrRequestStatus' WHERE `key` = 'overseerrRequestStatus';
 --> statement-breakpoint
 UPDATE `enrichment_field` SET `key` = 'seerrHasIssue' WHERE `key` = 'overseerrHasIssue';
+--> statement-breakpoint
+UPDATE `metadata_provider` SET `type` = 'SEERR' WHERE `type` = 'OVERSEERR';
