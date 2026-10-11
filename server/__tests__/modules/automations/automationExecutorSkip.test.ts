@@ -175,4 +175,29 @@ describe('AutomationExecutor — invalid automations', () => {
     );
     expect(unmonitorCalls).toBe(0);
   });
+
+  // No rule is `required` yet, so no real filter can make a query unavailable.
+  it('skips an automation whose query needs a provider type that is not configured', async () => {
+    const own = await seedRadarr('Own Radarr');
+    const automation = await seedAutomationOver(own.id, [{ ruleKey: 'watched', value: true }]);
+    vi.spyOn(mediaQueryService, 'getHealthForAutomation').mockResolvedValue({
+      status: 'unavailable',
+      providerStatus: [
+        {
+          providerType: MetadataProviderType.TAUTULLI,
+          required: true,
+          configured: false,
+          affectedFilterKeys: ['watched'],
+        },
+      ],
+      qualificationIssues: [],
+    });
+
+    await executor.execute(automation.id);
+
+    const [run] = await getDb().select().from(automationRuns);
+    expect(run.status).toBe('skipped');
+    expect(run.error).toBe('Watched filter needs a Tautulli provider, which is not configured');
+    expect(unmonitorCalls).toBe(0);
+  });
 });

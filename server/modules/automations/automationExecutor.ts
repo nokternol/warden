@@ -59,13 +59,27 @@ interface RunPlan {
   actuatorIds: Parameters<ActuatorTask['run']>[0];
 }
 
-/** "Radarr instance 3" — a provider instance named by its type and id. */
-function instanceName(type: string | undefined, providerId: number): string {
-  const typeName = type ? type.charAt(0) + type.slice(1).toLowerCase() : 'Provider';
-  return `${typeName} instance ${providerId}`;
+/** "RADARR" as "Radarr". */
+function providerTypeName(type: string): string {
+  return type.charAt(0) + type.slice(1).toLowerCase();
 }
 
+/** "Radarr instance 3" — a provider instance named by its type and id. */
+function instanceName(type: string | undefined, providerId: number): string {
+  return `${type ? providerTypeName(type) : 'Provider'} instance ${providerId}`;
+}
+
+type ProviderStatus = QueryHealth['providerStatus'][number];
 type QualificationIssue = QueryHealth['qualificationIssues'][number];
+
+/** One line saying which rule needs a provider type that is not configured. */
+function describeMissingProvider(
+  { providerType, affectedFilterKeys }: ProviderStatus,
+  contentType: ContentType
+): string {
+  const rule = getRule(affectedFilterKeys[0], contentType);
+  return `${rule?.label} filter needs a ${providerTypeName(providerType)} provider, which is not configured`;
+}
 
 /** One line saying why a filter's instance qualification keeps the automation from running. */
 function describeQualificationIssue(
@@ -232,6 +246,11 @@ export class AutomationExecutor {
         queryId,
         automationProviderId
       );
+      for (const status of health.providerStatus) {
+        if (status.required && !status.configured) {
+          problems.push(describeMissingProvider(status, contentType));
+        }
+      }
       for (const issue of health.qualificationIssues) {
         problems.push(describeQualificationIssue(issue, contentType, automationProvider));
       }
