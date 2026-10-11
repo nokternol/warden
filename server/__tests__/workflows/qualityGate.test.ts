@@ -48,3 +48,10 @@ describe('quality gate workflow: container smoke', () => {
     for (const run of runs) expect(run).toMatch(/SMOKE_SKIP_BUILD=1/);
   });
 });
+
+describe('quality gate workflow: triggers', () => {
+  it('runs on pushes to main and on v* tags', () => {
+    expect(workflow.on.push?.branches).toEqual(['main']);
+    expect(workflow.on.push?.tags).toEqual(['v*']);
+  });
+});
