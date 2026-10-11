@@ -200,4 +200,26 @@ describe('AutomationExecutor — invalid automations', () => {
     expect(run.error).toBe('Watched filter needs a Tautulli provider, which is not configured');
     expect(unmonitorCalls).toBe(0);
   });
+
+  it('still runs an automation whose only problem is a missing optional provider', async () => {
+    const own = await seedRadarr('Own Radarr');
+    const query = await mediaQueryService.create({
+      name: 'Watched',
+      contentType: 'movie',
+      filters: [{ ruleKey: 'watched', value: true }],
+    });
+    expect((await mediaQueryService.getById(query.id)).health.status).toBe('degraded');
+    const automation = await automationService.create({
+      name: 'Nightly',
+      queries: [{ queryId: query.id, role: 'include' }],
+      providerId: own.id,
+      taskId: 'unmonitorMovie',
+      schedule: '0 2 * * *',
+    });
+
+    await executor.execute(automation.id);
+
+    const [run] = await getDb().select().from(automationRuns);
+    expect(run.status).toBe('success');
+  });
 });
