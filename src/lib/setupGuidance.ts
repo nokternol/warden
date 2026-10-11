@@ -1,16 +1,32 @@
-export type SetupState = 'no-providers' | 'no-source' | 'no-query' | 'no-automation' | 'complete';
+export type SetupState =
+  | 'unknown'
+  | 'no-providers'
+  | 'no-source'
+  | 'no-query'
+  | 'no-automation'
+  | 'complete';
 
+/** What the page knows about setup so far; a fact that has not resolved is `undefined`. */
 export interface SetupFacts {
-  providerCount: number;
-  hasSource?: boolean;
-  queryCount?: number;
-  automationCount?: number;
+  providerCount: number | undefined;
+  hasSource: boolean | undefined;
+  queryCount: number | undefined;
+  automationCount: number | undefined;
 }
 
 export function setupState(facts: SetupFacts): SetupState {
-  if (facts.providerCount === 0) return 'no-providers';
-  if (facts.hasSource === false) return 'no-source';
-  if (facts.queryCount === 0) return 'no-query';
-  if (facts.automationCount === 0) return 'no-automation';
+  const { providerCount, hasSource, queryCount, automationCount } = facts;
+  if (
+    providerCount === undefined ||
+    hasSource === undefined ||
+    queryCount === undefined ||
+    automationCount === undefined
+  ) {
+    return 'unknown';
+  }
+  if (providerCount === 0) return 'no-providers';
+  if (!hasSource) return 'no-source';
+  if (queryCount === 0) return 'no-query';
+  if (automationCount === 0) return 'no-automation';
   return 'complete';
 }

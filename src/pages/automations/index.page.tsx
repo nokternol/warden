@@ -41,14 +41,12 @@ export default function AutomationsPage() {
   const { providers } = useProviderSettings();
   const { sources } = useMediaSources();
   const [showBuilder, setShowBuilder] = useState(false);
-  const guidance = providers
-    ? setupState({
-        providerCount: providers.length,
-        hasSource: sources && Object.values(sources).some((source) => source.configured),
-        queryCount: queries.length,
-        automationCount: automations.length,
-      })
-    : undefined;
+  const guidance = setupState({
+    providerCount: providers?.length,
+    hasSource: sources && Object.values(sources).some((source) => source.configured),
+    queryCount: queries.length,
+    automationCount: automations.length,
+  });
 
   const handleLoad = (_query: MediaQueryRecord) => {
     void router.push('/media');
@@ -90,7 +88,7 @@ export default function AutomationsPage() {
       }
     >
       <div className="p-6 space-y-8 max-w-4xl">
-        {guidance && guidance !== 'complete' && (
+        {guidance !== 'unknown' && guidance !== 'complete' && (
           <SetupChecklist state={guidance} onCreateAutomation={() => setShowBuilder(true)} />
         )}
 

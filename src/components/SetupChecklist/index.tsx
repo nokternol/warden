@@ -3,7 +3,7 @@ import { cn } from '@app/lib/utils/cn';
 import { Check } from 'lucide-react';
 
 interface SetupChecklistProps {
-  state: Exclude<SetupState, 'complete'>;
+  state: Exclude<SetupState, 'unknown' | 'complete'>;
   onCreateAutomation: () => void;
 }
 
