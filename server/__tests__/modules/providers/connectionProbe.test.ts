@@ -5,9 +5,9 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 /**
- * The connection probe for the deferred TVMAZE and SEERR types. The API
- * refuses to probe a type that is not offered, so these cases are covered
- * here, at the probe itself, ready for when the types are offered.
+ * The connection probe per provider type. The API refuses to probe a type that
+ * is not offered, so the deferred TVMAZE case is covered here, at the probe
+ * itself, ready for when the type is offered.
  */
 describe('probeConnection', () => {
   describe('TVMAZE', () => {

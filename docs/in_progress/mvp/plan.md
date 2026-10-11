@@ -57,7 +57,6 @@ code. Every path to them is blocked by the scope declaration.
 | Search page, `/api/search/metadata` | A second way to find a title beside the title filter (F11). Its role is decided when un-deferred. |
 | `/api/providers/metadata` | No MVP consumer. |
 | `/api/app-settings` (the `appSettings` module, `settingsAwarePrecedence.ts`) | No UI and no consumer yet. It is the input to the post-MVP precedence work. |
-| Provider type SEERR | Not buildable through `ProviderFactory`. The request manager is offered as `OVERSEERR` until D3 makes `SEERR` its one type and removes it from this list. |
 | Provider type TVMAZE | Not buildable through `ProviderFactory` yet (its API key is lost), so offering it is a reachable broken path (L1). |
 | Provider type OMDB | It feeds only the deferred ratings path. |
 | Provider type TMDB | Not in the verification stack (decision 9). Login-page backdrops keep using the `TMDB_API_KEY` environment setting, which is separate from the provider type. |
@@ -69,12 +68,9 @@ verified in G1**, and everything else of those kinds is declared deferred.
 ## Glossary
 
 One name per concept, everywhere. Settled names live in
-[`VOCABULARY.md`](../../architecture/VOCABULARY.md#glossary--one-name-per-concept). The rows below are
-decided but not yet built; each slice moves its row into `VOCABULARY.md` when it ships.
-
-| Concept | Canonical name | Retired names | Rationale | Slice |
-|---|---|---|---|---|
-| The request-manager provider | **Seerr** *(decided)* | Overseerr, `OVERSEERR`, `OverseerrProvider`, `overseerr*` rule keys | Decision 9a. Seerr is Overseerr's API-compatible successor, so one type serves both servers. | D3 |
+[`VOCABULARY.md`](../../architecture/VOCABULARY.md#glossary--one-name-per-concept). Each slice moves
+its decided-but-unbuilt rows into `VOCABULARY.md` when it ships; every row has shipped, so none are
+pending.
 
 ## Destination scenario
 
@@ -574,14 +570,13 @@ names, so nothing is renamed twice.
 - **Why:** F9, L1, and Definition of done item 2.
 - **Behaviours:**
   - The add-provider list shows exactly the offered types (decision 9), with labels and defaults
-    from the server. Until D3, the offered request manager is `OVERSEERR` (labelled Overseerr), and
-    `SEERR` is declared deferred.
+    from the server. The offered request manager is Seerr (`SEERR`, since D3).
   - Creating a non-offered type is rejected before any connection is attempted.
   - A rule is offered only if it has at least one live producer among offered types, so the stale
     TMDB/TVMAZE claims disappear until fixed. (A rule with no control is already left out by C2.)
   - Only the offered tasks (decision 10) are offered for enablement or automation.
 - **Expected end state (as built):** `contract/scope.ts` exports the scope declaration (`Scope`,
-  `scope`) with `deferred.providerTypes` (SEERR, TMDB, OMDB, TVMAZE), `deferred.rules` (`certification`,
+  `scope`) with `deferred.providerTypes` (TMDB, OMDB, TVMAZE; D3 removed SEERR), `deferred.rules` (`certification`,
   `tmdbStatus`) and `deferred.tasks` (empty; a task is `{ providerType, taskId }`), plus
   `isOfferedProviderType`, `isOfferedRule` and `isOfferedTask`, which take the declaration as an argument. The kernel
   container registers it as `scope`, and procedures read it from their cradle, so a test can inject its
@@ -691,6 +686,13 @@ names, so nothing is renamed twice.
 - **Deletes:** the `seerrProvider.ts` re-export alias. The single class now carries the one name.
 - **Docs:** fold the provider e2e `seerr.md`/`overseerr.md` specs' status into the implementation
   map. Phase 9 is absorbed here.
+- **As built:** migration 0030 renames the three persisted spellings in place: `metadata_provider.type`,
+  `media_query_filter_values.filterKey` and `enrichment_field.key` (enrichment values reference their
+  field by id, so none is rewritten). The field keys, the rule keys and the enricher moved together
+  because the enrichment queries refuse a field key the seed lacks. The provider test and the MSW
+  handlers (`tests/mocks/handlers/seerr.ts`) serve an Overseerr server (port 5055) and a Seerr server
+  (port 5056) from one set of payloads. The provider card's icon map now has a `SEERR` entry; it never had
+  one for the old `SEERR` type.
 
 **D4 · An invalid automation is skipped and says why** (after B6; story first)
 - **Model:** Sonnet 5.5 (one executor guard, one run status, one Runs page state).
@@ -797,8 +799,8 @@ names, so nothing is renamed twice.
 | 6 | Product and DB name | **Decided: Warden**, with default DB file `warden.db`. The NAS deployment renames its file once or pins `DB_PATH`. |
 | 7 | What "hidden" means | **Decided: blocked, not removed.** Deferred code stays compiled, typechecked and tested. Every path to it (page, nav, section, API procedure, provider type, filter, task) is blocked by the one scope declaration (S1). |
 | 8a–8g | Glossary names | **Decided:** Rule (definition) and Filter (a rule with a chosen value); MediaQuery, shown as Query; included/excluded queries; Source only for the owning provider; series; System automations, with task meaning a provider action; Runs. See the [Glossary](#glossary). |
-| 9 | Offered provider types | **Decided: Radarr, Sonarr, Seerr, Plex, Jellyfin, Tautulli**, the stack running on the NAS where G1 verifies them. TMDB, OMDB and TVMAZE are deferred. Until D3 consolidates the request manager, Seerr is offered as the buildable `OVERSEERR` type (labelled Overseerr) and `SEERR` is declared deferred. Plex and Jellyfin both active exercises the contested-field precedence (`playCount`, `lastWatchedAt`) in G1. |
-| 9a | Overseerr vs Seerr | **Decided: one provider type, Seerr** (D3). Development continues against the NAS's current Overseerr, since the APIs match. The NAS upgrades to Seerr before G1, so acceptance verifies the offered type against the real target; the Seerr spec flagged its live compatibility as unverified. |
+| 9 | Offered provider types | **Decided: Radarr, Sonarr, Seerr, Plex, Jellyfin, Tautulli**, the stack running on the NAS where G1 verifies them. TMDB, OMDB and TVMAZE are deferred. D3 made Seerr the one request-manager type. Plex and Jellyfin both active exercises the contested-field precedence (`playCount`, `lastWatchedAt`) in G1. |
+| 9a | Overseerr vs Seerr | **Decided: one provider type, Seerr** (D3). Development continues against the NAS's current Overseerr, since the APIs match. The NAS upgrades to Seerr before G1, so acceptance verifies the offered type against the real target; the Seerr spec flagged its live compatibility as unverified. D3 built the single `SEERR` type, tested against mocks of both server kinds. |
 | 10 | Offered tasks | **Decided: all 32 offered**, each run once in G1 against a sacrificial item, so destructive ones are proven on throwaway media. The offered types declare 32 tasks, all wired, with parameterized ones backed by options routes. (D) marks destructive. **Radarr:** unmonitorMovie, triggerSearch, deleteMovieWithFiles (D), deleteMovieKeepFiles (D), refreshMovie, rescanMovie, renameMovies, refreshCollection, changeQualityProfile, addTag, removeTag. **Sonarr:** unmonitorSeries, triggerSearch, deleteSeriesWithFiles (D), deleteSeriesKeepFiles (D), refreshSeries, rescanSeries, renameSeries, changeQualityProfile, addTag, removeTag. **Plex:** deleteFromLibrary (D), refreshMetadata, markPlayed, markUnplayed. **Jellyfin:** deleteItem (D), refreshMetadata, markPlayed, markUnplayed, addToCollection, removeFromCollection. **Tautulli:** deleteWatchHistory (D). **Seerr:** none (enrichment only). |
 | 11 | Client/server contract mechanism | **Decided: oRPC contract-first** (C0). On the wire it stays plain HTTP/JSON at the same `/api/...` URLs via oRPC's OpenAPI handler; client and server ship in one image, so there is no client/server version skew to manage. Checked on npm 2026-10-03: oRPC 1.15.4 (released 2026-10-01, schema-agnostic, Zod 4 compatible); ts-rest 3.52.1 (last release 2025-06, peer `zod ^3`, incompatible with this repo's Zod 4.3); Zodios 10.9.6 (last release 2023-08, peer `zod ^3`, axios-based, unmaintained). The alternative is tightening the current bridge by hand (add method/path to the shared schemas, write our own typed client), which builds a homegrown second version of what oRPC already is. |
 

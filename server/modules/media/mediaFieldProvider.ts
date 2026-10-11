@@ -1,10 +1,10 @@
 import type {
   JellyfinItem,
   JellyfinMediaSource,
-  OverseerrIssue,
-  OverseerrRequest,
   PlexMedia,
   PlexMediaItem,
+  SeerrIssue,
+  SeerrRequest,
   TautulliHistoryItem,
 } from '../providers';
 
@@ -20,8 +20,8 @@ export interface EnrichmentFields {
   tags: number[];
   playCount: number;
   lastWatchedAt: string;
-  overseerrRequestStatus: number;
-  overseerrHasIssue: boolean;
+  seerrRequestStatus: number;
+  seerrHasIssue: boolean;
   tmdbStatus: string;
   plexAddedAt: string;
   studio: string;
@@ -128,21 +128,21 @@ export const tmdbFieldSource: MediaFieldSource<string, Pick<EnrichmentFields, 't
   toEnrichmentFields: (status) => ({ tmdbStatus: status }),
 };
 
-/** Overseerr's own representation: request status and whether an issue is open. */
-interface OverseerrNativeFields {
+/** Seerr's own representation: request status and whether an issue is open. */
+interface SeerrNativeFields {
   requestStatus?: number;
   hasIssue?: boolean;
 }
 
-export const overseerrFieldProvider: MediaFieldProvider<
-  [OverseerrRequest[], OverseerrIssue[]],
-  OverseerrNativeFields,
-  Partial<Pick<EnrichmentFields, 'overseerrRequestStatus' | 'overseerrHasIssue'>>,
+export const seerrFieldProvider: MediaFieldProvider<
+  [SeerrRequest[], SeerrIssue[]],
+  SeerrNativeFields,
+  Partial<Pick<EnrichmentFields, 'seerrRequestStatus' | 'seerrHasIssue'>>,
   number
 > = {
   visit: ([requests, issues]) => {
-    const byTmdbId = new Map<number, OverseerrNativeFields>();
-    const get = (tmdbId: number): OverseerrNativeFields => {
+    const byTmdbId = new Map<number, SeerrNativeFields>();
+    const get = (tmdbId: number): SeerrNativeFields => {
       let f = byTmdbId.get(tmdbId);
       if (!f) {
         f = {};
@@ -155,8 +155,8 @@ export const overseerrFieldProvider: MediaFieldProvider<
     return byTmdbId;
   },
   toEnrichmentFields: (native) => ({
-    ...(native.requestStatus !== undefined ? { overseerrRequestStatus: native.requestStatus } : {}),
-    ...(native.hasIssue !== undefined ? { overseerrHasIssue: native.hasIssue } : {}),
+    ...(native.requestStatus !== undefined ? { seerrRequestStatus: native.requestStatus } : {}),
+    ...(native.hasIssue !== undefined ? { seerrHasIssue: native.hasIssue } : {}),
   }),
 };
 

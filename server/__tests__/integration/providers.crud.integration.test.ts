@@ -144,7 +144,7 @@ describe('Provider CRUD API Integration', () => {
     });
 
     it.each([
-      MetadataProviderType.SEERR,
+      'OVERSEERR',
       MetadataProviderType.TMDB,
       MetadataProviderType.OMDB,
       MetadataProviderType.TVMAZE,

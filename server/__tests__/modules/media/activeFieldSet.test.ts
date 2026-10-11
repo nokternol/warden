@@ -54,10 +54,10 @@ describe('fieldsByProviderType', () => {
     ]);
   });
 
-  it('declares overseerrRequestStatus and overseerrHasIssue for Overseerr', () => {
-    expect(fieldsByProviderType[MetadataProviderType.OVERSEERR]).toEqual([
-      'overseerrRequestStatus',
-      'overseerrHasIssue',
+  it('declares seerrRequestStatus and seerrHasIssue for Seerr', () => {
+    expect(fieldsByProviderType[MetadataProviderType.SEERR]).toEqual([
+      'seerrRequestStatus',
+      'seerrHasIssue',
     ]);
   });
 

@@ -2,9 +2,9 @@ import { MetadataProviderType } from '@server/database/schema';
 import type { MetadataProvider } from '@server/database/schema';
 import { getChildLogger } from '@server/kernel/logger';
 import { JellyfinProvider } from '@server/modules/providers/connections/jellyfinProvider';
-import { OverseerrProvider } from '@server/modules/providers/connections/overseerrProvider';
 import { PlexProvider } from '@server/modules/providers/connections/plexProvider';
 import { RadarrProvider } from '@server/modules/providers/connections/radarrProvider';
+import { SeerrProvider } from '@server/modules/providers/connections/seerrProvider';
 import { SonarrProvider } from '@server/modules/providers/connections/sonarrProvider';
 import { TautulliProvider } from '@server/modules/providers/connections/tautulliProvider';
 import { TvMazeProvider } from '@server/modules/providers/connections/tvmazeProvider';
@@ -62,15 +62,15 @@ describe('ProviderFactory.create', () => {
     );
   });
 
-  it('creates an OverseerrProvider for OVERSEERR type', () => {
-    expect(factory.create(makeProvider(MetadataProviderType.OVERSEERR), log)).toBeInstanceOf(
-      OverseerrProvider
+  it('creates a SeerrProvider for SEERR type', () => {
+    expect(factory.create(makeProvider(MetadataProviderType.SEERR), log)).toBeInstanceOf(
+      SeerrProvider
     );
   });
 
   it('throws an error for an unsupported provider type', () => {
-    const unsupported = makeProvider(MetadataProviderType.SEERR);
-    expect(() => factory.create(unsupported, log)).toThrow('Unsupported provider type: SEERR');
+    const unsupported = makeProvider(MetadataProviderType.TVMAZE);
+    expect(() => factory.create(unsupported, log)).toThrow('Unsupported provider type: TVMAZE');
   });
 });
 
@@ -85,7 +85,7 @@ describe('ProviderFactory.createMany', () => {
 
     expect(set.plex).toBeInstanceOf(PlexProvider);
     expect(set.tautulli).toBeInstanceOf(TautulliProvider);
-    expect(set.overseerr).toBeUndefined();
+    expect(set.seerr).toBeUndefined();
   });
 
   it('places an active Jellyfin provider into its typed slot', () => {

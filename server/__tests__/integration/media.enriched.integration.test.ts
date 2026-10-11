@@ -9,7 +9,7 @@ import {
 /**
  * Phase 2 — enriched predicates on the browse path.
  *
- * The parallel engine never declared the overseerr or tmdbStatus predicates, so
+ * The parallel engine never declared the seerr or tmdbStatus predicates, so
  * these controls did nothing. After the swap the handler merges media_enrichment
  * the normalized items and filters through the registry. Critically: when there
  * is NO enrichment data, an enriched filter returns 0 items (not "keep all").
@@ -146,13 +146,13 @@ describe('Media browse — enriched predicates', () => {
     await db.delete(mediaIdentity);
   });
 
-  describe('overseerrRequestStatus', () => {
+  describe('seerrRequestStatus', () => {
     it('returns only movies whose merged enrichment status equals the requested value', async () => {
-      await seedEnrichment(1, { overseerrRequestStatus: 2 });
-      await seedEnrichment(2, { overseerrRequestStatus: 1 });
+      await seedEnrichment(1, { seerrRequestStatus: 2 });
+      await seedEnrichment(2, { seerrRequestStatus: 1 });
 
       const res = await client.get(
-        browsePath('movie', [{ ruleKey: 'overseerrRequestStatus', value: 2 }], { pageSize: 100 })
+        browsePath('movie', [{ ruleKey: 'seerrRequestStatus', value: 2 }], { pageSize: 100 })
       );
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Requested']);
@@ -160,20 +160,20 @@ describe('Media browse — enriched predicates', () => {
 
     it('returns 0 items when there is no enrichment data (corrected from "keep all")', async () => {
       const res = await client.get(
-        browsePath('movie', [{ ruleKey: 'overseerrRequestStatus', value: 2 }], { pageSize: 100 })
+        browsePath('movie', [{ ruleKey: 'seerrRequestStatus', value: 2 }], { pageSize: 100 })
       );
       const data = expectSuccessResponse(res);
       expect(data.totalCount).toBe(0);
     });
   });
 
-  describe('overseerrHasIssue', () => {
-    it('returns only movies flagged with an issue when overseerrHasIssue=true', async () => {
-      await seedEnrichment(1, { overseerrHasIssue: true });
-      await seedEnrichment(2, { overseerrHasIssue: false });
+  describe('seerrHasIssue', () => {
+    it('returns only movies flagged with an issue when seerrHasIssue=true', async () => {
+      await seedEnrichment(1, { seerrHasIssue: true });
+      await seedEnrichment(2, { seerrHasIssue: false });
 
       const res = await client.get(
-        browsePath('movie', [{ ruleKey: 'overseerrHasIssue', value: true }], { pageSize: 100 })
+        browsePath('movie', [{ ruleKey: 'seerrHasIssue', value: true }], { pageSize: 100 })
       );
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Requested']);

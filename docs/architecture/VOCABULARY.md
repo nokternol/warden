@@ -95,6 +95,7 @@ fracture.
 | A provider that owns media | **Source** | `sourceProviders` on rules | A rule lists its `providers`; `MediaSource` is the one place "source" is used. |
 | What a provider type makes filterable, as short phrases shown on its card | **Filter data** (`filterData`) | capabilities, `filterCapabilities` | "Capabilities" already means the roles configuring a provider unlocks (source, enricher, actuator); the card has always headed this list "Filter data". |
 | Whether a provider type, rule or task can be reached | **offered / deferred** | hidden | Deferred things are blocked, not removed: their code stays compiled and tested, and `contract/scope.ts` is the one list of them. |
+| The request-manager provider | **Seerr** | Overseerr, `OVERSEERR`, `OverseerrProvider`, `overseerr*` rule keys | Seerr is Overseerr's API-compatible successor, so one provider type serves both servers. |
 | The product | **Warden** | Maintainarr | Log files are `warden-*.log`, the default database is `./config/db/warden.db`, and Plex lists the app as Warden. |
 
 ## Deprecated names — stop writing these
@@ -122,3 +123,4 @@ fracture.
 | `csv-ids` (rule data type) | `instance-ids`: its value is `{ providerId?, ids }`, not a CSV string | Renamed (C2). |
 | `BOOLEAN_VALUE_LABELS`, `ENUM_OPTIONS`, `SEGMENT_LABEL_OVERRIDES`, `groupsFor`, `ruleRendersControl` (client presentation tables) | The rule's own `valueLabels`, `options`, `shortLabel`, `lookup` and `group`, read from its descriptor | Deleted (C2). |
 | Maintainarr | Warden | Renamed (B5): log filenames, Plex product and device name, default `DB_PATH`, fixtures, README links. |
+| `MetadataProviderType.OVERSEERR`, `OverseerrProvider`, `overseerrProvider.ts`, the `seerrProvider.ts` re-export alias, rule and enrichment keys `overseerrRequestStatus` / `overseerrHasIssue` | `MetadataProviderType.SEERR`, `SeerrProvider`, `seerrRequestStatus` / `seerrHasIssue` | Migration 0030 rewrites stored provider types, saved-query filter keys and enrichment field keys; the extra type and alias are deleted (D3). |

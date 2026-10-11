@@ -67,9 +67,9 @@ for this predicate either way.
 
 ### Shape when built
 
-1. `OverseerrProvider.getUsers()` → `GET /api/v1/user`, paginated.
-2. `OverseerrProvider.getWatchlist(userId)` → `GET /api/v1/user/:id/watchlist`, paginated.
-3. `overseerrWatchlistEnricher` (new, or an extension of `overseerrEnricher` in `enricherAdapters.ts`) —
+1. `SeerrProvider.getUsers()` → `GET /api/v1/user`, paginated.
+2. `SeerrProvider.getWatchlist(userId)` → `GET /api/v1/user/:id/watchlist`, paginated.
+3. `seerrWatchlistEnricher` (new, or an extension of `seerrEnricher` in `enricherAdapters.ts`) —
    per user, aggregate `tmdbId → userId[]` into `watchlistUserIds`.
 4. `EnrichmentFields.watchlistUserIds: number[]` — Overseerr user ids (the natural identity for the
    exclude-source multi-select in the UI — these are the ids a consumer picker would show).
@@ -81,7 +81,7 @@ for this predicate either way.
 ### Open questions for whoever picks this up
 
 - Whether `watchlistUserIds` needs its own `EnrichmentJobFactoryDeps`-level plumbing or can ride entirely on
-  the existing `overseerrEnricher`'s provider instance.
+  the existing `seerrEnricher`'s provider instance.
 - Whether the consumer picker in the UI needs Overseerr `displayName`s surfaced somewhere (a small read
   endpoint), or whether that's a separate follow-up once the predicate itself lands.
 - Pagination/rate-limit behavior for servers with many Overseerr users — `getWatchlist` is one call per user

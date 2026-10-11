@@ -246,7 +246,7 @@ describe('GET /api/rules', () => {
         MetadataProviderType.PLEX,
         MetadataProviderType.JELLYFIN,
         MetadataProviderType.TAUTULLI,
-        MetadataProviderType.OVERSEERR,
+        MetadataProviderType.SEERR,
         MetadataProviderType.TMDB
       );
       const presentationFields = [

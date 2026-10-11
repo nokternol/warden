@@ -66,8 +66,8 @@ export type {
   JellyfinMediaStream,
   JellyfinUserData,
 } from './connections/jellyfinProvider';
-export { OverseerrProvider } from './connections/overseerrProvider';
-export type { OverseerrIssue, OverseerrRequest } from './connections/overseerrProvider';
+export { SeerrProvider } from './connections/seerrProvider';
+export type { SeerrIssue, SeerrRequest } from './connections/seerrProvider';
 export { PlexProvider } from './connections/plexProvider';
 export type { PlexMedia, PlexMediaItem, PlexMediaPart } from './connections/plexProvider';
 export { RadarrProvider } from './connections/radarrProvider';

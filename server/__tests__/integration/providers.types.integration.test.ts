@@ -58,7 +58,7 @@ describe('GET /api/providers/types', () => {
       { type: 'RADARR', label: 'Radarr' },
       { type: 'SONARR', label: 'Sonarr' },
       { type: 'TAUTULLI', label: 'Tautulli' },
-      { type: 'OVERSEERR', label: 'Overseerr' },
+      { type: 'SEERR', label: 'Seerr' },
     ]);
   });
 

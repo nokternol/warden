@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw';
 
-// Shared request list shape used by both Overseerr and Seerr
+// Request and issue payloads served identically by an Overseerr server (port 5055) and a
+// Seerr server (port 5056): Seerr is API-compatible with Overseerr.
 const mockRequests = [
   {
     id: 1,
@@ -17,7 +18,8 @@ const mockIssues = [
   { id: 2, status: 1, media: { tmdbId: 704 } },
 ];
 
-export const overseerrHandlers = [
+export const seerrHandlers = [
+  // Overseerr server
   http.get('http://localhost:5055/api/v1/request', () => {
     return HttpResponse.json({
       results: mockRequests,
@@ -29,7 +31,7 @@ export const overseerrHandlers = [
     return HttpResponse.json({ results: mockIssues });
   }),
 
-  // Seerr (typically runs on a different port but uses same API shape)
+  // Seerr server
   http.get('http://localhost:5056/api/v1/request', () => {
     return HttpResponse.json({
       results: mockRequests,

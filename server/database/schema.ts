@@ -24,7 +24,6 @@ export enum MetadataProviderType {
   TAUTULLI = 'TAUTULLI',
   PLEX = 'PLEX',
   JELLYFIN = 'JELLYFIN',
-  OVERSEERR = 'OVERSEERR',
   SEERR = 'SEERR',
   TMDB = 'TMDB',
   OMDB = 'OMDB',

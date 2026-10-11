@@ -18,8 +18,8 @@ export interface EnrichmentFields {
   tags: number[];
   playCount: number;
   lastWatchedAt: string;
-  overseerrRequestStatus: number;
-  overseerrHasIssue: boolean;
+  seerrRequestStatus: number;
+  seerrHasIssue: boolean;
   tmdbStatus: string;
   plexAddedAt: string;
   studio: string;
@@ -71,7 +71,7 @@ field can never disagree on type regardless of which interface declares them.
 | `tautulliFieldProvider` | `MediaFieldProvider` | `playCount`, `lastWatchedAt` |
 | `plexFieldProvider` | `MediaFieldProvider` | `playCount`, `lastWatchedAt`, `plexAddedAt`, `studio`, `runtimeMinutes`, `fileSizeBytes`, `releaseDate`, `fileContainer`, `videoCodec`, `audioCodec`, `fileResolution`, `labels` |
 | `jellyfinFieldProvider` | `MediaFieldProvider` | `playCount`, `lastWatchedAt`, `jellyfinAddedAt`, `studio`, `runtimeMinutes`, `fileSizeBytes`, `releaseDate`, `fileContainer`, `videoCodec`, `audioCodec`, `fileResolution`, `labels`, `isFavorite` |
-| `overseerrFieldProvider` | `MediaFieldProvider` | `overseerrRequestStatus`, `overseerrHasIssue` |
+| `seerrFieldProvider` | `MediaFieldProvider` | `seerrRequestStatus`, `seerrHasIssue` |
 | `tmdbFieldSource` | `MediaFieldSource` | `tmdbStatus` |
 
 Tautulli, Plex, and Jellyfin report the identical play-history native shape (play count + optional
@@ -107,7 +107,7 @@ oversight: closing it is follow-on work, not part of what shipped.
 
 [`movie.ts`](ref:path:server/modules/media/movie.ts) and
 [`series.ts`](ref:path:server/modules/media/series.ts) no longer hand-type `tags`, `playCount`,
-`lastWatchedAt`, `overseerrHasIssue`, `overseerrRequestStatus`, `tmdbStatus`, `plexAddedAt` — each
+`lastWatchedAt`, `seerrHasIssue`, `seerrRequestStatus`, `tmdbStatus`, `plexAddedAt` — each
 interface extends `Partial<EnrichmentFields>` directly (no field is movie-only or series-only within
 `EnrichmentFields` itself; that distinction lives in `providers`/`contentTypes` instead). This
 started as an explicit `Partial<Pick<EnrichmentFields, 'tags' | 'playCount' | ...>>` union, but `Pick`
@@ -147,7 +147,7 @@ settings-aware ordering (`applyPrimaryMediaServer`,
 [`enrichment/settingsAwarePrecedence.ts`](ref:path:server/modules/media/enrichment/settingsAwarePrecedence.ts))
 exists and is tested but isn't wired to a live setting read at either call site above yet.
 
-Scoped only to fields with more than one real producer — an uncontested field (`overseerrHasIssue`,
+Scoped only to fields with more than one real producer — an uncontested field (`seerrHasIssue`,
 `tmdbStatus`, `tags`, `isFavorite`, all single-producer today) needs no entry, since there's nothing to
 order; it carries through `resolvePrecedence` unlisted. An array's positions can't collide, so a tie is
 structurally unrepresentable rather than merely forbidden by convention — the same shape decision
@@ -207,7 +207,7 @@ export const fieldsByProviderType = {
     'fileSizeBytes', 'releaseDate', 'fileContainer', 'videoCodec', 'audioCodec',
     'fileResolution', 'labels', 'isFavorite',
   ],
-  [OVERSEERR]: ['overseerrRequestStatus', 'overseerrHasIssue'],
+  [SEERR]: ['seerrRequestStatus', 'seerrHasIssue'],
   [TMDB]: ['tmdbStatus'],
 };
 ```
@@ -228,7 +228,7 @@ import.
 fields include the given key. Every rule whose predicate reads an `EnrichmentFields`-tracked field
 calls it, either directly (`studio`, `runtimeMinutes`, `fileContainer`, `videoCodec`, `audioCodec`,
 `fileResolution`, `fileSizeBytes`, `labels`, `isFavorite` → `jellyfinIsFavorite`, `tmdbStatus`,
-`overseerrRequestStatus`, `overseerrHasIssue`) or under a different rule key than the field itself
+`seerrRequestStatus`, `seerrHasIssue`) or under a different rule key than the field itself
 (`watched`/`lastWatchedDaysAgo` read `playCount`/`lastWatchedAt`; `plexAddedDaysAgo` reads
 `plexAddedAt`; `jellyfinAddedDaysAgo` reads `jellyfinAddedAt`; `releaseDaysAgo` reads `releaseDate`).
 Every other rule — most of `NormalizedMovie`/`NormalizedSeries`'s fields (`title`, `year`, `hasFile`,

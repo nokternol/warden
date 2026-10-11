@@ -79,17 +79,17 @@ describe('resolvePrecedence', () => {
       title: 'M',
       playCount: 5,
     });
-    const overseerr = result(MetadataProviderType.OVERSEERR, {
+    const seerr = result(MetadataProviderType.SEERR, {
       _sourceIds: { radarr: 1 },
       title: 'M',
-      overseerrHasIssue: true,
+      seerrHasIssue: true,
     });
 
-    const resolved = resolvePrecedence([tautulli, overseerr], {
+    const resolved = resolvePrecedence([tautulli, seerr], {
       playCount: [MetadataProviderType.TAUTULLI],
-      overseerrHasIssue: [MetadataProviderType.OVERSEERR],
+      seerrHasIssue: [MetadataProviderType.SEERR],
     });
 
-    expect(resolved[0]).toMatchObject({ playCount: 5, overseerrHasIssue: true });
+    expect(resolved[0]).toMatchObject({ playCount: 5, seerrHasIssue: true });
   });
 });

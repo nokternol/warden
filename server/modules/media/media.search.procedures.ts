@@ -5,10 +5,10 @@ import { api } from '@server/kernel/api';
 import { getChildLogger } from '@server/kernel/logger';
 import {
   JellyfinProvider,
-  OverseerrProvider,
   PlexProvider,
   type ProviderSettingsService,
   RadarrProvider,
+  SeerrProvider,
   SonarrProvider,
   TautulliProvider,
 } from '@server/modules/providers';
@@ -25,7 +25,7 @@ const SEARCHABLE_TYPES = [
   MetadataProviderType.PLEX,
   MetadataProviderType.JELLYFIN,
   MetadataProviderType.TAUTULLI,
-  MetadataProviderType.OVERSEERR,
+  MetadataProviderType.SEERR,
 ];
 
 async function searchProvider(provider: MetadataProvider, title: string): Promise<SearchResult> {
@@ -72,8 +72,8 @@ async function searchProvider(provider: MetadataProvider, title: string): Promis
         const data = await p.searchHistory(title);
         return { ...base, status: 'ok', data };
       }
-      case MetadataProviderType.OVERSEERR: {
-        const p = new OverseerrProvider(provider, log);
+      case MetadataProviderType.SEERR: {
+        const p = new SeerrProvider(provider, log);
         const data = await p.search(title);
         return { ...base, status: 'ok', data };
       }

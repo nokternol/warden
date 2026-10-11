@@ -44,7 +44,6 @@ export async function probeConnection(
         .json();
       break;
     case MetadataProviderType.SEERR:
-    case MetadataProviderType.OVERSEERR:
       await ky.get(`${base}/api/v1/status`, { headers: { 'X-Api-Key': key }, timeout }).json();
       break;
     case MetadataProviderType.TVMAZE:

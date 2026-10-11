@@ -2,6 +2,13 @@
 Generated: 2026-06-05  
 Method: parallel subagents per provider group, consolidated into this document.
 
+> **Dated snapshot, not current fact.** This records what each provider's API offers and what Warden
+> fetched as of the date above. File paths, type names and "currently fetched/filterable" columns may
+> no longer match the code; `docs/architecture/` describes what is built, and
+> `docs/architecture/VOCABULARY.md` lists retired names. The request manager is one provider type,
+> Seerr (`SEERR`, `SeerrProvider`), with `seerr`-prefixed field keys; this document's "Overseerr"
+> names the server product.
+
 ---
 
 ## How to read this document
@@ -235,7 +242,7 @@ Source: `GET /Users/{userId}/Items` â€” returns full `BaseItemDto` (~80 fields).
 ## Provider: Overseerr / Seerr
 
 Sources: `GET /api/v1/request` (filterable data), `GET /api/v1/search` (mediaInfo typed as `unknown`).  
-Seerr is API-compatible with Overseerr; `seerrProvider.ts` correctly re-exports `OverseerrProvider`.
+Seerr is API-compatible with Overseerr, so one provider type, `SEERR` (`SeerrProvider`), serves both servers.
 
 | Field name | JS type | Currently fetched? | Currently filterable? | Join key | Filter potential | Tier |
 |---|---|---|---|---|---|---|
@@ -414,8 +421,8 @@ These require adding fields to the provider TypeScript types and fetching them â
 | viewCount, lastViewedAt, addedAt, contentRating | Plex | PlexMediaItem | **HIGH** |
 | guid / guids | Plex | PlexMediaItem | join key |
 | play_count, last_played | Tautulli | new type (get_library_media_info) | **HIGH** |
-| mediaInfo.status, mediaInfo.issues | Overseerr | OverseerrSearchResult (retype from unknown) | **HIGH** |
-| request.status (filter) | Overseerr | exists in type, add filter branch | **HIGH** |
+| mediaInfo.status, mediaInfo.issues | Seerr | SeerrSearchResult (retype from unknown) | **HIGH** |
+| request.status (filter) | Seerr | exists in type, add filter branch | **HIGH** |
 | Rated | OMDB | OmdbEnrichment | **HIGH** |
 | status, original_language, in_production, last_air_date | TMDB | TmdbEnrichment | **HIGH** |
 | type, ended, webChannel | TVMaze | TvMazeShow | **HIGH** |
@@ -480,9 +487,9 @@ When built, it should store enrichment data keyed on `(mediaItemId, providerType
 | jellyfinPlayCount | integer | Jellyfin UserData.PlayCount | jellyfinPlayCount |
 | jellyfinLastPlayedDate | text (ISO) | Jellyfin UserData.LastPlayedDate | jellyfinLastPlayedDaysAgo |
 | jellyfinIsFavorite | integer (boolean) | Jellyfin UserData.IsFavorite | jellyfinIsFavorite |
-| overseerrMediaStatus | integer | Overseerr mediaInfo.status | overseerrStatus eq/in |
-| overseerrRequestStatus | integer | Overseerr request.status | overseerrRequestStatus |
-| overseerrHasIssue | integer (boolean) | Overseerr mediaInfo.issues.length > 0 | overseerrHasIssue |
+| seerrMediaStatus | integer | Seerr mediaInfo.status | seerrStatus eq/in |
+| seerrRequestStatus | integer | Seerr request.status | seerrRequestStatus |
+| seerrHasIssue | integer (boolean) | Seerr mediaInfo.issues.length > 0 | seerrHasIssue |
 | omdbRated | text | OMDB Rated | omdbRated eq/in |
 | tmdbVoteAverage | real | TMDB vote_average | tmdbRating gte/lte |
 | tmdbPopularity | real | TMDB popularity | tmdbPopularity gte/lte |

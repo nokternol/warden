@@ -243,8 +243,8 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     shortLabel: 'Status',
   },
   {
-    key: 'overseerrRequestStatus',
-    label: 'Overseerr request status',
+    key: 'seerrRequestStatus',
+    label: 'Seerr request status',
     group: 'Requests',
     contentTypes: ['movie', 'series'],
     dataType: 'number',
@@ -257,8 +257,8 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     shortLabel: 'Status',
   },
   {
-    key: 'overseerrHasIssue',
-    label: 'Overseerr has issue',
+    key: 'seerrHasIssue',
+    label: 'Seerr has issue',
     group: 'Requests',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',

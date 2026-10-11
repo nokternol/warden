@@ -159,10 +159,10 @@ TMDB's to fix).
 ### `originCountry` — (b): hardcoded fixed-array branch in `csvStringOptions`, not a `Lookups` route
 
 ISO 3166-1 alpha-2 country codes are a closed, well-known, externally-standardized vocabulary — not
-runtime library data that grows or varies per instance the way `network`/`overseerrRequestedBy` do.
-The set is larger than Overseerr's 4-value `overseerrIssueType` precedent (~250 codes vs. 4), but
+runtime library data that grows or varies per instance the way `network`/`seerrRequestedBy` do.
+The set is larger than Overseerr's 4-value `seerrIssueType` precedent (~250 codes vs. 4), but
 size alone doesn't change the shape: it's still fixed, enumerable ahead of time, and identical across
-every TMDB-configured instance, which is exactly the test `overseerrIssueType`'s decision established
+every TMDB-configured instance, which is exactly the test `seerrIssueType`'s decision established
 ("provider's own fixed API vocabulary," not "small"). Routing ~250 unchanging values through a
 `/api/media/*` fetch would be pure overhead for zero per-instance variance — nothing to look up.
 
@@ -197,7 +197,7 @@ possible here (unlike `originCountry`, there is no fixed enumeration to hardcode
 (rule.key === 'keywords') return lookups.tmdbKeywords;`), new `/api/media/tmdb-keywords` route in
 `useMediaLookups.ts` returning the distinct set of keyword tags seen across the library's
 TMDB-enriched items, following the `listGenres`/`listNetworks` dedupe-and-sort pattern (same
-mechanism `overseerrRequesters` used for Overseerr's open per-instance value set). Checked all six
+mechanism `seerrRequesters` used for Overseerr's open per-instance value set). Checked all six
 prior UI passes' "UI decisions" sections for an existing tag/keyword-shaped route to reuse — none
 exists; Plex's `plexLabels` and Jellyfin's `Tags` are separate, provider-specific tag spaces (Plex
 labels are user-applied library tags, Jellyfin `Tags` likewise) with no semantic overlap to TMDB's
@@ -219,7 +219,7 @@ noted in the spec's own "Naming-collision notes" as having none.
 
 ### `hasTrailer` — confirmed `boolean`, new `BOOLEAN_VALUE_LABELS` entry
 
-Same shape as `overseerrHasIssue`/`overseerrHasComments`. Generic "Yes"/"No" would read ambiguously
+Same shape as `seerrHasIssue`/`seerrHasComments`. Generic "Yes"/"No" would read ambiguously
 in an active-filter chip out of context. Add:
 
 ```

@@ -9,7 +9,7 @@ import AddProviderForm from '../index';
 
 const types: ProviderTypeDescriptor[] = [
   { type: 'RADARR', label: 'Radarr', apiPath: '/api/v3', filterData: ['Movie library'] },
-  { type: 'OVERSEERR', label: 'Overseerr', apiPath: '', filterData: ['Request queue'] },
+  { type: 'SEERR', label: 'Seerr', apiPath: '', filterData: ['Request queue'] },
 ];
 
 describe('AddProviderForm', () => {
@@ -19,7 +19,7 @@ describe('AddProviderForm', () => {
     const options = screen.getAllByRole('option') as HTMLOptionElement[];
     expect(options.map((o) => [o.value, o.textContent])).toEqual([
       ['RADARR', 'Radarr'],
-      ['OVERSEERR', 'Overseerr'],
+      ['SEERR', 'Seerr'],
     ]);
   });
 

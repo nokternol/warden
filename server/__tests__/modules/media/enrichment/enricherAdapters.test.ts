@@ -2,16 +2,16 @@ import { MetadataProviderType } from '@server/database/schema';
 import { getChildLogger } from '@server/kernel/logger';
 import {
   jellyfinEnricher,
-  overseerrEnricher,
   plexEnricher,
+  seerrEnricher,
   tautulliEnricher,
   tmdbEnricher,
 } from '@server/modules/media/enrichment/enricherAdapters';
 import type { NormalizedMovie } from '@server/modules/media/movie';
 import type { ProviderConfig } from '@server/modules/providers/connections/baseProviderConnection';
 import { JellyfinProvider } from '@server/modules/providers/connections/jellyfinProvider';
-import { OverseerrProvider } from '@server/modules/providers/connections/overseerrProvider';
 import { PlexProvider } from '@server/modules/providers/connections/plexProvider';
+import { SeerrProvider } from '@server/modules/providers/connections/seerrProvider';
 import { TautulliProvider } from '@server/modules/providers/connections/tautulliProvider';
 import { TmdbProvider } from '@server/modules/providers/connections/tmdbProvider';
 import { describe, expect, it, vi } from 'vitest';
@@ -245,10 +245,10 @@ describe('jellyfinEnricher', () => {
   });
 });
 
-describe('overseerrEnricher', () => {
+describe('seerrEnricher', () => {
   it('decorates a matched item with request status and issue flag, tagged by provider', async () => {
-    const overseerr = new OverseerrProvider(mockConfig, mockLogger);
-    vi.spyOn(overseerr, 'getRequests').mockResolvedValue([
+    const seerr = new SeerrProvider(mockConfig, mockLogger);
+    vi.spyOn(seerr, 'getRequests').mockResolvedValue([
       {
         id: 1,
         status: 2,
@@ -258,16 +258,14 @@ describe('overseerrEnricher', () => {
         createdAt: '',
       },
     ]);
-    vi.spyOn(overseerr, 'getIssues').mockResolvedValue([
-      { id: 1, status: 1, media: { tmdbId: 100 } },
-    ]);
+    vi.spyOn(seerr, 'getIssues').mockResolvedValue([{ id: 1, status: 1, media: { tmdbId: 100 } }]);
     const item: NormalizedMovie = { _sourceIds: { tmdb: 100 }, title: 'M' };
 
-    const result = await overseerrEnricher(overseerr).enrich([item]);
+    const result = await seerrEnricher(seerr).enrich([item]);
 
-    expect(result.provider).toBe(MetadataProviderType.OVERSEERR);
-    expect(result.items[0].overseerrRequestStatus).toBe(2);
-    expect(result.items[0].overseerrHasIssue).toBe(true);
+    expect(result.provider).toBe(MetadataProviderType.SEERR);
+    expect(result.items[0].seerrRequestStatus).toBe(2);
+    expect(result.items[0].seerrHasIssue).toBe(true);
   });
 });
 

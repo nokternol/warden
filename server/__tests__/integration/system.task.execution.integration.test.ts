@@ -64,7 +64,7 @@ describe('system task execution via container — system:enrichment', () => {
     expect(updated.enrichedAt).not.toBeNull();
   });
 
-  it('resolves an active Overseerr provider so enrichment writes a non-null overseerrRequestStatus', async () => {
+  it('resolves an active Seerr provider so enrichment writes a non-null seerrRequestStatus', async () => {
     server.use(
       http.get('http://overseerr.test/api/v1/request', () =>
         HttpResponse.json({
@@ -83,8 +83,8 @@ describe('system task execution via container — system:enrichment', () => {
       http.get('http://overseerr.test/api/v1/issue', () => HttpResponse.json({ results: [] }))
     );
     await container.cradle.providerSettingsService.create({
-      type: MetadataProviderType.OVERSEERR,
-      name: 'Overseerr',
+      type: MetadataProviderType.SEERR,
+      name: 'Seerr',
       url: 'http://overseerr.test',
       apiKey: 'k',
     });
@@ -100,6 +100,6 @@ describe('system task execution via container — system:enrichment', () => {
     await container.cradle.automationExecutor.execute(enrichmentAutomation.id);
 
     const fields = await new EnrichmentQueries({ db }).getByIdentityIds([identity.id]);
-    expect(fields.get(identity.id)?.overseerrRequestStatus).toBe(2);
+    expect(fields.get(identity.id)?.seerrRequestStatus).toBe(2);
   });
 });

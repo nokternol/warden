@@ -181,7 +181,6 @@ export const ProviderTypeSchema = z.enum([
   'TAUTULLI',
   'PLEX',
   'JELLYFIN',
-  'OVERSEERR',
   'SEERR',
   'TMDB',
   'OMDB',

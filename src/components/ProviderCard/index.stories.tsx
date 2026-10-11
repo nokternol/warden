@@ -24,9 +24,9 @@ const radarrType: ProviderTypeDescriptor = {
   filterData: ['Movie library', 'Quality profiles', 'Tags'],
 };
 
-const overseerrType: ProviderTypeDescriptor = {
-  type: 'OVERSEERR',
-  label: 'Overseerr',
+const seerrType: ProviderTypeDescriptor = {
+  type: 'SEERR',
+  label: 'Seerr',
   apiPath: '',
   filterData: ['Request queue'],
 };
@@ -80,11 +80,11 @@ export const ExpandedNoTasks: Story = () => (
       <ProviderCard
         provider={{
           ...provider,
-          type: 'OVERSEERR',
-          name: 'Overseerr',
+          type: 'SEERR',
+          name: 'Seerr',
           url: 'http://localhost:5055',
         }}
-        typeDescriptor={overseerrType}
+        typeDescriptor={seerrType}
         tasks={[]}
         onUpdate={noop}
         onDelete={() => {}}

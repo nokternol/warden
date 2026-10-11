@@ -439,6 +439,25 @@ Earlier entries in this ledger use the names that were current when they healed 
   `src/lib` is the only client code that reads or writes it, shared by the bar and `toFilters`. The
   server's `ruleRegistry.ts` keeps its own parser for the same value (tracked in #158).
 
+### Request manager — two type names for one implementation (recorded and healed 2026-10-11, MVP slice D3)
+
+- **Fracture:** the request manager had two provider types, `OVERSEERR` and `SEERR`, for one
+  implementation. `seerrProvider.ts` re-exported `OverseerrProvider` under a second name so a separate
+  `SEERR` type could exist, but `ProviderFactory` never built it. Every field, rule key and class carried
+  the Overseerr spelling, and the product the request manager is moving to (Seerr) had no first-class type.
+- **How it misled:** the add-provider list had to offer the buildable `OVERSEERR` while `SEERR` sat in the
+  deferred list, so configuring Seerr was impossible, and the type enum, the catalogue, the probe and the
+  metadata procedure each carried both names. The provider card's icon map listed `OVERSEERR` only, so a
+  `SEERR` provider would have had no icon.
+- **Healed by:** `SEERR` is the one request-manager type. `ProviderFactory` builds `SeerrProvider`
+  (`connections/seerrProvider.ts`, the alias file replaced by the class itself), the catalogue offers
+  Seerr, and `contract/scope.ts` no longer defers it. The rule and enrichment field keys are
+  `seerrRequestStatus` and `seerrHasIssue`. Migration 0030 renames the three persisted spellings in
+  place: `metadata_provider.type`, `media_query_filter_values.filterKey` and `enrichment_field.key`
+  (enrichment values reference their field by id, so none is rewritten). The tests serve an Overseerr
+  server and a Seerr server from one set of mock payloads; behaviour against a live Seerr server is
+  checked in the acceptance run after the NAS upgrade.
+
 ## Open
 
 No fracture is currently open.

@@ -878,8 +878,8 @@ export const MEDIA_RULES = [
     },
   },
   {
-    key: 'overseerrRequestStatus',
-    label: 'Overseerr request status',
+    key: 'seerrRequestStatus',
+    label: 'Seerr request status',
     group: 'Requests',
     contentTypes: ['movie', 'series'],
     dataType: 'number',
@@ -890,26 +890,26 @@ export const MEDIA_RULES = [
       { value: '4', label: 'Available' },
     ],
     shortLabel: 'Status',
-    providers: deriveProviders('overseerrRequestStatus'),
-    sourceField: 'overseerrRequestStatus',
+    providers: deriveProviders('seerrRequestStatus'),
+    sourceField: 'seerrRequestStatus',
     required: false,
     predicate: (item, value) => {
-      if (item.overseerrRequestStatus === undefined) return false;
-      return item.overseerrRequestStatus === Number(value);
+      if (item.seerrRequestStatus === undefined) return false;
+      return item.seerrRequestStatus === Number(value);
     },
   },
   {
-    key: 'overseerrHasIssue',
-    label: 'Overseerr has issue',
+    key: 'seerrHasIssue',
+    label: 'Seerr has issue',
     group: 'Requests',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     valueLabels: { true: 'Has Issue', false: 'No Issue' },
-    providers: deriveProviders('overseerrHasIssue'),
-    sourceField: 'overseerrHasIssue',
+    providers: deriveProviders('seerrHasIssue'),
+    sourceField: 'seerrHasIssue',
     required: false,
     // Truthy/falsy: "has issue" treats unknown (null/undefined) and false alike as "no issue".
-    predicate: (item, value) => Boolean(item.overseerrHasIssue) === asBool(value),
+    predicate: (item, value) => Boolean(item.seerrHasIssue) === asBool(value),
   },
   {
     key: 'lastWatchedDaysAgo',

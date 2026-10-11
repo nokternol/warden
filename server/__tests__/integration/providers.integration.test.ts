@@ -195,13 +195,13 @@ describe('Providers API Integration', () => {
       expect(data.data).toHaveProperty('recentHistory');
     });
 
-    it('returns Overseerr metadata when given valid OVERSEERR params', async () => {
+    it('returns Seerr metadata when given valid SEERR params', async () => {
       const response = await client.get(
-        '/api/providers/metadata?type=OVERSEERR&url=http://localhost:5055&apiKey=fake-api-key'
+        '/api/providers/metadata?type=SEERR&url=http://localhost:5055&apiKey=fake-api-key'
       );
       const data = expectSuccessResponse(response);
 
-      expect(data.type).toBe('OVERSEERR');
+      expect(data.type).toBe('SEERR');
       expect(data.data).toHaveProperty('requests');
     });
 
