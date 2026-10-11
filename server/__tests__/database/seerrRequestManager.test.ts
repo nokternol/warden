@@ -9,7 +9,7 @@ async function rows(client: Client, query: string) {
 }
 
 describe('migration 0030 — the request manager becomes Seerr', () => {
-  it('keeps stored request status and issue values, now under seerr field keys', async () => {
+  it('reads stored request status and issue values back under the seerr field keys', async () => {
     const client = await databaseBefore(MIGRATION);
     await client.execute("INSERT INTO media_identity (kind, tmdbId) VALUES ('movie', 603)");
     await client.execute(
@@ -62,7 +62,7 @@ describe('migration 0030 — the request manager becomes Seerr', () => {
     ]);
   });
 
-  it('keeps a saved query’s request filters, now under seerr rule keys, with other filters untouched', async () => {
+  it('reads a saved query’s request filters back under the seerr rule keys, leaving other filters untouched', async () => {
     const client = await databaseBefore(MIGRATION);
     await client.execute("INSERT INTO media_queries (name, contentType) VALUES ('q', 'movie')");
     await client.execute(
