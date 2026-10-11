@@ -4,6 +4,7 @@ import { Check } from 'lucide-react';
 
 interface SetupChecklistProps {
   state: Exclude<SetupState, 'complete'>;
+  onCreateAutomation: () => void;
 }
 
 type StepStatus = 'done' | 'current' | 'upcoming';
@@ -72,7 +73,7 @@ function Step({
   );
 }
 
-export default function SetupChecklist({ state }: SetupChecklistProps) {
+export default function SetupChecklist({ state, onCreateAutomation }: SetupChecklistProps) {
   const current = CURRENT_STEP_INDEX[state];
 
   return (
@@ -106,7 +107,18 @@ export default function SetupChecklist({ state }: SetupChecklistProps) {
           </>
         )}
       </Step>
-      <Step number={3} status={stepStatus(2, current)} title="Create an automation" />
+      <Step number={3} status={stepStatus(2, current)} title="Create an automation">
+        {current === 2 && (
+          <>
+            <p className="mt-1 text-xs text-text-secondary">
+              Pair a query with a task and a schedule.
+            </p>
+            <button type="button" onClick={onCreateAutomation} className={LINK_CLASS}>
+              New automation
+            </button>
+          </>
+        )}
+      </Step>
     </ol>
   );
 }

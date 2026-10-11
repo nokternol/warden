@@ -54,5 +54,22 @@ describe('AutomationsPage', () => {
         '/settings'
       );
     });
+
+    it('opens the automation builder from the "Create an automation" step once a source and a query exist', async () => {
+      server.use(
+        mockProcedure(contract.automations.list, () => []),
+        mockProcedure(contract.providers.tasks, () => [])
+      );
+
+      render(<AutomationsPage />, { wrapper: Wrapper });
+
+      const current = await screen.findByRole('listitem', { current: 'step' });
+      expect(current).toHaveTextContent('Create an automation');
+      expect(screen.queryByRole('button', { name: /cancel/i })).not.toBeInTheDocument();
+
+      await userEvent.click(within(current).getByRole('button', { name: /new automation/i }));
+
+      expect(await screen.findAllByRole('button', { name: /cancel/i })).not.toHaveLength(0);
+    });
   });
 });

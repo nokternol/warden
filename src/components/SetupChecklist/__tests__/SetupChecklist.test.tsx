@@ -1,10 +1,10 @@
 import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import SetupChecklist from '../index';
 
 describe('SetupChecklist', () => {
   it('explains that no connected provider is a source when providers exist but none is one', () => {
-    render(<SetupChecklist state="no-source" />);
+    render(<SetupChecklist state="no-source" onCreateAutomation={vi.fn()} />);
 
     const current = screen.getByRole('listitem', { current: 'step' });
     expect(current).toHaveTextContent('Connect a source');
@@ -12,7 +12,7 @@ describe('SetupChecklist', () => {
   });
 
   it('marks the source step done, leads with saving a query, and holds back the automation step', () => {
-    render(<SetupChecklist state="no-query" />);
+    render(<SetupChecklist state="no-query" onCreateAutomation={vi.fn()} />);
 
     const [source, query, automation] = screen.getAllByRole('listitem');
     expect(source).toHaveTextContent('Connect a source');
