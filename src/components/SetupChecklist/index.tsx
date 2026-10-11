@@ -86,7 +86,7 @@ export default function SetupChecklist({ state, onCreateAutomation }: SetupCheck
           <>
             <p className="mt-1 text-xs text-text-secondary">
               {state === 'no-source'
-                ? 'None of your providers is a source. Add Radarr or Sonarr.'
+                ? 'None of your providers is an active source. Add or enable Radarr or Sonarr.'
                 : 'Add Radarr or Sonarr so Warden has media to work with.'}
             </p>
             <a href="/settings" className={LINK_CLASS}>

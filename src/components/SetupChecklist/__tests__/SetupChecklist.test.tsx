@@ -3,12 +3,14 @@ import { describe, expect, it, vi } from 'vitest';
 import SetupChecklist from '../index';
 
 describe('SetupChecklist', () => {
-  it('explains that no connected provider is a source when providers exist but none is one', () => {
+  it('asks to add or enable a source when providers exist but none is an active source', () => {
     render(<SetupChecklist state="no-source" onCreateAutomation={vi.fn()} />);
 
     const current = screen.getByRole('listitem', { current: 'step' });
     expect(current).toHaveTextContent('Connect a source');
-    expect(current).toHaveTextContent(/none of your providers is a source/i);
+    expect(current).toHaveTextContent(
+      /none of your providers is an active source\. add or enable radarr or sonarr/i
+    );
   });
 
   it('marks the source step done, leads with saving a query, and holds back the automation step', () => {
