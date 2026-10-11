@@ -222,4 +222,17 @@ describe('AutomationExecutor — invalid automations', () => {
     const [run] = await getDb().select().from(automationRuns);
     expect(run.status).toBe('success');
   });
+
+  it('runs again once the problem is fixed, since validity is derived on each run', async () => {
+    const own = await seedRadarr('Own Radarr');
+    const automation = await seedAutomationOver(own.id, []);
+    await providerSettingsService.update(own.id, { isActive: false });
+    await executor.execute(automation.id);
+
+    await providerSettingsService.update(own.id, { isActive: true });
+    await executor.execute(automation.id);
+
+    const runs = await getDb().select().from(automationRuns).orderBy(automationRuns.id);
+    expect(runs.map((r) => r.status)).toEqual(['skipped', 'success']);
+  });
 });
