@@ -29,9 +29,10 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 
 export default function AutomationsPage() {
   const router = useRouter();
-  const { queries, remove: removeQuery } = useMediaQueries();
+  const { queries, isLoading: queriesLoading, remove: removeQuery } = useMediaQueries();
   const {
     automations,
+    isLoading: automationsLoading,
     isCreating,
     create,
     setStatus,
@@ -44,8 +45,8 @@ export default function AutomationsPage() {
   const guidance = setupState({
     providerCount: providers?.length,
     hasSource: sources && Object.values(sources).some((source) => source.configured),
-    queryCount: queries.length,
-    automationCount: automations.length,
+    queryCount: queriesLoading ? undefined : queries.length,
+    automationCount: automationsLoading ? undefined : automations.length,
   });
 
   const handleLoad = (_query: MediaQueryRecord) => {

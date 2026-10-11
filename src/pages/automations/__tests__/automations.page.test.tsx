@@ -78,5 +78,23 @@ describe('AutomationsPage', () => {
 
       expect(screen.queryByRole('list', { name: 'Setup' })).not.toBeInTheDocument();
     });
+
+    it.each([
+      ['providers', contract.providers.list],
+      ['sources', contract.media.sources],
+      ['queries', contract.mediaQueries.list],
+      ['automations', contract.automations.list],
+    ])('shows no guidance while the %s are still loading', async (_name, procedure) => {
+      // Every other fact says setup is incomplete, so any guidance shown would be a guess.
+      server.use(
+        mockProcedure(procedure, () => new Promise<never>(() => {})),
+        mockProcedure(contract.providers.list, () => [])
+      );
+
+      render(<AutomationsPage />, { wrapper: Wrapper });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      expect(screen.queryByRole('list', { name: 'Setup' })).not.toBeInTheDocument();
+    });
   });
 });
