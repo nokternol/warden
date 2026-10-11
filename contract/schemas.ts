@@ -209,7 +209,8 @@ export const AutomationRunSchema = z
     automationId: z.number(),
     automationName: z.string(),
     ranAt: IsoDateSchema,
-    status: z.enum(['success', 'error']),
+    // `skipped`: the automation was invalid when due, so it never ran; `error` holds why.
+    status: z.enum(['success', 'error', 'skipped']),
     itemCount: z.number().nullable(),
     error: z.string().nullable(),
     createdAt: IsoDateSchema,
