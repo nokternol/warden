@@ -4,7 +4,7 @@
  *
  * Run: vitest run --project server
  */
-import { MetadataProviderType, automationRuns } from '@server/database/schema';
+import { MetadataProviderType, automationRunItems, automationRuns } from '@server/database/schema';
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { AutomationExecutor } from '@server/modules/automations/automationExecutor';
@@ -112,5 +112,18 @@ describe('AutomationExecutor — invalid automations', () => {
       `Tags filter names Radarr instance ${removed.id}, which is not an active provider`
     );
     expect(unmonitorCalls).toBe(0);
+  });
+
+  it('leaves the automation last-run summary and the run items untouched', async () => {
+    const own = await seedRadarr('Own Radarr');
+    const removed = await seedRadarr('Removed Radarr');
+    const automation = await seedAutomationOver(own.id, [tagsOf(removed.id)]);
+    await providerSettingsService.delete(removed.id);
+
+    await executor.execute(automation.id);
+
+    const [reloaded] = (await automationService.list()).filter((a) => a.id === automation.id);
+    expect(reloaded.lastRun).toBeUndefined();
+    expect(await getDb().select().from(automationRunItems)).toHaveLength(0);
   });
 });
