@@ -69,6 +69,11 @@ function instanceName(type: string | undefined, providerId: number): string {
   return `${type ? providerTypeName(type) : 'Provider'} instance ${providerId}`;
 }
 
+/** A filter's rule label, or its raw key when no rule is registered for it. */
+function filterLabel(filterKey: string, contentType: ContentType): string {
+  return getRule(filterKey, contentType)?.label ?? filterKey;
+}
+
 type ProviderStatus = QueryHealth['providerStatus'][number];
 type QualificationIssue = QueryHealth['qualificationIssues'][number];
 
@@ -77,8 +82,7 @@ function describeMissingProvider(
   { providerType, affectedFilterKeys }: ProviderStatus,
   contentType: ContentType
 ): string {
-  const rule = getRule(affectedFilterKeys[0], contentType);
-  return `${rule?.label} filter needs a ${providerTypeName(providerType)} provider, which is not configured`;
+  return `${filterLabel(affectedFilterKeys[0], contentType)} filter needs a ${providerTypeName(providerType)} provider, which is not configured`;
 }
 
 /** One line saying why a filter's instance qualification keeps the automation from running. */
@@ -88,7 +92,7 @@ function describeQualificationIssue(
   automationProvider: MetadataProvider
 ): string {
   const rule = getRule(filterKey, contentType);
-  const filter = `${rule?.label} filter names ${instanceName(rule?.providers[0], providerId)}`;
+  const filter = `${filterLabel(filterKey, contentType)} filter names ${instanceName(rule?.providers[0], providerId)}`;
   return reason === 'not_active'
     ? `${filter}, which is not an active provider`
     : `${filter}, which is not this automation's provider (${instanceName(automationProvider.type, automationProvider.id)})`;
