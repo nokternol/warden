@@ -113,3 +113,20 @@ describe('loading never shows an empty state', () => {
     expect(screen.queryByText('No system automations')).not.toBeInTheDocument();
   });
 });
+
+describe('a source that failed during a successful browse', () => {
+  it('names the provider and its error above the results', async () => {
+    server.use(
+      mockProcedure(contract.media.browse.movie, () => ({
+        items: [],
+        totalCount: 0,
+        page: 1,
+        pageSize: 48,
+        yearRange: { min: null, max: null },
+        errors: [{ provider: 'Radarr Main', error: 'Timed out' }],
+      }))
+    );
+    page(<MediaPage />);
+    await alertNaming(/radarr main.*timed out/i);
+  });
+});

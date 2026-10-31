@@ -129,6 +129,7 @@ export default function QueryRow({
                 variant="secondary"
                 size="sm"
                 aria-label={`Load ${query.name} in Media`}
+                disabled={!rules}
                 onClick={onLoad}
                 className="gap-1.5"
               >

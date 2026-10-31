@@ -1,5 +1,5 @@
 import type { MediaQueryRecord } from '@app/hooks/useMediaQueries';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import QueryRow from '../index';
@@ -23,7 +23,9 @@ describe('QueryRow', () => {
     const user = userEvent.setup();
     const onLoad = vi.fn();
     render(<QueryRow query={mockQuery} onLoad={onLoad} onDelete={vi.fn()} />);
-    await user.click(screen.getByRole('button', { name: /load/i }));
+    const load = screen.getByRole('button', { name: /load/i });
+    await waitFor(() => expect(load).toBeEnabled());
+    await user.click(load);
     expect(onLoad).toHaveBeenCalledTimes(1);
   });
 

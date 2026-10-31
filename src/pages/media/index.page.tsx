@@ -421,6 +421,8 @@ export interface MediaSlice<T> {
   fetchMore: () => void;
   error?: Error;
   refresh?: () => unknown;
+  /** Sources that failed while the browse itself succeeded. */
+  sourceErrors?: { provider: string; error: string }[];
 }
 
 interface Lookups {
@@ -468,6 +470,23 @@ export interface MediaContentProps {
   // card density
   density: CardDensity;
   onDensityChange: (d: CardDensity) => void;
+}
+
+/** Results may be partial when a source failed, so the failure is stated beside them. */
+function SourceErrors({ errors = [] }: { errors?: { provider: string; error: string }[] }) {
+  if (errors.length === 0) return null;
+  return (
+    <div
+      role="alert"
+      className="mb-4 rounded-lg border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-text-primary"
+    >
+      {errors.map(({ provider, error }) => (
+        <p key={provider} className="break-words">
+          Couldn't reach {provider}: {error}
+        </p>
+      ))}
+    </div>
+  );
 }
 
 // ─── MediaContent ─────────────────────────────────────────────────────────────
@@ -542,6 +561,7 @@ export function MediaContent({
           className={cn(activeTab !== 'movies' && 'hidden')}
         >
           <h2 className="sr-only">Movies</h2>
+          <SourceErrors errors={movies.sourceErrors} />
           <VirtualMediaGrid
             items={movies.items}
             isLoading={movies.isLoading}
@@ -614,6 +634,7 @@ export function MediaContent({
           className={cn(activeTab !== 'series' && 'hidden')}
         >
           <h2 className="sr-only">Series</h2>
+          <SourceErrors errors={series.sourceErrors} />
           <VirtualMediaGrid
             items={series.items}
             isLoading={series.isLoading}
