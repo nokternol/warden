@@ -1,3 +1,5 @@
+import { guardPage } from '@app/lib/utils/guardPage';
+import { scope } from '@contract/scope';
 import type { GetServerSideProps, GetServerSidePropsContext } from 'next';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -35,5 +37,24 @@ describe('a deferred page', () => {
     expect(await getServerSideProps(requestFor('/ratings?title=Heat'))).toEqual({
       notFound: true,
     });
+  });
+});
+
+describe('an un-deferred page', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('answers once it has no entry in the declaration', async () => {
+    vi.stubEnv('BYPASS_AUTH', 'true');
+    const declared = {
+      deferred: {
+        ...scope.deferred,
+        pages: scope.deferred.pages.filter((page) => page !== '/ratings'),
+      },
+    };
+
+    expect(await guardPage(requestFor('/ratings'), declared)).toBeNull();
+    expect(await guardPage(requestFor('/search'), declared)).toEqual({ notFound: true });
   });
 });
