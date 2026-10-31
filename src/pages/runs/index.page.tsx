@@ -6,9 +6,11 @@ import RunRow from '@app/components/RunRow';
 import SidebarNav from '@app/components/SidebarNav';
 import TopBar from '@app/components/TopBar';
 import { RUNS_PAGE_SIZE, useAutomationRuns } from '@app/hooks/useAutomationRuns';
+import { useAutomations } from '@app/hooks/useAutomations';
 import { guardPage } from '@app/lib/utils/guardPage';
 import { History } from 'lucide-react';
 import type { GetServerSideProps } from 'next';
+import { useRouter } from 'next/router';
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const refusal = await guardPage(ctx);
@@ -19,13 +21,50 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 const RunsIcon = () => <History size={28} strokeWidth={1.25} aria-hidden="true" />;
 
 export default function RunsPage() {
-  const { runs, total, error, refresh, page, nextPage, prevPage } = useAutomationRuns();
+  const router = useRouter();
+  const param = router.query.automationId;
+  const automationId = typeof param === 'string' && /^\d+$/.test(param) ? Number(param) : undefined;
+  const { automations } = useAutomations();
+  const { runs, total, error, refresh, page, nextPage, prevPage } = useAutomationRuns({
+    automationId,
+  });
   const hasMore = (page + 1) * RUNS_PAGE_SIZE < total;
   const hasPrev = page > 0;
 
   return (
     <AppLayout sidebar={<SidebarNav />} topBar={<TopBar title="Runs" />}>
-      <div className="p-4 sm:p-6 max-w-5xl">
+      <div className="p-4 sm:p-6 space-y-4 max-w-5xl">
+        <div className="max-w-xs">
+          <label
+            htmlFor="runs-automation"
+            className="block text-sm font-medium text-text-secondary mb-1"
+          >
+            Automation
+          </label>
+          <select
+            id="runs-automation"
+            className="field"
+            value={automationId ?? ''}
+            onChange={(e) => {
+              void router.replace(
+                {
+                  pathname: router.pathname,
+                  query: e.target.value ? { automationId: e.target.value } : {},
+                },
+                undefined,
+                { shallow: true }
+              );
+            }}
+          >
+            <option value="">All automations</option>
+            {automations?.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <AsyncBoundary
           data={runs}
           error={error}
@@ -37,7 +76,11 @@ export default function RunsPage() {
               <EmptyState
                 icon={<RunsIcon />}
                 title="No runs yet"
-                description="Runs will appear here once your automations have executed."
+                description={
+                  automationId === undefined
+                    ? 'Runs will appear here once your automations have executed.'
+                    : 'This automation has not run yet.'
+                }
               />
             </div>
           }

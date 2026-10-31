@@ -1,20 +1,16 @@
+import { LoadError } from '@app/components/AsyncBoundary';
 import Badge from '@app/components/Badge';
+import Button from '@app/components/Button';
 import type { AutomationRunDto } from '@app/hooks/useAutomationRuns';
 import { type RunItemDto, useRunItems } from '@app/hooks/useRunItems';
+import { RUN_STATUS } from '@app/lib/runStatus';
 import { cn } from '@app/lib/utils/cn';
 import { ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import styles from './RunRow.module.css';
 
 /** The run table's columns, in order — the header and every row's cells follow it. */
-const COLUMNS = ['Automation', 'Status', 'Ran At', 'Items', 'Error'] as const;
-
-/** How each run status reads on its badge. */
-const STATUS_BADGE = {
-  success: { variant: 'success', label: 'success' },
-  error: { variant: 'error', label: 'error' },
-  skipped: { variant: 'warning', label: 'Invalid' },
-} as const;
+const COLUMNS = ['Automation', 'Status', 'Ran at', 'Items', 'Details'] as const;
 
 function formatDate(dateStr: string): string {
   try {
@@ -51,30 +47,21 @@ function Root({ run, defaultExpanded = false }: RunRowProps) {
             {run.automationName}
           </div>
         </td>
-        <td className={styles.badgeCell}>
-          <Badge variant={STATUS_BADGE[run.status].variant} size="sm">
-            {STATUS_BADGE[run.status].label}
+        <td className={styles.cell} data-label="Status">
+          <Badge variant={RUN_STATUS[run.status].variant} size="sm">
+            {RUN_STATUS[run.status].label}
           </Badge>
         </td>
-        <td className={styles.cell}>{formatDate(run.ranAt)}</td>
-        <td className={styles.cell}>{run.itemCount !== null ? run.itemCount : '—'}</td>
-        <td
-          className={cn(
-            styles.cell,
-            run.status === 'skipped' ? styles.reasonCell : styles.errorCell
-          )}
-        >
-          {run.error ? (
-            run.status === 'skipped' ? (
-              <span className={styles.reason}>{run.error}</span>
-            ) : (
-              <span className={styles.error} title={run.error}>
-                {run.error.length > 60 ? `${run.error.slice(0, 60)}…` : run.error}
-              </span>
-            )
-          ) : (
-            '—'
-          )}
+        <td className={styles.cell} data-label="Ran at">
+          {formatDate(run.ranAt)}
+        </td>
+        <td className={styles.cell} data-label="Items">
+          {run.itemCount !== null ? run.itemCount : '—'}
+        </td>
+        <td className={styles.detailsCell}>
+          <span className={run.status === 'error' ? styles.error : undefined}>
+            {run.error ?? <span className="max-sm:hidden">—</span>}
+          </span>
         </td>
       </tr>
       {open && <TargetedItems runId={run.id} />}
@@ -114,9 +101,15 @@ function Note({ children }: { children: React.ReactNode }) {
 }
 
 function TargetedItemList({ runId }: { runId: number }) {
-  const { items, total, isLoading } = useRunItems(runId);
+  const { items, total, error, refresh, isFetchingMore, loadMore } = useRunItems(runId);
 
-  if (isLoading) return <Note>Loading items…</Note>;
+  if (!items) {
+    return error ? (
+      <LoadError what="this run's items" onRetry={() => refresh()} />
+    ) : (
+      <Note>Loading items…</Note>
+    );
+  }
   if (items.length === 0) return <Note>No items recorded for this run.</Note>;
 
   return (
@@ -127,9 +120,22 @@ function TargetedItemList({ runId }: { runId: number }) {
         ))}
       </ul>
       {total > items.length && (
-        <p className={styles.pageNote}>
-          Showing {items.length} of {total} items
-        </p>
+        <div className={styles.pageNote}>
+          <span>
+            Showing {items.length} of {total} items
+          </span>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={isFetchingMore}
+            onClick={() => {
+              void loadMore();
+            }}
+          >
+            Show more items
+          </Button>
+        </div>
       )}
     </>
   );
@@ -144,7 +150,7 @@ function TargetedItem({ item }: { item: RunItemDto }) {
       {item.year !== null && <span className={styles.itemYear}>{item.year}</span>}
       {item.deleted && (
         <Badge variant="default" size="sm" title="This item has since left its source">
-          removed
+          Removed
         </Badge>
       )}
     </li>
@@ -154,7 +160,7 @@ function TargetedItem({ item }: { item: RunItemDto }) {
 /** The run table's header row, naming the columns each `RunRow` fills. */
 function Head() {
   return (
-    <thead>
+    <thead className={styles.head}>
       <tr className={styles.headRow}>
         {COLUMNS.map((column) => (
           <th key={column} className={styles.columnHeader}>

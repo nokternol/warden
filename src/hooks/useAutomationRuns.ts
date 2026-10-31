@@ -9,6 +9,12 @@ export const RUNS_PAGE_SIZE = 25;
 
 export function useAutomationRuns(opts: { automationId?: number } = {}) {
   const [page, setPage] = useState(0);
+  // A new filter starts from its first page.
+  const [pageFor, setPageFor] = useState(opts.automationId);
+  if (pageFor !== opts.automationId) {
+    setPageFor(opts.automationId);
+    setPage(0);
+  }
 
   const { data, isLoading, error, mutate } = useApi(api.automations.runs, {
     limit: RUNS_PAGE_SIZE,
