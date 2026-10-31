@@ -198,7 +198,7 @@ feature, below).
 calls `getStatus(tmdbId)`, contributing a single field (`tmdbStatus`), gated into `ruleRegistry.ts`. The
 much larger enriched-details/watch-providers/ratings surface (`getMovieDetailsEnriched`, watch providers,
 `getRatings`) is implemented but consumed only by the separate on-demand
-`ratingsAggregation.ts`/`providers.ratings` procedure and `TmdbService`'s trending-backdrops
+`ratingsAggregation.ts`/`providers.ratings` procedure (deferred: it answers 404, with the ratings page and panel blocked too) and `TmdbService`'s trending-backdrops
 feature ([`server/modules/providers/tmdbService.ts`](ref:path:server/modules/providers/tmdbService.ts),
 unrelated background-image fetching) — none of it flows through `EnrichmentJob` onto a `MediaItem`. Also
 note `ruleRegistry.ts`'s `genres`/`year`/`certification` rules already list TMDB as a `providers`
@@ -221,7 +221,7 @@ rating/votes, Rotten Tomatoes %, Metacritic score, award-winner/Oscar-winner fla
 `Awards` string), director, actors, language, box office.
 
 **Wired into the media-item pipeline?** No — used only by the separate ratings-aggregation feature
-(`server/modules/providers/ratingsAggregation.ts`, the `providers.ratings` procedure in `providers.procedures.ts`). Not an
+(`server/modules/providers/ratingsAggregation.ts`, the `providers.ratings` procedure in `providers.procedures.ts`, deferred by the scope declaration). Not an
 enricher, not referenced by `enricherAdapters.ts` or `ruleRegistry.ts` for any `MediaItem` field. (The
 `certification`/`imdbRating` rules in `ruleRegistry.ts` list `OMDB` as a `providers` entry, but no
 enricher currently populates either field from OMDB — same "listed but not wired" gap as TMDB's

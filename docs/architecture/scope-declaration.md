@@ -7,7 +7,7 @@ Un-deferring something means removing one entry from that declaration.
 ## The declaration
 
 [`contract/scope.ts`](ref:path:contract/scope.ts) exports `scope: Scope`. It lives in the contract
-because both sides of the API depend on the contract, so either side can consult it. It lists three
+because both sides of the API depend on the contract, so either side can consult it. It lists six
 kinds of deferred things:
 
 - **`providerTypes`** — provider types that cannot be configured: `TMDB`, `OMDB`, `TVMAZE`.
@@ -17,19 +17,22 @@ kinds of deferred things:
   so it has no control) and `tmdbStatus` (produced only by TMDB).
 - **`tasks`** — provider tasks not offered for enablement or automation, each named by provider type
   and task id, because task ids are unique only within a type. None are deferred today.
+- **`procedures`** — contract route paths that answer 404: `/api/providers/ratings`,
+  `/api/providers/metadata`, `/api/search/metadata` and `/api/app-settings`. An entry is a path rather
+  than a procedure name, so it covers every HTTP method there and one entry defers a whole resource.
+- **`pages`** — page URLs that answer 404 and leave the navigation: `/dashboard`, `/search`, `/ratings`.
+- **`sections`** — parts of an offered page that do not render, each named by the id its guard asks
+  about: `mediaRatingsPanel`.
 
-The declaration covers provider types, rules and tasks. Pages, navigation items and API procedures
-are not part of it.
-
-The questions are asked through three functions beside the declaration: `isOfferedProviderType(declared,
-type)`, `isOfferedRule(declared, ruleKey)` and `isOfferedTask(declared, providerType, taskId)`. Each
-takes the declaration as an argument, so the server can be handed a different one under test.
+The questions are asked through one function per kind beside the declaration: `isOfferedProviderType`,
+`isOfferedRule`, `isOfferedTask`, `isOfferedProcedure`, `isOfferedPage` and `isOfferedSection`. Each
+takes the declaration as its first argument, so it can be handed a different one under test.
 
 ## Who consults it
 
 The kernel container registers the declaration as `scope`
 ([`server/kernel/container.ts`](ref:path:server/kernel/container.ts)). Procedures and services read it
-from their cradle, never by importing it:
+from their cradle, never by importing it. The client has no cradle, so it imports the declaration:
 
 - **Provider types.** [`providers.procedures.ts`](ref:path:server/modules/providers/providers.procedures.ts)
   serves only offered types from `GET /api/providers/types`. Provider create and the connection test
@@ -44,11 +47,33 @@ from their cradle, never by importing it:
   write: a provider update whose `settings.enabledTasks` names one answers 400, and
   [`AutomationService.create`](ref:path:server/modules/automations/automationService.ts) rejects one
   even if it was enabled before it was deferred.
+- **Procedures.** The root middleware of the contract implementer
+  ([`server/kernel/api.ts`](ref:path:server/kernel/api.ts)) refuses a deferred procedure with a
+  `NOT_FOUND` error, so its handler never runs. `createApiRouter` passes it the cradle's `scope` through
+  `serveApi`. The check comes before default-deny, so a signed-out caller gets 404 rather than a 401
+  that would reveal the route, and `BYPASS_AUTH` reveals nothing either.
+- **Pages.** [`guardPage`](ref:path:src/lib/utils/guardPage.ts) is the first thing every signed-in page's
+  `getServerSideProps` asks. A deferred page answers 404 before any auth outcome, at request time on the
+  server, whether the request is a page load or Next's client-side data fetch. Deferring a page needs no
+  change to the page.
+- **Navigation.** [`resolveNavItems`](ref:path:src/lib/navigation.tsx) leaves out deferred pages, and it
+  is the only way to read the navigation: the sidebar and Media's mobile bar both use it.
+- **Sections.** [The media page](ref:path:src/pages/media/index.page.tsx) renders the ratings panel only
+  while `mediaRatingsPanel` is offered. While it is deferred, cards get no click handler, so
+  [`MediaCard`](ref:path:src/components/MediaCard/index.tsx) renders them non-interactive.
 
 The `rules` list decides: a listed rule is not served, and removing its entry serves it once it has a
 live producer. [`ruleScope.test.ts`](ref:path:server/__tests__/modules/media/ruleScope.test.ts) keeps
 the list complete, equal to exactly the set of rules with no control or no offered producer, so it is
 a checked inventory too: un-deferring TMDB fails that test until `tmdbStatus` is removed from the list.
+
+Procedures, pages and sections are plain strings too.
+[`scope.test.ts`](ref:path:src/__tests__/contract/scope.test.ts) fails when an entry names no route path
+in the contract, no page file, or no guard in the client, so a stale entry fails the build.
+
+Tests of deferred code that go through the HTTP layer inject a declaration that offers their procedures
+([`scope.ts`](ref:path:tests/helpers/scope.ts)). The Media page tests that open the ratings panel do the
+same for its section.
 
 The probe itself, `probeConnection` ([`connectionProbe.ts`](ref:path:server/modules/providers/connectionProbe.ts)),
 still knows every type. Its TVMAZE case is tested against the probe directly
@@ -85,6 +110,11 @@ no copy. [`useProviderTypes`](ref:path:src/hooks/useProviderTypes.ts) fetches th
   by its served label.
 
 ## What this does not cover
+
+- **Deferred client code stays compiled.** The pages' JavaScript still exists in the build. What is
+  enforced is that no URL renders them and no procedure answers them.
+- **Deferred tasks have no stale-entry check.** None are deferred today, and the check would need the
+  provider catalogue on the server.
 
 - **An automation saved before its task was deferred still runs.** The executor checks enablement,
   not the declaration.

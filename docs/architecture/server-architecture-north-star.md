@@ -107,7 +107,7 @@ server/
     auth/          # authService, session store (drizzleStore)
     system/        # health endpoints, systemHealthCheck, ensureSystemJobs,
                    # systemTaskRunner, failedStateMiddleware
-    appSettings/   # system-wide settings that belong to no single provider
+    appSettings/   # system-wide settings that belong to no single provider (procedures deferred)
 ```
 
 Boundary decisions this inventory encodes:
