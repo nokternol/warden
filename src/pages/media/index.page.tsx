@@ -712,7 +712,7 @@ export function MediaContent({
   );
 }
 
-// ─── Auth guard ───────────────────────────────────────────────────────────────
+// ─── Page guard ───────────────────────────────────────────────────────────────
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const refusal = await guardPage(ctx);

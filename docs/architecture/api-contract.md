@@ -41,13 +41,14 @@ The contract uses [oRPC](https://orpc.dev) in contract-first mode, with Zod 4 sc
   the input as a whole goes in the message), and anything unexpected, including a handler result
   that breaks the contract's output, is a logged 500 `INTERNAL_ERROR`.
   Requests the contract doesn't match fall through to the next Express handler.
-- **Authentication.** The implementer's root middleware is default-deny: a procedure answers without a
-  signed-in user only when its contract meta says `public: true`. Every other procedure, including one
-  added later, is refused with 401 `UNAUTHORIZED`. Only four procedures are public, the ones needed before
+- **Authentication.** The implementer's root middleware first answers 404 for a procedure the scope
+  declaration defers ([scope declaration](ref:path:docs/architecture/scope-declaration.md)). After that it
+  is default-deny: a procedure answers without a signed-in user only when its contract meta says
+  `public: true`. Every other offered procedure, including one added later, is refused with 401 `UNAUTHORIZED`. Only four procedures are public, the ones needed before
   sign-in: `system.health`, `auth.plexLogin`, `auth.logout` and `media.backdrops` (the sign-in page's
   images). [`defaultDenyAuth.integration.test.ts`](ref:path:server/__tests__/integration/defaultDenyAuth.integration.test.ts)
   pins this down. It requires the contract's `public` marks to be exactly that allowlist. With
-  `BYPASS_AUTH` off, it also walks the contract against the assembled router: every procedure outside the
+  `BYPASS_AUTH` off and every procedure offered, it also walks the contract against the assembled router: every procedure outside the
   allowlist must refuse an anonymous call, and none on it may be refused by the guard. Adding a public procedure
   is therefore a reviewed change to that test. The procedure context carries the user that
   `checkUser` attached from the session, and the session itself, which sign-in starts and sign-out

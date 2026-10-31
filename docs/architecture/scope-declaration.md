@@ -32,7 +32,8 @@ takes the declaration as its first argument, so it can be handed a different one
 
 The kernel container registers the declaration as `scope`
 ([`server/kernel/container.ts`](ref:path:server/kernel/container.ts)). Procedures and services read it
-from their cradle, never by importing it. The client has no cradle, so it imports the declaration:
+from their cradle, and tests hand them a different one. The imported value appears on the server only as
+the default of an injectable `scope` parameter. The client has no cradle, so it imports the declaration:
 
 - **Provider types.** [`providers.procedures.ts`](ref:path:server/modules/providers/providers.procedures.ts)
   serves only offered types from `GET /api/providers/types`. Provider create and the connection test
@@ -69,11 +70,11 @@ a checked inventory too: un-deferring TMDB fails that test until `tmdbStatus` is
 
 Procedures, pages and sections are plain strings too.
 [`scope.test.ts`](ref:path:src/__tests__/contract/scope.test.ts) fails when an entry names no route path
-in the contract, no page file, or no guard in the client, so a stale entry fails the build.
+in the contract, no page file, or no guard in the client, so a stale entry fails the test run.
 
 Tests of deferred code that go through the HTTP layer inject a declaration that offers their procedures
-([`scope.ts`](ref:path:tests/helpers/scope.ts)). The Media page tests that open the ratings panel do the
-same for its section.
+([`scope.ts`](ref:path:tests/helpers/scope.ts)). The Media page reads the declaration when its module loads, so the tests that
+open the ratings panel mock `@contract/scope` to offer its section.
 
 The probe itself, `probeConnection` ([`connectionProbe.ts`](ref:path:server/modules/providers/connectionProbe.ts)),
 still knows every type. Its TVMAZE case is tested against the probe directly
@@ -115,7 +116,6 @@ no copy. [`useProviderTypes`](ref:path:src/hooks/useProviderTypes.ts) fetches th
   enforced is that no URL renders them and no procedure answers them.
 - **Deferred tasks have no stale-entry check.** None are deferred today, and the check would need the
   provider catalogue on the server.
-
 - **An automation saved before its task was deferred still runs.** The executor checks enablement,
   not the declaration.
 - **Query health still reports deferred producers.** A query's provider status lists every type in a

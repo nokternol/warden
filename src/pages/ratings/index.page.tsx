@@ -11,7 +11,7 @@ import type { GetServerSideProps } from 'next';
 import { useState } from 'react';
 import styles from './ratings.module.css';
 
-// ─── Auth guard ───────────────────────────────────────────────────────────────
+// ─── Page guard ───────────────────────────────────────────────────────────────
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const refusal = await guardPage(ctx);

@@ -145,7 +145,8 @@ export const contestedFieldPrecedence: ContestedFieldPrecedence = {
 Jellyfin sits after Plex as a fixed literal order, not yet a `primaryMediaServer`-driven swap — that
 settings-aware ordering (`applyPrimaryMediaServer`,
 [`enrichment/settingsAwarePrecedence.ts`](ref:path:server/modules/media/enrichment/settingsAwarePrecedence.ts))
-exists and is tested but isn't wired to a live setting read at either call site above yet.
+exists and is tested but isn't wired to a live setting read at either call site above yet. It is
+deferred for the MVP by the [scope declaration](ref:path:docs/architecture/scope-declaration.md).
 
 Scoped only to fields with more than one real producer — an uncontested field (`seerrHasIssue`,
 `tmdbStatus`, `tags`, `isFavorite`, all single-producer today) needs no entry, since there's nothing to

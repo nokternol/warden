@@ -27,7 +27,7 @@ function sortProviders(providers: ProviderSummary[], typeOrder: ProviderType[]):
   });
 }
 
-// ─── Auth guard ───────────────────────────────────────────────────────────────
+// ─── Page guard ───────────────────────────────────────────────────────────────
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const refusal = await guardPage(ctx);
