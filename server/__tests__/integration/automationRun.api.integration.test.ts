@@ -1,5 +1,5 @@
 import { buildContainer } from '@server/container';
-import { automations } from '@server/database/schema';
+import { MetadataProviderType, automations } from '@server/database/schema';
 /**
  * POST /api/automations/:id/run — Phase 3 Run Now
  * Async 202 + background execute; unknown id → 404; kind-agnostic and ignores disabled.
@@ -10,6 +10,9 @@ import { closeDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createAutomationProcedures } from '@server/modules/automations';
+import { AutomationService } from '@server/modules/automations/automationService';
+import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
+import { ProviderSettingsService } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient } from '@tests/helpers/api';
 import express, { type Express } from 'express';
@@ -93,5 +96,41 @@ describe('POST /api/automations/:id/run — Phase 3', () => {
 
     expect(res.status).toBe(202);
     await expect.poll(async () => (await runsFor(disabledRow.id)).length).toBeGreaterThan(0);
+  });
+
+  it('records a skipped run, not a success, for an automation that is no longer valid', async () => {
+    const db = getDb();
+    const providers = new ProviderSettingsService({ db });
+    const provider = await providers.create({
+      type: MetadataProviderType.RADARR,
+      name: 'Radarr',
+      url: 'http://localhost:7878/api/v3',
+      apiKey: 'k',
+      settings: { enabledTasks: ['unmonitorMovie'] },
+    });
+    const query = await new MediaQueryService({ db }).create({
+      name: 'Q',
+      contentType: 'movie',
+      filters: [],
+    });
+    const automation = await new AutomationService({ db }).create({
+      name: 'Invalid',
+      queries: [{ queryId: query.id, role: 'include' }],
+      providerId: provider.id,
+      taskId: 'unmonitorMovie',
+      schedule: '0 * * * *',
+    });
+    await providers.update(provider.id, { isActive: false });
+
+    const res = await client.post(`/api/automations/${automation.id}/run`);
+
+    expect(res.status).toBe(202);
+    await expect.poll(async () => (await runsFor(automation.id)).length).toBeGreaterThan(0);
+    expect(await runsFor(automation.id)).toEqual([
+      expect.objectContaining({
+        status: 'skipped',
+        error: expect.stringContaining('not an active'),
+      }),
+    ]);
   });
 });

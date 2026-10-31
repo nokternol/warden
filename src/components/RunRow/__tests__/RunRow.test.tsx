@@ -82,4 +82,13 @@ describe('RunRow', () => {
 
     expect(await screen.findByText(/no items recorded/i)).toBeInTheDocument();
   });
+
+  it('labels a skipped run Invalid and shows its whole reason', () => {
+    const reason = 'Tags filter names Radarr instance 3, which is not an active provider';
+    renderRow({ ...run, id: 3, status: 'skipped', itemCount: 0, error: reason });
+
+    expect(screen.getByText('Invalid')).toBeInTheDocument();
+    expect(screen.queryByText('skipped')).not.toBeInTheDocument();
+    expect(screen.getByText(reason)).toBeInTheDocument();
+  });
 });

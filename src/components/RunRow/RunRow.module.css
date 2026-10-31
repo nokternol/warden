@@ -28,6 +28,14 @@
   @apply max-w-xs truncate;
 }
 
+.reasonCell {
+  @apply max-w-sm;
+}
+
+.reason {
+  @apply text-text-secondary;
+}
+
 .name {
   @apply flex items-center gap-2;
 }
