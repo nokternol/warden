@@ -5,6 +5,18 @@ import type { MediaProfile, MediaTag } from '@contract/media';
 export type { MediaTag };
 export type MediaQualityProfile = MediaProfile;
 
+/** Just the instance data that names a saved filter's ids, flattened across providers. */
+export function useFilterSummaryLookups() {
+  const { data: tags } = useApi(api.media.tags, undefined);
+  const { data: profiles } = useApi(api.media.qualityProfiles, undefined);
+  const { data: languageProfiles } = useApi(api.media.languageProfiles, undefined);
+  return {
+    tags: [...(tags?.radarr ?? []), ...(tags?.sonarr ?? [])],
+    qualityProfiles: [...(profiles?.radarr ?? []), ...(profiles?.sonarr ?? [])],
+    languageProfiles: languageProfiles ?? [],
+  };
+}
+
 export function useMediaLookups() {
   const tags = useApi(api.media.tags, undefined);
   const profiles = useApi(api.media.qualityProfiles, undefined);

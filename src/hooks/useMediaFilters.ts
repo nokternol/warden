@@ -149,7 +149,10 @@ function parseQuery(
   return state;
 }
 
-function buildQuery(state: FilterState, index: FieldIndex | undefined): Record<string, string> {
+export function buildQuery(
+  state: FilterState,
+  index: FieldIndex | undefined
+): Record<string, string> {
   const q: Record<string, string> = {};
   if (state.movieSort !== SORT_DEFAULT) q.movieSort = state.movieSort;
   if (state.seriesSort !== SORT_DEFAULT) q.seriesSort = state.seriesSort;

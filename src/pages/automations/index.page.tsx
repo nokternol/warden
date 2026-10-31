@@ -12,8 +12,10 @@ import { useAutomations } from '@app/hooks/useAutomations';
 import type { CreateAutomationInput } from '@app/hooks/useAutomations';
 import { useMediaQueries } from '@app/hooks/useMediaQueries';
 import type { MediaQueryRecord } from '@app/hooks/useMediaQueries';
+import { useMediaRules } from '@app/hooks/useMediaRules';
 import { useMediaSources } from '@app/hooks/useMediaSources';
 import { useProviderSettings } from '@app/hooks/useProviderSettings';
+import { mediaHref } from '@app/lib/mediaQueryAdapters';
 import { setupState } from '@app/lib/setupGuidance';
 import { guardPage } from '@app/lib/utils/guardPage';
 import { BookMarked, Zap } from 'lucide-react';
@@ -49,6 +51,7 @@ export default function AutomationsPage() {
   } = useAutomations({ kind: 'user' });
   const { providers } = useProviderSettings();
   const { sources } = useMediaSources();
+  const { rules } = useMediaRules();
   const [showBuilder, setShowBuilder] = useState(false);
   const [createdName, setCreatedName] = useState<string | null>(null);
   // Each fact stays undefined until its fetch has succeeded, so the guidance stays 'unknown'.
@@ -59,8 +62,8 @@ export default function AutomationsPage() {
     automationCount: automations?.length,
   });
 
-  const handleLoad = (_query: MediaQueryRecord) => {
-    void router.push('/media');
+  const handleLoad = (query: MediaQueryRecord) => {
+    void router.push(mediaHref(query, rules ?? []));
   };
 
   const handleCreate = async (input: CreateAutomationInput) => {
@@ -208,9 +211,7 @@ export default function AutomationsPage() {
                     <QueryRow
                       query={query}
                       onLoad={() => handleLoad(query)}
-                      onDelete={() => {
-                        void removeQuery(query.id);
-                      }}
+                      onDelete={() => removeQuery(query.id)}
                     />
                   </div>
                 ))}

@@ -48,6 +48,7 @@ import {
   Tv2,
 } from 'lucide-react';
 import type { GetServerSideProps } from 'next';
+import { useRouter } from 'next/router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const RATINGS_PANEL_OFFERED = isOfferedSection(scope, 'mediaRatingsPanel');
@@ -731,7 +732,11 @@ export default function MediaPage() {
   const [density, setDensity] = useCardDensity();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<ActiveTab>('movies');
+  const { query: routeQuery } = useRouter();
+  const [activeTab, setActiveTab] = useState<ActiveTab>(
+    routeQuery.tab === 'series' ? 'series' : 'movies'
+  );
+  const [savedName, setSavedName] = useState<string | null>(null);
 
   const activeFilterCount = countActiveFilters(values, activeTab);
 
@@ -811,6 +816,11 @@ export default function MediaPage() {
           />
         }
       >
+        {savedName && (
+          <p role="status" className="px-3 sm:px-6 pt-3 text-sm text-success">
+            Saved query {savedName}.
+          </p>
+        )}
         {loadFailures.length > 0 && (
           <div className="px-3 sm:px-6 pt-3 space-y-2">
             {loadFailures.map(({ what, onRetry }) => (
@@ -845,9 +855,10 @@ export default function MediaPage() {
       <SaveQueryDialog
         open={saveDialogOpen}
         onClose={() => setSaveDialogOpen(false)}
-        onSave={(name) => {
+        onSave={async (name) => {
           const contentType = activeTab === 'movies' ? 'movie' : 'series';
-          return saveQuery(name, contentType, toFilters(values, contentType, rules));
+          await saveQuery(name, contentType, toFilters(values, contentType, rules));
+          setSavedName(name);
         }}
       />
     </>

@@ -7,6 +7,8 @@ import SidebarNav from '@app/components/SidebarNav';
 import TopBar from '@app/components/TopBar';
 import { useAutomations } from '@app/hooks/useAutomations';
 import { useMediaReset } from '@app/hooks/useMediaReset';
+import { api } from '@app/lib/api/client';
+import { useApi } from '@app/lib/api/useApi';
 import { guardPage } from '@app/lib/utils/guardPage';
 import { Monitor } from 'lucide-react';
 import type { GetServerSideProps } from 'next';
@@ -20,6 +22,9 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 export default function SystemPage() {
   const { automations, error, refresh, run } = useAutomations({ kind: 'system' });
   const { reset } = useMediaReset();
+  const { data: movies } = useApi(api.media.browse.movie, { pageSize: 1 });
+  const { data: series } = useApi(api.media.browse.series, { pageSize: 1 });
+  const titleCount = movies && series ? movies.totalCount + series.totalCount : undefined;
 
   return (
     <AppLayout sidebar={<SidebarNav />} topBar={<TopBar title="System" />}>
@@ -71,6 +76,7 @@ export default function SystemPage() {
             and their libraries are not touched.
           </p>
           <MediaResetControl
+            titleCount={titleCount}
             onReset={async () => {
               const result = await reset();
               if (!result) throw new Error('Failed to reset media data');

@@ -1,8 +1,14 @@
-import type { FilterValue } from '@app/hooks/useMediaFilters';
+import {
+  type FilterState,
+  type FilterValue,
+  buildQuery,
+  computeFieldIndex,
+  scopeOf,
+} from '@app/hooks/useMediaFilters';
 import type { Filter } from '@app/hooks/useMediaQueries';
 import { parseIds } from '@app/lib/multiValueFilter';
 import type { MediaRuleDescriptor } from '@contract/media';
-import type { ContentType } from '@contract/schemas';
+import { type ContentType, isInstanceScopedValue } from '@contract/schemas';
 
 /**
  * The registry-keyed, scoped filter state (`useMediaFilters`) a content type's
@@ -44,4 +50,39 @@ export function toFilters(
       const ids = parseIds(String(value));
       return { ruleKey, value: providerId === undefined ? { ids } : { providerId, ids } };
     });
+}
+
+/**
+ * The Media page URL showing a saved query: its filters as the params Media reads its filter state
+ * from, on the query's own tab. The inverse of `toFilters`.
+ */
+export function mediaHref(
+  query: { contentType: ContentType; filters: Filter[] },
+  rules: MediaRuleDescriptor[]
+): string {
+  const state: FilterState = {
+    shared: {},
+    movie: {},
+    series: {},
+    movieQualifiers: {},
+    seriesQualifiers: {},
+    movieSort: 'title_asc',
+    seriesSort: 'title_asc',
+  };
+  const qualifiers = query.contentType === 'movie' ? state.movieQualifiers : state.seriesQualifiers;
+  for (const { ruleKey, value } of query.filters) {
+    const rule = rules.find((r) => r.key === ruleKey && r.contentTypes.includes(query.contentType));
+    if (!rule) continue;
+    const bucket = state[scopeOf(rule)];
+    if (typeof value === 'object' && isInstanceScopedValue(value)) {
+      bucket[ruleKey] = value.ids.join(',');
+      if (value.providerId !== undefined) qualifiers[ruleKey] = value.providerId;
+    } else {
+      bucket[ruleKey] = value as FilterValue;
+    }
+  }
+  const params = new URLSearchParams(buildQuery(state, computeFieldIndex(rules)));
+  if (query.contentType === 'series') params.set('tab', 'series');
+  const search = params.toString();
+  return search ? `/media?${search}` : '/media';
 }
