@@ -5,6 +5,8 @@ import type { AppConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createApiRouter } from '@server/modules';
+import { proceduresOffered } from '@tests/helpers/scope';
+import { asValue } from 'awilix';
 import express, { type Express } from 'express';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -69,6 +71,8 @@ describe('default-deny API auth', () => {
   beforeAll(async () => {
     const db = await initializeDatabase(testConfig);
     const container = buildContainer({ config: testConfig, db });
+    // Default-deny covers every procedure, including those the scope declaration defers today.
+    container.register({ scope: asValue(proceduresOffered) });
     app = express();
     app.use(express.json());
     app.use(requestIdMiddleware);

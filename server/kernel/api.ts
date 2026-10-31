@@ -32,17 +32,19 @@ export interface ServeApiOptions {
 
 /**
  * The contract implementer every module builds its procedures from. Its root
- * middleware is default-deny: a procedure answers without a signed-in user only
- * when the contract marks it `public`, or when the server runs with the auth bypass.
+ * middleware first refuses a procedure the scope declaration defers, so a
+ * deferred procedure looks absent to every caller, signed in or not. It is then
+ * default-deny: a procedure answers without a signed-in user only when the
+ * contract marks it `public`, or when the server runs with the auth bypass.
  */
 export const api = implement(contract)
   .$context<ApiContext>()
   .use(({ context, procedure, next }) => {
-    if (!procedure['~orpc'].meta.public && !context.user && !context.authBypassed) {
-      throw new ORPCError('UNAUTHORIZED', { message: 'Authentication required' });
-    }
     if (!isOfferedProcedure(context.scope, procedure['~orpc'].route.path)) {
       throw new ORPCError('NOT_FOUND', { message: 'Not found' });
+    }
+    if (!procedure['~orpc'].meta.public && !context.user && !context.authBypassed) {
+      throw new ORPCError('UNAUTHORIZED', { message: 'Authentication required' });
     }
     return next();
   });

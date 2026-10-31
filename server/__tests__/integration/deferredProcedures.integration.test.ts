@@ -37,21 +37,29 @@ function isRefusedAsDeferred(res: request.Response) {
   return res.status === 404 && res.body?.error?.type === 'NOT_FOUND';
 }
 
+type Cradle = ReturnType<typeof buildContainer>['cradle'];
+
+/** An app serving the real API router, with or without a signed-in caller. */
+function serve(cradle: Cradle, caller: 'signed-in' | 'signed-out' = 'signed-out'): Express {
+  const app = express();
+  app.use(express.json());
+  app.use(requestIdMiddleware);
+  if (caller === 'signed-in') {
+    app.use((req, _res, next) => {
+      req.user = { id: 1 } as unknown as NonNullable<typeof req.user>;
+      next();
+    });
+  }
+  app.use('/api', createApiRouter(cradle));
+  return app;
+}
+
 describe('deferred API procedures', () => {
-  let cradle: ReturnType<typeof buildContainer>['cradle'];
-  let signedIn: Express;
+  let cradle: Cradle;
 
   beforeAll(async () => {
     const db = await initializeDatabase(testConfig);
     cradle = buildContainer({ config: testConfig, db }).cradle;
-    signedIn = express();
-    signedIn.use(express.json());
-    signedIn.use(requestIdMiddleware);
-    signedIn.use((req, _res, next) => {
-      req.user = { id: 1 } as unknown as NonNullable<typeof req.user>;
-      next();
-    });
-    signedIn.use('/api', createApiRouter(cradle));
   });
 
   afterAll(async () => {
@@ -59,13 +67,21 @@ describe('deferred API procedures', () => {
   });
 
   it.each(DEFERRED_CALLS)('answers a signed-in %s %s with 404', async (method, url) => {
-    expect(isRefusedAsDeferred(await request(signedIn)[method](url))).toBe(true);
+    const res = await request(serve(cradle, 'signed-in'))[method](url);
+
+    expect(isRefusedAsDeferred(res)).toBe(true);
+  });
+
+  it.each(DEFERRED_CALLS)('answers a signed-out %s %s with 404, not 401', async (method, url) => {
+    const res = await request(serve(cradle))[method](url);
+
+    expect(isRefusedAsDeferred(res)).toBe(true);
   });
 
   it('never invokes the handler of a deferred procedure', async () => {
     const handlerWork = vi.spyOn(cradle.appSettingsService, 'get');
 
-    await request(signedIn).get('/api/app-settings');
+    await request(serve(cradle, 'signed-in')).get('/api/app-settings');
 
     expect(handlerWork).not.toHaveBeenCalled();
   });
