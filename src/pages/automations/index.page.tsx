@@ -50,6 +50,7 @@ export default function AutomationsPage() {
   const { providers } = useProviderSettings();
   const { sources } = useMediaSources();
   const [showBuilder, setShowBuilder] = useState(false);
+  const [createdName, setCreatedName] = useState<string | null>(null);
   // Each fact stays undefined until its fetch has succeeded, so the guidance stays 'unknown'.
   const guidance = setupState({
     providerCount: providers?.length,
@@ -63,8 +64,9 @@ export default function AutomationsPage() {
   };
 
   const handleCreate = async (input: CreateAutomationInput) => {
-    await create(input);
+    const created = await create(input);
     setShowBuilder(false);
+    setCreatedName(created.name);
   };
 
   const activeCount = automations?.filter((a) => a.status === 'active').length ?? 0;
@@ -85,7 +87,10 @@ export default function AutomationsPage() {
               title={
                 queries?.length === 0 ? 'Save a query first to create an automation' : undefined
               }
-              onClick={() => setShowBuilder(true)}
+              onClick={() => {
+                setCreatedName(null);
+                setShowBuilder(true);
+              }}
             >
               New automation
             </Button>
@@ -102,12 +107,16 @@ export default function AutomationsPage() {
         {showBuilder && queries && (
           <AutomationBuilder
             queries={queries}
-            onSubmit={(input) => {
-              void handleCreate(input);
-            }}
+            onSubmit={handleCreate}
             onCancel={() => setShowBuilder(false)}
             isSubmitting={isCreating}
           />
+        )}
+
+        {createdName && (
+          <p role="status" className="text-sm text-success">
+            Created {createdName}.
+          </p>
         )}
 
         {/* ── Automations list ─────────────────────────────────────────────── */}

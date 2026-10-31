@@ -1,13 +1,16 @@
 import AutomationQueryList from '@app/components/AutomationQueryList';
 import type { AutomationQueryItem } from '@app/components/AutomationQueryList';
 import Badge from '@app/components/Badge';
-import { type AutomationPreview, useAutomationPreview } from '@app/hooks/useAutomationPreview';
+import Button from '@app/components/Button';
+import EmptyState from '@app/components/EmptyState';
+import { useAutomationPreview } from '@app/hooks/useAutomationPreview';
 import type { CreateAutomationInput } from '@app/hooks/useAutomations';
 import type { MediaQueryRecord } from '@app/hooks/useMediaQueries';
 import { useProviderSettings } from '@app/hooks/useProviderSettings';
 import { optionsForProvider, useProviderTaskOptions } from '@app/hooks/useProviderTaskOptions';
 import type { ProviderTaskParameter } from '@app/hooks/useProviderTasks';
 import { useProviderTasks } from '@app/hooks/useProviderTasks';
+import { blastRadius } from '@app/lib/blastRadius';
 import { cn } from '@app/lib/utils/cn';
 import { Cron } from 'croner';
 import cronstrue from 'cronstrue';
@@ -61,23 +64,6 @@ function relativeTime(isoOrDate: string | Date): string {
   return past ? `${d}d ago` : `in ${d}d`;
 }
 
-const ITEM_NOUNS: Record<AutomationPreview['contentType'], { one: string; many: string }> = {
-  movie: { one: 'movie', many: 'movies' },
-  series: { one: 'series', many: 'series' },
-};
-
-/**
- * The blast-radius phrase for a preview request, e.g. "will affect 214 movies".
- * Until the count arrives, or if it cannot be had, it states that instead of a number.
- */
-function blastRadius({ data, error }: { data?: AutomationPreview; error?: Error }): string {
-  if (data) {
-    const nouns = ITEM_NOUNS[data.contentType];
-    return `will affect ${data.count} ${data.count === 1 ? nouns.one : nouns.many}`;
-  }
-  return error ? "couldn't count the affected items" : 'counting affected items…';
-}
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface BuilderTask {
@@ -101,11 +87,25 @@ interface TaskSelection {
   confirmed: boolean;
 }
 
-function SettingsLink() {
+function ScheduleChip({
+  label,
+  pressed,
+  onClick,
+}: { label: string; pressed: boolean; onClick: () => void }) {
   return (
-    <a href="/settings" className="text-primary-text hover:underline rounded">
-      Settings
-    </a>
+    <button
+      type="button"
+      aria-pressed={pressed}
+      onClick={onClick}
+      className={cn(
+        'px-3 py-1.5 text-sm font-medium rounded-sm border transition-colors duration-150 max-sm:min-h-[44px]',
+        pressed
+          ? 'bg-primary border-primary text-on-primary'
+          : 'border-border-input text-text-secondary hover:text-text-primary hover:bg-surface-hover'
+      )}
+    >
+      {label}
+    </button>
   );
 }
 
@@ -118,7 +118,8 @@ export default function AutomationBuilder({
   isSubmitting,
 }: {
   queries: MediaQueryRecord[];
-  onSubmit: (input: CreateAutomationInput) => void;
+  /** Rejects when the create fails; the form then stays as it is and says why. */
+  onSubmit: (input: CreateAutomationInput) => unknown;
   onCancel: () => void;
   isSubmitting: boolean;
 }) {
@@ -168,7 +169,7 @@ export default function AutomationBuilder({
 
   const [name, setName] = useState('');
   const [automationQueries, setAutomationQueries] = useState<AutomationQueryItem[]>(
-    queries.length === 1 ? [{ queryId: queries[0].id, role: 'include', sortOrder: 0 }] : []
+    queries.length > 0 ? [{ queryId: queries[0].id, role: 'include', sortOrder: 0 }] : []
   );
   const [selection, setSelection] = useState<TaskSelection | null>(null);
   const selectedTask = selection?.task ?? null;
@@ -198,72 +199,70 @@ export default function AutomationBuilder({
   const nextRunDate = effectiveCron ? safeNextRun(effectiveCron) : null;
   const isValidCron = nextRunDate !== null;
 
-  const hasValidInclude = automationQueries.some((s) => s.role === 'include' && s.queryId > 0);
+  const hasInclude = automationQueries.some((s) => s.role === 'include');
 
   // Only a destructive task states its blast radius, so only it asks the server to count.
   const previewDraft =
-    selectedTask?.destructive && hasValidInclude
+    selectedTask?.destructive && hasInclude
       ? {
           providerId: selectedTask.providerId,
           taskId: selectedTask.taskId,
-          queries: automationQueries
-            .filter((q) => q.queryId > 0)
-            .map((q) => ({ queryId: q.queryId, role: q.role })),
+          queries: automationQueries.map((q) => ({ queryId: q.queryId, role: q.role })),
         }
       : null;
   const preview = useAutomationPreview(previewDraft);
+  const radius = hasInclude ? blastRadius(preview) : null;
 
   const hasRequiredParameter = !selectedTask?.parameter || taskParameterValue.trim().length > 0;
 
   const canSubmit =
     name.trim().length > 0 &&
-    hasValidInclude &&
+    hasInclude &&
     selectedTask !== null &&
     isValidCron &&
     hasRequiredParameter &&
-    (!selectedTask.destructive || effectConfirmed);
+    (!selectedTask.destructive || (effectConfirmed && radius?.state === 'counted'));
 
   const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
+    async (e: React.FormEvent) => {
       e.preventDefault();
       if (!canSubmit || !selectedTask) return;
       setSubmitError(null);
-      onSubmit({
-        name: name.trim(),
-        queries: automationQueries,
-        providerId: selectedTask.providerId,
-        taskId: selectedTask.taskId,
-        taskParameter: selectedTask.parameter ? taskParameterValue : undefined,
-        schedule: effectiveCron,
-      });
+      try {
+        await onSubmit({
+          name: name.trim(),
+          queries: automationQueries,
+          providerId: selectedTask.providerId,
+          taskId: selectedTask.taskId,
+          taskParameter: selectedTask.parameter ? taskParameterValue : undefined,
+          schedule: effectiveCron,
+        });
+      } catch (err) {
+        setSubmitError(err instanceof Error ? err.message : "Couldn't create the automation.");
+      }
     },
     [canSubmit, automationQueries, selectedTask, name, effectiveCron, taskParameterValue, onSubmit]
   );
 
   return (
     <form
-      onSubmit={handleSubmit}
-      className="rounded-lg border border-primary/30 bg-surface-panel"
+      onSubmit={(e) => {
+        void handleSubmit(e);
+      }}
+      className="rounded-lg border border-border bg-surface-panel"
       noValidate
     >
       {/* Form header */}
-      <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/60">
-        <span className="text-sm font-semibold text-text-primary">New automation</span>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="text-xs text-text-muted hover:text-text-primary transition-colors rounded"
-        >
-          Cancel
-        </button>
+      <div className="px-4 sm:px-5 py-3.5 border-b border-divider">
+        <h2 className="text-sm font-semibold text-text-primary">New automation</h2>
       </div>
 
-      <div className="px-5 py-5 space-y-6">
+      <div className="px-4 sm:px-5 py-5 space-y-6">
         {/* ── Name ── */}
         <div>
           <label
             htmlFor="auto-name"
-            className="block text-xs font-medium text-text-secondary mb-1.5"
+            className="block text-sm font-medium text-text-secondary mb-1.5"
           >
             Name
           </label>
@@ -274,15 +273,15 @@ export default function AutomationBuilder({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Archive stale movies"
-            className="w-full max-w-md px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary placeholder:text-text-muted/60 focus:border-primary transition-colors"
+            className="field max-w-md"
             required
           />
         </div>
 
         {/* ── Automation queries ── */}
         <div>
-          <p className="text-xs font-medium text-text-secondary mb-1">Run on</p>
-          <p className="text-xs text-text-muted mb-3">Which media this automation targets.</p>
+          <p className="text-sm font-medium text-text-secondary mb-1">Queries</p>
+          <p className="text-xs text-text-muted mb-3">The media this automation acts on.</p>
           <AutomationQueryList
             automationQueries={automationQueries}
             queries={queries.map((q) => ({ id: q.id, name: q.name }))}
@@ -297,29 +296,32 @@ export default function AutomationBuilder({
 
         {/* ── Task ── */}
         <div>
-          <p className="text-xs font-medium text-text-secondary mb-1">Task</p>
-          <p className="text-xs text-text-muted mb-3">What to do with matched items.</p>
+          <p className="text-sm font-medium text-text-secondary mb-1">Task</p>
+          <p className="text-xs text-text-muted mb-3">
+            What to do with matched items. Destructive tasks delete or change data in the provider.
+          </p>
           {tasksByProvider.length === 0 ? (
-            <div className="flex flex-col items-center gap-1.5 px-4 py-6 rounded border border-dashed border-border bg-surface-bg/40 text-center">
-              <Zap size={18} strokeWidth={1.5} className="text-text-muted" aria-hidden="true" />
-              <p className="text-sm font-medium text-text-secondary">No tasks are enabled yet</p>
-              <p className="max-w-xs text-xs text-text-muted">
-                Enable tasks on a connected provider in <SettingsLink /> to use them here.
-              </p>
+            <div className="rounded border border-border">
+              <EmptyState
+                icon={<Zap size={18} strokeWidth={1.5} aria-hidden="true" />}
+                title="No tasks are enabled yet"
+                description="Enable tasks on a connected provider to use them here."
+                action={{ label: 'Go to Providers', href: '/settings' }}
+              />
             </div>
           ) : (
             <div className="space-y-2">
               {tasksByProvider.map(([providerId, group]) => (
                 <div key={providerId} className="rounded border border-border overflow-hidden">
-                  <div className="px-3 py-1.5 bg-surface-bg/60 border-b border-border/60">
-                    <span className="text-[11px] font-medium text-text-muted uppercase tracking-wide">
+                  <div className="px-3 py-1.5 bg-surface-bg/60 border-b border-divider">
+                    <span className="text-xs font-medium text-text-secondary">
                       {group.providerName}
-                      <span className="ml-1.5 normal-case tracking-normal font-normal opacity-60">
+                      <span className="ml-1.5 font-normal text-text-muted">
                         {group.providerType}
                       </span>
                     </span>
                   </div>
-                  <div className="divide-y divide-border/50">
+                  <div className="divide-y divide-divider">
                     {group.tasks.map((bt: BuilderTask) => {
                       const selected =
                         selectedTask?.taskId === bt.taskId &&
@@ -328,7 +330,7 @@ export default function AutomationBuilder({
                         <label
                           key={`${bt.providerId}-${bt.taskId}`}
                           className={cn(
-                            'flex items-center gap-3 px-3.5 py-2.5 cursor-pointer transition-colors',
+                            'flex items-center gap-3 px-3.5 py-2.5 max-sm:min-h-[44px] cursor-pointer transition-colors',
                             selected ? 'bg-primary/15' : 'bg-surface-panel hover:bg-surface-bg/40'
                           )}
                         >
@@ -339,12 +341,12 @@ export default function AutomationBuilder({
                             onChange={() =>
                               setSelection({ task: bt, parameterValue: '', confirmed: false })
                             }
-                            className="flex-shrink-0 text-primary-text"
+                            className="flex-shrink-0 text-primary"
                           />
                           <div className="flex flex-1 min-w-0 items-center gap-2">
                             <span
                               className={cn(
-                                'text-sm font-medium truncate',
+                                'text-sm font-medium',
                                 selected ? 'text-primary-text' : 'text-text-primary'
                               )}
                             >
@@ -377,7 +379,7 @@ export default function AutomationBuilder({
           <div>
             <label
               htmlFor="task-parameter"
-              className="block text-xs font-medium text-text-secondary mb-1.5"
+              className="block text-sm font-medium text-text-secondary mb-1.5"
             >
               {selectParameter.label}
             </label>
@@ -388,7 +390,7 @@ export default function AutomationBuilder({
                 const parameterValue = e.target.value;
                 setSelection((current) => current && { ...current, parameterValue });
               }}
-              className="w-full max-w-md px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary transition-colors"
+              className="field max-w-md"
               required
             >
               <option value="" disabled>
@@ -405,74 +407,86 @@ export default function AutomationBuilder({
 
         {/* ── Destructive confirmation ── */}
         {selectedTask?.destructive && (
-          <label className="flex items-start gap-2.5 rounded border border-warning/40 bg-warning/10 px-3.5 py-3 text-sm text-text-primary cursor-pointer">
-            <input
-              type="checkbox"
-              checked={effectConfirmed}
-              onChange={(e) => {
-                const confirmed = e.target.checked;
-                setSelection((current) => current && { ...current, confirmed });
-              }}
-              className="mt-0.5 flex-shrink-0 text-primary-text"
-            />
-            <span>
-              Confirm: {selectedTask.label} · {blastRadius(preview)}
-            </span>
-          </label>
+          <div className="rounded border border-warning/40 bg-warning/10 px-3.5 py-3 text-sm text-text-primary space-y-2">
+            <label
+              className={cn(
+                'flex items-start gap-2.5',
+                radius?.state === 'counted' ? 'cursor-pointer' : 'cursor-not-allowed'
+              )}
+            >
+              <input
+                type="checkbox"
+                checked={effectConfirmed && radius?.state === 'counted'}
+                disabled={radius?.state !== 'counted'}
+                onChange={(e) => {
+                  const confirmed = e.target.checked;
+                  setSelection((current) => current && { ...current, confirmed });
+                }}
+                className="mt-0.5 flex-shrink-0 text-primary disabled:opacity-40"
+              />
+              <span>
+                {radius === null
+                  ? 'Choose a query to see how many items this affects.'
+                  : radius.state === 'counted'
+                    ? `Confirm: ${selectedTask.label} · ${radius.phrase}`
+                    : radius.phrase}
+              </span>
+            </label>
+            {radius?.state === 'failed' && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  void preview.mutate();
+                }}
+              >
+                Retry count
+              </Button>
+            )}
+          </div>
         )}
 
         {/* ── Schedule ── */}
-        <div>
-          <p className="text-xs font-medium text-text-secondary mb-1">Schedule</p>
+        <fieldset>
+          <legend className="text-sm font-medium text-text-secondary mb-1">Schedule</legend>
           <p className="text-xs text-text-muted mb-3">When this automation runs.</p>
 
           {/* Preset chips */}
           <div className="flex flex-wrap gap-2 mb-3">
             {SCHEDULE_PRESETS.map((p) => (
-              <button
+              <ScheduleChip
                 key={p.value}
-                type="button"
+                label={p.label}
+                pressed={!isCustom && schedulePreset === p.value}
                 onClick={() => {
                   setSchedulePreset(p.value);
                   setIsCustom(false);
                 }}
-                className={cn(
-                  'px-3 py-1 text-xs font-medium rounded-full transition-colors',
-                  !isCustom && schedulePreset === p.value
-                    ? 'bg-primary text-on-primary'
-                    : 'bg-surface-elevated text-text-secondary hover:text-text-primary hover:bg-surface-bg'
-                )}
-              >
-                {p.label}
-              </button>
+              />
             ))}
-            <button
-              type="button"
-              onClick={() => setIsCustom(true)}
-              className={cn(
-                'px-3 py-1 text-xs font-medium rounded-full transition-colors',
-                isCustom
-                  ? 'bg-primary text-on-primary'
-                  : 'bg-surface-elevated text-text-secondary hover:text-text-primary hover:bg-surface-bg'
-              )}
-            >
-              Custom
-            </button>
+            <ScheduleChip label="Custom" pressed={isCustom} onClick={() => setIsCustom(true)} />
           </div>
 
           {/* Custom cron input */}
           {isCustom && (
             <div className="mb-2.5">
+              <label
+                htmlFor="auto-cron"
+                className="block text-sm font-medium text-text-secondary mb-1.5"
+              >
+                Cron expression
+              </label>
               <input
+                id="auto-cron"
                 type="text"
                 value={customSchedule}
                 onChange={(e) => setCustomSchedule(e.target.value)}
                 placeholder="e.g. 0 3 * * 1-5"
+                aria-invalid={!isValidCron && Boolean(customSchedule)}
                 className={cn(
-                  'w-48 px-3 py-1.5 text-sm font-mono bg-surface-bg border rounded text-text-primary transition-colors',
-                  !isValidCron && customSchedule
-                    ? 'border-danger'
-                    : 'border-border focus:border-primary'
+                  'field max-w-xs font-mono',
+                  !isValidCron && customSchedule && 'border-danger'
                 )}
               />
             </div>
@@ -494,31 +508,22 @@ export default function AutomationBuilder({
               </span>
             </div>
           )}
-        </div>
+        </fieldset>
 
         {/* ── Submit ── */}
-        {submitError && <p className="text-xs text-danger-text">{submitError}</p>}
+        {submitError && (
+          <p role="alert" className="text-sm text-danger-text">
+            {submitError}
+          </p>
+        )}
 
-        <div className="flex items-center justify-end gap-2 pt-1 border-t border-border/60">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium rounded-sm bg-surface-elevated border border-border text-text-secondary hover:text-text-primary transition-colors"
-          >
+        <div className="flex items-center justify-end gap-2 pt-4 border-t border-divider">
+          <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={!canSubmit || isSubmitting}
-            className={cn(
-              'px-4 py-2 text-sm font-medium rounded-sm text-on-primary transition-colors',
-              canSubmit && !isSubmitting
-                ? 'bg-primary hover:bg-primary-hover'
-                : 'bg-primary/40 cursor-not-allowed'
-            )}
-          >
+          </Button>
+          <Button type="submit" size="sm" disabled={!canSubmit || isSubmitting}>
             {isSubmitting ? 'Creating…' : 'Create automation'}
-          </button>
+          </Button>
         </div>
       </div>
     </form>

@@ -1,3 +1,4 @@
+import Button from '@app/components/Button';
 import { api } from '@app/lib/api/client';
 import { useApi } from '@app/lib/api/useApi';
 import type { AutomationQueryInput } from '@contract/automations';
@@ -20,26 +21,19 @@ function usePreviewCount(queryId: number): number | null {
 function AutomationQueryRow({
   automationQuery,
   index,
-  automationQueries,
-  onChange,
+  options,
+  onPatch,
+  onRemove,
 }: {
   automationQuery: AutomationQueryItem;
   index: number;
-  automationQueries: AutomationQueryItem[];
-  onChange: (next: AutomationQueryItem[]) => void;
+  /** The queries this row can hold: its own, plus any no other row holds. */
+  options: { id: number; name: string }[];
+  onPatch: (patch: Partial<AutomationQueryItem>) => void;
+  onRemove: () => void;
 }) {
   const count = usePreviewCount(automationQuery.queryId);
-
-  function handleRemove() {
-    onChange(automationQueries.filter((_, i) => i !== index));
-  }
-
-  function handleRoleChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const updated = automationQueries.map((s, j) =>
-      j === index ? { ...s, role: e.target.value as AutomationQueryItem['role'] } : s
-    );
-    onChange(updated);
-  }
+  const position = index + 1;
 
   const countLabel =
     count != null
@@ -49,16 +43,38 @@ function AutomationQueryRow({
       : null;
 
   return (
-    <div>
-      <span>{automationQuery.queryId}</span>
-      <select value={automationQuery.role} onChange={handleRoleChange}>
-        <option value="include">Include</option>
-        <option value="exclude">Exclude (unless)</option>
+    <div className="flex flex-wrap items-center gap-2">
+      <select
+        aria-label={`Query ${position}`}
+        value={automationQuery.queryId}
+        onChange={(e) => onPatch({ queryId: Number(e.target.value) })}
+        className="field flex-1 min-w-48 sm:max-w-xs"
+      >
+        {options.map((query) => (
+          <option key={query.id} value={query.id}>
+            {query.name}
+          </option>
+        ))}
       </select>
-      {countLabel && <span>{countLabel}</span>}
-      <button type="button" onClick={handleRemove}>
+      <select
+        aria-label={`Role of query ${position}`}
+        value={automationQuery.role}
+        onChange={(e) => onPatch({ role: e.target.value as AutomationQueryItem['role'] })}
+        className="field w-auto"
+      >
+        <option value="include">Include</option>
+        <option value="exclude">Exclude</option>
+      </select>
+      {countLabel && <span className="text-xs text-text-muted tabular-nums">{countLabel}</span>}
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        aria-label={`Remove query ${position}`}
+        onClick={onRemove}
+      >
         Remove
-      </button>
+      </Button>
     </div>
   );
 }
@@ -68,7 +84,6 @@ async function fetchAllPreviews(
 ): Promise<{ role: AutomationQueryItem['role']; count: number }[]> {
   return Promise.all(
     automationQueries.map(async (s) => {
-      if (s.queryId === 0) return { role: s.role, count: 0 };
       const { count } = await api.mediaQueries.preview({ id: s.queryId });
       return { role: s.role, count };
     })
@@ -89,40 +104,63 @@ function useNetCount(automationQueries: AutomationQueryItem[]): number | null {
 
 export default function AutomationQueryList({
   automationQueries,
-  queries: _queries,
+  queries,
   onChange,
 }: AutomationQueryListProps) {
+  const heldIds = new Set(automationQueries.map((s) => s.queryId));
+  const firstUnused = queries.find((query) => !heldIds.has(query.id));
+
   function handleAdd() {
+    if (!firstUnused) return;
+    const nextOrder = Math.max(-1, ...automationQueries.map((s) => s.sortOrder)) + 1;
     onChange([
       ...automationQueries,
-      { queryId: 0, role: 'include', sortOrder: automationQueries.length },
+      { queryId: firstUnused.id, role: 'include', sortOrder: nextOrder },
     ]);
   }
 
   const excludeCount = automationQueries.filter((s) => s.role === 'exclude').length;
-  const hasValidInclude = automationQueries.some((s) => s.role === 'include' && s.queryId > 0);
+  const hasInclude = automationQueries.some((s) => s.role === 'include');
   const net = useNetCount(automationQueries);
 
   return (
-    <div>
+    <div className="space-y-2">
       {automationQueries.map((automationQuery, i) => (
         <AutomationQueryRow
           key={automationQuery.sortOrder}
           automationQuery={automationQuery}
           index={i}
-          automationQueries={automationQueries}
-          onChange={onChange}
+          options={queries.filter(
+            (query) => query.id === automationQuery.queryId || !heldIds.has(query.id)
+          )}
+          onPatch={(patch) =>
+            onChange(automationQueries.map((s, j) => (j === i ? { ...s, ...patch } : s)))
+          }
+          onRemove={() => onChange(automationQueries.filter((_, j) => j !== i))}
         />
       ))}
-      {net != null && <p>~{net} to act on</p>}
-      {!hasValidInclude && automationQueries.length > 0 && (
-        <p>At least one include source with a selected query is required.</p>
+      {net != null && <p className="text-xs text-text-secondary">~{net} to act on</p>}
+      {!hasInclude && automationQueries.length > 0 && (
+        <p className="text-xs text-text-secondary">At least one query must be included.</p>
       )}
-      <button type="button" onClick={handleAdd}>
-        Add query
-      </button>
+      <div className="flex flex-wrap items-center gap-3 pt-1">
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          disabled={!firstUnused}
+          onClick={handleAdd}
+        >
+          Add query
+        </Button>
+        <p className="text-xs text-text-muted">
+          Include adds a query's matches. Exclude removes its matches from the result.
+        </p>
+      </div>
       {excludeCount > 2 && (
-        <p>Complex exclusion rules can be hard to reason about — consider simplifying.</p>
+        <p className="text-xs text-text-secondary">
+          Complex exclusion rules can be hard to reason about. Consider simplifying.
+        </p>
       )}
     </div>
   );

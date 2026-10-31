@@ -143,11 +143,11 @@ describe('AutomationBuilder', () => {
     expect(screen.getByLabelText('Destructive action')).toBeInTheDocument();
   });
 
-  it('shows the empty state with a Settings link when no enabled tasks exist', async () => {
+  it('shows the empty state with a Providers link when no enabled tasks exist', async () => {
     mockApi([makeProvider()], [{ providerId: 1, type: 'RADARR', tasks: [DISABLED_DELETE] }]);
     renderBuilder();
     expect(await screen.findByText(/no tasks are enabled yet/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /settings/i })).toHaveAttribute('href', '/settings');
+    expect(screen.getByRole('link', { name: /providers/i })).toHaveAttribute('href', '/settings');
   });
 
   it('calls onSubmit with the selected instance providerId and taskId', async () => {
@@ -313,12 +313,12 @@ describe('AutomationBuilder', () => {
 
     await user.type(screen.getByLabelText('Name'), 'Purge');
     await user.click(await screen.findByRole('radio', { name: /delete movie \+ files/i }));
-    await user.click(screen.getByRole('checkbox', { name: /confirm/i }));
-    const role = screen.getByRole('combobox');
+    await user.click(await screen.findByRole('checkbox', { name: /confirm/i }));
+    const role = screen.getByRole('combobox', { name: 'Role of query 1' });
     await user.selectOptions(role, 'exclude');
     await user.selectOptions(role, 'include');
 
-    expect(screen.getByRole('checkbox', { name: /confirm/i })).not.toBeChecked();
+    expect(await screen.findByRole('checkbox', { name: /confirm/i })).not.toBeChecked();
     expect(screen.getByRole('button', { name: /create automation/i })).toBeDisabled();
   });
 
@@ -335,7 +335,7 @@ describe('AutomationBuilder', () => {
 
     await user.click(await screen.findByRole('radio', { name: /delete movie \+ files/i }));
 
-    const confirmation = screen.getByRole('checkbox', { name: /confirm/i });
+    const confirmation = screen.getByRole('checkbox');
     await waitFor(() =>
       expect(confirmation).toHaveAccessibleName(
         'Confirm: Delete movie + files · will affect 214 movies'
@@ -365,7 +365,7 @@ describe('AutomationBuilder', () => {
 
     await user.click(await screen.findByRole('radio', { name: /delete series \+ files/i }));
 
-    const confirmation = screen.getByRole('checkbox', { name: /confirm/i });
+    const confirmation = screen.getByRole('checkbox');
     await waitFor(() =>
       expect(confirmation).toHaveAccessibleName(
         'Confirm: Delete series + files · will affect 3 series'
@@ -386,7 +386,7 @@ describe('AutomationBuilder', () => {
 
     await user.click(await screen.findByRole('radio', { name: /delete movie \+ files/i }));
 
-    const confirmation = screen.getByRole('checkbox', { name: /confirm/i });
+    const confirmation = screen.getByRole('checkbox');
     await waitFor(() =>
       expect(confirmation).toHaveAccessibleName(
         'Confirm: Delete movie + files · will affect 1 movie'
@@ -412,9 +412,7 @@ describe('AutomationBuilder', () => {
     await user.type(screen.getByLabelText('Name'), 'Purge');
     await user.click(await screen.findByRole('radio', { name: /delete movie \+ files/i }));
 
-    expect(screen.getByRole('checkbox', { name: /confirm/i })).toHaveAccessibleName(
-      'Confirm: Delete movie + files · counting affected items…'
-    );
+    expect(screen.getByRole('checkbox')).toHaveAccessibleName('Counting affected items…');
     expect(screen.getByRole('button', { name: /create automation/i })).toBeDisabled();
     answer(214);
   });
@@ -442,11 +440,9 @@ describe('AutomationBuilder', () => {
     await user.type(screen.getByLabelText('Name'), 'Purge');
     await user.click(await screen.findByRole('radio', { name: /delete movie \+ files/i }));
 
-    const confirmation = screen.getByRole('checkbox', { name: /confirm/i });
+    const confirmation = screen.getByRole('checkbox');
     await waitFor(() =>
-      expect(confirmation).toHaveAccessibleName(
-        "Confirm: Delete movie + files · couldn't count the affected items"
-      )
+      expect(confirmation).toHaveAccessibleName("Couldn't count the affected items.")
     );
     expect(screen.getByRole('button', { name: /create automation/i })).toBeDisabled();
   });
@@ -477,7 +473,7 @@ describe('AutomationBuilder', () => {
     await user.click(screen.getByRole('radio', { name: /keep files/i }));
 
     await waitFor(() =>
-      expect(screen.getByRole('checkbox', { name: /confirm/i })).toHaveAccessibleName(
+      expect(screen.getByRole('checkbox')).toHaveAccessibleName(
         'Confirm: Delete movie (keep files) · will affect 7 movies'
       )
     );
