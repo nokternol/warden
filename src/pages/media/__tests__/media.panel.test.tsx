@@ -51,4 +51,18 @@ describe('MediaPage — ratings panel', () => {
       expect(screen.queryByRole('dialog')).toBeNull();
     });
   });
+
+  it('opens the panel from a series card too, once the section has no entry in the declaration', async () => {
+    render(<MediaPage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('media-card-series-1')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('media-card-series-1'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+  });
 });
