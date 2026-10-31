@@ -1,8 +1,10 @@
+import { scope } from '@contract/scope';
 import { buildContainer } from '@server/container';
 import type { AppConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createApiRouter } from '@server/modules';
+import { asValue } from 'awilix';
 import express, { type Express } from 'express';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -95,5 +97,23 @@ describe('deferred API procedures', () => {
     await request(serve(cradle, 'signed-in')).get('/api/app-settings');
 
     expect(handlerWork).not.toHaveBeenCalled();
+  });
+
+  it('reaches the handler once the procedure has no entry in the declaration', async () => {
+    const container = buildContainer({ config: testConfig, db: cradle.db });
+    container.register({
+      scope: asValue({
+        deferred: {
+          ...scope.deferred,
+          procedures: scope.deferred.procedures.filter((path) => path !== '/api/app-settings'),
+        },
+      }),
+    });
+    const handlerWork = vi.spyOn(container.cradle.appSettingsService, 'get');
+
+    const res = await request(serve(container.cradle, 'signed-in')).get('/api/app-settings');
+
+    expect(res.status).toBe(200);
+    expect(handlerWork).toHaveBeenCalledOnce();
   });
 });
