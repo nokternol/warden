@@ -65,6 +65,11 @@
   .field {
     @apply w-full px-3 py-1.5 text-base sm:text-sm rounded-sm border border-border-input bg-surface-bg text-text-primary placeholder:text-text-muted transition-colors duration-150 max-sm:min-h-[44px];
   }
+
+  /* Keeps a select's value clear of the arrow the forms plugin draws. */
+  select.field {
+    @apply pr-10;
+  }
 }
 
 * {

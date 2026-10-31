@@ -77,7 +77,7 @@ function LastRun({ automation }: { automation: AutomationDto }) {
         <a
           href={`/runs?automationId=${automation.id}`}
           aria-label={`Runs of ${automation.name}`}
-          className="underline underline-offset-2 hover:text-text-primary inline-block max-lg:py-1"
+          className="underline underline-offset-2 hover:text-text-primary inline-flex items-center max-lg:min-h-[44px]"
         >
           Runs
         </a>

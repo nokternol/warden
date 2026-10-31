@@ -26,6 +26,10 @@
   @apply px-6 py-3 text-lg;
 }
 
+.label {
+  @apply inline-flex items-center gap-1.5;
+}
+
 .spinner {
   @apply animate-spin -ml-1 mr-2 h-4 w-4;
 }

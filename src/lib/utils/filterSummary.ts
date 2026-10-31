@@ -58,6 +58,12 @@ function formatValue(
   return String(value);
 }
 
+/** Words for a rule no active provider currently describes, so no chip shows a raw key. */
+function labelFromKey(key: string): string {
+  const words = key.replace(/([A-Z])/g, ' $1').toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 /** One readable chip per filter, worded from the served rule descriptors. */
 export function summarizeFilters(
   filters: Filter[],
@@ -66,6 +72,6 @@ export function summarizeFilters(
 ): string[] {
   return filters.map(({ ruleKey, value }) => {
     const rule = rules.find((r) => r.key === ruleKey);
-    return `${rule?.label ?? ruleKey}: ${formatValue(rule, value, lookups)}`;
+    return `${rule?.label ?? labelFromKey(ruleKey)}: ${formatValue(rule, value, lookups)}`;
   });
 }

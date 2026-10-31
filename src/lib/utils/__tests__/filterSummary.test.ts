@@ -68,7 +68,7 @@ describe('summarizeFilters', () => {
     expect(one('genres', 'Drama,Comedy')).toBe('Genres: Drama, Comedy');
   });
 
-  it('falls back to the key for a rule no longer described', () => {
-    expect(one('gone', 'x')).toBe('gone: x');
+  it('words a rule no longer described, rather than showing its key', () => {
+    expect(one('lastWatched', 'x')).toBe('Last watched: x');
   });
 });
