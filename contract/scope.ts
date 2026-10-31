@@ -32,6 +32,8 @@ export interface Scope {
     procedures: readonly string[];
     /** Page URLs that answer 404 and are left out of the navigation. */
     pages: readonly string[];
+    /** Sections inside an offered page that do not render, each named by its guard's id. */
+    sections: readonly string[];
   };
 }
 
@@ -70,6 +72,10 @@ export const scope: Scope = {
       // Ratings have two mechanisms; unifying them is post-MVP work.
       '/ratings',
     ],
+    sections: [
+      // Ratings have two mechanisms; unifying them is post-MVP work.
+      'mediaRatingsPanel',
+    ],
   },
 };
 
@@ -102,4 +108,9 @@ export function isOfferedProcedure(declared: Scope, path: string | undefined): b
 /** Whether the page at `url` answers: `declared` does not defer it. */
 export function isOfferedPage(declared: Scope, url: string): boolean {
   return !declared.deferred.pages.includes(url);
+}
+
+/** Whether the section with `id` renders: `declared` does not defer it. */
+export function isOfferedSection(declared: Scope, id: string): boolean {
+  return !declared.deferred.sections.includes(id);
 }

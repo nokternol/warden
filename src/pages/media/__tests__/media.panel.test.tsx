@@ -1,8 +1,16 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { render } from '@tests/helpers/component';
 import { SWRConfig } from 'swr';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import MediaPage from '../index.page';
+
+vi.mock('@contract/scope', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@contract/scope')>();
+  return {
+    ...actual,
+    scope: { deferred: { ...actual.scope.deferred, sections: [] } },
+  };
+});
 
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
   <SWRConfig value={{ provider: () => new Map() }}>{children}</SWRConfig>

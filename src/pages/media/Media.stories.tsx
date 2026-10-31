@@ -262,11 +262,19 @@ function isBucketActive(bucket: Record<string, FilterValue>, skipEmptyTitle = fa
   });
 }
 
+const FIXTURE_MOVIES = [
+  { id: 1, title: 'Heat', year: 1995, hasFile: true },
+  { id: 2, title: 'Arrival', year: 2016, hasFile: true },
+  { id: 3, title: 'Dune', year: 2021, hasFile: false },
+] as ManagedMovie[];
+
 function Controlled({
   filtersOpen,
   onFiltersClose,
   activeTab = 'movies',
+  movies = emptySlice<ManagedMovie>(),
 }: {
+  movies?: MediaSlice<ManagedMovie>;
   filtersOpen: boolean;
   onFiltersClose: () => void;
   activeTab?: ActiveTab;
@@ -301,7 +309,7 @@ function Controlled({
       activeTab={activeTab}
       filtersOpen={filtersOpen}
       onFiltersClose={onFiltersClose}
-      movies={emptySlice<ManagedMovie>()}
+      movies={movies}
       series={emptySlice<ManagedSeries>()}
       lookups={LOOKUPS}
       sources={{
@@ -339,3 +347,12 @@ Mobile.meta = { width: 390 };
 /** Tablet viewport (md breakpoint). Desktop filter bar is visible; mobile filter controls are hidden. */
 export const Tablet: Story = () => <Controlled filtersOpen={false} onFiltersClose={() => {}} />;
 Tablet.meta = { width: 768 };
+
+/** A library with titles. Its cards open nothing while the ratings panel is deferred. */
+export const Library: Story = () => (
+  <Controlled
+    filtersOpen={false}
+    onFiltersClose={() => {}}
+    movies={{ ...emptySlice<ManagedMovie>(), items: FIXTURE_MOVIES, totalCount: 3 }}
+  />
+);
