@@ -13,15 +13,15 @@ import { useMediaSources } from '@app/hooks/useMediaSources';
 import { useProviderSettings } from '@app/hooks/useProviderSettings';
 import { setupState } from '@app/lib/setupGuidance';
 import { cn } from '@app/lib/utils/cn';
-import { requireAuth } from '@app/lib/utils/requireAuth';
+import { guardPage } from '@app/lib/utils/guardPage';
 import { BookMarked, Zap } from 'lucide-react';
 import type { GetServerSideProps } from 'next';
 import { useRouter } from 'next/router';
 import { useState } from 'react';
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
-  const authRedirect = await requireAuth(ctx);
-  if (authRedirect) return authRedirect;
+  const refusal = await guardPage(ctx);
+  if (refusal) return refusal;
   return { props: {} };
 };
 

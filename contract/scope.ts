@@ -30,6 +30,8 @@ export interface Scope {
      * that path, so one entry defers a whole resource.
      */
     procedures: readonly string[];
+    /** Page URLs that answer 404 and are left out of the navigation. */
+    pages: readonly string[];
   };
 }
 
@@ -60,6 +62,14 @@ export const scope: Scope = {
       // No UI and no consumer yet: the input to the post-MVP precedence work.
       '/api/app-settings',
     ],
+    pages: [
+      // Automations plus first-run guidance is the landing page.
+      '/dashboard',
+      // A second way to find a title beside the title filter.
+      '/search',
+      // Ratings have two mechanisms; unifying them is post-MVP work.
+      '/ratings',
+    ],
   },
 };
 
@@ -87,4 +97,9 @@ export function isOfferedTask(
 /** Whether the procedure at contract route `path` answers: `declared` does not defer it. */
 export function isOfferedProcedure(declared: Scope, path: string | undefined): boolean {
   return !declared.deferred.procedures.some((deferred) => deferred === path);
+}
+
+/** Whether the page at `url` answers: `declared` does not defer it. */
+export function isOfferedPage(declared: Scope, url: string): boolean {
+  return !declared.deferred.pages.includes(url);
 }

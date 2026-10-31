@@ -6,7 +6,7 @@ import type { RatingsFormValues } from '@app/components/RatingsForm';
 import SidebarNav from '@app/components/SidebarNav';
 import TopBar from '@app/components/TopBar';
 import { useRatings } from '@app/hooks/useRatings';
-import { requireAuth } from '@app/lib/utils/requireAuth';
+import { guardPage } from '@app/lib/utils/guardPage';
 import type { GetServerSideProps } from 'next';
 import { useState } from 'react';
 import styles from './ratings.module.css';
@@ -14,8 +14,8 @@ import styles from './ratings.module.css';
 // ─── Auth guard ───────────────────────────────────────────────────────────────
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
-  const authRedirect = await requireAuth(ctx);
-  if (authRedirect) return authRedirect;
+  const refusal = await guardPage(ctx);
+  if (refusal) return refusal;
   return { props: {} };
 };
 
