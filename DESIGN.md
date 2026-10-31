@@ -4,10 +4,16 @@ description: Rule-based automation engine for self-hosted media libraries
 colors:
   primary: "#0d9488"
   primary-hover: "#14b8a6"
-  primary-active: "#0f766e"
+  primary-active: "#10a596"
+  on-primary: "#0f172a"
+  primary-text: "#14b8a6"
+  primary-text-light: "#115e59"
   danger: "#dc2626"
-  danger-hover: "#ef4444"
-  danger-active: "#b91c1c"
+  danger-hover: "#b91c1c"
+  danger-active: "#991b1b"
+  on-danger: "#ffffff"
+  danger-text: "#fca5a5"
+  danger-text-light: "#991b1b"
   surface-bg: "#0f172a"
   surface-panel: "#1e293b"
   surface-elevated: "#2a3546"
@@ -16,11 +22,19 @@ colors:
   text-primary: "#f8fafc"
   text-secondary: "#cbd5e1"
   text-muted: "#94a3b8"
-  border: "#1e293b"
-  border-light: "#e2e8f0"
+  text-primary-light: "#0f172a"
+  text-secondary-light: "#334155"
+  text-muted-light: "#475569"
+  border: "#475569"
+  border-light: "#cbd5e1"
+  border-input: "#7d8fa3"
+  border-input-light: "#64748b"
   success: "#10b981"
+  success-light: "#065f46"
   warning: "#f59e0b"
-  info: "#3b82f6"
+  warning-light: "#92400e"
+  info: "#60a5fa"
+  info-light: "#1d4ed8"
 typography:
   title:
     fontFamily: "Inter, system-ui, sans-serif"
@@ -59,17 +73,17 @@ spacing:
 components:
   button-primary:
     backgroundColor: "{colors.primary}"
-    textColor: "#ffffff"
+    textColor: "{colors.on-primary}"
     rounded: "{rounded.sm}"
     padding: "8px 16px"
   button-primary-hover:
     backgroundColor: "{colors.primary-hover}"
-    textColor: "#ffffff"
+    textColor: "{colors.on-primary}"
     rounded: "{rounded.sm}"
     padding: "8px 16px"
   button-primary-active:
     backgroundColor: "{colors.primary-active}"
-    textColor: "#ffffff"
+    textColor: "{colors.on-primary}"
     rounded: "{rounded.sm}"
     padding: "8px 16px"
   button-secondary:
@@ -79,7 +93,7 @@ components:
     padding: "8px 16px"
   button-danger:
     backgroundColor: "{colors.danger}"
-    textColor: "#ffffff"
+    textColor: "{colors.on-danger}"
     rounded: "{rounded.sm}"
     padding: "8px 16px"
   card-default:
@@ -92,7 +106,7 @@ components:
     padding: "16px"
   badge-primary:
     backgroundColor: "rgba(13, 148, 136, 0.10)"
-    textColor: "{colors.primary}"
+    textColor: "{colors.primary-text}"
     rounded: "{rounded.full}"
     padding: "4px 10px"
   badge-success:
@@ -131,12 +145,15 @@ Warden should feel at home beside Tautulli, Kometa, and Overseerr — tools that
 Slate neutrals form the structural backbone; teal marks what is alive and interactive.
 
 ### Primary
-- **Operative Teal** (#0d9488): The brand color. Primary action buttons, active sidebar items, focus rings, key data indicators. Never decorative — only where the system responds to or awaits user intent.
+- **Operative Teal** (#0d9488): The brand fill. Primary action buttons, active sidebar items, focus rings, key data indicators. Never decorative — only where the system responds to or awaits user intent.
 - **Live Teal** (#14b8a6): Hover state for primary actions. The lighter step signals responsiveness without brightness overload on a dark surface.
-- **Pressed Teal** (#0f766e): Active/pressed state. Confirms input receipt.
+- **Pressed Teal** (#10a596): Active/pressed state. Confirms input receipt.
+- **On Primary** (#0f172a): Text on every teal fill: 4.77:1 at rest, 7.17:1 on hover, 5.82:1 pressed. White reaches only 3.74:1 and is not used on teal.
+- **Teal Text** (#14b8a6 dark, #115e59 light): Teal as text or an icon on a surface. The fill colour reaches only 3.91:1 on the panel, so it is never used for text.
 
 ### Secondary
-- **Critical Red** (#dc2626): Destructive actions exclusively. Delete, disconnect, irreversible operations. Hover: #ef4444. Active: #b91c1c. Never decorative.
+- **Critical Red** (#dc2626): Destructive fills exclusively. Delete, disconnect, irreversible operations. White text. Hover: #b91c1c. Active: #991b1b. Both darken because white text must hold 4.5:1. Never decorative.
+- **Danger Text** (#fca5a5 dark, #991b1b light): Errors and danger as text on a surface or a danger tint. It holds 4.5:1 on the panel, the elevated tier and a 15% danger tint.
 
 ### Neutral
 - **Console Black** (#0f172a): The floor. Page background in dark mode. Nothing is placed directly here except the panel tier.
@@ -146,12 +163,17 @@ Slate neutrals form the structural backbone; teal marks what is alive and intera
 - **Muted Text** (#94a3b8): Supporting information: timestamps, counts, placeholder text. Never for text the user needs to act on.
 - **Cool White** (#f8fafc): Primary text and icons in dark mode; page background in light mode.
 - **Panel Light** (#eaf0f6): Surface for cards and containers in light mode.
-- **Border Light** (#e2e8f0): Borders and dividers in light mode.
+- **Border** (#475569 dark, #cbd5e1 light): Container borders and row dividers. Decorative, because surface tiers, content and spacing already separate what they outline.
+- **Input Border** (#7d8fa3 dark, #64748b light): The edge of inputs and other controls. It identifies the control, so it holds 3:1 on every surface.
 
 ### Status
-- **Go Green** (#10b981): Success states, completed tasks, healthy connections.
-- **Caution Amber** (#f59e0b): Warnings, degraded states, non-critical issues.
-- **Signal Blue** (#3b82f6): Informational context, non-urgent notices.
+- **Go Green** (#10b981 dark, #065f46 light): Success states, completed tasks, healthy connections.
+- **Caution Amber** (#f59e0b dark, #92400e light): Warnings, degraded states, non-critical issues.
+- **Signal Blue** (#60a5fa dark, #1d4ed8 light): Informational context, non-urgent notices.
+
+Each status colour is readable as text on every surface of its theme and on its own 10% tint. `src/styles/__tests__/theme.contrast.test.ts` computes all of these ratios from the theme.
+
+**The One Theme Rule.** Components use tokens, never a colour value. Colour tokens are channel variables composed with `rgb(var(--x) / <alpha-value>)`, so opacity modifiers work on every semantic colour.
 
 **The Single Voice Rule.** Teal appears on ≤10% of any given screen at rest. An interface where everything is teal is an interface where nothing is teal. Its rarity is its power: when teal appears, the system is speaking.
 
@@ -201,17 +223,18 @@ Confident and minimal. Clear affordances, stripped-back surfaces, full state voc
 
 ### Buttons
 - **Shape:** Gently rounded (4px / `--radius-sm`). Suggests a control, not a pill or a block.
-- **Primary:** Operative Teal fill (#0d9488), white text, `px-4 py-2` (16px / 8px), medium 500. Hover: Live Teal (#14b8a6). Active: Pressed Teal (#0f766e). Focus: 2px ring at primary color, 2px offset from the surface background.
+- **Primary:** Operative Teal fill (#0d9488), On Primary text, `px-4 py-2` (16px / 8px), medium 500. Hover: Live Teal (#14b8a6). Active: Pressed Teal (#10a596). Focus: the global ring.
 - **Secondary:** Panel surface background, primary text color, 1px border (`--color-border`). Hover shifts background one tier down (surface-bg), creating a visible contrast change without color shift.
 - **Danger:** Critical Red (#dc2626) fill, white text. Same shape and padding as primary.
 - **Disabled:** All variants at 40% opacity, `cursor: not-allowed`. No hover response.
 - **Loading:** Label replaced by "Loading..." with a 16px inline spinner. Dimensions held constant to prevent CLS.
-- **Size variants:** sm (`px-3 py-1.5`, 14px text), md (`px-4 py-2`, 16px text), lg (`px-6 py-3`, 18px text).
+- **Size variants:** sm (`px-3 py-1.5`, 14px text), md (`px-4 py-2`, 16px text), lg (`px-6 py-3`, 18px text). At least 44px tall below `sm`.
+- **Focus, everywhere:** one global `:focus-visible` ring, 2px at primary color with a 2px offset. Components do not restyle it.
 
 ### Badges
 - **Shape:** Full pill (9999px). The pill shape distinguishes read-only status from interactive buttons.
 - **Status formula:** 10% opacity fill, 20% opacity border, full-opacity text — applied consistently across all variants (primary, success, warning, error, info). Consistent transparency formula; no ad-hoc alpha values.
-- **Prohibited as interactive.** Badges are read-only status indicators. If it needs a click handler, use a button or chip instead.
+- **Prohibited as interactive.** Badges are read-only status indicators. If it needs a click handler, use a button or a 4px-radius chip with `aria-pressed`, as the schedule presets do.
 
 ### Cards
 - **Corner style:** Gently rounded (8px / `--radius-md`). Larger than buttons to suggest a container.
@@ -224,17 +247,28 @@ Confident and minimal. Clear affordances, stripped-back surfaces, full state voc
 - **Sub-components:** `Card.Header` and `Card.Footer` use the divider token (not the border token) to separate from body content. Always use `Card.Content` for body when header or footer slots are present.
 
 ### Inputs / Fields
-- **Style:** 1px border (`--color-border`), surface-bg background, 6px radius (0.375rem — between `--radius-sm` and `--radius-md`). Inter 14px regular.
-- **Focus:** Border shifts to `--color-primary`. Single-property change; no ring.
+- **Style:** the `.field` class. 1px border (`--color-border-input`), surface-bg background, 4px radius (`--radius-sm`). Inter 14px regular; 16px and at least 44px tall below `sm`, which also stops iOS zooming.
+- **Focus:** Border shifts to `--color-primary`, with the global ring.
 - **Label:** Inter 14px medium, positioned above the field. Helper text at 12px muted below.
 - **No floating labels.** Fixed labels above the field always. Floating labels fail at 120% zoom and obscure state.
 
 ### Navigation (Sidebar)
 - **Background:** Panel Slate (`--color-surface-panel`), right border at `--color-border`.
 - **Items:** Inter 14px medium, `px-3 py-2.5`, 4px radius. 20×20 icon + text label.
-- **Active:** Operative Teal fill, white text. The only sidebar surface where teal appears at full fill opacity.
+- **Active:** Operative Teal fill, On Primary text. The only sidebar surface where teal appears at full fill opacity.
 - **Inactive hover:** Surface-bg background, primary text color. Subtle shift without color introduction.
 - **Width:** 220px (`--layout-sidebar-width`), fixed.
+
+### Navigation (Phone)
+- `AppLayout` mounts one bottom bar on every screen below `md`, from the same scope-filtered items as the sidebar: the main pages as tabs, the configuration pages and Sign out under More.
+
+### Async states
+- **One pattern:** `AsyncBoundary` for every load. Loading shows skeleton rows, a failure is an alert naming the data with a Retry, and empty is `EmptyState`. A failure never reads as empty, and loading never shows an empty state.
+- **Mutations:** a failure shows an inline `role="alert"` at its source and keeps the input; the action shows a pending state; a successful create is confirmed.
+- **Destructive actions** state a count before they can be confirmed: disabled until it arrives, and a failed count blocks with a retry.
+
+### Tables and rows
+- One convention for Automations, System and Runs: a panel with a `text-xs` medium muted header in sentence case, divider-separated rows, and always-visible actions with 16px icons and labels naming the row. Below the layout's breakpoint, cells stack with their own labels and nothing scrolls sideways.
 
 ## 6. Do's and Don'ts
 
@@ -244,6 +278,7 @@ Confident and minimal. Clear affordances, stripped-back surfaces, full state voc
 - **Do** use the exact shadow vocabulary from Section 4. The multi-layer teal glow is calibrated; substituting generic drop shadows breaks the elevation language.
 - **Do** keep Inter as the sole UI typeface. Weight and size contrast create hierarchy; additional fonts add noise.
 - **Do** cap prose line length at 65–75ch. Dense data views may run longer; descriptions and help text must not.
+- **Do** make every surface fully operable at 400px, because a phone is the owner's primary device.
 - **Do** include all six states on every interactive component: default, hover, focus, active, disabled, loading.
 - **Do** use `cursor: not-allowed` and 40% opacity for disabled states on every component variant.
 - **Do** verify contrast for every new surface-text pairing. The minimum: 4.5:1 for body text, 3:1 for large or bold text and interactive elements.
@@ -257,5 +292,5 @@ Confident and minimal. Clear affordances, stripped-back surfaces, full state voc
 - **Don't** use display or decorative fonts in UI labels, buttons, nav items, or table cells. Inter only.
 - **Don't** apply teal as a background fill to more than 10% of screen area at rest. The active sidebar item is the permitted use case; anything broader dilutes the signal.
 - **Don't** default to modals. Inline editing, contextual side panels, and progressive disclosure are almost always the better pattern. A modal is a last resort.
-- **Don't** animate layout properties (`width`, `height`, `padding`, `margin`). All state transitions use only `background-color`, `color`, `opacity`, `transform`, and `box-shadow`. 150ms duration on all.
+- **Don't** animate layout properties (`width`, `height`, `padding`, `margin`). All state transitions use only `background-color`, `color`, `opacity`, `transform`, and `box-shadow`. 150ms duration on all, and none under `prefers-reduced-motion`, where skeletons hold their base colour and spinners hold a still arc.
 - **Don't** gate content visibility on entrance animations. Animations are additive enhancement; content must be visible by default.

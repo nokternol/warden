@@ -814,6 +814,11 @@ names, so nothing is renamed twice.
   System, against the constraints above: contrast, focus, reduced motion, an explicit state for every
   async boundary, density, and glossary names. Run `playwright-cli` screenshots at 1440px and 400px.
 - Any fix that changes behavior gets a test. Pure visual fixes are verified by screenshot.
+- **Expected end state, as decided by the owner after the critique:** a phone is the primary device, so
+  every in-scope surface is fully operable at 400px (recorded in `PRODUCT.md`), and everything is driven
+  through the theme, whose token changes `DESIGN.md` records. Small additions this needed: the provider
+  catalogue's `apiKeyRequired` and `hostPlaceholder`, an optional `id` on `providers.test` so a stored key
+  can be probed, and display names for system automations.
 
 ### Track G — Acceptance
 

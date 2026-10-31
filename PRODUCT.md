@@ -10,6 +10,8 @@ Self-hosters running a personal media server stack around Plex, Jellyfin, or Emb
 
 These users are fluent in the visual language of self-hosted tools: dark surfaces, sidebar nav, table-heavy data views, badge-based status. They notice inconsistency, and they trust tools that feel coherent.
 
+A phone is the owner's primary device. Everything Warden offers is fully operable at 400px: all navigation, every row action, forms, and the same confirmations before anything destructive. A phone is for operating Warden, not only for checking it.
+
 ## Product Purpose
 
 Warden is a rule-based automation engine for self-hosted media libraries. Users define **filters** that select a group of media, attach a **schedule** (cron-based), and pair them with a **task** — an action applied to that group on that cadence. The three-part model (filter + schedule + task) is the core primitive. Success looks like: a user opens the app, configures a rule, and the library reflects the result automatically — with no ambiguity about what ran, when, and what changed.
@@ -40,4 +42,4 @@ Teal is the existing brand anchor. It should be used intentionally: primary acti
 
 ## Accessibility & Inclusion
 
-WCAG 2.1 AA. All body text at 4.5:1 contrast against its background; interactive elements at 3:1. Focus rings visible on keyboard navigation. Reduced-motion alternative for all transitions.
+WCAG 2.1 AA, in both themes. All body text at 4.5:1 contrast against its background; interactive elements at 3:1. Focus rings visible on keyboard navigation. Reduced-motion alternative for all transitions. Tap targets at least 44px on phones.

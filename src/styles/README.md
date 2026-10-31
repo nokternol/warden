@@ -86,10 +86,10 @@ export const themeColors = {
   slate: palette.slate,
 
   // Semantic utilities → bg-primary, text-text-muted, bg-surface-bg, …
-  primary: { DEFAULT: 'var(--color-primary)', hover: 'var(--color-primary-hover)' },
-  surface: { bg: 'var(--color-surface-bg)', panel: 'var(--color-surface-panel)' },
-  text:    { primary: 'var(--color-text-primary)', muted: 'var(--color-text-muted)' },
-  border:  { DEFAULT: 'var(--color-border)' },
+  primary: { DEFAULT: 'rgb(var(--color-primary) / <alpha-value>)', text: 'rgb(var(--color-primary-text) / <alpha-value>)' },
+  surface: { bg: 'rgb(var(--color-surface-bg) / <alpha-value>)', panel: 'rgb(var(--color-surface-panel) / <alpha-value>)' },
+  text:    { primary: 'rgb(var(--color-text-primary) / <alpha-value>)', muted: 'rgb(var(--color-text-muted) / <alpha-value>)' },
+  border:  { DEFAULT: 'rgb(var(--color-border) / <alpha-value>)' },
 };
 ```
 
@@ -138,7 +138,11 @@ The output injected into `@layer base` looks like:
 ```tsx
 // Semantic utilities — theme-aware, flip automatically in dark mode
 <div className="bg-surface-bg text-text-primary border border-border" />
-<button className="bg-primary hover:bg-primary-hover text-white" />
+<button className="bg-primary hover:bg-primary-hover text-on-primary" />
+<div className="bg-danger/10 text-danger-text" /> // opacity modifiers work on every semantic colour
+
+// Raw CSS composes the channel variables
+// color: rgb(var(--color-text-muted)); background: rgb(var(--color-danger) / 0.1);
 
 // Primitive utilities — for one-off overrides against the palette
 <span className="text-teal-400" />

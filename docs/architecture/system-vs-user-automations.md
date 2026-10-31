@@ -32,10 +32,12 @@ startup health check ([`server/modules/system/systemHealthCheck.ts`](ref:path:se
 If a container restarts and a system job is missing, it is restored automatically.
 
 Current system automations (added in Phase 2):
-- **Identity Resolution Job** — maps Radarr/Sonarr items to cross-provider IDs
-- **Enrichment Job** — fetches Tier 2 provider data for enriched filter predicates
+- **Identity resolution** — maps Radarr/Sonarr items to cross-provider IDs
+- **Enrichment** — fetches Tier 2 provider data for enriched filter predicates
 
-Both are prerequisites for Tier 2 filter predicates to return meaningful results.
+Both are prerequisites for Tier 2 filter predicates to return meaningful results. A system job is
+identified by its `taskId`; its `name` is the display name the owner reads, and the startup check
+corrects a row whose name differs.
 
 ## Enforcement
 
@@ -70,9 +72,13 @@ Feedback is split into two independent pieces, neither of which involves the dom
   provider connection tests. The Run Now icon swaps to a spinner while the POST is in flight, then a
   check or a cross for ~2s once it settles, before reverting to idle. This confirms the click was
   *received*, not that the underlying job has *finished* — a distinction the row is careful not to
-  blur (title text reads "Run triggered", never "Run complete"). The feedback row overrides its
-  usual hover-only visibility while non-idle, so it stays visible even after the cursor leaves —
-  otherwise a fire-and-click interaction would hide its own confirmation.
+  blur (title text reads "Run triggered", never "Run complete"). Row actions are always visible, and a
+  failed trigger stays as an inline alert at the row. A user automation whose task is destructive
+  confirms inline first, stating the count from `automations.preview`, and cannot run until that
+  count has arrived.
+- **Last outcome.** The row shows the last run's outcome and reason, and links to
+  `/runs?automationId=N`. A skip leaves the `lastRun` summary alone, so the row reads the newest run
+  from the run history to show a skipped-as-invalid attempt.
 - **Eventual list revalidation.** [`useAutomations.run()`](ref:path:src/hooks/useAutomations.ts) fires
   four staggered SWR revalidations (1.5s/4s/9s/18s) after a successful trigger, so `lastRun` catches
   up once the async job actually completes without the user reloading. This is a fixed polling
