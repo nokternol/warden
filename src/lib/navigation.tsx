@@ -10,7 +10,7 @@ import {
   Zap,
 } from 'lucide-react';
 
-export const NAV_ITEMS: Omit<SidebarItem, 'active'>[] = [
+const NAV_ITEMS: Omit<SidebarItem, 'active'>[] = [
   {
     id: 'dashboard',
     label: 'Dashboard',
@@ -43,7 +43,7 @@ export const NAV_ITEMS: Omit<SidebarItem, 'active'>[] = [
   },
 ];
 
-export const BOTTOM_NAV_ITEMS: Omit<SidebarItem, 'active'>[] = [
+const BOTTOM_NAV_ITEMS: Omit<SidebarItem, 'active'>[] = [
   {
     id: 'settings',
     label: 'Providers',

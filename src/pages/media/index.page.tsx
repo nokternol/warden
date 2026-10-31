@@ -28,7 +28,7 @@ import { descriptorFor, useProviderTypes } from '@app/hooks/useProviderTypes';
 import type { ManagedSeries } from '@app/hooks/useSeries';
 import { useSeries } from '@app/hooks/useSeries';
 import { toFilters } from '@app/lib/mediaQueryAdapters';
-import { NAV_ITEMS } from '@app/lib/navigation';
+import { resolveNavItems } from '@app/lib/navigation';
 import { cn } from '@app/lib/utils/cn';
 import { guardPage } from '@app/lib/utils/guardPage';
 import type { MediaRuleDescriptor } from '@contract/media';
@@ -743,13 +743,13 @@ export default function MediaPage() {
 
   const mobileNav = (
     <nav className="flex items-center justify-around h-16 px-2">
-      {NAV_ITEMS.map((item) => (
+      {resolveNavItems('/media').items.map((item) => (
         <a
           key={item.id}
           href={item.href}
           className={cn(
             'flex flex-col items-center gap-0.5 px-4 py-2 text-xs transition-colors min-h-[44px] justify-center',
-            item.href === '/media' ? 'text-primary' : 'text-text-muted hover:text-text-primary'
+            item.active ? 'text-primary' : 'text-text-muted hover:text-text-primary'
           )}
         >
           {item.icon}
