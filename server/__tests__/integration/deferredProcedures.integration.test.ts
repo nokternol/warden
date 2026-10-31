@@ -78,6 +78,17 @@ describe('deferred API procedures', () => {
     expect(isRefusedAsDeferred(res)).toBe(true);
   });
 
+  it.each(DEFERRED_CALLS)('answers %s %s with 404 under the auth bypass', async (method, url) => {
+    const { cradle: bypassed } = buildContainer({
+      config: { ...testConfig, BYPASS_AUTH: true },
+      db: cradle.db,
+    });
+
+    const res = await request(serve(bypassed))[method](url);
+
+    expect(isRefusedAsDeferred(res)).toBe(true);
+  });
+
   it('never invokes the handler of a deferred procedure', async () => {
     const handlerWork = vi.spyOn(cradle.appSettingsService, 'get');
 
