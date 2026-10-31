@@ -81,3 +81,18 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+/*
+  With reduced motion, animations finish at once: a skeleton holds its base colour, a spinner holds a
+  still arc beside its text, and state changes apply instantly.
+*/
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,6 +1,10 @@
+import Head from 'next/head';
 export default function Custom404() {
   return (
     <div className="min-h-screen bg-surface-bg flex items-center justify-center p-4">
+      <Head>
+        <title>Page not found · Warden</title>
+      </Head>
       <div className="text-center">
         <h1 className="text-9xl font-bold text-primary-text mb-4">404</h1>
         <h2 className="text-3xl font-semibold text-text-primary mb-4">Page Not Found</h2>

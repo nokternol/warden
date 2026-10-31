@@ -1,4 +1,5 @@
 import type { NextPageContext } from 'next';
+import Head from 'next/head';
 
 interface ErrorProps {
   statusCode?: number;
@@ -7,6 +8,9 @@ interface ErrorProps {
 function CustomError({ statusCode }: ErrorProps) {
   return (
     <div className="min-h-screen bg-surface-bg flex items-center justify-center p-4">
+      <Head>
+        <title>Something went wrong · Warden</title>
+      </Head>
       <div className="text-center">
         <h1 className="text-6xl font-bold text-primary-text mb-4">{statusCode || 'Error'}</h1>
         <p className="text-xl text-text-muted mb-8">

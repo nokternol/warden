@@ -534,6 +534,7 @@ export function MediaContent({
           tabIndex={activeTab === 'movies' ? 0 : undefined}
           className={cn(activeTab !== 'movies' && 'hidden')}
         >
+          <h2 className="sr-only">Movies</h2>
           <VirtualMediaGrid
             items={movies.items}
             isLoading={movies.isLoading}
@@ -619,6 +620,7 @@ export function MediaContent({
           tabIndex={activeTab === 'series' ? 0 : undefined}
           className={cn(activeTab !== 'series' && 'hidden')}
         >
+          <h2 className="sr-only">Series</h2>
           <VirtualMediaGrid
             items={series.items}
             isLoading={series.isLoading}
@@ -780,7 +782,7 @@ export default function MediaPage() {
         topBar={
           <TopBar
             sticky
-            title="Managed Media"
+            title="Media"
             actions={
               <>
                 <Tabs

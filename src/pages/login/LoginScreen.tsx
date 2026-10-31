@@ -1,6 +1,7 @@
 import { ImageFader } from '@app/components/ImageFader';
 import { PlexIcon, WardenLogo } from '@app/components/Logo';
 import { useBackdrops } from '@app/hooks/useBackdrops';
+import Head from 'next/head';
 
 /** Why a sign-in attempt did not start a session. */
 export interface SignInFailure {
@@ -28,7 +29,10 @@ export function LoginScreen({ isSigningIn, failure, onSignIn }: LoginScreenProps
   const { backdrops } = useBackdrops();
 
   return (
-    <div className="relative min-h-screen w-full flex flex-col items-center justify-center bg-surface-bg px-6">
+    <div className="relative min-h-dvh w-full flex flex-col items-center justify-center bg-surface-bg px-6">
+      <Head>
+        <title>Sign in · Warden</title>
+      </Head>
       {/* Background with Cinematic Tint */}
       <div className="absolute inset-0 z-0">
         <ImageFader images={backdrops || []} className="opacity-50" />

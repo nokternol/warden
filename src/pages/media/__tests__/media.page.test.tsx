@@ -34,7 +34,7 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => (
 describe('MediaPage', () => {
   it('renders the page title', () => {
     render(<MediaPage />, { wrapper: Wrapper });
-    expect(screen.getByText(/managed media/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Media' })).toBeInTheDocument();
   });
 
   it('renders AppLayout with sidebar', () => {
@@ -128,5 +128,17 @@ describe('MediaPage', () => {
     await waitFor(() => {
       expect(screen.queryByText(/no radarr 4k connection configured/i)).toBeInTheDocument();
     });
+  });
+});
+
+describe('MediaPage heading order', () => {
+  it('names each tab panel with a level 2 heading, so title headings do not skip a level', async () => {
+    render(
+      <SWRConfig value={{ provider: () => new Map() }}>
+        <MediaPage />
+      </SWRConfig>
+    );
+    expect(await screen.findByRole('heading', { level: 1, name: 'Media' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: 'Movies' })).toBeInTheDocument();
   });
 });

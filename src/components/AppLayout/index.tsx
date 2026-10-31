@@ -26,11 +26,23 @@ export default function AppLayout({
   return (
     <ScrollContainerContext.Provider value={mainRef}>
       <div className={cn(styles.container, className)} {...props}>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-3 focus:py-2 focus:rounded-sm focus:bg-surface-elevated focus:text-text-primary"
+        >
+          Skip to content
+        </a>
+
         {/* Sidebar */}
         {sidebar && <aside className={styles.sidebarWrapper}>{sidebar}</aside>}
 
         {/* Main Content */}
-        <main ref={mainRef} className={cn(styles.mainContent, mobileNav && 'pb-16 md:pb-0')}>
+        <main
+          ref={mainRef}
+          id="main-content"
+          tabIndex={-1}
+          className={cn(styles.mainContent, mobileNav && 'pb-16 md:pb-0')}
+        >
           {topBar}
           {children}
         </main>
