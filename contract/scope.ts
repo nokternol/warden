@@ -25,6 +25,11 @@ export interface Scope {
     rules: readonly string[];
     /** Provider tasks that are not offered for enablement or automation. */
     tasks: readonly DeferredTask[];
+    /**
+     * Contract route paths whose procedures answer 404. An entry covers every HTTP method at
+     * that path, so one entry defers a whole resource.
+     */
+    procedures: readonly string[];
   };
 }
 
@@ -45,6 +50,16 @@ export const scope: Scope = {
       'tmdbStatus',
     ],
     tasks: [],
+    procedures: [
+      // Ratings have two mechanisms; unifying them is post-MVP work.
+      '/api/providers/ratings',
+      // No MVP consumer.
+      '/api/providers/metadata',
+      // A second way to find a title beside the title filter.
+      '/api/search/metadata',
+      // No UI and no consumer yet: the input to the post-MVP precedence work.
+      '/api/app-settings',
+    ],
   },
 };
 
@@ -67,4 +82,9 @@ export function isOfferedTask(
   return !declared.deferred.tasks.some(
     (task) => task.providerType === providerType && task.taskId === taskId
   );
+}
+
+/** Whether the procedure at contract route `path` answers: `declared` does not defer it. */
+export function isOfferedProcedure(declared: Scope, path: string | undefined): boolean {
+  return !declared.deferred.procedures.some((deferred) => deferred === path);
 }

@@ -5,6 +5,7 @@ import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createSearchProcedures } from '@server/modules/media';
 import { createMockConfig } from '@tests/factories';
+import { proceduresOffered } from '@tests/helpers/scope';
 import express, { type Express } from 'express';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -28,7 +29,9 @@ describe('GET /api/search/metadata', () => {
       req.user = { id: 1 } as unknown as NonNullable<typeof req.user>;
       next();
     });
-    app.use(serveApi({ media: createSearchProcedures(container.cradle) }));
+    app.use(
+      serveApi({ media: createSearchProcedures(container.cradle) }, { scope: proceduresOffered })
+    );
   });
 
   afterAll(async () => {

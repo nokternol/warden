@@ -7,6 +7,7 @@ import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createAppSettingsProcedures } from '@server/modules/appSettings';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient, expectErrorResponse } from '@tests/helpers/api';
+import { proceduresOffered } from '@tests/helpers/scope';
 import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -29,9 +30,10 @@ describe('App Settings API Integration', () => {
     const config = loadConfig();
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
-    const appSettingsRoutes = serveApi({
-      appSettings: createAppSettingsProcedures(container.cradle),
-    });
+    const appSettingsRoutes = serveApi(
+      { appSettings: createAppSettingsProcedures(container.cradle) },
+      { scope: proceduresOffered }
+    );
 
     authedApp = express();
     authedApp.use(express.json());
