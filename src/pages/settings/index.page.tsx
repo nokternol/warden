@@ -1,6 +1,8 @@
 import AddProviderForm from '@app/components/AddProviderForm';
 import AppLayout from '@app/components/AppLayout';
+import AsyncBoundary from '@app/components/AsyncBoundary';
 import Button from '@app/components/Button';
+import EmptyState from '@app/components/EmptyState';
 import ProviderCard from '@app/components/ProviderCard';
 import SidebarNav from '@app/components/SidebarNav';
 import { Skeleton } from '@app/components/Skeleton';
@@ -38,7 +40,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
-  const { providers, isLoading, create, update, remove } = useProviderSettings();
+  const { providers, error, refresh, create, update, remove } = useProviderSettings();
   const { availability } = useProviderTasks();
   const { types } = useProviderTypes();
   const [showAddForm, setShowAddForm] = useState(false);
@@ -49,7 +51,6 @@ export default function SettingsPage() {
   };
 
   const typeOrder = (types ?? []).map((t) => t.type);
-  const sorted = providers ? sortProviders(providers, typeOrder) : [];
 
   return (
     <AppLayout
@@ -71,7 +72,7 @@ export default function SettingsPage() {
         />
       }
     >
-      <div className="p-6 space-y-4 max-w-3xl">
+      <div className="p-4 sm:p-6 space-y-4 max-w-5xl">
         {showAddForm && (
           <AddProviderForm
             types={types}
@@ -80,46 +81,55 @@ export default function SettingsPage() {
           />
         )}
 
-        {isLoading && (
-          <div className="space-y-3">
-            {[0, 1, 2].map((i) => (
-              <Skeleton key={i} className="h-[72px]" />
-            ))}
-          </div>
-        )}
+        <AsyncBoundary
+          data={providers}
+          error={error}
+          onRetry={() => refresh()}
+          what="providers"
+          loading={
+            <div className="space-y-3">
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} className="h-[72px]" />
+              ))}
+            </div>
+          }
+          isEmpty={(list) => list.length === 0}
+          empty={
+            showAddForm ? null : (
+              <EmptyState
+                icon={<Plug size={28} strokeWidth={1.25} aria-hidden="true" />}
+                title="No providers configured"
+                description="Connect your first provider to start building automations."
+                action={{ label: 'Add provider', onClick: () => setShowAddForm(true) }}
+              />
+            )
+          }
+        >
+          {(list) => {
+            const sorted = sortProviders(list, typeOrder);
+            return (
+              <div className="space-y-2">
+                {sorted.map((p, idx) => {
+                  const prev = idx > 0 ? sorted[idx - 1] : null;
+                  const showDivider = prev !== null && p.type !== prev.type;
 
-        {!isLoading && sorted.length === 0 && !showAddForm && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Plug size={32} strokeWidth={1.25} className="text-text-muted mb-4" />
-            <p className="text-sm font-medium text-text-primary mb-1">No providers configured</p>
-            <p className="text-xs text-text-muted max-w-xs">
-              Connect your first provider to start building automations.
-            </p>
-          </div>
-        )}
-
-        {!isLoading && sorted.length > 0 && (
-          <div className="space-y-2">
-            {sorted.map((p, idx) => {
-              const prev = idx > 0 ? sorted[idx - 1] : null;
-              const typeGroup = (t: ProviderType) => typeOrder.indexOf(t);
-              const showDivider = prev !== null && typeGroup(p.type) !== typeGroup(prev.type);
-
-              return (
-                <div key={p.id}>
-                  {showDivider && <div className="h-px bg-border/40 my-1" />}
-                  <ProviderCard
-                    provider={p}
-                    typeDescriptor={descriptorFor(types, p.type)}
-                    tasks={tasksForProvider(availability, p.id)}
-                    onUpdate={(patch) => update(p.id, patch)}
-                    onDelete={() => remove(p.id)}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        )}
+                  return (
+                    <div key={p.id}>
+                      {showDivider && <div className="h-px bg-divider my-1" />}
+                      <ProviderCard
+                        provider={p}
+                        typeDescriptor={descriptorFor(types, p.type)}
+                        tasks={tasksForProvider(availability, p.id)}
+                        onUpdate={(patch) => update(p.id, patch)}
+                        onDelete={() => remove(p.id)}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          }}
+        </AsyncBoundary>
       </div>
     </AppLayout>
   );

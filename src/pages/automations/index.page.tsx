@@ -1,6 +1,9 @@
 import AppLayout from '@app/components/AppLayout';
+import AsyncBoundary from '@app/components/AsyncBoundary';
 import AutomationBuilder from '@app/components/AutomationBuilder';
 import AutomationRow from '@app/components/AutomationRow';
+import Button from '@app/components/Button';
+import EmptyState from '@app/components/EmptyState';
 import QueryRow from '@app/components/QueryRow';
 import SetupChecklist from '@app/components/SetupChecklist';
 import SidebarNav from '@app/components/SidebarNav';
@@ -12,7 +15,6 @@ import type { MediaQueryRecord } from '@app/hooks/useMediaQueries';
 import { useMediaSources } from '@app/hooks/useMediaSources';
 import { useProviderSettings } from '@app/hooks/useProviderSettings';
 import { setupState } from '@app/lib/setupGuidance';
-import { cn } from '@app/lib/utils/cn';
 import { guardPage } from '@app/lib/utils/guardPage';
 import { BookMarked, Zap } from 'lucide-react';
 import type { GetServerSideProps } from 'next';
@@ -25,48 +27,35 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   return { props: {} };
 };
 
-// A setup fact is only known once its fetch has settled without error; otherwise it must not
-// be mistaken for an empty result.
-function resolved<T>(isLoading: boolean, error: unknown, value: T): T | undefined {
-  return isLoading || error ? undefined : value;
-}
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AutomationsPage() {
   const router = useRouter();
   const {
     queries,
-    isLoading: queriesLoading,
     error: queriesError,
+    refresh: refreshQueries,
     remove: removeQuery,
   } = useMediaQueries();
   const {
     automations,
-    isLoading: automationsLoading,
     error: automationsError,
+    refresh: refreshAutomations,
     isCreating,
     create,
     setStatus,
     remove: removeAutomation,
     run,
-  } = useAutomations();
-  const { providers, isLoading: providersLoading, error: providersError } = useProviderSettings();
-  const { sources, isLoading: sourcesLoading, error: sourcesError } = useMediaSources();
+  } = useAutomations({ kind: 'user' });
+  const { providers } = useProviderSettings();
+  const { sources } = useMediaSources();
   const [showBuilder, setShowBuilder] = useState(false);
+  // Each fact stays undefined until its fetch has succeeded, so the guidance stays 'unknown'.
   const guidance = setupState({
-    providerCount: resolved(providersLoading, providersError, providers?.length),
-    hasSource: resolved(
-      sourcesLoading,
-      sourcesError,
-      sources && Object.values(sources).some((source) => source.configured)
-    ),
-    queryCount: resolved(queriesLoading, queriesError, queries.length),
-    automationCount: resolved(
-      automationsLoading,
-      automationsError,
-      automations.filter((a) => a.kind === 'user').length
-    ),
+    providerCount: providers?.length,
+    hasSource: sources && Object.values(sources).some((source) => source.configured),
+    queryCount: queries?.length,
+    automationCount: automations?.length,
   });
 
   const handleLoad = (_query: MediaQueryRecord) => {
@@ -78,8 +67,9 @@ export default function AutomationsPage() {
     setShowBuilder(false);
   };
 
-  const activeCount = automations.filter((a) => a.status === 'active').length;
-  const errorCount = automations.filter((a) => a.lastRun?.status === 'error').length;
+  const activeCount = automations?.filter((a) => a.status === 'active').length ?? 0;
+  const errorCount = automations?.filter((a) => a.lastRun?.status === 'error').length ?? 0;
+  const canCreate = Boolean(queries?.length) && !showBuilder;
 
   return (
     <AppLayout
@@ -88,33 +78,28 @@ export default function AutomationsPage() {
         <TopBar
           title="Automations"
           actions={
-            <button
+            <Button
               type="button"
-              disabled={queries.length === 0 || showBuilder}
+              size="sm"
+              disabled={!canCreate}
               title={
-                queries.length === 0 ? 'Save a query first to create an automation' : undefined
+                queries?.length === 0 ? 'Save a query first to create an automation' : undefined
               }
               onClick={() => setShowBuilder(true)}
-              className={cn(
-                'px-4 py-2 text-on-primary text-sm font-medium rounded-sm transition-colors duration-150',
-                queries.length === 0 || showBuilder
-                  ? 'bg-primary/40 cursor-not-allowed'
-                  : 'bg-primary hover:bg-primary-hover'
-              )}
             >
-              + New automation
-            </button>
+              New automation
+            </Button>
           }
         />
       }
     >
-      <div className="p-6 space-y-8 max-w-4xl">
+      <div className="p-4 sm:p-6 space-y-8 max-w-5xl">
         {guidance !== 'unknown' && guidance !== 'complete' && (
           <SetupChecklist state={guidance} onCreateAutomation={() => setShowBuilder(true)} />
         )}
 
         {/* ── Builder ─────────────────────────────────────────────────────── */}
-        {showBuilder && (
+        {showBuilder && queries && (
           <AutomationBuilder
             queries={queries}
             onSubmit={(input) => {
@@ -127,109 +112,112 @@ export default function AutomationsPage() {
 
         {/* ── Automations list ─────────────────────────────────────────────── */}
         <section aria-labelledby="automations-heading">
-          <div className="flex items-center gap-3 mb-1">
-            <Zap
-              size={16}
-              strokeWidth={1.75}
-              className={automations.length > 0 ? 'text-primary-text' : 'text-text-muted'}
-              aria-hidden="true"
-            />
+          <div className="flex flex-wrap items-center gap-x-3 mb-1">
             <h2 id="automations-heading" className="text-sm font-semibold text-text-primary">
-              Automations
+              Your automations
             </h2>
-            {automations.length > 0 && (
+            {automations && automations.length > 0 && (
               <span className="text-xs text-text-muted flex items-center gap-1.5">
-                {activeCount > 0 && <span className="text-primary-text">{activeCount} active</span>}
-                {activeCount > 0 && errorCount > 0 && <span className="opacity-40">·</span>}
-                {errorCount > 0 && <span className="text-danger-text">{errorCount} error</span>}
+                <span>{activeCount} active</span>
+                {errorCount > 0 && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span className="text-danger-text">{errorCount} error</span>
+                  </>
+                )}
               </span>
             )}
           </div>
-          <p className="text-xs text-text-muted mb-4 ml-[28px]">
-            Each automation pairs a query with a task and a cron schedule.
+          <p className="text-xs text-text-muted mb-4 max-w-prose">
+            Each automation applies a task to the media its queries select, on a schedule.
           </p>
 
-          {automations.length === 0 ? (
-            <div className="rounded-lg border border-border bg-surface-panel overflow-hidden">
-              <div className="flex flex-col items-center justify-center py-12 gap-3 text-center px-6">
-                <Zap size={28} strokeWidth={1.25} className="text-text-muted" aria-hidden="true" />
-                <p className="text-sm font-medium text-text-secondary">No automations yet</p>
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-lg border border-border bg-surface-panel overflow-hidden">
-              {/* Column header */}
-              <div className="hidden sm:grid sm:grid-cols-[1fr_160px_168px_88px] items-center px-4 py-2 border-b border-border bg-surface-bg/30">
-                <span className="text-xs font-medium text-text-muted">Automation</span>
-                <span className="text-xs font-medium text-text-muted">Schedule</span>
-                <span className="text-xs font-medium text-text-muted">Last run</span>
-                <span className="text-xs font-medium text-text-muted">Next run</span>
-              </div>
-              {automations.map((a) => (
-                <AutomationRow
-                  key={a.id}
-                  automation={a}
-                  onToggle={() => {
-                    void setStatus(a.id, a.status === 'active' ? 'disabled' : 'active');
-                  }}
-                  onDelete={() => {
-                    void removeAutomation(a.id);
-                  }}
-                  onRun={() => run(a.id)}
+          <AsyncBoundary
+            data={automations}
+            error={automationsError}
+            onRetry={() => refreshAutomations()}
+            what="automations"
+            isEmpty={(list) => list.length === 0}
+            empty={
+              <div className="rounded-lg border border-border bg-surface-panel">
+                <EmptyState
+                  icon={<Zap size={28} strokeWidth={1.25} aria-hidden="true" />}
+                  title="No automations yet"
                 />
-              ))}
-            </div>
-          )}
+              </div>
+            }
+          >
+            {(list) => (
+              <div className="rounded-lg border border-border bg-surface-panel">
+                {/* Column header */}
+                <div className="hidden sm:grid sm:grid-cols-[1fr_160px_168px_88px] items-center px-4 py-2 border-b border-divider">
+                  <span className="text-xs font-medium text-text-muted">Automation</span>
+                  <span className="text-xs font-medium text-text-muted">Schedule</span>
+                  <span className="text-xs font-medium text-text-muted">Last run</span>
+                  <span className="text-xs font-medium text-text-muted">Next run</span>
+                </div>
+                {list.map((a) => (
+                  <AutomationRow
+                    key={a.id}
+                    automation={a}
+                    onToggle={() => {
+                      void setStatus(a.id, a.status === 'active' ? 'disabled' : 'active');
+                    }}
+                    onDelete={() => {
+                      void removeAutomation(a.id);
+                    }}
+                    onRun={() => run(a.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </AsyncBoundary>
         </section>
 
         {/* ── Queries ────────────────────────────────────────────────── */}
         <section aria-labelledby="media-queries-heading">
-          <div className="flex items-center gap-3 mb-1">
-            <BookMarked
-              size={16}
-              strokeWidth={1.75}
-              className="text-primary-text flex-shrink-0"
-              aria-hidden="true"
-            />
-            <h2 id="media-queries-heading" className="text-sm font-semibold text-text-primary">
-              Queries
-            </h2>
-          </div>
-          <p className="text-xs text-text-muted mb-4 ml-[28px]">
-            Named filter sets from the Media page. Each automation targets one query.
+          <h2 id="media-queries-heading" className="text-sm font-semibold text-text-primary mb-1">
+            Queries
+          </h2>
+          <p className="text-xs text-text-muted mb-4 max-w-prose">
+            Named filter sets saved from the Media page.
           </p>
 
-          {queries.length === 0 ? (
-            <div className="rounded-lg border border-border bg-surface-panel overflow-hidden">
-              <div className="flex flex-col items-center justify-center py-12 gap-3 text-center px-6">
-                <BookMarked
-                  size={28}
-                  strokeWidth={1.25}
-                  className="text-text-muted"
-                  aria-hidden="true"
+          <AsyncBoundary
+            data={queries}
+            error={queriesError}
+            onRetry={() => refreshQueries()}
+            what="queries"
+            isEmpty={(list) => list.length === 0}
+            empty={
+              <div className="rounded-lg border border-border bg-surface-panel">
+                <EmptyState
+                  icon={<BookMarked size={28} strokeWidth={1.25} aria-hidden="true" />}
+                  title="No queries yet"
                 />
-                <p className="text-sm font-medium text-text-secondary">No queries yet</p>
               </div>
-            </div>
-          ) : (
-            <div
-              className="rounded-lg border border-border bg-surface-panel overflow-hidden divide-y divide-divider"
-              role="list"
-              aria-label="Queries"
-            >
-              {queries.map((query) => (
-                <div key={query.id} role="listitem">
-                  <QueryRow
-                    query={query}
-                    onLoad={() => handleLoad(query)}
-                    onDelete={() => {
-                      void removeQuery(query.id);
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
+            }
+          >
+            {(list) => (
+              <div
+                className="rounded-lg border border-border bg-surface-panel divide-y divide-divider"
+                role="list"
+                aria-label="Queries"
+              >
+                {list.map((query) => (
+                  <div key={query.id} role="listitem">
+                    <QueryRow
+                      query={query}
+                      onLoad={() => handleLoad(query)}
+                      onDelete={() => {
+                        void removeQuery(query.id);
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </AsyncBoundary>
         </section>
       </div>
     </AppLayout>

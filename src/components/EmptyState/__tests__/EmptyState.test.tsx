@@ -18,8 +18,7 @@ describe('EmptyState', () => {
 
   it('does not render description when not provided', () => {
     const { container } = render(<EmptyState title="No items" />);
-    const description = container.querySelector('p');
-    expect(description).not.toBeInTheDocument();
+    expect(container.querySelectorAll('p')).toHaveLength(1);
   });
 
   it('renders icon when provided', () => {

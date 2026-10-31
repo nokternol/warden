@@ -14,8 +14,9 @@ export type { Filter };
 export type QueryHealth = z.infer<typeof QueryHealthSchema>;
 export type { MediaQueryRecord };
 
+/** `queries` is undefined until it has loaded, so a caller cannot mistake that for none. */
 export function useMediaQueries() {
-  const { data: queries = [], isLoading, error, mutate } = useApi(api.mediaQueries.list, undefined);
+  const { data: queries, isLoading, error, mutate } = useApi(api.mediaQueries.list, undefined);
 
   const save = async (
     name: string,
@@ -32,5 +33,5 @@ export function useMediaQueries() {
     await mutate();
   };
 
-  return { queries, isLoading, error, save, remove };
+  return { queries, isLoading, error, refresh: mutate, save, remove };
 }

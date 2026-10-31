@@ -50,7 +50,9 @@ export function usePaginatedMedia<T>(
     });
   };
 
-  const { data, isLoading, isValidating, setSize, error } = useSWRInfinite<PaginatedPage<T>>(
+  const { data, isLoading, isValidating, setSize, error, mutate } = useSWRInfinite<
+    PaginatedPage<T>
+  >(
     getKey,
     ([procedure, input]: ReturnType<typeof apiKey<BrowseQuery>>) =>
       procedure(input) as Promise<PaginatedPage<T>>,
@@ -107,5 +109,6 @@ export function usePaginatedMedia<T>(
       void setSize((s) => s + 1);
     }, [setSize]),
     error: error as Error | undefined,
+    refresh: mutate,
   };
 }

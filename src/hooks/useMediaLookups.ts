@@ -6,42 +6,59 @@ export type { MediaTag };
 export type MediaQualityProfile = MediaProfile;
 
 export function useMediaLookups() {
-  const { data: tagsData } = useApi(api.media.tags, undefined);
-  const { data: profilesData } = useApi(api.media.qualityProfiles, undefined);
-  const { data: genresData } = useApi(api.media.genres, undefined);
-  const { data: networksData } = useApi(api.media.networks, undefined);
-  const { data: studioData } = useApi(api.media.studio, undefined);
-  const { data: releaseGroupsData } = useApi(api.media.releaseGroups, undefined);
-  const { data: collectionNamesData } = useApi(api.media.collectionNames, undefined);
-  const { data: languageProfilesData } = useApi(api.media.languageProfiles, undefined);
-  const { data: fileContainersData } = useApi(api.media.fileContainers, undefined);
-  const { data: videoCodecsData } = useApi(api.media.videoCodecs, undefined);
-  const { data: audioCodecsData } = useApi(api.media.audioCodecs, undefined);
-  const { data: fileResolutionsData } = useApi(api.media.fileResolutions, undefined);
-  const { data: labelsData } = useApi(api.media.labels, undefined);
+  const tags = useApi(api.media.tags, undefined);
+  const profiles = useApi(api.media.qualityProfiles, undefined);
+  const genres = useApi(api.media.genres, undefined);
+  const networks = useApi(api.media.networks, undefined);
+  const studio = useApi(api.media.studio, undefined);
+  const releaseGroups = useApi(api.media.releaseGroups, undefined);
+  const collectionNames = useApi(api.media.collectionNames, undefined);
+  const languageProfiles = useApi(api.media.languageProfiles, undefined);
+  const fileContainers = useApi(api.media.fileContainers, undefined);
+  const videoCodecs = useApi(api.media.videoCodecs, undefined);
+  const audioCodecs = useApi(api.media.audioCodecs, undefined);
+  const fileResolutions = useApi(api.media.fileResolutions, undefined);
+  const labels = useApi(api.media.labels, undefined);
+  const all = [
+    tags,
+    profiles,
+    genres,
+    networks,
+    studio,
+    releaseGroups,
+    collectionNames,
+    languageProfiles,
+    fileContainers,
+    videoCodecs,
+    audioCodecs,
+    fileResolutions,
+    labels,
+  ];
 
   return {
+    error: all.find((result) => result.error)?.error,
+    refresh: () => Promise.all(all.map((result) => result.mutate())),
     tags: {
-      radarr: tagsData?.radarr ?? [],
-      sonarr: tagsData?.sonarr ?? [],
+      radarr: tags.data?.radarr ?? [],
+      sonarr: tags.data?.sonarr ?? [],
     },
     qualityProfiles: {
-      radarr: profilesData?.radarr ?? [],
-      sonarr: profilesData?.sonarr ?? [],
+      radarr: profiles.data?.radarr ?? [],
+      sonarr: profiles.data?.sonarr ?? [],
     },
     genres: {
-      movies: genresData?.movies ?? [],
-      series: genresData?.series ?? [],
+      movies: genres.data?.movies ?? [],
+      series: genres.data?.series ?? [],
     },
-    networks: networksData ?? [],
-    studio: studioData ?? [],
-    releaseGroups: releaseGroupsData ?? [],
-    collectionNames: collectionNamesData ?? [],
-    languageProfiles: languageProfilesData ?? [],
-    fileContainers: fileContainersData ?? [],
-    videoCodecs: videoCodecsData ?? [],
-    audioCodecs: audioCodecsData ?? [],
-    fileResolutions: fileResolutionsData ?? [],
-    labels: labelsData ?? [],
+    networks: networks.data ?? [],
+    studio: studio.data ?? [],
+    releaseGroups: releaseGroups.data ?? [],
+    collectionNames: collectionNames.data ?? [],
+    languageProfiles: languageProfiles.data ?? [],
+    fileContainers: fileContainers.data ?? [],
+    videoCodecs: videoCodecs.data ?? [],
+    audioCodecs: audioCodecs.data ?? [],
+    fileResolutions: fileResolutions.data ?? [],
+    labels: labels.data ?? [],
   };
 }

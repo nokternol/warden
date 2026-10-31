@@ -12,9 +12,10 @@ export type { AutomationDto, CreateAutomationInput };
 // the next natural revalidation instead.
 const POLL_DELAYS_MS = [1500, 4000, 9000, 18000];
 
+/** `automations` is undefined until it has loaded, so a caller cannot mistake that for none. */
 export function useAutomations(options?: { kind?: 'user' | 'system' }) {
   const {
-    data: automations = [],
+    data: automations,
     isLoading,
     error,
     mutate,
@@ -25,7 +26,7 @@ export function useAutomations(options?: { kind?: 'user' | 'system' }) {
     setIsCreating(true);
     try {
       const newAutomation = await api.automations.create(input);
-      mutate([...automations, newAutomation], { revalidate: false });
+      mutate([...(automations ?? []), newAutomation], { revalidate: false });
       return newAutomation;
     } finally {
       setIsCreating(false);
@@ -35,7 +36,7 @@ export function useAutomations(options?: { kind?: 'user' | 'system' }) {
   const setStatus = async (id: number, status: AutomationStatus): Promise<void> => {
     const updatedAutomation = await api.automations.updateStatus({ id, status });
     mutate(
-      automations.map((x) => (x.id === id ? updatedAutomation : x)),
+      automations?.map((x) => (x.id === id ? updatedAutomation : x)),
       { revalidate: false }
     );
   };
@@ -52,5 +53,15 @@ export function useAutomations(options?: { kind?: 'user' | 'system' }) {
     }
   };
 
-  return { automations, isLoading, error, isCreating, create, setStatus, remove, run };
+  return {
+    automations,
+    isLoading,
+    error,
+    refresh: mutate,
+    isCreating,
+    create,
+    setStatus,
+    remove,
+    run,
+  };
 }

@@ -14,7 +14,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 };
 
 export default function DashboardPage() {
-  const { automations } = useAutomations();
+  const { automations = [] } = useAutomations();
   const router = useRouter();
 
   return (

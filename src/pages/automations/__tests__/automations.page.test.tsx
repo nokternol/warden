@@ -56,8 +56,10 @@ describe('AutomationsPage', () => {
 
     it('asks for an automation when only system automations exist', async () => {
       server.use(
-        mockProcedure(contract.automations.list, () =>
-          MOCK_AUTOMATIONS.map((a) => ({ ...a, kind: 'system' as const }))
+        mockProcedure(contract.automations.list, ({ request }) =>
+          new URL(request.url).searchParams.get('kind') === 'user'
+            ? []
+            : MOCK_AUTOMATIONS.map((a) => ({ ...a, kind: 'system' as const }))
         )
       );
 
