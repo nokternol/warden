@@ -11,7 +11,7 @@ interface SetupChecklistProps {
 type StepStatus = 'done' | 'current' | 'upcoming';
 
 const LINK_CLASS =
-  'mt-2 inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-sm bg-primary text-on-primary hover:bg-primary-hover transition-colors';
+  'mt-2 inline-flex items-center max-sm:min-h-[44px] px-3 py-1.5 text-sm font-medium rounded-sm bg-primary text-on-primary hover:bg-primary-hover transition-colors';
 
 type IncompleteState = SetupChecklistProps['state'];
 
@@ -33,7 +33,7 @@ const STEPS: readonly StepDefinition[] = [
         : 'Add Radarr or Sonarr so Warden has media to work with.',
     action: () => (
       <a href="/settings" className={LINK_CLASS}>
-        Open settings
+        Go to Providers
       </a>
     ),
   },

@@ -130,3 +130,25 @@ describe('SettingsPage', () => {
     expect(cardNames).toEqual(['Radarr Main', 'Living room Plex']);
   });
 });
+
+describe('SettingsPage copy', () => {
+  it('calls the destination Providers, and the add toggle reads correctly while open', async () => {
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+    expect(screen.queryByText('Settings')).not.toBeInTheDocument();
+    await user.click(screen.getAllByRole('button', { name: 'Add provider' })[0]);
+    const toggle = screen.getByRole('button', { name: 'Close form' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('offers Add provider from the empty state', async () => {
+    server.use(mockProcedure(contract.providers.list, () => []));
+    render(
+      <SWRConfig value={{ provider: () => new Map() }}>
+        <SettingsPage />
+      </SWRConfig>
+    );
+    await screen.findByText('No providers configured');
+    expect(screen.getAllByRole('button', { name: 'Add provider' })).toHaveLength(2);
+  });
+});

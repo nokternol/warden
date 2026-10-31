@@ -31,7 +31,7 @@ describe('AutomationsPage', () => {
 
       const current = await screen.findByRole('listitem', { current: 'step' });
       expect(current).toHaveTextContent('Connect a source');
-      expect(within(current).getByRole('link', { name: /settings/i })).toHaveAttribute(
+      expect(within(current).getByRole('link', { name: /providers/i })).toHaveAttribute(
         'href',
         '/settings'
       );

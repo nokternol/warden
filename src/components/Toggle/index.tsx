@@ -17,7 +17,7 @@ export default function Toggle({ checked, onChange, disabled = false, label }: T
       onClick={() => !disabled && onChange(!checked)}
       disabled={disabled}
       className={cn(
-        'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-150',
+        'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-150 max-sm:after:absolute max-sm:after:-inset-x-1 max-sm:after:-inset-y-3',
         checked ? 'bg-primary' : 'bg-border-input',
         disabled && 'opacity-40 cursor-not-allowed'
       )}

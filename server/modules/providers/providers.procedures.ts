@@ -156,7 +156,12 @@ export function createProvidersProcedures(
     test: api.providers.test.handler(async ({ input }) => {
       assertOfferedType(input.type);
       try {
-        await probeConnection(input.type as MetadataProviderType, input.url, input.apiKey);
+        const apiKey =
+          input.apiKey ??
+          (input.id === undefined
+            ? undefined
+            : ((await providerSettingsService.findById(input.id)).apiKey ?? undefined));
+        await probeConnection(input.type as MetadataProviderType, input.url, apiKey);
         return { ok: true };
       } catch (err) {
         return { ok: false, error: err instanceof Error ? err.message : String(err) };

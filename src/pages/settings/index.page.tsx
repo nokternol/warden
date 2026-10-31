@@ -44,10 +44,12 @@ export default function SettingsPage() {
   const { availability } = useProviderTasks();
   const { types } = useProviderTypes();
   const [showAddForm, setShowAddForm] = useState(false);
+  const [addedName, setAddedName] = useState<string | null>(null);
 
   const handleCreate = async (params: CreateProviderParams) => {
-    await create(params);
+    const created = await create(params);
     setShowAddForm(false);
+    setAddedName(created.name);
   };
 
   const typeOrder = (types ?? []).map((t) => t.type);
@@ -58,15 +60,15 @@ export default function SettingsPage() {
       topBar={
         <TopBar
           title="Providers"
-          breadcrumbs={[{ label: 'Settings' }, { label: 'Providers' }]}
           actions={
             <Button
               type="button"
-              variant="primary"
+              variant={showAddForm ? 'secondary' : 'primary'}
               size="sm"
+              aria-expanded={showAddForm}
               onClick={() => setShowAddForm((v) => !v)}
             >
-              Add provider
+              {showAddForm ? 'Close form' : 'Add provider'}
             </Button>
           }
         />
@@ -79,6 +81,12 @@ export default function SettingsPage() {
             onSubmit={handleCreate}
             onCancel={() => setShowAddForm(false)}
           />
+        )}
+
+        {addedName && !showAddForm && (
+          <p role="status" className="text-sm text-success">
+            Added {addedName}. Open it to test the connection and enable tasks.
+          </p>
         )}
 
         <AsyncBoundary
