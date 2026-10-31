@@ -1,5 +1,5 @@
 .container {
-  @apply h-screen bg-surface-bg flex overflow-hidden;
+  @apply h-dvh bg-surface-bg flex overflow-hidden;
 }
 
 .sidebarWrapper {
@@ -8,5 +8,5 @@
 }
 
 .mainContent {
-  @apply flex-1 flex flex-col overflow-x-hidden overflow-y-auto min-h-0;
+  @apply flex-1 flex flex-col overflow-x-hidden overflow-y-auto min-h-0 min-w-0 pb-20 md:pb-0;
 }

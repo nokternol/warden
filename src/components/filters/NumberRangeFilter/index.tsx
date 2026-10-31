@@ -143,7 +143,7 @@ export function NumberRangeFilter({
             <div className="flex-1 min-w-0">
               <label
                 htmlFor={`${id}-from`}
-                className="block text-[10px] text-text-muted mb-1 select-none"
+                className="block text-xs text-text-muted mb-1 select-none"
               >
                 From
               </label>
@@ -162,7 +162,7 @@ export function NumberRangeFilter({
             <div className="flex-1 min-w-0">
               <label
                 htmlFor={`${id}-to`}
-                className="block text-[10px] text-text-muted mb-1 select-none"
+                className="block text-xs text-text-muted mb-1 select-none"
               >
                 To
               </label>
@@ -183,7 +183,7 @@ export function NumberRangeFilter({
               onClick={clearAndClose}
               disabled={!isActive && !draftMin && !draftMax}
               className={cn(
-                'text-[10px] transition-colors underline underline-offset-2',
+                'text-xs transition-colors underline underline-offset-2',
                 isActive || draftMin || draftMax
                   ? 'text-text-muted hover:text-text-primary'
                   : 'text-text-muted/30 pointer-events-none'

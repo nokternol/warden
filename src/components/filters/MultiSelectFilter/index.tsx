@@ -216,7 +216,7 @@ export function MultiSelectFilter<T extends string | number>({
               >
                 {group !== undefined && (
                   <div
-                    className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-text-muted select-none first:pt-1.5"
+                    className="px-3 pt-2 pb-1 text-xs font-semibold uppercase tracking-wider text-text-muted select-none first:pt-1.5"
                     aria-hidden="true"
                   >
                     {group}
@@ -236,7 +236,7 @@ export function MultiSelectFilter<T extends string | number>({
                       tabIndex={-1}
                       onClick={() => toggle(option.value)}
                       onKeyDown={(e) => onItemKeyDown(e, index, () => toggle(option.value))}
-                      className="flex items-center gap-2 px-3 py-2.5 text-xs text-text-secondary hover:bg-surface-hover focus:bg-surface-hover cursor-pointer select-none"
+                      className="flex items-center gap-2 px-3 py-2.5 text-xs text-text-secondary hover:bg-surface-hover focus:bg-surface-hover cursor-pointer select-none max-sm:min-h-[44px]"
                     >
                       <span
                         aria-hidden="true"
@@ -272,7 +272,7 @@ export function MultiSelectFilter<T extends string | number>({
           {spansGroups && spanNote && (
             <div
               role="note"
-              className="border-t border-border mt-1 px-3 pt-2 pb-1.5 text-[11px] leading-snug text-text-muted"
+              className="border-t border-border mt-1 px-3 pt-2 pb-1.5 text-xs leading-snug text-text-muted"
             >
               {spanNote}
             </div>

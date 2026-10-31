@@ -85,7 +85,7 @@ const StatusBadge = ({
   if (!status) return null;
   const variantMap = {
     monitored: 'primary',
-    missing: 'error',
+    missing: 'warning',
     downloaded: 'success',
   } as const;
 

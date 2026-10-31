@@ -128,7 +128,7 @@ export function FilterPicker({ entries, onPick }: FilterPickerProps) {
         ref={triggerRef}
         type="button"
         {...({ popovertarget: popoverId } as PopoverTargetAttr)}
-        className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs font-medium border border-dashed border-border text-text-secondary hover:border-primary hover:text-primary-text transition-colors"
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs font-medium border border-dashed border-border text-text-secondary hover:border-primary hover:text-primary-text transition-colors max-sm:min-h-[44px]"
       >
         <svg
           width="11"
@@ -176,13 +176,13 @@ export function FilterPicker({ entries, onPick }: FilterPickerProps) {
             tracks the highlighted option. */}
         <div id={listboxId} role="listbox" aria-label="Available filters" className="p-1">
           {filtered.length === 0 ? (
-            <p className="px-2 py-3 text-xs text-text-muted text-center">
+            <p className="px-2 py-3 text-xs text-text-muted text-center max-sm:min-h-[44px]">
               No filters match “{query}”
             </p>
           ) : (
             filtered.map(([label, groupEntries]) => (
               <div key={label} className="mb-1 last:mb-0">
-                <div className="px-2 pt-1.5 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-muted select-none">
+                <div className="px-2 pt-1.5 pb-0.5 text-xs font-semibold uppercase tracking-wider text-text-muted select-none">
                   {label}
                 </div>
                 {groupEntries.map((entry) => {

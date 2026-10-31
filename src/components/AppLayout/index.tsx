@@ -1,3 +1,4 @@
+import MobileNav from '@app/components/MobileNav';
 import { cn } from '@app/lib/utils/cn';
 import { type HTMLAttributes, createContext, useRef } from 'react';
 import styles from './AppLayout.module.css';
@@ -10,14 +11,12 @@ interface AppLayoutProps extends HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   sidebar?: React.ReactNode;
   topBar?: React.ReactNode;
-  mobileNav?: React.ReactNode;
 }
 
 export default function AppLayout({
   children,
   sidebar,
   topBar,
-  mobileNav,
   className = '',
   ...props
 }: AppLayoutProps) {
@@ -37,22 +36,12 @@ export default function AppLayout({
         {sidebar && <aside className={styles.sidebarWrapper}>{sidebar}</aside>}
 
         {/* Main Content */}
-        <main
-          ref={mainRef}
-          id="main-content"
-          tabIndex={-1}
-          className={cn(styles.mainContent, mobileNav && 'pb-16 md:pb-0')}
-        >
+        <main ref={mainRef} id="main-content" tabIndex={-1} className={styles.mainContent}>
           {topBar}
           {children}
         </main>
 
-        {/* Mobile bottom navigation bar — fixed, hidden on md+ */}
-        {mobileNav && (
-          <div className="fixed bottom-0 left-0 right-0 md:hidden z-40 bg-surface-panel border-t border-border">
-            {mobileNav}
-          </div>
-        )}
+        <MobileNav />
       </div>
     </ScrollContainerContext.Provider>
   );

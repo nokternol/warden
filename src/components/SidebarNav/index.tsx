@@ -1,7 +1,7 @@
 import { WardenLogo } from '@app/components/Logo';
 import Sidebar from '@app/components/Sidebar';
-import { api } from '@app/lib/api/client';
 import { resolveNavItems } from '@app/lib/navigation';
+import { signOut } from '@app/lib/signOut';
 import { useRouter } from 'next/router';
 
 const logo = (
@@ -15,10 +15,5 @@ export default function SidebarNav() {
   const { pathname } = useRouter();
   const { items, bottomItems } = resolveNavItems(pathname);
 
-  const handleLogout = async () => {
-    await api.auth.logout();
-    window.location.href = '/login';
-  };
-
-  return <Sidebar items={items} bottomItems={bottomItems} logo={logo} onLogout={handleLogout} />;
+  return <Sidebar items={items} bottomItems={bottomItems} logo={logo} onLogout={signOut} />;
 }

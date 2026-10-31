@@ -11,7 +11,7 @@
 }
 
 .titleGroup {
-  @apply flex items-center gap-2 min-w-0 overflow-hidden;
+  @apply flex items-center gap-2 min-w-0;
 }
 
 .breadcrumbsNav {

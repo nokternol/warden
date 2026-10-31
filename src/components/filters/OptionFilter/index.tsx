@@ -62,7 +62,7 @@ export function OptionFilter<T extends string>({
               onClick={() => onChange(isSelected ? undefined : opt.value)}
               aria-pressed={isSelected}
               className={cn(
-                'flex items-center gap-1.5 px-3.5 py-2.5 rounded-md text-sm font-medium border transition-colors min-h-[44px]',
+                'flex items-center gap-1.5 px-3.5 py-2.5 rounded-md text-sm font-medium border transition-colors min-h-[44px] max-sm:min-h-[44px]',
                 isSelected
                   ? 'bg-primary text-on-primary border-primary'
                   : 'bg-surface-panel text-text-secondary border-border hover:bg-surface-hover'

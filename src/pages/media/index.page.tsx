@@ -30,7 +30,6 @@ import { descriptorFor, useProviderTypes } from '@app/hooks/useProviderTypes';
 import type { ManagedSeries } from '@app/hooks/useSeries';
 import { useSeries } from '@app/hooks/useSeries';
 import { toFilters } from '@app/lib/mediaQueryAdapters';
-import { resolveNavItems } from '@app/lib/navigation';
 import { cn } from '@app/lib/utils/cn';
 import { guardPage } from '@app/lib/utils/guardPage';
 import type { MediaRuleDescriptor } from '@contract/media';
@@ -210,7 +209,7 @@ function SortFieldPicker({
         aria-expanded={open}
         aria-label="Sort by"
         className={cn(
-          'flex items-center gap-1 text-xs font-medium px-1.5 py-1 rounded transition-colors',
+          'flex items-center gap-1 text-xs font-medium px-1.5 py-1 max-sm:min-h-[44px] rounded transition-colors',
           isNonDefault
             ? 'text-primary-text hover:text-primary-text'
             : 'text-text-secondary hover:text-text-primary'
@@ -246,7 +245,7 @@ function SortFieldPicker({
               }}
               onKeyDown={(e) => handleMenuKeyDown(e, index)}
               className={cn(
-                'w-full text-left px-3 py-1.5 text-xs transition-colors focus:bg-surface-panel',
+                'w-full text-left px-3 py-1.5 max-sm:min-h-[44px] text-xs transition-colors focus:bg-surface-panel',
                 field === opt.value
                   ? 'text-primary-text font-medium'
                   : 'text-text-secondary hover:bg-surface-panel'
@@ -298,9 +297,9 @@ function SortBar({
         <button
           type="button"
           onClick={handleDirToggle}
-          aria-label={dir === 'asc' ? 'Sort ascending' : 'Sort descending'}
+          aria-label={dir === 'asc' ? 'Sort descending' : 'Sort ascending'}
           className={cn(
-            'flex items-center justify-center w-6 h-6 rounded transition-colors',
+            'flex items-center justify-center size-11 sm:size-6 rounded transition-colors',
             isNonDefault
               ? 'text-primary-text hover:text-primary-text'
               : 'text-text-muted hover:text-text-secondary'
@@ -746,28 +745,9 @@ export default function MediaPage() {
     { what: 'filter options', error: lookups.error, onRetry: lookups.refresh },
   ].filter((failure) => failure.error);
 
-  const mobileNav = (
-    <nav className="flex items-center justify-around h-16 px-2">
-      {resolveNavItems('/media').items.map((item) => (
-        <a
-          key={item.id}
-          href={item.href}
-          className={cn(
-            'flex flex-col items-center gap-0.5 px-4 py-2 text-xs transition-colors min-h-[44px] justify-center',
-            item.active ? 'text-primary-text' : 'text-text-muted hover:text-text-primary'
-          )}
-        >
-          {item.icon}
-          <span>{item.label}</span>
-        </a>
-      ))}
-    </nav>
-  );
-
   return (
     <>
       <AppLayout
-        mobileNav={mobileNav}
         sidebar={<SidebarNav />}
         topBar={
           <TopBar
@@ -796,7 +776,7 @@ export default function MediaPage() {
                 <button
                   type="button"
                   className={cn(
-                    'md:hidden flex items-center gap-2 px-3 py-1.5 rounded-sm text-sm font-medium border transition-colors',
+                    'md:hidden flex items-center gap-2 px-3 py-1.5 max-sm:min-h-[44px] rounded-sm text-sm font-medium border transition-colors',
                     isActive
                       ? 'bg-primary text-on-primary border-primary'
                       : 'bg-transparent text-text-primary border-border hover:bg-surface-hover'
