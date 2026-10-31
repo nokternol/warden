@@ -63,8 +63,9 @@ The contract uses [oRPC](https://orpc.dev) in contract-first mode, with Zod 4 sc
   ([`LoginScreen.tsx`](ref:path:src/pages/login/LoginScreen.tsx)).
 - **Auth bypass (development only).** With `BYPASS_AUTH=true`, `serveApi` marks every request's context
   `authBypassed`, and the root middleware lets non-public procedures answer without a user. This is what
-  lets browser tooling such as `playwright-cli` drive the app without a Plex sign-in; `requireAuth`
-  skips the page redirect under the same variable. Config validation refuses to start with it on in
+  lets browser tooling such as `playwright-cli` drive the app without a Plex sign-in;
+  [`guardPage`](ref:path:src/lib/utils/guardPage.ts) skips the page redirect under the same variable.
+  The bypass reveals nothing the scope declaration defers: that check comes first on both paths. Config validation refuses to start with it on in
   production, and the server logs a warning at startup whenever it is on.
 - **Client.** [`src/lib/api/client.ts`](ref:path:src/lib/api/client.ts) exports `api`, a client typed
   from the contract. Calling a procedure that doesn't exist, or passing input it doesn't accept, doesn't
@@ -128,7 +129,8 @@ encodes it.
   requires every contract procedure to be called somewhere in `src/`, outside tests and stories. Its
   explicit allowlist names the procedures no client calls, each with a reason: `system.health`, which
   the container health check probes, and the deferred `appSettings.get`, `appSettings.update` and
-  `providers.metadata`, which have no client consumer yet.
+  `providers.metadata`, which have no client consumer yet. Deferred procedures stay in the contract and
+  stay implemented; the root middleware answers them 404.
 - **Direction.** [`.dependency-cruiser.cjs`](ref:path:.dependency-cruiser.cjs) forbids `src/` importing
   `server/`, `server/` importing `src/` (type-only imports included), and `contract/` importing either.
   [`boundaries.test.ts`](ref:path:server/__tests__/boundaries.test.ts) cruises a fixture tree with the

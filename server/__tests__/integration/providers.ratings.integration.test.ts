@@ -7,6 +7,7 @@ import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createProvidersProcedures } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
+import { proceduresOffered } from '@tests/helpers/scope';
 import { server } from '@tests/mocks/server';
 import express from 'express';
 import { http, HttpResponse } from 'msw';
@@ -47,7 +48,12 @@ describe('GET /api/providers/ratings — TMDB key DI isolation', () => {
       req.user = { id: 1 } as unknown as NonNullable<typeof req.user>;
       next();
     });
-    app.use(serveApi({ providers: createProvidersProcedures(container.cradle, () => {}) }));
+    app.use(
+      serveApi(
+        { providers: createProvidersProcedures(container.cradle, () => {}) },
+        { scope: proceduresOffered }
+      )
+    );
     app.use(errorHandlerMiddleware);
     return app;
   }

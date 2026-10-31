@@ -477,6 +477,21 @@ Earlier entries in this ledger use the names that were current when they healed 
   graceful stop, runtime identity, `TZ` and layer reuse, directly and through `compose.yaml`. `nodemon`
   and `dev:nodemon` are gone; `dev:debug` is `tsx watch --inspect`.
 
+### Deferred surfaces — out of scope on paper, reachable in the product (recorded and healed 2026-10-31, MVP slice S1)
+
+- **Fracture:** the plan declared features out of scope, but only provider types, rules and tasks were in
+  the scope declaration. The Dashboard, Search and Ratings pages were in the navigation, the media page's
+  ratings panel opened from any card, and `/api/providers/metadata` and `/api/app-settings` answered with
+  no consumer (L2).
+- **How it misled:** a reader of the plan would take these as blocked, while a signed-in user could reach
+  all of them. A second declaration for them would have split the one answer to what Warden exposes.
+- **Healed by:** the scope declaration lists deferred procedures, pages and sections as well. The contract
+  implementer's root middleware answers a deferred procedure 404 before default-deny, `guardPage` answers
+  a deferred page 404 before any auth outcome, `resolveNavItems` leaves deferred pages out of the sidebar
+  and mobile bar, and the media page guards its ratings panel. A test fails on an entry that names nothing.
+  The deferred code and its tests stay; the two ratings mechanisms (F10) and two title lookups (F11) are
+  blocked here, and unifying them stays post-MVP work.
+
 ## Open
 
 No fracture is currently open.

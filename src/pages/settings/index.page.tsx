@@ -9,7 +9,7 @@ import type { CreateProviderParams, ProviderSummary } from '@app/hooks/useProvid
 import { useProviderSettings } from '@app/hooks/useProviderSettings';
 import { tasksForProvider, useProviderTasks } from '@app/hooks/useProviderTasks';
 import { descriptorFor, useProviderTypes } from '@app/hooks/useProviderTypes';
-import { requireAuth } from '@app/lib/utils/requireAuth';
+import { guardPage } from '@app/lib/utils/guardPage';
 import type { ProviderType } from '@contract/providers';
 import { Plug } from 'lucide-react';
 import type { GetServerSideProps } from 'next';
@@ -30,8 +30,8 @@ function sortProviders(providers: ProviderSummary[], typeOrder: ProviderType[]):
 // ─── Auth guard ───────────────────────────────────────────────────────────────
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
-  const authRedirect = await requireAuth(ctx);
-  if (authRedirect) return authRedirect;
+  const refusal = await guardPage(ctx);
+  if (refusal) return refusal;
   return { props: {} };
 };
 

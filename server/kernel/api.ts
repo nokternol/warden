@@ -1,4 +1,5 @@
 import { contract } from '@contract/index';
+import { type Scope, scope as declaredScope, isOfferedProcedure } from '@contract/scope';
 import type { AnyContractRouter } from '@orpc/contract';
 import { OpenAPIHandler } from '@orpc/openapi/node';
 import { ORPCError, implement } from '@orpc/server';
@@ -18,21 +19,30 @@ export interface ApiContext {
   session: Request['session'];
   /** True when the server runs with `BYPASS_AUTH`: every procedure answers without a user. */
   authBypassed: boolean;
+  /** The scope declaration: a procedure it defers answers 404. */
+  scope: Scope;
 }
 
 export interface ServeApiOptions {
   /** Answer every procedure without a signed-in user (`BYPASS_AUTH`, refused in production). */
   authBypass?: boolean;
+  /** The scope declaration to enforce; the app passes the cradle's `scope`. */
+  scope?: Scope;
 }
 
 /**
  * The contract implementer every module builds its procedures from. Its root
- * middleware is default-deny: a procedure answers without a signed-in user only
- * when the contract marks it `public`, or when the server runs with the auth bypass.
+ * middleware first refuses a procedure the scope declaration defers, so a
+ * deferred procedure looks absent to every caller, signed in or not. It is then
+ * default-deny: a procedure answers without a signed-in user only when the
+ * contract marks it `public`, or when the server runs with the auth bypass.
  */
 export const api = implement(contract)
   .$context<ApiContext>()
   .use(({ context, procedure, next }) => {
+    if (!isOfferedProcedure(context.scope, procedure['~orpc'].route.path)) {
+      throw new ORPCError('NOT_FOUND', { message: 'Not found' });
+    }
     if (!procedure['~orpc'].meta.public && !context.user && !context.authBypassed) {
       throw new ORPCError('UNAUTHORIZED', { message: 'Authentication required' });
     }
@@ -113,7 +123,7 @@ function invalidInput(issues: InputIssue[]): ORPCError<string, unknown> {
 /** Serves a (sub)router of contract procedures over HTTP at their contract paths. */
 export function serveApi(
   router: Router<AnyContractRouter, ApiContext>,
-  { authBypass = false }: ServeApiOptions = {}
+  { authBypass = false, scope = declaredScope }: ServeApiOptions = {}
 ): RequestHandler {
   const handler = new OpenAPIHandler(router, {
     clientInterceptors: [({ next, context }) => inSuccessEnvelope(next, context.requestId)],
@@ -131,6 +141,7 @@ export function serveApi(
           user: req.user,
           session: req.session,
           authBypassed: authBypass,
+          scope,
         },
       })
       .then(({ matched }) => {

@@ -3,13 +3,13 @@ import { DashboardContent } from '@app/components/DashboardContent';
 import SidebarNav from '@app/components/SidebarNav';
 import TopBar from '@app/components/TopBar';
 import { useAutomations } from '@app/hooks/useAutomations';
-import { requireAuth } from '@app/lib/utils/requireAuth';
+import { guardPage } from '@app/lib/utils/guardPage';
 import type { GetServerSideProps } from 'next';
 import { useRouter } from 'next/router';
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
-  const authRedirect = await requireAuth(ctx);
-  if (authRedirect) return authRedirect;
+  const refusal = await guardPage(ctx);
+  if (refusal) return refusal;
   return { props: {} };
 };
 

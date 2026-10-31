@@ -6,8 +6,16 @@ import { render, screen, setupUser, waitFor } from '@tests/helpers/component';
 import { mockProcedure } from '@tests/mocks/contract';
 import { server } from '@tests/mocks/server';
 import { SWRConfig } from 'swr';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import MediaPage from '../index.page';
+
+vi.mock('@contract/scope', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@contract/scope')>();
+  return {
+    ...actual,
+    scope: { deferred: { ...actual.scope.deferred, sections: [] } },
+  };
+});
 
 const EMPTY_PAGE = {
   items: [],

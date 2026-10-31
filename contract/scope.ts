@@ -25,6 +25,15 @@ export interface Scope {
     rules: readonly string[];
     /** Provider tasks that are not offered for enablement or automation. */
     tasks: readonly DeferredTask[];
+    /**
+     * Contract route paths whose procedures answer 404. An entry covers every HTTP method at
+     * that path, so one entry defers a whole resource.
+     */
+    procedures: readonly string[];
+    /** Page URLs that answer 404 and are left out of the navigation. */
+    pages: readonly string[];
+    /** Sections inside an offered page that do not render, each named by its guard's id. */
+    sections: readonly string[];
   };
 }
 
@@ -45,6 +54,28 @@ export const scope: Scope = {
       'tmdbStatus',
     ],
     tasks: [],
+    procedures: [
+      // Ratings have two mechanisms; unifying them is post-MVP work.
+      '/api/providers/ratings',
+      // No MVP consumer.
+      '/api/providers/metadata',
+      // A second way to find a title beside the title filter.
+      '/api/search/metadata',
+      // No UI and no consumer yet: the input to the post-MVP precedence work.
+      '/api/app-settings',
+    ],
+    pages: [
+      // Automations plus first-run guidance is the landing page.
+      '/dashboard',
+      // A second way to find a title beside the title filter.
+      '/search',
+      // Ratings have two mechanisms; unifying them is post-MVP work.
+      '/ratings',
+    ],
+    sections: [
+      // Ratings have two mechanisms; unifying them is post-MVP work.
+      'mediaRatingsPanel',
+    ],
   },
 };
 
@@ -67,4 +98,19 @@ export function isOfferedTask(
   return !declared.deferred.tasks.some(
     (task) => task.providerType === providerType && task.taskId === taskId
   );
+}
+
+/** Whether the procedure at contract route `path` answers: `declared` does not defer it. */
+export function isOfferedProcedure(declared: Scope, path: string | undefined): boolean {
+  return !declared.deferred.procedures.some((deferred) => deferred === path);
+}
+
+/** Whether the page at `url` answers: `declared` does not defer it. */
+export function isOfferedPage(declared: Scope, url: string): boolean {
+  return !declared.deferred.pages.includes(url);
+}
+
+/** Whether the section with `id` renders: `declared` does not defer it. */
+export function isOfferedSection(declared: Scope, id: string): boolean {
+  return !declared.deferred.sections.includes(id);
 }

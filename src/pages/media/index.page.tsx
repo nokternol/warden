@@ -28,12 +28,13 @@ import { descriptorFor, useProviderTypes } from '@app/hooks/useProviderTypes';
 import type { ManagedSeries } from '@app/hooks/useSeries';
 import { useSeries } from '@app/hooks/useSeries';
 import { toFilters } from '@app/lib/mediaQueryAdapters';
-import { NAV_ITEMS } from '@app/lib/navigation';
+import { resolveNavItems } from '@app/lib/navigation';
 import { cn } from '@app/lib/utils/cn';
-import { requireAuth } from '@app/lib/utils/requireAuth';
+import { guardPage } from '@app/lib/utils/guardPage';
 import type { MediaRuleDescriptor } from '@contract/media';
 import type { ProviderType } from '@contract/providers';
 import type { ContentType } from '@contract/schemas';
+import { isOfferedSection, scope } from '@contract/scope';
 import {
   ArrowDown,
   ArrowUp,
@@ -46,6 +47,8 @@ import {
 } from 'lucide-react';
 import type { GetServerSideProps } from 'next';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+const RATINGS_PANEL_OFFERED = isOfferedSection(scope, 'mediaRatingsPanel');
 
 // ─── Density icons ────────────────────────────────────────────────────────────
 
@@ -544,10 +547,14 @@ export function MediaContent({
                 className={
                   selectedId === `movie-${movie.id}` ? 'ring-2 ring-primary rounded-lg' : undefined
                 }
-                onClick={(id) => {
-                  setSelected({ title: movie.title, year: movie.year });
-                  setSelectedId(id);
-                }}
+                onClick={
+                  RATINGS_PANEL_OFFERED
+                    ? (id) => {
+                        setSelected({ title: movie.title, year: movie.year });
+                        setSelectedId(id);
+                      }
+                    : undefined
+                }
               >
                 <MediaCard.Poster src={getPosterUrl(movie.images)} alt={movie.title} />
                 <MediaCard.Content>
@@ -625,10 +632,14 @@ export function MediaContent({
                 className={
                   selectedId === `series-${item.id}` ? 'ring-2 ring-primary rounded-lg' : undefined
                 }
-                onClick={(id) => {
-                  setSelected({ title: item.title, year: item.year });
-                  setSelectedId(id);
-                }}
+                onClick={
+                  RATINGS_PANEL_OFFERED
+                    ? (id) => {
+                        setSelected({ title: item.title, year: item.year });
+                        setSelectedId(id);
+                      }
+                    : undefined
+                }
               >
                 <MediaCard.Poster src={getPosterUrl(item.images)} alt={item.title} />
                 <MediaCard.Content>
@@ -686,15 +697,17 @@ export function MediaContent({
         </section>
       </div>
 
-      <RatingsPanel
-        isOpen={selected !== null}
-        onClose={() => {
-          setSelected(null);
-          setSelectedId(null);
-        }}
-        title={selected?.title ?? ''}
-        year={selected?.year}
-      />
+      {RATINGS_PANEL_OFFERED && (
+        <RatingsPanel
+          isOpen={selected !== null}
+          onClose={() => {
+            setSelected(null);
+            setSelectedId(null);
+          }}
+          title={selected?.title ?? ''}
+          year={selected?.year}
+        />
+      )}
     </>
   );
 }
@@ -702,8 +715,8 @@ export function MediaContent({
 // ─── Auth guard ───────────────────────────────────────────────────────────────
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
-  const authRedirect = await requireAuth(ctx);
-  if (authRedirect) return authRedirect;
+  const refusal = await guardPage(ctx);
+  if (refusal) return refusal;
   return { props: {} };
 };
 
@@ -743,13 +756,13 @@ export default function MediaPage() {
 
   const mobileNav = (
     <nav className="flex items-center justify-around h-16 px-2">
-      {NAV_ITEMS.map((item) => (
+      {resolveNavItems('/media').items.map((item) => (
         <a
           key={item.id}
           href={item.href}
           className={cn(
             'flex flex-col items-center gap-0.5 px-4 py-2 text-xs transition-colors min-h-[44px] justify-center',
-            item.href === '/media' ? 'text-primary' : 'text-text-muted hover:text-text-primary'
+            item.active ? 'text-primary' : 'text-text-muted hover:text-text-primary'
           )}
         >
           {item.icon}

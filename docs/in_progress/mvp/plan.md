@@ -166,7 +166,7 @@ principles become these acceptance checks on every UI slice:
 | # | Loose end | Evidence |
 |---|---|---|
 | L1 | Creating a SEERR or TVMAZE provider passes validation, then throws in `ProviderFactory`. | `settings.schemas.ts:4` (`nativeEnum`), `providerFactory.ts:72`. **Healed by C5:** provider create and the connection test answer 400 for a type `contract/scope.ts` defers, before anything is stored or contacted. |
-| L2 | `/api/providers/metadata` and `/api/app-settings` have no consumer. | route grep |
+| L2 | `/api/providers/metadata` and `/api/app-settings` have no consumer. | route grep. **Healed by S1:** both are deferred in `contract/scope.ts` and answer 404. |
 | L3 | Rules in the API that the UI can never render, such as `certification`. | `ruleRendersControl`. **Healed by C2:** the descriptor's shape gives every served rule a control, and `/api/rules` leaves out a rule that cannot be described, so `ruleRendersControl` is gone. |
 
 ## Slice protocol
@@ -297,6 +297,14 @@ names, so nothing is renamed twice.
   and read by C5's projections. S1 extends the same `Scope` with the deferred pages and API
   procedures, read by the contract implementer (refuses deferred procedures) and by the client's
   nav, page guard and section guard. Deferred code and its tests stay as they are.
+- **Expected end state (as built):** `Scope.deferred` gains `procedures` (contract route paths, so one
+  entry covers a resource), `pages` and `sections`, with `isOfferedProcedure`, `isOfferedPage` and
+  `isOfferedSection`. The root middleware in `server/kernel/api.ts` checks deferral before default-deny.
+  `requireAuth` became `guardPage`, which every signed-in page's `getServerSideProps` calls, so a
+  deferred page needs no change of its own. `resolveNavItems` is the only reader of the nav lists.
+  The sidebar's `/settings` entry is labelled Providers, and with the ratings panel deferred, Media
+  cards have no click handler. `src/__tests__/contract/scope.test.ts` fails on a stale procedure, page or
+  section entry.
 - **Docs:** `docs/architecture/` gains the scope mechanism; architecture docs describing deferred
   surfaces note that they're deferred.
 

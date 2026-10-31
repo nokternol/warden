@@ -9,6 +9,7 @@ import { ProviderSettingsService } from '@server/modules/providers';
 import { createProvidersProcedures } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient, expectErrorResponse, expectSuccessResponse } from '@tests/helpers/api';
+import { proceduresOffered } from '@tests/helpers/scope';
 import express, { type Express } from 'express';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -41,7 +42,12 @@ describe('Providers API Integration', () => {
       req.user = { id: 1 } as unknown as NonNullable<typeof req.user>;
       next();
     });
-    app.use(serveApi({ providers: createProvidersProcedures(container.cradle, () => {}) }));
+    app.use(
+      serveApi(
+        { providers: createProvidersProcedures(container.cradle, () => {}) },
+        { scope: proceduresOffered }
+      )
+    );
     app.use(errorHandlerMiddleware);
 
     client = createApiClient(app);
