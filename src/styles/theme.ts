@@ -88,16 +88,21 @@ export const palette = {
     900: '#111827',
     950: '#030712',
   },
-  // Status color primitives (fixed; no light/dark flip needed)
+  // Status colour primitives: a lighter step for dark surfaces, a darker one for light surfaces.
   emerald: {
     500: '#10b981',
+    800: '#065f46',
   },
   amber: {
     500: '#f59e0b',
+    800: '#92400e',
   },
   blue: {
-    500: '#3b82f6',
+    400: '#60a5fa',
+    700: '#1d4ed8',
   },
+  white: '#ffffff',
+  black: '#000000',
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -108,15 +113,26 @@ export const palette = {
 // Tailwind (via the themeColors export below).
 // ─────────────────────────────────────────────────────────────────────────────
 export const semanticTokens = {
-  // Primary brand
+  // Primary brand fill. Text on it is `onPrimary`, never white: white reaches only 3.74:1.
   primary: palette.teal[600],
   primaryHover: palette.teal[500],
-  primaryActive: palette.teal[700],
+  primaryActive: palette.teal[550],
+  onPrimary: palette.slate[900],
+  // Teal as text or an icon on a surface; the fill colour is too dark on the panel.
+  primaryText: palette.teal[800],
+  primaryTextDark: palette.teal[500],
 
-  // Danger / destructive
+  // Danger fill for destructive actions. Hover and active darken because white text must hold 4.5:1.
   danger: palette.red[600],
-  dangerHover: palette.red[500],
-  dangerActive: palette.red[700],
+  dangerHover: palette.red[700],
+  dangerActive: palette.red[800],
+  onDanger: palette.white,
+  // Danger as text on a surface or a danger tint.
+  dangerText: palette.red[800],
+  dangerTextDark: palette.red[300],
+
+  // Backdrop behind dialogs, and the shadow under poster badges.
+  scrim: palette.black,
 
   // Surface (light)
   surfaceBg: palette.slate[50],
@@ -134,29 +150,25 @@ export const semanticTokens = {
 
   // Text (light)
   textPrimary: palette.slate[900],
-  textSecondary: palette.slate[600],
-  textMuted: palette.slate[400],
+  textSecondary: palette.slate[700],
+  textMuted: palette.slate[600],
 
   // Text (dark)
   textPrimaryDark: palette.slate[50],
   textSecondaryDark: palette.slate[300],
   textMutedDark: palette.slate[400],
 
-  // Border (light / dark)
-  border: palette.slate[200],
-  borderDark: palette.slate[800],
+  // Container border: decorative, because the surface tiers already separate the container.
+  border: palette.slate[300],
+  borderDark: palette.slate[600],
 
-  // Internal section dividers (header/footer rules inside a card).
-  // Must be visually distinct from the card surface.
-  // In dark mode, surfacePanel = slate[800], so divider must step above it.
-  borderDivider: palette.slate[200],
-  borderDividerDark: palette.slate[700],
+  // Input and control borders identify the control, so they hold 3:1 on every surface.
+  borderInput: palette.slate[500],
+  borderInputDark: palette.slate[450],
 
-  // ── Primary RGB channels ──────────────────────────────────────────────────
-  // Stored as an r,g,b triplet so shadow definitions can compose
-  // rgba(var(--color-primary-glow), alpha) without duplicating the hex.
-  // Must stay in sync with `primary` above.
-  primaryGlow: '13, 148, 136', // teal[600]
+  // Rules between rows and inside cards: decorative, because content and spacing separate rows.
+  borderDivider: palette.slate[300],
+  borderDividerDark: palette.slate[600],
 
   // ── Elevation shadows — light mode ───────────────────────────────────────
   shadowSm: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
@@ -172,34 +184,37 @@ export const semanticTokens = {
   // Opacities are calibrated against surfaceBgDark = slate[900] (#0f172a).
   // If the background shifts lighter again, increase these proportionally.
   shadowCardDefaultDark: [
-    'inset 0 0 0 1px rgba(var(--color-primary-glow), 0.24)', // edge
-    '0 0 0 1px rgba(var(--color-primary-glow), 0.08)', // outer ring
-    '0 4px 24px rgba(var(--color-primary-glow), 0.10)', // ambient
+    'inset 0 0 0 1px rgb(var(--color-primary) / 0.24)', // edge
+    '0 0 0 1px rgb(var(--color-primary) / 0.08)', // outer ring
+    '0 4px 24px rgb(var(--color-primary) / 0.10)', // ambient
     '0 1px 6px rgba(0,0,0,0.55)', // depth
   ].join(', '),
   shadowCardOutlinedDark: [
-    'inset 0 0 0 1px rgba(var(--color-primary-glow), 0.18)', // edge
-    '0 4px 24px rgba(var(--color-primary-glow), 0.08)', // ambient
+    'inset 0 0 0 1px rgb(var(--color-primary) / 0.18)', // edge
+    '0 4px 24px rgb(var(--color-primary) / 0.08)', // ambient
     '0 1px 6px rgba(0,0,0,0.50)', // depth
   ].join(', '),
   shadowCardElevatedDark: [
-    'inset 0 0 0 1px rgba(var(--color-primary-glow), 0.35)', // edge — stronger on lighter bg
-    '0 0 0 1px rgba(var(--color-primary-glow), 0.14)', // outer ring
-    '0 10px 48px rgba(var(--color-primary-glow), 0.16)', // wide ambient — key for lift
+    'inset 0 0 0 1px rgb(var(--color-primary) / 0.35)', // edge — stronger on lighter bg
+    '0 0 0 1px rgb(var(--color-primary) / 0.14)', // outer ring
+    '0 10px 48px rgb(var(--color-primary) / 0.16)', // wide ambient — key for lift
     '0 3px 12px rgba(0,0,0,0.70)', // deep drop — restores depth
   ].join(', '),
 
   // ── Card outlined dark border ─────────────────────────────────────────────
-  borderCardOutlinedDark: 'rgba(var(--color-primary-glow), 0.25)',
+  borderCardOutlinedDark: 'rgb(var(--color-primary) / 0.25)',
 
   // ── Card glass highlight (dark only) ──────────────────────────────────────
   // Slightly brighter sheen to restore perceived surface lift on lighter bg.
   cardGlassHighlight: 'linear-gradient(160deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 55%)',
 
-  // ── Status colors (semantic, same in light/dark) ──────────────────────────
-  colorSuccess: palette.emerald[500],
-  colorWarning: palette.amber[500],
-  colorInfo: palette.blue[500],
+  // ── Status colours, readable as text on every surface of their theme ──────────────────────────
+  colorSuccess: palette.emerald[800],
+  colorWarning: palette.amber[800],
+  colorInfo: palette.blue[700],
+  colorSuccessDark: palette.emerald[500],
+  colorWarningDark: palette.amber[500],
+  colorInfoDark: palette.blue[400],
 
   // ── Radius ───────────────────────────────────────────────────────────────
   radiusSm: '4px', // buttons, inputs, sidebar items
@@ -216,34 +231,45 @@ export const semanticTokens = {
   disabledOpacity: '0.4',
 } as const;
 
-// Convenience: CSS-var name → light value pairs consumed by globals.css codegen.
-// You can import this in a script or just use it as reference when editing globals.css.
+/** A hex colour as the space-separated channels `rgb(var(--x) / alpha)` composes with. */
+function channels(hex: string): string {
+  return [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16)).join(' ');
+}
+
+// CSS variables injected by tailwind.config.js. Colour variables hold bare channels, so any
+// raw CSS use is written `rgb(var(--color-x))` or `rgb(var(--color-x) / 0.1)`.
 export const cssVarMap = {
   // ── Brand ────────────────────────────────────────────────────────────────
-  '--color-primary': semanticTokens.primary,
-  '--color-primary-hover': semanticTokens.primaryHover,
-  '--color-primary-active': semanticTokens.primaryActive,
-  // RGB triplet for rgba() shadow composition (tracks primary)
-  '--color-primary-glow': semanticTokens.primaryGlow,
+  '--color-primary': channels(semanticTokens.primary),
+  '--color-primary-hover': channels(semanticTokens.primaryHover),
+  '--color-primary-active': channels(semanticTokens.primaryActive),
+  '--color-on-primary': channels(semanticTokens.onPrimary),
+  '--color-primary-text': channels(semanticTokens.primaryText),
 
   // ── Danger ───────────────────────────────────────────────────────────────
-  '--color-danger': semanticTokens.danger,
-  '--color-danger-hover': semanticTokens.dangerHover,
-  '--color-danger-active': semanticTokens.dangerActive,
+  '--color-danger': channels(semanticTokens.danger),
+  '--color-danger-hover': channels(semanticTokens.dangerHover),
+  '--color-danger-active': channels(semanticTokens.dangerActive),
+  '--color-on-danger': channels(semanticTokens.onDanger),
+  '--color-danger-text': channels(semanticTokens.dangerText),
+
+  '--color-scrim': channels(semanticTokens.scrim),
 
   // ── Surface ──────────────────────────────────────────────────────────────
-  '--color-surface-bg': semanticTokens.surfaceBg,
-  '--color-surface-panel': semanticTokens.surfacePanel,
+  '--color-surface-bg': channels(semanticTokens.surfaceBg),
+  '--color-surface-panel': channels(semanticTokens.surfacePanel),
 
   // ── Text ─────────────────────────────────────────────────────────────────
-  '--color-text-primary': semanticTokens.textPrimary,
-  '--color-text-secondary': semanticTokens.textSecondary,
-  '--color-text-muted': semanticTokens.textMuted,
+  '--color-text-primary': channels(semanticTokens.textPrimary),
+  '--color-text-secondary': channels(semanticTokens.textSecondary),
+  '--color-text-muted': channels(semanticTokens.textMuted),
 
   // ── Border ───────────────────────────────────────────────────────────────
-  '--color-border': semanticTokens.border,
-  '--color-divider': semanticTokens.borderDivider,
-  '--color-border-card-outlined': semanticTokens.border,
+  '--color-border': channels(semanticTokens.border),
+  '--color-border-input': channels(semanticTokens.borderInput),
+  '--color-divider': channels(semanticTokens.borderDivider),
+  // A complete colour, not channels: it carries its own alpha in dark mode.
+  '--color-border-card-outlined': 'rgb(var(--color-border))',
 
   // ── Elevation shadows (light mode) ───────────────────────────────────────
   '--shadow-sm': semanticTokens.shadowSm,
@@ -259,15 +285,15 @@ export const cssVarMap = {
   '--card-glass-highlight': 'none',
 
   // ── Status colors ─────────────────────────────────────────────────────────
-  '--color-success': semanticTokens.colorSuccess,
-  '--color-warning': semanticTokens.colorWarning,
-  '--color-info': semanticTokens.colorInfo,
+  '--color-success': channels(semanticTokens.colorSuccess),
+  '--color-warning': channels(semanticTokens.colorWarning),
+  '--color-info': channels(semanticTokens.colorInfo),
 
   // ── Elevated surface (light mode = same as panel; elevated context handled by shadow) ──
-  '--color-surface-elevated': semanticTokens.surfacePanel,
+  '--color-surface-elevated': channels(semanticTokens.surfacePanel),
 
   // ── Hover surface for panel-level elements ────────────────────────────────
-  '--color-surface-hover': semanticTokens.surfaceHover,
+  '--color-surface-hover': channels(semanticTokens.surfaceHover),
 
   // ── Radius ───────────────────────────────────────────────────────────────
   '--radius-sm': semanticTokens.radiusSm,
@@ -285,21 +311,31 @@ export const cssVarMap = {
 } as const;
 
 export const cssVarMapDark = {
+  // ── Brand and danger as text ─────────────────────────────────────────────
+  '--color-primary-text': channels(semanticTokens.primaryTextDark),
+  '--color-danger-text': channels(semanticTokens.dangerTextDark),
+
   // ── Surface ──────────────────────────────────────────────────────────────
-  '--color-surface-bg': semanticTokens.surfaceBgDark,
-  '--color-surface-panel': semanticTokens.surfacePanelDark,
+  '--color-surface-bg': channels(semanticTokens.surfaceBgDark),
+  '--color-surface-panel': channels(semanticTokens.surfacePanelDark),
 
   // ── Text ─────────────────────────────────────────────────────────────────
-  '--color-text-primary': semanticTokens.textPrimaryDark,
-  '--color-text-secondary': semanticTokens.textSecondaryDark,
-  '--color-text-muted': semanticTokens.textMutedDark,
+  '--color-text-primary': channels(semanticTokens.textPrimaryDark),
+  '--color-text-secondary': channels(semanticTokens.textSecondaryDark),
+  '--color-text-muted': channels(semanticTokens.textMutedDark),
 
   // ── Border ───────────────────────────────────────────────────────────────
-  '--color-border': semanticTokens.borderDark,
-  '--color-divider': semanticTokens.borderDividerDark,
+  '--color-border': channels(semanticTokens.borderDark),
+  '--color-border-input': channels(semanticTokens.borderInputDark),
+  '--color-divider': channels(semanticTokens.borderDividerDark),
   '--color-border-card-outlined': semanticTokens.borderCardOutlinedDark,
 
-  // ── Card shadows (dark mode — teal glow via --color-primary-glow) ─────────
+  // ── Status colors ─────────────────────────────────────────────────────────
+  '--color-success': channels(semanticTokens.colorSuccessDark),
+  '--color-warning': channels(semanticTokens.colorWarningDark),
+  '--color-info': channels(semanticTokens.colorInfoDark),
+
+  // ── Card shadows (dark mode, teal glow composed from --color-primary) ─────
   '--shadow-card-default': semanticTokens.shadowCardDefaultDark,
   '--shadow-card-outlined': semanticTokens.shadowCardOutlinedDark,
   '--shadow-card-elevated': semanticTokens.shadowCardElevatedDark,
@@ -308,10 +344,10 @@ export const cssVarMapDark = {
   '--card-glass-highlight': semanticTokens.cardGlassHighlight,
 
   // ── Elevated surface (modals / dropdowns / tooltips) ─────────────────────
-  '--color-surface-elevated': semanticTokens.surfaceElevatedDark,
+  '--color-surface-elevated': channels(semanticTokens.surfaceElevatedDark),
 
   // ── Hover surface for panel-level elements ────────────────────────────────
-  '--color-surface-hover': semanticTokens.surfaceHoverDark,
+  '--color-surface-hover': channels(semanticTokens.surfaceHoverDark),
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -321,6 +357,8 @@ export const cssVarMapDark = {
 // they automatically flip between light/dark. Primitive utilities (bg-teal-500 …)
 // are also available for one-off overrides.
 // ─────────────────────────────────────────────────────────────────────────────
+const token = (name: string) => `rgb(var(--color-${name}) / <alpha-value>)`;
+
 export const themeColors = {
   // Primitive scales (available as e.g. bg-teal-500, text-slate-900)
   teal: palette.teal,
@@ -328,37 +366,43 @@ export const themeColors = {
   slate: palette.slate,
   gray: palette.gray,
 
-  // Semantic utilities (automatically theme-aware via CSS variables)
+  // Semantic utilities: theme-aware through CSS variables, and they accept opacity modifiers.
   primary: {
-    DEFAULT: 'var(--color-primary)',
-    hover: 'var(--color-primary-hover)',
-    active: 'var(--color-primary-active)',
+    DEFAULT: token('primary'),
+    hover: token('primary-hover'),
+    active: token('primary-active'),
+    text: token('primary-text'),
   },
+  'on-primary': token('on-primary'),
   danger: {
-    DEFAULT: 'var(--color-danger)',
-    hover: 'var(--color-danger-hover)',
-    active: 'var(--color-danger-active)',
+    DEFAULT: token('danger'),
+    hover: token('danger-hover'),
+    active: token('danger-active'),
+    text: token('danger-text'),
   },
+  'on-danger': token('on-danger'),
+  scrim: token('scrim'),
   surface: {
-    bg: 'var(--color-surface-bg)',
-    panel: 'var(--color-surface-panel)',
-    elevated: 'var(--color-surface-elevated)',
-    hover: 'var(--color-surface-hover)',
+    bg: token('surface-bg'),
+    panel: token('surface-panel'),
+    elevated: token('surface-elevated'),
+    hover: token('surface-hover'),
   },
   text: {
-    primary: 'var(--color-text-primary)',
-    secondary: 'var(--color-text-secondary)',
-    muted: 'var(--color-text-muted)',
+    primary: token('text-primary'),
+    secondary: token('text-secondary'),
+    muted: token('text-muted'),
   },
   border: {
-    DEFAULT: 'var(--color-border)',
+    DEFAULT: token('border'),
+    input: token('border-input'),
   },
-  divider: 'var(--color-divider)',
+  divider: token('divider'),
 
   // Status colors
-  success: 'var(--color-success)',
-  warning: 'var(--color-warning)',
-  info: 'var(--color-info)',
+  success: token('success'),
+  warning: token('warning'),
+  info: token('info'),
 
   // Integration partner colors (third-party brand constants, not design tokens)
   plex: {

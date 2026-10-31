@@ -223,7 +223,7 @@ export default function ProviderCard({
             setConfirming(false);
           }
         }}
-        className="w-full flex items-start gap-3 p-4 text-left focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-bg focus-visible:outline-none rounded-lg"
+        className="w-full flex items-start gap-3 p-4 text-left rounded-lg"
         aria-expanded={expanded}
       >
         <ProviderTypeIcon type={provider.type} />
@@ -231,7 +231,7 @@ export default function ProviderCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium text-sm text-text-primary">{provider.name}</span>
-            <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full font-medium">
+            <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary-text rounded-full font-medium">
               {typeDescriptor?.label ?? provider.type}
             </span>
             <StatusIndicator isActive={provider.isActive} />
@@ -262,7 +262,7 @@ export default function ProviderCard({
                 <button
                   type="button"
                   onClick={() => setEditing(true)}
-                  className="text-xs text-text-secondary hover:text-text-primary transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-bg focus-visible:outline-none rounded"
+                  className="text-xs text-text-secondary hover:text-text-primary transition-colors duration-150 rounded"
                 >
                   Edit
                 </button>
@@ -284,7 +284,7 @@ export default function ProviderCard({
                       type="text"
                       value={editForm.name}
                       onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
-                      className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
+                      className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary transition-colors"
                       required
                     />
                   </div>
@@ -297,7 +297,7 @@ export default function ProviderCard({
                       <span className="ml-1.5">
                         <ConnectionTestIcon status={testStatus} />
                       </span>
-                      {testError && <span className="ml-1.5 text-danger-hover">{testError}</span>}
+                      {testError && <span className="ml-1.5 text-danger-text">{testError}</span>}
                     </label>
                     <input
                       id={`edit-${provider.id}-url`}
@@ -308,7 +308,7 @@ export default function ProviderCard({
                         setTestStatus('idle');
                       }}
                       onBlur={() => runTest(editForm.url, editForm.apiKey)}
-                      className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
+                      className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary transition-colors"
                       required
                     />
                   </div>
@@ -329,7 +329,7 @@ export default function ProviderCard({
                       }}
                       onBlur={() => runTest(editForm.url, editForm.apiKey)}
                       placeholder="••••••••"
-                      className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
+                      className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary transition-colors"
                     />
                   </div>
                   {provider.type === 'JELLYFIN' && (
@@ -345,7 +345,7 @@ export default function ProviderCard({
                         type="text"
                         value={editForm.userId}
                         onChange={(e) => setEditForm((f) => ({ ...f, userId: e.target.value }))}
-                        className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
+                        className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary transition-colors"
                       />
                     </div>
                   )}
@@ -452,7 +452,7 @@ export default function ProviderCard({
                     })}
                   </div>
                   {taskToggleError && (
-                    <p className="text-xs text-danger-hover mt-2">{taskToggleError}</p>
+                    <p className="text-xs text-danger-text mt-2">{taskToggleError}</p>
                   )}
                 </section>
               )}
@@ -485,7 +485,7 @@ export default function ProviderCard({
                   <button
                     type="button"
                     onClick={() => setConfirming(true)}
-                    className="text-xs text-text-muted hover:text-danger-hover transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-bg focus-visible:outline-none rounded"
+                    className="text-xs text-text-muted hover:text-danger-text transition-colors duration-150 rounded"
                   >
                     Delete provider
                   </button>

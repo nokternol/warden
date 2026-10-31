@@ -11,7 +11,7 @@ interface SetupChecklistProps {
 type StepStatus = 'done' | 'current' | 'upcoming';
 
 const LINK_CLASS =
-  'mt-2 inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-sm bg-primary text-white hover:bg-primary-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-bg';
+  'mt-2 inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-sm bg-primary text-on-primary hover:bg-primary-hover transition-colors';
 
 type IncompleteState = SetupChecklistProps['state'];
 
@@ -70,7 +70,7 @@ function StepMarker({ number, status }: { number: number; status: StepStatus }) 
       aria-hidden="true"
       className={cn(
         'flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border text-xs font-semibold',
-        status === 'current' && 'border-primary bg-primary text-white',
+        status === 'current' && 'border-primary bg-primary text-on-primary',
         status === 'done' && 'border-success text-success',
         status === 'upcoming' && 'border-border text-text-secondary'
       )}

@@ -7,7 +7,7 @@
 }
 
 .title {
-  @apply text-xl font-semibold text-danger mb-2;
+  @apply text-xl font-semibold text-danger-text mb-2;
 }
 
 .description {
@@ -23,7 +23,7 @@
 }
 
 .pre {
-  @apply mt-2 text-xs text-danger bg-surface-bg p-2 rounded overflow-auto max-h-48;
+  @apply mt-2 text-xs text-danger-text bg-surface-bg p-2 rounded overflow-auto max-h-48;
 }
 
 .actions {

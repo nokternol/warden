@@ -649,7 +649,7 @@ function FilterBarWrapper({
       <div className="px-6 py-2 bg-surface-elevated border-b border-border">
         <span className="text-xs text-text-muted font-mono">
           filter state:{' '}
-          <span className={isActive ? 'text-primary' : 'text-text-muted'}>
+          <span className={isActive ? 'text-primary-text' : 'text-text-muted'}>
             {isActive ? 'active' : 'default'}
           </span>
           {values.shared.title && (
@@ -761,7 +761,7 @@ export const WithActiveFilters: Story = () => {
     <div className="bg-surface-bg min-h-screen">
       <div className="px-6 py-2 bg-surface-elevated border-b border-border">
         <span className="text-xs text-text-muted font-mono">
-          filter state: <span className="text-primary">active</span>
+          filter state: <span className="text-primary-text">active</span>
           <span className="ml-2 text-text-secondary">
             hasFile=true · seriesStatus=continuing · anime · unwatched · year≥2010
           </span>

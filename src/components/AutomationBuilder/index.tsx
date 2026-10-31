@@ -103,10 +103,7 @@ interface TaskSelection {
 
 function SettingsLink() {
   return (
-    <a
-      href="/settings"
-      className="text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded"
-    >
+    <a href="/settings" className="text-primary-text hover:underline rounded">
       Settings
     </a>
   );
@@ -255,7 +252,7 @@ export default function AutomationBuilder({
         <button
           type="button"
           onClick={onCancel}
-          className="text-xs text-text-muted hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded"
+          className="text-xs text-text-muted hover:text-text-primary transition-colors rounded"
         >
           Cancel
         </button>
@@ -277,7 +274,7 @@ export default function AutomationBuilder({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Archive stale movies"
-            className="w-full max-w-md px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary placeholder:text-text-muted/60 focus:border-primary focus:outline-none transition-colors"
+            className="w-full max-w-md px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary placeholder:text-text-muted/60 focus:border-primary transition-colors"
             required
           />
         </div>
@@ -342,13 +339,13 @@ export default function AutomationBuilder({
                             onChange={() =>
                               setSelection({ task: bt, parameterValue: '', confirmed: false })
                             }
-                            className="flex-shrink-0 text-primary focus:ring-primary focus:ring-offset-0"
+                            className="flex-shrink-0 text-primary-text"
                           />
                           <div className="flex flex-1 min-w-0 items-center gap-2">
                             <span
                               className={cn(
                                 'text-sm font-medium truncate',
-                                selected ? 'text-primary' : 'text-text-primary'
+                                selected ? 'text-primary-text' : 'text-text-primary'
                               )}
                             >
                               {bt.label}
@@ -391,7 +388,7 @@ export default function AutomationBuilder({
                 const parameterValue = e.target.value;
                 setSelection((current) => current && { ...current, parameterValue });
               }}
-              className="w-full max-w-md px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
+              className="w-full max-w-md px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary transition-colors"
               required
             >
               <option value="" disabled>
@@ -416,7 +413,7 @@ export default function AutomationBuilder({
                 const confirmed = e.target.checked;
                 setSelection((current) => current && { ...current, confirmed });
               }}
-              className="mt-0.5 flex-shrink-0 text-primary focus:ring-primary focus:ring-offset-0"
+              className="mt-0.5 flex-shrink-0 text-primary-text"
             />
             <span>
               Confirm: {selectedTask.label} · {blastRadius(preview)}
@@ -440,9 +437,9 @@ export default function AutomationBuilder({
                   setIsCustom(false);
                 }}
                 className={cn(
-                  'px-3 py-1 text-xs font-medium rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-panel',
+                  'px-3 py-1 text-xs font-medium rounded-full transition-colors',
                   !isCustom && schedulePreset === p.value
-                    ? 'bg-primary text-white'
+                    ? 'bg-primary text-on-primary'
                     : 'bg-surface-elevated text-text-secondary hover:text-text-primary hover:bg-surface-bg'
                 )}
               >
@@ -453,9 +450,9 @@ export default function AutomationBuilder({
               type="button"
               onClick={() => setIsCustom(true)}
               className={cn(
-                'px-3 py-1 text-xs font-medium rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-panel',
+                'px-3 py-1 text-xs font-medium rounded-full transition-colors',
                 isCustom
-                  ? 'bg-primary text-white'
+                  ? 'bg-primary text-on-primary'
                   : 'bg-surface-elevated text-text-secondary hover:text-text-primary hover:bg-surface-bg'
               )}
             >
@@ -472,7 +469,7 @@ export default function AutomationBuilder({
                 onChange={(e) => setCustomSchedule(e.target.value)}
                 placeholder="e.g. 0 3 * * 1-5"
                 className={cn(
-                  'w-48 px-3 py-1.5 text-sm font-mono bg-surface-bg border rounded text-text-primary focus:outline-none transition-colors',
+                  'w-48 px-3 py-1.5 text-sm font-mono bg-surface-bg border rounded text-text-primary transition-colors',
                   !isValidCron && customSchedule
                     ? 'border-danger'
                     : 'border-border focus:border-primary'
@@ -486,7 +483,7 @@ export default function AutomationBuilder({
             <div
               className={cn(
                 'flex items-center gap-2 text-xs',
-                isValidCron ? 'text-text-secondary' : 'text-danger'
+                isValidCron ? 'text-text-secondary' : 'text-danger-text'
               )}
             >
               <Clock size={12} strokeWidth={1.75} aria-hidden="true" />
@@ -500,13 +497,13 @@ export default function AutomationBuilder({
         </div>
 
         {/* ── Submit ── */}
-        {submitError && <p className="text-xs text-danger">{submitError}</p>}
+        {submitError && <p className="text-xs text-danger-text">{submitError}</p>}
 
         <div className="flex items-center justify-end gap-2 pt-1 border-t border-border/60">
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium rounded-sm bg-surface-elevated border border-border text-text-secondary hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-panel"
+            className="px-4 py-2 text-sm font-medium rounded-sm bg-surface-elevated border border-border text-text-secondary hover:text-text-primary transition-colors"
           >
             Cancel
           </button>
@@ -514,7 +511,7 @@ export default function AutomationBuilder({
             type="submit"
             disabled={!canSubmit || isSubmitting}
             className={cn(
-              'px-4 py-2 text-sm font-medium rounded-sm text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-panel',
+              'px-4 py-2 text-sm font-medium rounded-sm text-on-primary transition-colors',
               canSubmit && !isSubmitting
                 ? 'bg-primary hover:bg-primary-hover'
                 : 'bg-primary/40 cursor-not-allowed'

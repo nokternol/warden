@@ -96,7 +96,7 @@ export default function AutomationsPage() {
               }
               onClick={() => setShowBuilder(true)}
               className={cn(
-                'px-4 py-2 text-white text-sm font-medium rounded-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-bg',
+                'px-4 py-2 text-on-primary text-sm font-medium rounded-sm transition-colors duration-150',
                 queries.length === 0 || showBuilder
                   ? 'bg-primary/40 cursor-not-allowed'
                   : 'bg-primary hover:bg-primary-hover'
@@ -131,7 +131,7 @@ export default function AutomationsPage() {
             <Zap
               size={16}
               strokeWidth={1.75}
-              className={automations.length > 0 ? 'text-primary' : 'text-text-muted'}
+              className={automations.length > 0 ? 'text-primary-text' : 'text-text-muted'}
               aria-hidden="true"
             />
             <h2 id="automations-heading" className="text-sm font-semibold text-text-primary">
@@ -139,9 +139,9 @@ export default function AutomationsPage() {
             </h2>
             {automations.length > 0 && (
               <span className="text-xs text-text-muted flex items-center gap-1.5">
-                {activeCount > 0 && <span className="text-primary">{activeCount} active</span>}
+                {activeCount > 0 && <span className="text-primary-text">{activeCount} active</span>}
                 {activeCount > 0 && errorCount > 0 && <span className="opacity-40">·</span>}
-                {errorCount > 0 && <span className="text-danger">{errorCount} error</span>}
+                {errorCount > 0 && <span className="text-danger-text">{errorCount} error</span>}
               </span>
             )}
           </div>
@@ -188,7 +188,7 @@ export default function AutomationsPage() {
             <BookMarked
               size={16}
               strokeWidth={1.75}
-              className="text-primary flex-shrink-0"
+              className="text-primary-text flex-shrink-0"
               aria-hidden="true"
             />
             <h2 id="media-queries-heading" className="text-sm font-semibold text-text-primary">

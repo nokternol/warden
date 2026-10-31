@@ -47,18 +47,18 @@ export default function QueryRow({
       <div className="flex items-center gap-2 flex-shrink-0 pt-0.5">
         {confirming ? (
           <>
-            <span className="text-xs text-danger font-medium">Delete?</span>
+            <span className="text-xs text-danger-text font-medium">Delete?</span>
             <button
               type="button"
               onClick={onDelete}
-              className="px-2.5 py-1 text-xs font-medium rounded-sm bg-danger text-white hover:bg-danger-hover transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-danger"
+              className="px-2.5 py-1 text-xs font-medium rounded-sm bg-danger text-on-danger hover:bg-danger-hover transition-colors"
             >
               Delete
             </button>
             <button
               type="button"
               onClick={() => setConfirming(false)}
-              className="px-2.5 py-1 text-xs font-medium rounded-sm bg-surface-panel border border-border text-text-secondary hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+              className="px-2.5 py-1 text-xs font-medium rounded-sm bg-surface-panel border border-border text-text-secondary hover:text-text-primary transition-colors"
             >
               Cancel
             </button>
@@ -68,7 +68,7 @@ export default function QueryRow({
             <button
               type="button"
               onClick={onLoad}
-              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-sm bg-surface-panel border border-border text-text-secondary hover:text-text-primary hover:bg-surface-bg transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-sm bg-surface-panel border border-border text-text-secondary hover:text-text-primary hover:bg-surface-bg transition-colors"
             >
               <Clapperboard size={12} strokeWidth={2} aria-hidden="true" />
               Load
@@ -77,7 +77,7 @@ export default function QueryRow({
               type="button"
               onClick={() => setConfirming(true)}
               aria-label={`Delete query "${query.name}"`}
-              className="flex items-center justify-center w-7 h-7 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-danger opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+              className="flex items-center justify-center w-7 h-7 rounded text-text-muted hover:text-danger-text hover:bg-danger/10 transition-colors opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
             >
               <Trash2 size={13} strokeWidth={2} aria-hidden="true" />
             </button>

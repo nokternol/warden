@@ -207,9 +207,9 @@ function SortFieldPicker({
         aria-expanded={open}
         aria-label="Sort by"
         className={cn(
-          'flex items-center gap-1 text-xs font-medium px-1.5 py-1 rounded transition-colors focus:outline-none focus:ring-1 focus:ring-primary',
+          'flex items-center gap-1 text-xs font-medium px-1.5 py-1 rounded transition-colors',
           isNonDefault
-            ? 'text-primary hover:text-primary-hover'
+            ? 'text-primary-text hover:text-primary-text'
             : 'text-text-secondary hover:text-text-primary'
         )}
       >
@@ -243,9 +243,9 @@ function SortFieldPicker({
               }}
               onKeyDown={(e) => handleMenuKeyDown(e, index)}
               className={cn(
-                'w-full text-left px-3 py-1.5 text-xs transition-colors focus:outline-none focus:bg-surface-panel',
+                'w-full text-left px-3 py-1.5 text-xs transition-colors focus:bg-surface-panel',
                 field === opt.value
-                  ? 'text-primary font-medium'
+                  ? 'text-primary-text font-medium'
                   : 'text-text-secondary hover:bg-surface-panel'
               )}
             >
@@ -295,9 +295,9 @@ function SortBar({
           onClick={handleDirToggle}
           aria-label={dir === 'asc' ? 'Sort ascending' : 'Sort descending'}
           className={cn(
-            'flex items-center justify-center w-6 h-6 rounded transition-colors focus:outline-none focus:ring-1 focus:ring-primary',
+            'flex items-center justify-center w-6 h-6 rounded transition-colors',
             isNonDefault
-              ? 'text-primary hover:text-primary-hover'
+              ? 'text-primary-text hover:text-primary-text'
               : 'text-text-muted hover:text-text-secondary'
           )}
         >
@@ -334,7 +334,7 @@ function SortBar({
                 'flex items-center justify-center w-7 h-7 transition-colors',
                 i > 0 && 'border-l border-border',
                 density === value
-                  ? 'bg-primary text-white'
+                  ? 'bg-primary text-on-primary'
                   : 'text-text-muted hover:text-text-secondary hover:bg-surface-hover'
               )}
             >
@@ -583,7 +583,7 @@ export function MediaContent({
                 </p>
                 <a
                   href="/settings"
-                  className="text-xs text-primary hover:underline underline-offset-2"
+                  className="text-xs text-primary-text hover:underline underline-offset-2"
                 >
                   Go to Settings
                 </a>
@@ -595,7 +595,7 @@ export function MediaContent({
                 <button
                   type="button"
                   onClick={clearAll}
-                  className="text-xs text-primary hover:underline underline-offset-2"
+                  className="text-xs text-primary-text hover:underline underline-offset-2"
                 >
                   Clear filters
                 </button>
@@ -668,7 +668,7 @@ export function MediaContent({
                 </p>
                 <a
                   href="/settings"
-                  className="text-xs text-primary hover:underline underline-offset-2"
+                  className="text-xs text-primary-text hover:underline underline-offset-2"
                 >
                   Go to Settings
                 </a>
@@ -680,7 +680,7 @@ export function MediaContent({
                 <button
                   type="button"
                   onClick={clearAll}
-                  className="text-xs text-primary hover:underline underline-offset-2"
+                  className="text-xs text-primary-text hover:underline underline-offset-2"
                 >
                   Clear filters
                 </button>
@@ -762,7 +762,7 @@ export default function MediaPage() {
           href={item.href}
           className={cn(
             'flex flex-col items-center gap-0.5 px-4 py-2 text-xs transition-colors min-h-[44px] justify-center',
-            item.active ? 'text-primary' : 'text-text-muted hover:text-text-primary'
+            item.active ? 'text-primary-text' : 'text-text-muted hover:text-text-primary'
           )}
         >
           {item.icon}
@@ -806,7 +806,7 @@ export default function MediaPage() {
                   className={cn(
                     'md:hidden flex items-center gap-2 px-3 py-1.5 rounded-sm text-sm font-medium border transition-colors',
                     isActive
-                      ? 'bg-primary text-white border-primary'
+                      ? 'bg-primary text-on-primary border-primary'
                       : 'bg-transparent text-text-primary border-border hover:bg-surface-hover'
                   )}
                   onClick={() => setFiltersOpen(true)}
@@ -814,7 +814,7 @@ export default function MediaPage() {
                   <Filter size={16} strokeWidth={2} aria-hidden="true" />
                   Filters
                   {isActive && (
-                    <span className="bg-white/30 rounded-full w-5 h-5 flex items-center justify-center text-xs leading-none">
+                    <span className="bg-on-primary/20 rounded-full w-5 h-5 flex items-center justify-center text-xs leading-none">
                       {activeFilterCount}
                     </span>
                   )}

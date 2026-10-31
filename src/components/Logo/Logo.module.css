@@ -3,7 +3,7 @@
 }
 
 .glow {
-  background-color: rgb(from var(--color-primary) r g b / 0.2);
+  background-color: rgb(var(--color-primary) / 0.2);
   @apply absolute inset-0 blur-2xl rounded-full;
 }
 
@@ -12,7 +12,7 @@
 }
 
 .svgDropShadow {
-  filter: drop-shadow(0 0 8px rgba(20, 184, 166, 0.5));
+  filter: drop-shadow(0 0 8px rgb(var(--color-primary-hover) / 0.5));
 }
 
 .svgSpin {
@@ -28,7 +28,7 @@
 }
 
 .hubCutout {
-  @apply fill-[var(--color-surface-bg)];
+  @apply fill-surface-bg;
 }
 
 .metadataHub {

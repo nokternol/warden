@@ -29,9 +29,7 @@ export default function RunsPage() {
       <div className="p-6">
         <Card variant="outlined" padding="none">
           {isLoading ? (
-            <div className="p-8 text-center text-[var(--color-text-secondary)] text-sm">
-              Loading runs…
-            </div>
+            <div className="p-8 text-center text-text-secondary text-sm">Loading runs…</div>
           ) : runs.length === 0 ? (
             <EmptyState
               icon={<RunsIcon />}
@@ -51,7 +49,7 @@ export default function RunsPage() {
                 </table>
               </div>
               <div className="flex items-center justify-between px-4 py-3 border-t border-white/5">
-                <span className="text-xs text-[var(--color-text-secondary)]">
+                <span className="text-xs text-text-secondary">
                   Page {page + 1} · {runs.length} {runs.length === 1 ? 'run' : 'runs'}
                 </span>
                 <div className="flex gap-2">

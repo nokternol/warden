@@ -117,7 +117,7 @@ export function NumberRangeFilter({
         className={cn(
           'flex items-center gap-1 px-2.5 rounded-md text-xs font-medium border transition-colors h-7',
           isActive
-            ? 'bg-primary text-white border-primary'
+            ? 'bg-primary text-on-primary border-primary'
             : 'bg-surface-panel text-text-secondary border-border hover:bg-surface-hover'
         )}
       >
@@ -137,11 +137,7 @@ export function NumberRangeFilter({
         <div
           role="dialog"
           aria-label={`${label} range filter`}
-          className="absolute top-full left-0 mt-1 z-20 bg-surface-elevated border border-border rounded-lg p-3 w-48"
-          style={{
-            boxShadow:
-              'inset 0 0 0 1px rgba(13,148,136,0.18), 0 4px 24px rgba(13,148,136,0.08), 0 1px 6px rgba(0,0,0,0.50)',
-          }}
+          className="absolute top-full left-0 mt-1 z-20 bg-surface-elevated border border-border rounded-lg p-3 w-48 shadow-card-outlined"
         >
           <div className="flex items-end gap-2">
             <div className="flex-1 min-w-0">
@@ -159,7 +155,7 @@ export function NumberRangeFilter({
                 placeholder={fromPlaceholder}
                 onChange={(e) => setDraftMin(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="w-full px-2 py-1.5 rounded text-xs bg-surface-bg border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary tabular-nums"
+                className="w-full px-2 py-1.5 rounded text-xs bg-surface-bg border border-border text-text-primary placeholder:text-text-muted tabular-nums"
               />
             </div>
             <span className="text-text-muted text-xs pb-[9px] flex-shrink-0">–</span>
@@ -177,7 +173,7 @@ export function NumberRangeFilter({
                 placeholder={toPlaceholder}
                 onChange={(e) => setDraftMax(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="w-full px-2 py-1.5 rounded text-xs bg-surface-bg border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary tabular-nums"
+                className="w-full px-2 py-1.5 rounded text-xs bg-surface-bg border border-border text-text-primary placeholder:text-text-muted tabular-nums"
               />
             </div>
           </div>
@@ -198,7 +194,7 @@ export function NumberRangeFilter({
             <button
               type="button"
               onClick={commitAndClose}
-              className="text-xs font-medium px-3 py-1 rounded bg-primary text-white hover:bg-primary-hover transition-colors focus:outline-none focus:ring-1 focus:ring-primary focus:ring-offset-1 focus:ring-offset-surface-elevated"
+              className="text-xs font-medium px-3 py-1 rounded bg-primary text-on-primary hover:bg-primary-hover transition-colors"
             >
               Apply
             </button>

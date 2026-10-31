@@ -41,7 +41,7 @@
 }
 
 .error {
-  @apply text-danger;
+  @apply text-danger-text;
 }
 
 /* ── Expand toggle ─────────────────────────────────────────────────────────── */

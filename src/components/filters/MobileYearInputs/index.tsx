@@ -33,7 +33,7 @@ export function MobileYearInputs({
             const v = e.target.valueAsNumber;
             setYearMin(Number.isNaN(v) ? undefined : v);
           }}
-          className="w-full px-3 py-2.5 rounded-md text-sm bg-surface-bg border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary"
+          className="w-full px-3 py-2.5 rounded-md text-sm bg-surface-bg border border-border text-text-primary placeholder:text-text-muted"
         />
       </div>
       <span className="text-text-muted pb-3">–</span>
@@ -50,7 +50,7 @@ export function MobileYearInputs({
             const v = e.target.valueAsNumber;
             setYearMax(Number.isNaN(v) ? undefined : v);
           }}
-          className="w-full px-3 py-2.5 rounded-md text-sm bg-surface-bg border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary"
+          className="w-full px-3 py-2.5 rounded-md text-sm bg-surface-bg border border-border text-text-primary placeholder:text-text-muted"
         />
       </div>
     </div>

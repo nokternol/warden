@@ -39,7 +39,7 @@ export function LoginScreen({ isSigningIn, failure, onSignIn }: LoginScreenProps
       <div className="relative z-10 w-full max-w-md text-center">
         {/* Logo container */}
         <div className="mb-6 flex justify-center">
-          <div className="p-4 rounded-lg bg-surface-panel/80 border border-primary/30 shadow-[0_0_30px_rgba(var(--color-primary-glow),0.2)]">
+          <div className="p-4 rounded-lg bg-surface-panel/80 border border-primary/30 shadow-card-elevated">
             <WardenLogo isLoader={isSigningIn} className="w-20 h-20" />
           </div>
         </div>
@@ -56,7 +56,7 @@ export function LoginScreen({ isSigningIn, failure, onSignIn }: LoginScreenProps
             role="alert"
             className="bg-surface-panel border border-danger/60 p-4 rounded-lg mb-6 shadow-card-elevated"
           >
-            <p className="font-semibold text-danger text-sm">{FAILURE_TITLES[failure.kind]}</p>
+            <p className="font-semibold text-danger-text text-sm">{FAILURE_TITLES[failure.kind]}</p>
             <p className="text-sm text-text-primary mt-1">{failure.reason}</p>
             {failure.kind === 'refused' && (
               <p className="text-xs text-text-secondary mt-2">{REFUSED_HINT}</p>
@@ -67,7 +67,7 @@ export function LoginScreen({ isSigningIn, failure, onSignIn }: LoginScreenProps
         {/* Login Card */}
         <div className="bg-surface-panel border border-border rounded-lg overflow-hidden shadow-card-elevated">
           <div className="bg-primary/10 py-2 border-b border-border">
-            <span className="text-xs font-medium text-primary">Sign in to continue</span>
+            <span className="text-xs font-medium text-primary-text">Sign in to continue</span>
           </div>
 
           <div className="p-8">

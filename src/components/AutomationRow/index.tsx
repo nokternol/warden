@@ -109,14 +109,14 @@ export default function AutomationRow({
               onClick={() => {
                 void onDelete();
               }}
-              className="px-2 py-0.5 text-[11px] font-medium rounded-sm bg-danger text-white hover:bg-danger-hover transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-danger"
+              className="px-2 py-0.5 text-[11px] font-medium rounded-sm bg-danger text-on-danger hover:bg-danger-hover transition-colors"
             >
               Delete
             </button>
             <button
               type="button"
               onClick={() => setConfirming(false)}
-              className="px-2 py-0.5 text-[11px] rounded-sm bg-surface-panel border border-border text-text-secondary hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+              className="px-2 py-0.5 text-[11px] rounded-sm bg-surface-panel border border-border text-text-secondary hover:text-text-primary transition-colors"
             >
               Cancel
             </button>
@@ -140,10 +140,10 @@ export default function AutomationRow({
                 title={runTitle}
                 aria-live="polite"
                 className={cn(
-                  'w-6 h-6 flex items-center justify-center rounded transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed',
+                  'w-6 h-6 flex items-center justify-center rounded transition-colors disabled:cursor-not-allowed',
                   runStatus === 'idle' &&
-                    'text-text-muted hover:text-primary hover:bg-surface-elevated',
-                  runStatus === 'fail' && 'text-danger hover:bg-danger/10'
+                    'text-text-muted hover:text-primary-text hover:bg-surface-elevated',
+                  runStatus === 'fail' && 'text-danger-text hover:bg-danger/10'
                 )}
               >
                 {runStatus === 'idle' ? (
@@ -163,7 +163,7 @@ export default function AutomationRow({
                   type="button"
                   onClick={onToggle}
                   title={automation.status === 'active' ? 'Disable' : 'Enable'}
-                  className="w-6 h-6 flex items-center justify-center rounded text-text-muted hover:text-text-primary hover:bg-surface-elevated transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                  className="w-6 h-6 flex items-center justify-center rounded text-text-muted hover:text-text-primary hover:bg-surface-elevated transition-colors"
                 >
                   {automation.status === 'active' ? (
                     <PowerOff size={12} strokeWidth={2} aria-hidden="true" />
@@ -175,7 +175,7 @@ export default function AutomationRow({
                   type="button"
                   onClick={() => setConfirming(true)}
                   title="Delete automation"
-                  className="w-6 h-6 flex items-center justify-center rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-danger"
+                  className="w-6 h-6 flex items-center justify-center rounded text-text-muted hover:text-danger-text hover:bg-danger/10 transition-colors"
                 >
                   <Trash2 size={12} strokeWidth={2} aria-hidden="true" />
                 </button>

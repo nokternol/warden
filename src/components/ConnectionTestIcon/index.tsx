@@ -37,7 +37,7 @@ export default function ConnectionTestIcon({ status }: { status: TestStatus }) {
   }
   return (
     <svg
-      className="inline-block w-4 h-4 text-danger-hover"
+      className="inline-block w-4 h-4 text-danger-text"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"

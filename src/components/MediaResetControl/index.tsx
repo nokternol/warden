@@ -40,7 +40,7 @@ export default function MediaResetControl({
       <button
         type="button"
         onClick={() => setPhase('confirming')}
-        className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-sm border border-border text-text-muted hover:text-danger hover:border-danger/40 hover:bg-danger/10 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-danger"
+        className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-sm border border-border text-text-muted hover:text-danger-text hover:border-danger/40 hover:bg-danger/10 transition-colors"
       >
         <RotateCcw size={12} strokeWidth={2} aria-hidden="true" />
         Reset media data
@@ -67,7 +67,7 @@ export default function MediaResetControl({
         <AlertTriangle
           size={14}
           strokeWidth={2}
-          className="text-danger mt-0.5 flex-shrink-0"
+          className="text-danger-text mt-0.5 flex-shrink-0"
           aria-hidden="true"
         />
         <p className="text-xs text-text-secondary leading-5">
@@ -86,13 +86,13 @@ export default function MediaResetControl({
           value={typed}
           onChange={(e) => setTyped(e.target.value)}
           disabled={phase === 'resetting'}
-          className="mt-1 w-full px-2 py-1 text-xs font-mono rounded-sm border border-border bg-surface-panel text-text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-danger disabled:opacity-50"
+          className="mt-1 w-full px-2 py-1 text-xs font-mono rounded-sm border border-border bg-surface-panel text-text-primary disabled:opacity-50"
         />
       </label>
       {phase === 'error' && (
         <div
           role="alert"
-          className="flex items-start gap-1.5 mt-2 px-2 py-1.5 rounded-sm bg-danger/10 border border-danger/30 text-[11px] text-danger leading-4"
+          className="flex items-start gap-1.5 mt-2 px-2 py-1.5 rounded-sm bg-danger/10 border border-danger/30 text-[11px] text-danger-text leading-4"
         >
           <X size={12} strokeWidth={2.5} className="mt-0.5 flex-shrink-0" aria-hidden="true" />
           {errorMessage}
@@ -105,7 +105,7 @@ export default function MediaResetControl({
           onClick={() => {
             void confirmReset();
           }}
-          className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-sm bg-danger text-white hover:bg-danger-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-danger"
+          className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-sm bg-danger text-on-danger hover:bg-danger-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           {phase === 'resetting' && (
             <svg
@@ -131,7 +131,7 @@ export default function MediaResetControl({
           type="button"
           onClick={cancel}
           disabled={phase === 'resetting'}
-          className="px-2.5 py-1 text-[11px] rounded-sm bg-surface-panel border border-border text-text-secondary hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:opacity-40 disabled:cursor-not-allowed"
+          className="px-2.5 py-1 text-[11px] rounded-sm bg-surface-panel border border-border text-text-secondary hover:text-text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Cancel
         </button>

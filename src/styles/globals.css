@@ -16,8 +16,54 @@
     @apply bg-surface-bg text-text-primary antialiased transition-colors duration-150 font-sans;
   }
 
+  .dark {
+    color-scheme: dark;
+  }
+
+  /* The one focus style. Components do not restyle it. */
   :focus-visible {
     @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-surface-bg;
+  }
+
+  /* Takes the @tailwindcss/forms defaults (grey border, white fill, blue focus) back to the theme. */
+  [type="text"],
+  [type="email"],
+  [type="url"],
+  [type="password"],
+  [type="number"],
+  [type="search"],
+  [multiple],
+  textarea,
+  select,
+  [type="checkbox"],
+  [type="radio"] {
+    @apply border-border-input bg-surface-bg;
+  }
+
+  [type="checkbox"]:checked,
+  [type="radio"]:checked {
+    @apply bg-primary border-primary;
+  }
+
+  [type="text"]:focus,
+  [type="email"]:focus,
+  [type="url"]:focus,
+  [type="password"]:focus,
+  [type="number"]:focus,
+  [type="search"]:focus,
+  [multiple]:focus,
+  textarea:focus,
+  select:focus,
+  [type="checkbox"]:focus,
+  [type="radio"]:focus {
+    @apply outline-none border-primary ring-2 ring-primary ring-offset-2 ring-offset-surface-bg;
+  }
+}
+
+@layer components {
+  /* A text input or select. On a phone it meets the 44px target and the 16px that stops iOS zooming. */
+  .field {
+    @apply w-full px-3 py-1.5 text-base sm:text-sm rounded-sm border border-border-input bg-surface-bg text-text-primary placeholder:text-text-muted transition-colors duration-150 max-sm:min-h-[44px];
   }
 }
 

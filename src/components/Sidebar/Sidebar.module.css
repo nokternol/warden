@@ -23,7 +23,7 @@
 }
 
 .itemActive {
-  @apply bg-primary text-white;
+  @apply bg-primary text-on-primary;
 }
 
 .itemInactive {

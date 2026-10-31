@@ -22,12 +22,12 @@
   margin: 0;
   font-size: 1.375rem;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: rgb(var(--color-text-primary));
 }
 
 .year {
   font-size: 0.875rem;
-  color: var(--color-text-muted);
+  color: rgb(var(--color-text-muted));
 }
 
 .averageBlock {
@@ -43,19 +43,19 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-text-muted);
+  color: rgb(var(--color-text-muted));
 }
 
 .averageValue {
   font-size: 2rem;
   font-weight: 800;
-  color: var(--color-primary);
+  color: rgb(var(--color-primary));
   line-height: 1;
 }
 
 .sourcesCount {
   font-size: 0.6875rem;
-  color: var(--color-text-muted);
+  color: rgb(var(--color-text-muted));
 }
 
 /* ── Sources Grid ── */
@@ -79,7 +79,7 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--color-text-muted);
+  color: rgb(var(--color-text-muted));
 }
 
 .sourceBody {
@@ -98,11 +98,11 @@
 
 .ratingLabel {
   font-size: 0.8125rem;
-  color: var(--color-text-muted);
+  color: rgb(var(--color-text-muted));
 }
 
 .ratingValue {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: rgb(var(--color-text-primary));
 }

@@ -128,7 +128,7 @@ export function FilterPicker({ entries, onPick }: FilterPickerProps) {
         ref={triggerRef}
         type="button"
         {...({ popovertarget: popoverId } as PopoverTargetAttr)}
-        className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs font-medium border border-dashed border-border text-text-secondary hover:border-primary hover:text-primary-hover transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs font-medium border border-dashed border-border text-text-secondary hover:border-primary hover:text-primary-text transition-colors"
       >
         <svg
           width="11"
@@ -168,7 +168,7 @@ export function FilterPicker({ entries, onPick }: FilterPickerProps) {
             }
             role="combobox"
             aria-expanded="true"
-            className="w-full px-2 py-1.5 rounded-sm text-xs bg-surface-bg border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full px-2 py-1.5 rounded-sm text-xs bg-surface-bg border border-border text-text-primary placeholder:text-text-muted"
           />
         </div>
         {/* Combobox pattern (biome.json override disables useFocusableInteractive here):
@@ -200,7 +200,7 @@ export function FilterPicker({ entries, onPick }: FilterPickerProps) {
                       className={cn(
                         'w-full text-left px-2 py-1.5 rounded-sm text-xs transition-colors',
                         isActive
-                          ? 'bg-primary/15 text-primary-hover'
+                          ? 'bg-primary/15 text-primary-text'
                           : 'text-text-secondary hover:bg-surface-hover'
                       )}
                     >

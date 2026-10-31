@@ -28,7 +28,12 @@ export default function SystemPage() {
         <section aria-labelledby="system-automations-heading">
           <div className="flex items-center justify-between gap-3 mb-1">
             <div className="flex items-center gap-3">
-              <Monitor size={16} strokeWidth={1.75} className="text-primary" aria-hidden="true" />
+              <Monitor
+                size={16}
+                strokeWidth={1.75}
+                className="text-primary-text"
+                aria-hidden="true"
+              />
               <h2
                 id="system-automations-heading"
                 className="text-sm font-semibold text-text-primary"

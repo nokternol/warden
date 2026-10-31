@@ -49,10 +49,10 @@ export function Tabs<T extends string>({ tabs, active, onChange, className }: Ta
           onKeyDown={(e) => handleKeyDown(e, index)}
           onClick={() => onChange(tab.value)}
           className={cn(
-            'px-3 py-1.5 rounded-sm text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-panel',
+            'px-3 py-1.5 rounded-sm text-sm font-medium transition-colors',
             active === tab.value
-              ? 'bg-primary text-white focus-visible:ring-text-primary'
-              : 'text-text-primary hover:bg-surface-hover focus-visible:ring-primary'
+              ? 'bg-primary text-on-primary'
+              : 'text-text-primary hover:bg-surface-hover'
           )}
         >
           {tab.label}

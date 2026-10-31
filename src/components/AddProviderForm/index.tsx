@@ -113,7 +113,7 @@ export default function AddProviderForm({
               setTestStatus('idle');
               setTestError(undefined);
             }}
-            className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
+            className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary transition-colors"
           >
             {types.map((t) => (
               <option key={t.type} value={t.type}>
@@ -132,7 +132,7 @@ export default function AddProviderForm({
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             placeholder="My Radarr"
-            className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
+            className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary transition-colors"
             required
           />
         </div>
@@ -142,7 +142,7 @@ export default function AddProviderForm({
             <span className="ml-1.5">
               <ConnectionTestIcon status={testStatus} />
             </span>
-            {testError && <span className="ml-1.5 text-xs text-danger-hover">{testError}</span>}
+            {testError && <span className="ml-1.5 text-xs text-danger-text">{testError}</span>}
           </label>
           {chosen?.defaultUrl !== undefined ? (
             <input
@@ -163,7 +163,7 @@ export default function AddProviderForm({
               }}
               onBlur={() => chosen && runTest(form.url, form.apiKey, chosen.type)}
               placeholder="http://localhost:7878"
-              className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
+              className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary transition-colors"
               required
             />
           )}
@@ -182,7 +182,7 @@ export default function AddProviderForm({
             }}
             onBlur={() => chosen && runTest(form.url, form.apiKey, chosen.type)}
             placeholder="Optional"
-            className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
+            className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary transition-colors"
           />
         </div>
         {chosen?.type === 'JELLYFIN' && (
@@ -196,7 +196,7 @@ export default function AddProviderForm({
               value={form.userId}
               onChange={(e) => setForm((f) => ({ ...f, userId: e.target.value }))}
               placeholder="Jellyfin user ID"
-              className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
+              className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary transition-colors"
             />
           </div>
         )}

@@ -16,7 +16,7 @@ export function TextFilter({
       placeholder={label}
       value={value ?? ''}
       onChange={(e) => onChange(e.target.value || undefined)}
-      className="px-2.5 py-1 rounded-md text-xs bg-surface-bg border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary w-36"
+      className="px-2.5 py-1 rounded-md text-xs bg-surface-bg border border-border text-text-primary placeholder:text-text-muted w-36"
     />
   );
 }
