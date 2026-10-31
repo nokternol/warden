@@ -1,6 +1,6 @@
 import StatusDot from '@app/components/StatusDot';
 import type { AutomationDto } from '@app/hooks/useAutomations';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import AutomationRow from '../index';
@@ -21,6 +21,12 @@ const mockAutomation: AutomationDto = {
   status: 'active',
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
+};
+
+const enabledRunButton = async () => {
+  const button = screen.getByTitle('Run now');
+  await waitFor(() => expect(button).toBeEnabled());
+  return button;
 };
 
 describe('AutomationRow', () => {
@@ -75,7 +81,7 @@ describe('AutomationRow', () => {
         onRun={onRun}
       />
     );
-    await user.click(screen.getByTitle('Run now'));
+    await user.click(await enabledRunButton());
     expect(onRun).toHaveBeenCalledTimes(1);
   });
 
@@ -90,7 +96,7 @@ describe('AutomationRow', () => {
         onRun={onRun}
       />
     );
-    await user.click(screen.getByTitle('Run now'));
+    await user.click(await enabledRunButton());
     expect(await screen.findByTitle('Run triggered')).toBeInTheDocument();
   });
 
@@ -105,8 +111,8 @@ describe('AutomationRow', () => {
         onRun={onRun}
       />
     );
-    await user.click(screen.getByTitle('Run now'));
-    const failButton = await screen.findByTitle('Run failed — click to retry');
+    await user.click(await enabledRunButton());
+    const failButton = await screen.findByTitle('Run failed, click to retry');
     expect(failButton.parentElement?.className).not.toMatch(/opacity-0/);
   });
 

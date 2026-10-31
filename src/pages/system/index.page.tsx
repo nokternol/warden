@@ -53,21 +53,9 @@ export default function SystemPage() {
           >
             {(list) => (
               <div className="rounded-lg border border-border bg-surface-panel">
-                <div className="hidden sm:grid sm:grid-cols-[1fr_160px_168px_88px] items-center px-4 py-2 border-b border-divider">
-                  <span className="text-xs font-medium text-text-muted">Automation</span>
-                  <span className="text-xs font-medium text-text-muted">Schedule</span>
-                  <span className="text-xs font-medium text-text-muted">Last run</span>
-                  <span className="text-xs font-medium text-text-muted">Next run</span>
-                </div>
+                <AutomationRow.Head />
                 {list.map((a) => (
-                  <AutomationRow
-                    key={a.id}
-                    automation={a}
-                    // System rows expose only Run-now; toggle/delete are never rendered for kind=system.
-                    onToggle={() => {}}
-                    onDelete={() => {}}
-                    onRun={() => run(a.id)}
-                  />
+                  <AutomationRow key={a.id} automation={a} onRun={() => run(a.id)} />
                 ))}
               </div>
             )}

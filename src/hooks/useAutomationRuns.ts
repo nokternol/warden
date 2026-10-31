@@ -27,3 +27,12 @@ export function useAutomationRuns(opts: { automationId?: number } = {}) {
     refresh: mutate,
   };
 }
+
+/** The input that reads one automation's newest recorded run. */
+export const latestRunInput = (automationId: number) => ({ automationId, limit: 1 });
+
+/** One automation's newest recorded run, whatever its status; undefined until it answers. */
+export function useLatestRun(automationId: number): AutomationRunDto | undefined {
+  const { data } = useApi(api.automations.runs, latestRunInput(automationId));
+  return data?.data[0];
+}

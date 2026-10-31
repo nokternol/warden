@@ -158,23 +158,13 @@ export default function AutomationsPage() {
           >
             {(list) => (
               <div className="rounded-lg border border-border bg-surface-panel">
-                {/* Column header */}
-                <div className="hidden sm:grid sm:grid-cols-[1fr_160px_168px_88px] items-center px-4 py-2 border-b border-divider">
-                  <span className="text-xs font-medium text-text-muted">Automation</span>
-                  <span className="text-xs font-medium text-text-muted">Schedule</span>
-                  <span className="text-xs font-medium text-text-muted">Last run</span>
-                  <span className="text-xs font-medium text-text-muted">Next run</span>
-                </div>
+                <AutomationRow.Head />
                 {list.map((a) => (
                   <AutomationRow
                     key={a.id}
                     automation={a}
-                    onToggle={() => {
-                      void setStatus(a.id, a.status === 'active' ? 'disabled' : 'active');
-                    }}
-                    onDelete={() => {
-                      void removeAutomation(a.id);
-                    }}
+                    onToggle={() => setStatus(a.id, a.status === 'active' ? 'disabled' : 'active')}
+                    onDelete={() => removeAutomation(a.id)}
                     onRun={() => run(a.id)}
                   />
                 ))}

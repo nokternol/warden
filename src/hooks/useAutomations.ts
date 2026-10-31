@@ -1,8 +1,10 @@
 import { api } from '@app/lib/api/client';
-import { useApi } from '@app/lib/api/useApi';
+import { apiKey, useApi } from '@app/lib/api/useApi';
 import type { CreateAutomationInput } from '@contract/automations';
 import type { AutomationDto, AutomationStatus } from '@contract/schemas';
 import { useState } from 'react';
+import { mutate as globalMutate } from 'swr';
+import { latestRunInput } from './useAutomationRuns';
 
 export type { AutomationDto, CreateAutomationInput };
 
@@ -49,7 +51,10 @@ export function useAutomations(options?: { kind?: 'user' | 'system' }) {
   const run = async (id: number): Promise<void> => {
     await api.automations.run({ id });
     for (const delay of POLL_DELAYS_MS) {
-      setTimeout(() => void mutate(), delay);
+      setTimeout(() => {
+        void mutate();
+        void globalMutate(apiKey(api.automations.runs, latestRunInput(id)));
+      }, delay);
     }
   };
 
