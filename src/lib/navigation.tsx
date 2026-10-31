@@ -1,4 +1,5 @@
 import type { SidebarItem } from '@app/types/navigation';
+import { type Scope, isOfferedPage, scope } from '@contract/scope';
 import {
   Clapperboard,
   History,
@@ -45,7 +46,7 @@ export const NAV_ITEMS: Omit<SidebarItem, 'active'>[] = [
 export const BOTTOM_NAV_ITEMS: Omit<SidebarItem, 'active'>[] = [
   {
     id: 'settings',
-    label: 'Settings',
+    label: 'Providers',
     icon: <Settings size={20} strokeWidth={1.75} />,
     href: '/settings',
   },
@@ -57,7 +58,10 @@ export const BOTTOM_NAV_ITEMS: Omit<SidebarItem, 'active'>[] = [
   },
 ];
 
-export function resolveNavItems(pathname: string): {
+export function resolveNavItems(
+  pathname: string,
+  declared: Scope = scope
+): {
   items: SidebarItem[];
   bottomItems: SidebarItem[];
 } {
@@ -66,8 +70,10 @@ export function resolveNavItems(pathname: string): {
     active: pathname === item.href || pathname.startsWith(`${item.href}/`),
   });
 
+  const offered = ({ href }: Omit<SidebarItem, 'active'>) => isOfferedPage(declared, href);
+
   return {
-    items: NAV_ITEMS.map(activate),
-    bottomItems: BOTTOM_NAV_ITEMS.map(activate),
+    items: NAV_ITEMS.filter(offered).map(activate),
+    bottomItems: BOTTOM_NAV_ITEMS.filter(offered).map(activate),
   };
 }
