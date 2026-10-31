@@ -60,7 +60,7 @@ function ResultSection({ result }: { result: SearchResult }) {
   );
 }
 
-// ─── Auth guard ───────────────────────────────────────────────────────────────
+// ─── Page guard ───────────────────────────────────────────────────────────────
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const refusal = await guardPage(ctx);
