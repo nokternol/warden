@@ -11,6 +11,15 @@ interface PlexPinResponse {
   authToken?: string;
 }
 
+/**
+ * An identifier for this browser. `crypto.randomUUID` only exists on secure pages, and Warden is
+ * commonly opened over plain HTTP on a LAN address; `getRandomValues` exists on every page.
+ */
+function newClientId(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
 export class PlexOAuth {
   private plexHeaders: Record<string, string>;
   private pin?: PlexPin;
@@ -23,7 +32,7 @@ export class PlexOAuth {
   private initializeHeaders(): Record<string, string> {
     let clientId = localStorage.getItem('plex-client-id');
     if (!clientId) {
-      clientId = crypto.randomUUID();
+      clientId = newClientId();
       localStorage.setItem('plex-client-id', clientId);
     }
 

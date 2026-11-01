@@ -12,11 +12,22 @@ describe('PlexOAuth', () => {
       getItem: vi.fn().mockReturnValue('test-client-id'),
       setItem: vi.fn(),
     });
-    vi.stubGlobal('crypto', { randomUUID: vi.fn().mockReturnValue('test-client-id') });
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it('makes a client id on a plain HTTP page, where crypto.randomUUID does not exist', () => {
+    const setItem = vi.fn();
+    vi.stubGlobal('localStorage', { getItem: vi.fn().mockReturnValue(null), setItem });
+    vi.stubGlobal('crypto', {
+      getRandomValues: (bytes: Uint8Array) => bytes.fill(7),
+    });
+
+    new PlexOAuth();
+
+    expect(setItem).toHaveBeenCalledWith('plex-client-id', '07'.repeat(16));
   });
 
   describe('getPin()', () => {

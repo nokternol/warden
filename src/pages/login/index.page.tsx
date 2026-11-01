@@ -34,12 +34,13 @@ export default function LoginPage() {
     setIsSigningIn(true);
     setFailure(null);
 
-    const oauth = new PlexOAuth();
-    // Must run synchronously here (user gesture context) so the browser
-    // allows window.open and we get a same-origin proxy we can later close.
-    oauth.preparePopup();
-
+    let oauth: PlexOAuth | undefined;
     try {
+      oauth = new PlexOAuth();
+      // Must run synchronously here (user gesture context) so the browser
+      // allows window.open and we get a same-origin proxy we can later close.
+      oauth.preparePopup();
+
       const authToken = await oauth.login();
 
       await api.auth.plexLogin({ authToken });
@@ -49,7 +50,7 @@ export default function LoginPage() {
       if (err instanceof Error && err.message === 'Authentication cancelled') return;
       setFailure(signInFailure(err));
     } finally {
-      oauth.close();
+      oauth?.close();
       setIsSigningIn(false);
     }
   };

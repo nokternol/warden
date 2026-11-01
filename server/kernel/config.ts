@@ -110,3 +110,14 @@ export function _resetConfig(): void {
 
 /** Session time-to-live: 30 days in seconds. Used by both cookie maxAge and the session store. */
 export const SESSION_TTL_SECONDS = 86400 * 30;
+
+/**
+ * Secure over HTTPS, including behind a proxy when TRUST_PROXY is on. Warden is commonly reached over
+ * plain HTTP on a LAN, where a browser drops a secure cookie and sign-in cannot stick.
+ */
+export const SESSION_COOKIE = {
+  maxAge: SESSION_TTL_SECONDS * 1000,
+  httpOnly: true,
+  sameSite: 'lax',
+  secure: 'auto',
+} as const;
