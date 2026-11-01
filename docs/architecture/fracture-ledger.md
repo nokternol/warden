@@ -514,6 +514,13 @@ Earlier entries in this ledger use the names that were current when they healed 
 - **Status:** the second mechanism is deferred in `contract/scope.ts`, so it is unreachable but present.
   Unifying them comes before un-deferring it, per the post-MVP list in `docs/in_progress/mvp/plan.md`.
 
+### Rule key and content type — two names kept (recorded 2026-11-01)
+
+- **Fracture:** the wire fields `QualificationIssue.filterKey` and `ProviderStatus.affectedFilterKeys` and
+  the column `media_query_filter_values.filterKey` hold rule keys. `media_identity.kind` holds a content
+  type.
+- **Status:** left in place for the MVP, since no user sees them and one needs a migration.
+
 ### Title lookup — two mechanisms, one blocked (recorded 2026-11-01, MVP slice B4)
 
 - **Fracture:** the title filter and the Search page's cross-provider metadata search both look up a

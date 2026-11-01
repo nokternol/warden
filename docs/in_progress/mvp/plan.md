@@ -820,15 +820,6 @@ names, so nothing is renamed twice.
   catalogue's `apiKeyRequired` and `hostPlaceholder`, an optional `id` on `providers.test` so a stored key
   can be probed, and display names for system automations.
 
-**F3 · Bulk actions and keyboard shortcuts**
-- **Model:** Opus 5.5.
-- **Why:** the critique found that managing many automations means repeating one row's actions, and
-  that nothing has a keyboard shortcut.
-- **Behaviours:** select automations (one, or all) and enable, disable or delete them together, with a
-  confirmation naming the count for delete and a statement of any that failed, which stay selected.
-  `/` focuses Media's title filter and `n` opens the automation builder, ignored while typing.
-- **Not included:** bulk Run Now, since a destructive task confirms its own count per automation.
-
 ### Track G — Acceptance
 
 **G1 · MVP acceptance and docs closure**
