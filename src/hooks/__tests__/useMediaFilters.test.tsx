@@ -111,6 +111,14 @@ describe('useMediaFilters — initial state', () => {
     expect(result.current.filterState.shared.title).toBe('batman');
   });
 
+  it('keeps the active tab in the URL when a filter changes', async () => {
+    mockRouterQuery = { tab: 'series' };
+    const { result } = await renderReady();
+    act(() => result.current.setValue('shared', 'title', 'batman'));
+    await waitFor(() => expect(mockReplace).toHaveBeenCalled());
+    expect(mockReplace.mock.lastCall?.[0].query.tab).toBe('series');
+  });
+
   it('parses a range field into { min, max } once rules load', async () => {
     mockRouterQuery = { yearMin: '2010', yearMax: '2020' };
     const { result } = renderHook(() => useMediaFilters(), { wrapper });

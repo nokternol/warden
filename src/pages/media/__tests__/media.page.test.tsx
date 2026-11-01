@@ -142,6 +142,25 @@ describe('MediaPage sort direction', () => {
   });
 });
 
+describe('MediaPage save confirmation', () => {
+  it('confirms a saved query until the filters change', async () => {
+    const user = setupUser();
+    render(
+      <SWRConfig value={{ provider: () => new Map() }}>
+        <MediaPage />
+      </SWRConfig>
+    );
+    const title = await screen.findAllByPlaceholderText('Filter by title…');
+    await user.type(title[0] as HTMLElement, 'a');
+    await user.click(await screen.findByRole('button', { name: 'Save as query' }));
+    await user.type(screen.getByPlaceholderText('e.g. Unwatched 4K movies'), 'Mine');
+    await user.keyboard('{Enter}');
+    expect(await screen.findByText('Saved query Mine.')).toBeInTheDocument();
+    await user.type(title[0] as HTMLElement, 'b');
+    await waitFor(() => expect(screen.queryByText('Saved query Mine.')).not.toBeInTheDocument());
+  });
+});
+
 describe('MediaPage heading order', () => {
   it('names each tab panel with a level 2 heading, so title headings do not skip a level', async () => {
     render(

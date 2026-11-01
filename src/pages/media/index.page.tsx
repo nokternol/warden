@@ -593,12 +593,10 @@ export function MediaContent({
               </MediaCard>
             )}
           />
-          {movies.hasMore && !movies.isFetchingMore && (
+          {movies.hasMore && !movies.isFetchingMore && !movies.error && (
             <div ref={movieSentinelRef} style={{ height: 1 }} />
           )}
-          {movies.error && movies.items.length === 0 && (
-            <LoadError what="movies" onRetry={() => movies.refresh?.()} />
-          )}
+          {movies.error && <LoadError what="movies" onRetry={() => movies.refresh?.()} />}
           {!movies.isLoading &&
             !movies.error &&
             movies.items.length === 0 &&
@@ -666,12 +664,10 @@ export function MediaContent({
               </MediaCard>
             )}
           />
-          {series.hasMore && !series.isFetchingMore && (
+          {series.hasMore && !series.isFetchingMore && !series.error && (
             <div ref={seriesSentinelRef} style={{ height: 1 }} />
           )}
-          {series.error && series.items.length === 0 && (
-            <LoadError what="series" onRetry={() => series.refresh?.()} />
-          )}
+          {series.error && <LoadError what="series" onRetry={() => series.refresh?.()} />}
           {!series.isLoading &&
             !series.error &&
             series.items.length === 0 &&
@@ -752,11 +748,24 @@ export default function MediaPage() {
   const [density, setDensity] = useCardDensity();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const { query: routeQuery } = useRouter();
+  const router = useRouter();
+  const routeQuery = router.query;
   const [activeTab, setActiveTab] = useState<ActiveTab>(
     routeQuery.tab === 'series' ? 'series' : 'movies'
   );
-  const [savedName, setSavedName] = useState<string | null>(null);
+  // The confirmation describes the filters that were saved; it ends when they change.
+  const [saved, setSaved] = useState<{ name: string; values: FilterState } | null>(null);
+
+  /** The tab lives in the URL so a reload stays on it. Movies is the default and has no param. */
+  const changeTab = (tab: ActiveTab) => {
+    setActiveTab(tab);
+    const { tab: _previous, ...rest } = router.query;
+    void router.replace(
+      { pathname: router.pathname, query: tab === 'series' ? { ...rest, tab } : rest },
+      undefined,
+      { shallow: true }
+    );
+  };
 
   const activeFilterCount = countActiveFilters(values, activeTab);
 
@@ -792,7 +801,7 @@ export default function MediaPage() {
                     },
                   ]}
                   active={activeTab}
-                  onChange={setActiveTab}
+                  onChange={changeTab}
                 />
                 <button
                   type="button"
@@ -817,9 +826,9 @@ export default function MediaPage() {
           />
         }
       >
-        {savedName && (
+        {saved?.values === values && (
           <p role="status" className="px-3 sm:px-6 pt-3 text-sm text-success">
-            Saved query {savedName}.
+            Saved query {saved.name}.
           </p>
         )}
         {loadFailures.length > 0 && (
@@ -859,7 +868,7 @@ export default function MediaPage() {
         onSave={async (name) => {
           const contentType = activeTab === 'movies' ? 'movie' : 'series';
           await saveQuery(name, contentType, toFilters(values, contentType, rules));
-          setSavedName(name);
+          setSaved({ name, values });
         }}
       />
     </>

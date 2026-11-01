@@ -251,7 +251,9 @@ export function useMediaFilters() {
     lastSyncedQueryRef.current = nextQuery;
     if (unchanged) return;
     const r = routerRef.current;
-    void r.replace({ pathname: r.pathname, query: nextQuery }, undefined, { shallow: true });
+    // The active tab shares the URL with the filters but is not part of their state.
+    const query = r.query.tab ? { ...nextQuery, tab: r.query.tab } : nextQuery;
+    void r.replace({ pathname: r.pathname, query }, undefined, { shallow: true });
   }, [filterState, index]);
 
   const debouncedFilters = useMemo(() => {
