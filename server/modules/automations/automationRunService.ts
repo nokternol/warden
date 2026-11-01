@@ -170,29 +170,35 @@ export class AutomationRunService {
     return this.db.insert(automationRunItems).select(
       this.db
         .select({
+          id: sql<number>`NULL`.as('id'),
           runId: sql<number>`(SELECT max(${automationRuns.id}) FROM ${automationRuns})`.as('runId'),
           mediaItemId: mediaItems.id,
+          title: mediaIdentity.title,
+          year: mediaIdentity.year,
         })
         .from(mediaItems)
+        .innerJoin(mediaIdentity, eq(mediaItems.mediaIdentityId, mediaIdentity.id))
         .where(inArray(mediaItems.id, mediaItemIds))
     );
   }
 
   async listRunItems(runId: number, page: PageRequest = {}): Promise<RunItemPage> {
-    const data = await this.db
+    const rows = await this.db
       .select({
-        mediaItemId: mediaItems.id,
-        title: mediaIdentity.title,
-        year: mediaIdentity.year,
+        id: automationRunItems.id,
+        mediaItemId: automationRunItems.mediaItemId,
+        title: automationRunItems.title,
+        year: automationRunItems.year,
         deleted: mediaItems.deleted,
       })
       .from(automationRunItems)
-      .innerJoin(mediaItems, eq(automationRunItems.mediaItemId, mediaItems.id))
-      .innerJoin(mediaIdentity, eq(mediaItems.mediaIdentityId, mediaIdentity.id))
+      .leftJoin(mediaItems, eq(automationRunItems.mediaItemId, mediaItems.id))
       .where(eq(automationRunItems.runId, runId))
-      .orderBy(asc(mediaIdentity.title), asc(mediaItems.id))
+      .orderBy(asc(automationRunItems.title), asc(automationRunItems.id))
       .limit(page.limit ?? DEFAULT_PAGE_SIZE)
       .offset(page.offset ?? 0);
+    // A link with no media row left targeted a title Warden no longer holds.
+    const data = rows.map((row) => ({ ...row, deleted: row.deleted ?? true }));
     const total = await this.db.$count(automationRunItems, eq(automationRunItems.runId, runId));
     return { data, total };
   }

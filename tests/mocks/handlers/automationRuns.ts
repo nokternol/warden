@@ -28,11 +28,11 @@ export const mockRuns: AutomationRunDto[] = [
 /** What each mock run targeted, keyed by run id; one item has since left its source. */
 export const mockRunItems: Record<number, RunItemDto[]> = {
   1: [
-    { mediaItemId: 11, title: 'Alien', year: 1979, deleted: false },
-    { mediaItemId: 12, title: 'Brazil', year: 1985, deleted: false },
-    { mediaItemId: 13, title: 'Collateral', year: 2004, deleted: false },
-    { mediaItemId: 14, title: 'Heat', year: 1995, deleted: true },
-    { mediaItemId: 15, title: 'Ronin', year: 1998, deleted: false },
+    { id: 11, mediaItemId: 11, title: 'Alien', year: 1979, deleted: false },
+    { id: 12, mediaItemId: 12, title: 'Brazil', year: 1985, deleted: false },
+    { id: 13, mediaItemId: 13, title: 'Collateral', year: 2004, deleted: false },
+    { id: 14, mediaItemId: 14, title: 'Heat', year: 1995, deleted: true },
+    { id: 15, mediaItemId: 15, title: 'Ronin', year: 1998, deleted: false },
   ],
   2: [],
 };
