@@ -81,3 +81,5 @@ suites. Integration tests build a real app over the in-memory db via the contain
   running and no orphaned process holds the file open.
 - **Migration failed at startup** — the server refuses to boot by design. Fix the SQL (or the journal
   entry) rather than working around the crash.
+
+A database with pending migrations is copied to `<file>.before-migration-<count>` first, so a bad migration can be undone by restoring that file.

@@ -204,7 +204,7 @@ export const ProviderSchema = z
   .strict();
 
 /** `skipped`: the automation was invalid when due, so it never ran; the run's `error` holds why. */
-export const AutomationRunStatusSchema = z.enum(['success', 'error', 'skipped']);
+export const AutomationRunStatusSchema = z.enum(['running', 'success', 'error', 'skipped']);
 
 export const AutomationRunSchema = z
   .object({

@@ -12,7 +12,7 @@ import {
   mediaSourceFor,
   resolveActuatorTargets,
 } from '../media';
-import type { MediaSource, MediaSourceFactory } from '../media';
+import type { EnrichmentFields, MediaSource, MediaSourceFactory } from '../media';
 import type { MediaQueryService, QueryHealth } from '../mediaQueries';
 import {
   type ActuatorTask,
@@ -57,6 +57,42 @@ interface RunPlan {
   task: ActuatorTask;
   targets: RunTargets;
   actuatorIds: Parameters<ActuatorTask['run']>[0];
+  /** How many source copies the query was evaluated against, and how many it matched. */
+  poolSize: number;
+  matchedCount: number;
+}
+
+const ENRICHMENT_TASK_ID = 'system:enrichment';
+
+/** Below this many targets a destructive run is small enough to be its own limit. */
+const REACH_CHECK_MIN_ITEMS = 20;
+
+/**
+ * Why a destructive run should not proceed: a query matching most of a library is almost always a
+ * fault, such as data that failed to load, and nobody is watching a scheduled run to stop it.
+ */
+export function excessiveReach({
+  task,
+  matchedCount,
+  poolSize,
+}: Pick<RunPlan, 'task' | 'matchedCount' | 'poolSize'>): string | undefined {
+  if (!task.destructive || matchedCount < REACH_CHECK_MIN_ITEMS) return undefined;
+  if (matchedCount * 2 <= poolSize) return undefined;
+  return `Not run: this would act on ${matchedCount} of ${poolSize} titles, more than half the library. Narrow its queries if that is intended.`;
+}
+
+/** A source that remembers how many items it returned. */
+function counting(source: MediaSource): MediaSource & { count: () => number } {
+  let count = 0;
+  return {
+    ...source,
+    getMediaItems: async () => {
+      const items = await source.getMediaItems();
+      count = items.length;
+      return items;
+    },
+    count: () => count,
+  };
 }
 
 /** "RADARR" as "Radarr". */
@@ -107,11 +143,13 @@ export class AutomationExecutor {
   private readonly mediaQueryService: MediaQueryService;
   private readonly providerFactory: IProviderFactory;
   private readonly mediaQueryEngine: MediaQueryEngine;
+  private readonly enrichmentQueries?: EnrichmentQueries;
   private readonly mediaSourceFactory?: Pick<MediaSourceFactory, 'sourcesFor'>;
   private readonly db?: DrizzleDb;
   private readonly systemTaskRunner?: SystemTaskRunnerLike;
   private readonly eventBus?: DomainEventBus;
   private readonly inFlight = new Set<number>();
+  private readonly providerTurns = new Map<number, Promise<void>>();
 
   constructor(deps: ExecutorDeps) {
     this.automationService = deps.automationService;
@@ -119,13 +157,15 @@ export class AutomationExecutor {
     this.providerSettingsService = deps.providerSettingsService;
     this.mediaQueryService = deps.mediaQueryService;
     this.providerFactory = deps.providerFactory ?? new ProviderFactory();
+    const enrichmentQueries =
+      deps.enrichmentQueries ?? (deps.db ? new EnrichmentQueries({ db: deps.db }) : undefined);
     this.mediaQueryEngine =
       deps.mediaQueryEngine ??
       new MediaQueryEngine({
         db: deps.db,
-        enrichmentQueries:
-          deps.enrichmentQueries ?? (deps.db ? new EnrichmentQueries({ db: deps.db }) : undefined),
+        enrichmentQueries: enrichmentQueries,
       });
+    this.enrichmentQueries = enrichmentQueries;
     this.mediaSourceFactory = deps.mediaSourceFactory;
     this.db = deps.db;
     this.systemTaskRunner = deps.systemTaskRunner;
@@ -140,6 +180,7 @@ export class AutomationExecutor {
     let kind: 'user' | 'system' = 'user';
     let taskId = '';
     let targets: RunTargets | undefined;
+    let runId: number | undefined;
 
     try {
       const automation = await this.automationService.getById(automationId);
@@ -180,38 +221,72 @@ export class AutomationExecutor {
         throw new Error(`Automation ${automationId} has no queries — cannot execute`);
       }
 
-      const providerSettings = await this.providerSettingsService.findById(automation.provider.id);
-      const problems = await this.blockingProblems(providerSettings, automationQueries);
-      if (problems.length > 0) {
-        await this.recordSkip(automationId, taskId, problems.join('; '));
-        return;
-      }
-      const plan = await this.planRun(automation.taskId, providerSettings, automationQueries);
-      targets = plan.targets;
-      itemCount = targets.items.length;
-      await plan.task.run(plan.actuatorIds, automation.taskParameter);
-      await this.recordResult(automationId, taskId, {
-        itemCount,
-        status: 'success',
-        kind,
-        targets,
+      // Runs through one provider take turns, so each plans against what the last one changed.
+      await this.takeProviderTurn(automation.provider.id, async () => {
+        // The wait may be long: what runs is the automation as it stands when its turn comes.
+        const current = await this.automationService.getById(automationId);
+        if (automation.status === 'active' && current.status !== 'active') return;
+        const providerSettings = await this.providerSettingsService.findById(
+          automation.provider!.id
+        );
+        const problems = await this.blockingProblems(providerSettings, current.queries ?? []);
+        if (problems.length > 0) {
+          await this.recordSkip(automationId, taskId, problems.join('; '));
+          return;
+        }
+        const plan = await this.planRun(current.taskId, providerSettings, current.queries ?? []);
+        targets = plan.targets;
+        itemCount = targets.items.length;
+        const excess = excessiveReach(plan);
+        if (excess) {
+          await this.recordSkip(automationId, taskId, excess);
+          return;
+        }
+        const run = await this.automationRunService.beginRun({ automationId, kind, targets });
+        runId = run.id;
+        await plan.task.run(plan.actuatorIds, current.taskParameter);
+        await this.recordResult(
+          automationId,
+          taskId,
+          { itemCount, status: 'success', kind, targets },
+          runId
+        );
+        this.emitDataChange(plan.task.affects, itemCount);
       });
-
-      this.emitDataChange(plan.task.affects, itemCount);
 
       log.info('Automation executed', { automationId, taskId: automation.taskId, itemCount });
     } catch (err) {
       log.error('Automation execution failed', { automationId, err });
-      await this.recordResult(automationId, taskId, {
-        itemCount,
-        status: 'error',
-        error: err instanceof Error ? err.message : 'Unknown error',
-        kind,
-        targets,
-      });
+      await this.recordResult(
+        automationId,
+        taskId,
+        {
+          itemCount,
+          status: 'error',
+          error: err instanceof Error ? err.message : 'Unknown error',
+          kind,
+          targets,
+        },
+        runId
+      );
     } finally {
       this.inFlight.delete(automationId);
     }
+  }
+
+  /** Whether a run of this automation is underway, which a further trigger would not start. */
+  isRunning(automationId: number): boolean {
+    return this.inFlight.has(automationId);
+  }
+
+  private async takeProviderTurn(providerId: number, work: () => Promise<void>): Promise<void> {
+    const previous = this.providerTurns.get(providerId) ?? Promise.resolve();
+    const turn = previous.then(work, work);
+    this.providerTurns.set(
+      providerId,
+      turn.catch(() => {})
+    );
+    await turn;
   }
 
   /** Records that an invalid user automation was not run, and why. */
@@ -251,8 +326,48 @@ export class AutomationExecutor {
       for (const issue of health.qualificationIssues) {
         problems.push(describeQualificationIssue(issue, contentType, automationProvider));
       }
+      problems.push(...(await this.missingEnrichment(queryId, contentType, health.providerStatus)));
     }
     return problems;
+  }
+
+  /**
+   * A title with no stored value reads as having none: no play history reads as unwatched. Until
+   * enrichment data is known to be complete, a filter on it can select the wrong titles, whether
+   * an include matches a title it should not or an exclude fails to protect one. Fields a source
+   * supplies itself arrive with the catalog, so only enrichment-only rules are checked.
+   */
+  private async missingEnrichment(
+    queryId: number,
+    contentType: ContentType,
+    providerStatus: ProviderStatus[]
+  ): Promise<string[]> {
+    if (!this.enrichmentQueries) return [];
+    const { filters } = await this.mediaQueryService.getById(queryId);
+    const problems: string[] = [];
+    for (const { ruleKey } of filters) {
+      const rule = getRule(ruleKey, contentType);
+      if (!rule?.sourceField || rule.providers.some(isMediaSourceType)) continue;
+      const producers = providerStatus.filter((s) => s.affectedFilterKeys.includes(ruleKey));
+      // A required provider's absence is already reported by the health check.
+      if (producers.some((s) => s.required && !s.configured)) continue;
+      if (!producers.some((s) => s.configured)) {
+        problems.push(`${rule.label} filter has no connected provider to supply its data`);
+      } else if (!(await this.enrichmentIsComplete(rule.sourceField, contentType))) {
+        problems.push(`${rule.label} filter's data has not finished loading`);
+      }
+    }
+    return problems;
+  }
+
+  /** The latest enrichment run finished cleanly, and this content type has values for the field. */
+  private async enrichmentIsComplete(
+    field: keyof EnrichmentFields,
+    contentType: ContentType
+  ): Promise<boolean> {
+    const latest = await this.automationRunService.latestStatusOfTask(ENRICHMENT_TASK_ID);
+    if (latest !== 'success') return false;
+    return (await this.enrichmentQueries?.hasValues(field, contentType)) ?? false;
   }
 
   /**
@@ -306,9 +421,8 @@ export class AutomationExecutor {
     if (isMediaSourceType(providerSettings.type)) {
       // Catalog-owning actuator: the query evaluates against its own catalog
       // and its native ids feed the task directly, one target per native id.
-      const mediaSource = mediaSourceFor(
-        provider as RadarrProvider | SonarrProvider,
-        providerSettings.id
+      const mediaSource = counting(
+        mediaSourceFor(provider as RadarrProvider | SonarrProvider, providerSettings.id)
       );
       const matched = await this.mediaQueryEngine.evaluate({
         source: mediaSource,
@@ -320,6 +434,8 @@ export class AutomationExecutor {
         task,
         targets: { contentType, items: [...targetById.values()] },
         actuatorIds: [...targetById.keys()],
+        poolSize: mediaSource.count(),
+        matchedCount: matched.length,
       };
     }
 
@@ -334,22 +450,53 @@ export class AutomationExecutor {
       );
     }
     const entries = await this.mediaSourceFactory.sourcesFor(contentType);
-    const pooled: MediaSource = {
-      getMediaItems: async () =>
-        (await Promise.all(entries.map((e) => e.source.getMediaItems()))).flat(),
+    let fetched: ReturnType<MediaSource['getMediaItems']> | undefined;
+    const pooled = counting({
+      // Fetched once, so what a run excludes is judged on the same catalog as what it includes.
+      getMediaItems: () => {
+        fetched ??= Promise.all(entries.map((e) => e.source.getMediaItems())).then((all) =>
+          all.flat()
+        );
+        return fetched;
+      },
       idOf: () => undefined,
-    };
+    });
     const matched = await this.mediaQueryEngine.evaluate({
       source: pooled,
       contentType,
       clauses: querySpecs,
     });
-    const { actuatorIds, addressed } = await resolveActuatorTargets(
-      this.db,
-      providerSettings.type,
-      matched
-    );
-    return { task, targets: { contentType, items: addressed }, actuatorIds };
+    const resolved = await resolveActuatorTargets(this.db, providerSettings.type, matched);
+    // Copies of one title share an actuator id, so an exclude on any copy protects the title.
+    const excludes = querySpecs.filter((spec) => spec.role === 'exclude');
+    const protectedIds = new Set<string>();
+    if (excludes.length > 0) {
+      const excluded = await this.mediaQueryEngine.evaluate({
+        source: pooled,
+        contentType,
+        clauses: excludes.map((spec) => ({ ...spec, role: 'include' as const })),
+      });
+      const { actuatorIds } = await resolveActuatorTargets(
+        this.db,
+        providerSettings.type,
+        excluded
+      );
+      for (const id of actuatorIds) protectedIds.add(id);
+    }
+    const actuatorIds = resolved.actuatorIds.filter((id) => !protectedIds.has(id));
+    return {
+      task,
+      targets: {
+        contentType,
+        items: resolved.addressed.filter((item) => {
+          const id = resolved.actuatorIdOf(item);
+          return id !== undefined && !protectedIds.has(id);
+        }),
+      },
+      actuatorIds,
+      poolSize: pooled.count(),
+      matchedCount: resolved.addressed.length,
+    };
   }
 
   /**
@@ -368,11 +515,12 @@ export class AutomationExecutor {
     taskId: string,
     result: {
       itemCount: number;
-      status: AutomationRunStatus;
+      status: Exclude<AutomationRunStatus, 'running'>;
       error?: string;
       kind: 'user' | 'system';
       targets?: RunTargets;
-    }
+    },
+    runId?: number
   ): Promise<void> {
     // A skip describes the automation's validity, not an execution, so the
     // last-run summary keeps describing the last run that did execute.
@@ -380,14 +528,16 @@ export class AutomationExecutor {
       result.status === 'skipped'
         ? undefined
         : this.automationService.recordRun(automationId, { ...result, status: result.status }),
-      this.automationRunService.createRun({
-        automationId,
-        status: result.status,
-        itemCount: result.itemCount,
-        error: result.error,
-        kind: result.kind,
-        targets: result.targets,
-      }),
+      runId !== undefined
+        ? this.automationRunService.finishRun(runId, result)
+        : this.automationRunService.createRun({
+            automationId,
+            status: result.status,
+            itemCount: result.itemCount,
+            error: result.error,
+            kind: result.kind,
+            targets: result.targets,
+          }),
     ]);
 
     this.eventBus?.emit('run:completed', {

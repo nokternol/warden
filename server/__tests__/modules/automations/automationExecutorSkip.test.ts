@@ -9,7 +9,7 @@ import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { DomainEventBus, type DomainEvents } from '@server/kernel/eventBus';
 import logger from '@server/kernel/logger';
-import { AutomationExecutor } from '@server/modules/automations/automationExecutor';
+import { AutomationExecutor, excessiveReach } from '@server/modules/automations/automationExecutor';
 import { AutomationRunService } from '@server/modules/automations/automationRunService';
 import { AutomationService } from '@server/modules/automations/automationService';
 import type { Filter } from '@server/modules/media/ruleRegistry';
@@ -54,6 +54,7 @@ describe('AutomationExecutor — invalid automations', () => {
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
       mediaQueryService,
+      db,
     });
     unmonitorCalls = 0;
     server.use(
@@ -202,28 +203,6 @@ describe('AutomationExecutor — invalid automations', () => {
     expect(unmonitorCalls).toBe(0);
   });
 
-  it('still runs an automation whose only problem is a missing optional provider', async () => {
-    const own = await seedRadarr('Own Radarr');
-    const query = await mediaQueryService.create({
-      name: 'Watched',
-      contentType: 'movie',
-      filters: [{ ruleKey: 'watched', value: true }],
-    });
-    expect((await mediaQueryService.getById(query.id)).health.status).toBe('degraded');
-    const automation = await automationService.create({
-      name: 'Nightly',
-      queries: [{ queryId: query.id, role: 'include' }],
-      providerId: own.id,
-      taskId: 'unmonitorMovie',
-      schedule: '0 2 * * *',
-    });
-
-    await executor.execute(automation.id);
-
-    const [run] = await getDb().select().from(automationRuns);
-    expect(run.status).toBe('success');
-  });
-
   it('runs again once the problem is fixed, since validity is derived on each run', async () => {
     const own = await seedRadarr('Own Radarr');
     const automation = await seedAutomationOver(own.id, []);
@@ -303,5 +282,222 @@ describe('AutomationExecutor — invalid automations', () => {
 
     const [run] = await getDb().select().from(automationRuns);
     expect(run.error).toBe('retiredRule filter needs a Tautulli provider, which is not configured');
+  });
+
+  describe('hardening', () => {
+    const movies = (count: number) =>
+      Array.from({ length: count }, (_, i) =>
+        createRadarrMovie({ id: i + 1, title: `T${i}`, tags: [1] })
+      );
+
+    it('will not filter on play history that has not been loaded, since none reads as unwatched', async () => {
+      const radarr = await seedRadarr('Radarr');
+      await providerSettingsService.create({
+        type: MetadataProviderType.TAUTULLI,
+        name: 'Tautulli',
+        url: 'http://localhost:8181',
+        apiKey: 'k',
+      });
+      const automation = await seedAutomationOver(radarr.id, [
+        { ruleKey: 'watched', value: false },
+      ]);
+
+      await executor.execute(automation.id);
+
+      const [run] = await getDb().select().from(automationRuns);
+      expect(run.status).toBe('skipped');
+      expect(run.error).toMatch(/has not finished loading/);
+      expect(unmonitorCalls).toBe(0);
+    });
+
+    it('will not filter on play history when nothing connected can supply it', async () => {
+      const radarr = await seedRadarr('Radarr');
+      const automation = await seedAutomationOver(radarr.id, [
+        { ruleKey: 'watched', value: false },
+      ]);
+
+      await executor.execute(automation.id);
+
+      const [run] = await getDb().select().from(automationRuns);
+      expect(run.status).toBe('skipped');
+      expect(run.error).toMatch(/no connected provider/);
+    });
+
+    it('will not exclude on play history that has not been loaded, since nothing would be protected', async () => {
+      const radarr = await seedRadarr('Radarr');
+      await providerSettingsService.create({
+        type: MetadataProviderType.TAUTULLI,
+        name: 'Tautulli',
+        url: 'http://localhost:8181',
+        apiKey: 'k',
+      });
+      const include = await mediaQueryService.create({
+        name: 'All',
+        contentType: 'movie',
+        filters: [],
+      });
+      const exclude = await mediaQueryService.create({
+        name: 'Watched',
+        contentType: 'movie',
+        filters: [{ ruleKey: 'watched', value: true }],
+      });
+      const automation = await automationService.create({
+        name: 'Nightly',
+        queries: [
+          { queryId: include.id, role: 'include' },
+          { queryId: exclude.id, role: 'exclude' },
+        ],
+        providerId: radarr.id,
+        taskId: 'unmonitorMovie',
+        schedule: '0 2 * * *',
+      });
+
+      await executor.execute(automation.id);
+
+      const [run] = await getDb().select().from(automationRuns);
+      expect(run.status).toBe('skipped');
+      expect(unmonitorCalls).toBe(0);
+    });
+
+    it('still filters on fields a source supplies itself, with no enrichment loaded', async () => {
+      const radarr = await seedRadarr('Radarr');
+      const automation = await seedAutomationOver(radarr.id, [tagsOf(radarr.id)]);
+
+      await executor.execute(automation.id);
+
+      const [run] = await getDb().select().from(automationRuns);
+      expect(run.status).toBe('success');
+      expect(unmonitorCalls).toBe(1);
+    });
+
+    it('runs what the automation is when its turn comes, not when it was queued', async () => {
+      const radarr = await seedRadarr('Radarr');
+      const first = await seedAutomationOver(radarr.id, []);
+      const second = await seedAutomationOver(radarr.id, []);
+      const running = Promise.all([executor.execute(first.id), executor.execute(second.id)]);
+      await automationService.updateStatus(second.id, 'disabled');
+      await running;
+
+      const runs = await getDb().select().from(automationRuns);
+      expect(runs.map((r) => r.automationId)).toEqual([first.id]);
+    });
+
+    async function destructiveAutomation() {
+      const radarr = await providerSettingsService.create({
+        type: MetadataProviderType.RADARR,
+        name: 'Radarr',
+        url: `${RADARR_URL}/api/v3`,
+        apiKey: 'test-key',
+        settings: { enabledTasks: ['deleteMovieWithFiles'] },
+      });
+      const query = await mediaQueryService.create({
+        name: 'All',
+        contentType: 'movie',
+        filters: [],
+      });
+      return automationService.create({
+        name: 'Purge',
+        queries: [{ queryId: query.id, role: 'include' }],
+        providerId: radarr.id,
+        taskId: 'deleteMovieWithFiles',
+        schedule: '0 2 * * *',
+      });
+    }
+
+    it('will not run a destructive task over most of a library', async () => {
+      let deletes = 0;
+      server.use(
+        http.get(`${RADARR_URL}/api/v3/movie`, () => HttpResponse.json(movies(40))),
+        http.delete(`${RADARR_URL}/api/v3/movie/:id`, () => {
+          deletes += 1;
+          return HttpResponse.json({});
+        })
+      );
+      const automation = await destructiveAutomation();
+
+      await executor.execute(automation.id);
+
+      const [run] = await getDb().select().from(automationRuns);
+      expect(run.status).toBe('skipped');
+      expect(run.error).toMatch(/40 of 40 titles/);
+      expect(deletes).toBe(0);
+    });
+
+    it('records a run as running before its task acts', async () => {
+      let statusDuringTask: string | undefined;
+      const radarr = await seedRadarr('Radarr');
+      const automation = await seedAutomationOver(radarr.id, []);
+      server.use(
+        http.put(`${RADARR_URL}/api/v3/movie/:id`, async () => {
+          const [run] = await getDb().select().from(automationRuns);
+          statusDuringTask = run?.status;
+          return HttpResponse.json({ id: 1, monitored: false });
+        })
+      );
+
+      await executor.execute(automation.id);
+
+      expect(statusDuringTask).toBe('running');
+      const runs = await getDb().select().from(automationRuns);
+      expect(runs.map((r) => r.status)).toEqual(['success']);
+    });
+
+    it('closes a run a restart cut off, stating some items may have changed', async () => {
+      const radarr = await seedRadarr('Radarr');
+      const automation = await seedAutomationOver(radarr.id, []);
+      const runService = new AutomationRunService({ db: getDb() });
+      await runService.beginRun({
+        automationId: automation.id,
+        kind: 'user',
+        targets: { contentType: 'movie', items: [] },
+      });
+
+      await runService.closeInterruptedRuns();
+
+      const [run] = await getDb().select().from(automationRuns);
+      expect(run.status).toBe('error');
+      expect(run.error).toMatch(/may have changed/);
+      const after = await automationService.getById(automation.id);
+      expect(after.lastRun?.status).toBe('error');
+    });
+
+    it('takes turns between automations on one provider', async () => {
+      const radarr = await seedRadarr('Radarr');
+      const first = await seedAutomationOver(radarr.id, []);
+      const second = await seedAutomationOver(radarr.id, []);
+      let active = 0;
+      let mostAtOnce = 0;
+      server.use(
+        http.put(`${RADARR_URL}/api/v3/movie/:id`, async () => {
+          active += 1;
+          mostAtOnce = Math.max(mostAtOnce, active);
+          await new Promise((resolve) => setTimeout(resolve, 20));
+          active -= 1;
+          return HttpResponse.json({ id: 1, monitored: false });
+        })
+      );
+
+      await Promise.all([executor.execute(first.id), executor.execute(second.id)]);
+
+      expect(mostAtOnce).toBe(1);
+      const runs = await getDb().select().from(automationRuns);
+      expect(runs.map((r) => r.status)).toEqual(['success', 'success']);
+    });
+
+    it('judges reach on copies, since copies of one title share an actuator id', () => {
+      const task = { destructive: true } as never;
+      expect(excessiveReach({ task, matchedCount: 80, poolSize: 80 })).toMatch(/80 of 80/);
+      expect(excessiveReach({ task, matchedCount: 40, poolSize: 80 })).toBeUndefined();
+      expect(excessiveReach({ task, matchedCount: 10, poolSize: 10 })).toBeUndefined();
+    });
+
+    it('reports an automation as running only while it is', async () => {
+      const radarr = await seedRadarr('Radarr');
+      const automation = await seedAutomationOver(radarr.id, []);
+      const running = executor.execute(automation.id);
+      expect(executor.isRunning(automation.id)).toBe(true);
+      await running;
+      expect(executor.isRunning(automation.id)).toBe(false);
+    });
   });
 });

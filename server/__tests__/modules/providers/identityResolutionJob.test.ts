@@ -250,23 +250,47 @@ describe('IdentityResolutionJob', () => {
   it('keeps a copy that left its source, marked deleted, with its group', async () => {
     const db = getDb();
     const radarr = {
-      getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 1, tmdbId: 100, title: 'Heat' })]),
+      getMovies: vi
+        .fn()
+        .mockResolvedValue([
+          makeMovie({ id: 1, tmdbId: 100, title: 'Heat' }),
+          makeMovie({ id: 2, tmdbId: 200, title: 'Ronin' }),
+        ]),
     };
     await new IdentityResolutionJob({
       db,
       movieSources: [{ providerId: radarrProviderId, provider: radarr }],
     }).runForMovies();
 
-    radarr.getMovies.mockResolvedValue([]);
+    radarr.getMovies.mockResolvedValue([makeMovie({ id: 2, tmdbId: 200, title: 'Ronin' })]);
     await new IdentityResolutionJob({
       db,
       movieSources: [{ providerId: radarrProviderId, provider: radarr }],
     }).runForMovies();
 
     const items = await db.select().from(mediaItems);
-    expect(items.map((i) => [i.externalId, i.deleted])).toEqual([[1, true]]);
+    expect(items.map((i) => [i.externalId, i.deleted])).toEqual([
+      [1, true],
+      [2, false],
+    ]);
     const groups = await db.select().from(mediaIdentity);
-    expect(groups.map((g) => g.title)).toEqual(['Heat']);
+    expect(groups.map((g) => g.title)).toContain('Heat');
+  });
+
+  it('treats an empty answer from a source as a fault, keeping its library', async () => {
+    const db = getDb();
+    const radarr = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 1, tmdbId: 100 })]) };
+    const job = new IdentityResolutionJob({
+      db,
+      movieSources: [{ providerId: radarrProviderId, provider: radarr }],
+    });
+    await job.runForMovies();
+
+    radarr.getMovies.mockResolvedValue([]);
+    await job.runForMovies();
+
+    const items = await db.select().from(mediaItems);
+    expect(items.map((i) => i.deleted)).toEqual([false]);
   });
 
   it('clears the deleted mark when the source lists the item again', async () => {
@@ -277,18 +301,22 @@ describe('IdentityResolutionJob', () => {
       movieSources: [{ providerId: radarrProviderId, provider: radarr }],
     });
     await job.runForMovies();
-    radarr.getMovies.mockResolvedValueOnce([]);
+    radarr.getMovies.mockResolvedValueOnce([makeMovie({ id: 2, tmdbId: 200 })]);
     await job.runForMovies();
 
     await job.runForMovies();
 
     const items = await db.select().from(mediaItems);
-    expect(items.map((i) => [i.externalId, i.deleted])).toEqual([[1, false]]);
+    expect(items.find((i) => i.externalId === 1)?.deleted).toBe(false);
   });
 
   it('marks a media_item row no longer reported by its instance deleted without touching other instances', async () => {
     const db = getDb();
-    const radarrA = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 1, tmdbId: 100 })]) };
+    const radarrA = {
+      getMovies: vi
+        .fn()
+        .mockResolvedValue([makeMovie({ id: 1, tmdbId: 100 }), makeMovie({ id: 3, tmdbId: 300 })]),
+    };
     const radarrB = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 2, tmdbId: 200 })]) };
     const job = new IdentityResolutionJob({
       db,
@@ -300,7 +328,9 @@ describe('IdentityResolutionJob', () => {
     await job.runForMovies();
 
     // Movie 1 is removed from instance A's library; instance B is untouched.
-    const radarrANowEmpty = { getMovies: vi.fn().mockResolvedValue([]) };
+    const radarrANowEmpty = {
+      getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 3, tmdbId: 300 })]),
+    };
     const job2 = new IdentityResolutionJob({
       db,
       movieSources: [
@@ -311,9 +341,10 @@ describe('IdentityResolutionJob', () => {
     await job2.runForMovies();
 
     const items = await db.select().from(mediaItems);
-    expect(items.map((i) => [i.providerId, i.deleted])).toEqual([
-      [radarrProviderId, true],
-      [radarr4kProviderId, false],
+    expect(items.map((i) => [i.providerId, i.externalId, i.deleted])).toEqual([
+      [radarrProviderId, 1, true],
+      [radarrProviderId, 3, false],
+      [radarr4kProviderId, 2, false],
     ]);
   });
 
@@ -342,7 +373,11 @@ describe('IdentityResolutionJob', () => {
 
   it('does not sweep a group still held by another instance after one instance prunes its copy', async () => {
     const db = getDb();
-    const radarrA = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 1, tmdbId: 603 })]) };
+    const radarrA = {
+      getMovies: vi
+        .fn()
+        .mockResolvedValue([makeMovie({ id: 1, tmdbId: 603 }), makeMovie({ id: 3, tmdbId: 300 })]),
+    };
     const radarrB = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 1, tmdbId: 603 })]) };
     const job = new IdentityResolutionJob({
       db,
@@ -353,7 +388,9 @@ describe('IdentityResolutionJob', () => {
     });
     await job.runForMovies();
 
-    const radarrAEmpty = { getMovies: vi.fn().mockResolvedValue([]) };
+    const radarrAEmpty = {
+      getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 3, tmdbId: 300 })]),
+    };
     const job2 = new IdentityResolutionJob({
       db,
       movieSources: [
@@ -363,10 +400,11 @@ describe('IdentityResolutionJob', () => {
     });
     await job2.runForMovies();
 
-    expect(await db.select().from(mediaIdentity)).toHaveLength(1);
+    expect(await db.select().from(mediaIdentity)).toHaveLength(2);
     const items = await db.select().from(mediaItems);
     expect(items.map((i) => [i.providerId, i.deleted])).toEqual([
       [radarrProviderId, true],
+      [radarrProviderId, false],
       [radarr4kProviderId, false],
     ]);
   });
@@ -422,16 +460,23 @@ describe('IdentityResolutionJob', () => {
   it('marks a media_item row no longer reported by its Sonarr instance deleted', async () => {
     const db = getDb();
     const sonarrA = {
-      getSeries: vi.fn().mockResolvedValue([makeSeries({ id: 10, tvdbId: 200 })]),
+      getSeries: vi
+        .fn()
+        .mockResolvedValue([
+          makeSeries({ id: 10, tvdbId: 200 }),
+          makeSeries({ id: 11, tvdbId: 201 }),
+        ]),
     };
     const job = new IdentityResolutionJob({
       db,
       seriesSources: [{ providerId: sonarrProviderId, provider: sonarrA }],
     });
     await job.runForSeries();
-    expect(await db.select().from(mediaItems)).toHaveLength(1);
+    expect(await db.select().from(mediaItems)).toHaveLength(2);
 
-    const sonarrAEmpty = { getSeries: vi.fn().mockResolvedValue([]) };
+    const sonarrAEmpty = {
+      getSeries: vi.fn().mockResolvedValue([makeSeries({ id: 11, tvdbId: 201 })]),
+    };
     const job2 = new IdentityResolutionJob({
       db,
       seriesSources: [{ providerId: sonarrProviderId, provider: sonarrAEmpty }],
@@ -439,8 +484,8 @@ describe('IdentityResolutionJob', () => {
     await job2.runForSeries();
 
     const items = await db.select().from(mediaItems);
-    expect(items.map((i) => i.deleted)).toEqual([true]);
-    expect(await db.select().from(mediaIdentity)).toHaveLength(1);
+    expect(items.map((i) => i.deleted)).toEqual([true, false]);
+    expect(await db.select().from(mediaIdentity)).toHaveLength(2);
   });
 
   it("stamps a series identity from a Plex item of type 'show'", async () => {

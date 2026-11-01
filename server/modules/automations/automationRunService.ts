@@ -47,6 +47,9 @@ export interface PageRequest {
   offset?: number;
 }
 
+export const INTERRUPTED_RUN_ERROR =
+  'Warden stopped during this run, so some of its items may have changed.';
+
 const DEFAULT_PAGE_SIZE = 50;
 
 export interface ListRunsOptions extends PageRequest {
@@ -137,6 +140,74 @@ export class AutomationRunService {
       error: row.error ?? null,
       createdAt: row.createdAt,
     });
+  }
+
+  /** Records that a run has started, with its targets, before anything is acted on. */
+  async beginRun(data: { automationId: number; kind: 'user' | 'system'; targets: RunTargets }) {
+    return this.createRun({
+      ...data,
+      status: 'running',
+      itemCount: data.targets.items.length,
+    });
+  }
+
+  async finishRun(
+    runId: number,
+    outcome: { status: AutomationRunStatus; itemCount: number; error?: string }
+  ): Promise<AutomationRunDto> {
+    await this.db
+      .update(automationRuns)
+      .set({ status: outcome.status, itemCount: outcome.itemCount, error: outcome.error ?? null })
+      .where(eq(automationRuns.id, runId));
+    const [row] = await this.db
+      .select(RUN_COLUMNS)
+      .from(automationRuns)
+      .innerJoin(automations, eq(automationRuns.automationId, automations.id))
+      .where(eq(automationRuns.id, runId));
+    return rowToDto(row);
+  }
+
+  /** A run still marked running at startup was cut off: its task may have acted on some items. */
+  async closeInterruptedRuns(): Promise<void> {
+    const interrupted = await this.db
+      .select({ automationId: automationRuns.automationId, itemCount: automationRuns.itemCount })
+      .from(automationRuns)
+      .where(eq(automationRuns.status, 'running'));
+    for (const { automationId, itemCount } of interrupted) {
+      await this.db
+        .update(automations)
+        .set({
+          lastRunAt: new Date().toISOString(),
+          lastRunItemCount: itemCount ?? 0,
+          lastRunStatus: 'error',
+          lastRunError: INTERRUPTED_RUN_ERROR,
+        })
+        .where(eq(automations.id, automationId));
+    }
+    await this.db
+      .update(automationRuns)
+      .set({ status: 'error', error: INTERRUPTED_RUN_ERROR })
+      .where(eq(automationRuns.status, 'running'));
+  }
+
+  async latestStatusOfTask(taskId: string): Promise<AutomationRunStatus | undefined> {
+    const [row] = await this.db
+      .select({ status: automationRuns.status })
+      .from(automationRuns)
+      .innerJoin(automations, eq(automationRuns.automationId, automations.id))
+      .where(eq(automations.taskId, taskId))
+      .orderBy(desc(automationRuns.id))
+      .limit(1);
+    return row?.status as AutomationRunStatus | undefined;
+  }
+
+  async countRuns(opts: Pick<ListRunsOptions, 'automationId'> = {}): Promise<number> {
+    return this.db.$count(
+      automationRuns,
+      opts.automationId === undefined
+        ? undefined
+        : eq(automationRuns.automationId, opts.automationId)
+    );
   }
 
   async listRuns(opts: ListRunsOptions = {}): Promise<AutomationRunDto[]> {

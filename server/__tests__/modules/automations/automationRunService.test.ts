@@ -239,6 +239,18 @@ describe('AutomationRunService', () => {
 
   // ─── listItemRuns ─────────────────────────────────────────────────────────
 
+  describe('countRuns', () => {
+    it('counts every run, not a page of them', async () => {
+      const { automation } = await seedFixtures();
+      for (let i = 0; i < 3; i += 1) {
+        await service.createRun({ automationId: automation.id, status: 'success' });
+      }
+      expect((await service.listRuns({ limit: 1 })).length).toBe(1);
+      expect(await service.countRuns()).toBe(3);
+      expect(await service.countRuns({ automationId: automation.id + 1 })).toBe(0);
+    });
+  });
+
   describe('a run outlives its media rows', () => {
     it('still lists a title as removed after the media data is reset', async () => {
       const { automation, provider } = await seedFixtures();
