@@ -293,6 +293,32 @@ describe('IdentityResolutionJob', () => {
     expect(items.map((i) => i.deleted)).toEqual([false]);
   });
 
+  it('lets requests run while it works through a library', async () => {
+    const db = getDb();
+    const radarr = {
+      getMovies: vi
+        .fn()
+        .mockResolvedValue(
+          Array.from({ length: 20 }, (_, i) => makeMovie({ id: i + 1, tmdbId: 1000 + i }))
+        ),
+    };
+    let turns = 0;
+    let done = false;
+    const countTurns = () => {
+      turns += 1;
+      if (!done) setImmediate(countTurns);
+    };
+    setImmediate(countTurns);
+
+    await new IdentityResolutionJob({
+      db,
+      movieSources: [{ providerId: radarrProviderId, provider: radarr }],
+    }).runForMovies();
+    done = true;
+
+    expect(turns).toBeGreaterThanOrEqual(20);
+  });
+
   it('clears the deleted mark when the source lists the item again', async () => {
     const db = getDb();
     const radarr = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 1, tmdbId: 100 })]) };

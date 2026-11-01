@@ -1,4 +1,5 @@
 import { and, eq, isNull, notInArray } from 'drizzle-orm';
+import { yieldToEventLoop } from '../../kernel/yieldToEventLoop';
 
 const defaultDelay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 import type { ContentType } from '@contract/schemas';
@@ -45,6 +46,7 @@ export class IdentityResolutionJob {
     const items = await this.deps.plexProvider.getAllItems();
     let changed = 0;
     for (const item of items) {
+      await yieldToEventLoop();
       const kind = item.type ? PLEX_KIND[item.type] : undefined;
       for (const guid of item.guids ?? []) {
         const tmdbMatch = guid.id.match(/^tmdb:\/\/(\d+)$/);
@@ -94,6 +96,7 @@ export class IdentityResolutionJob {
     const items = await this.deps.jellyfinProvider.getAllItems();
     let changed = 0;
     for (const item of items) {
+      await yieldToEventLoop();
       const kind = item.Type ? JELLYFIN_KIND[item.Type] : undefined;
       const tmdbId = Number.parseInt(item.ProviderIds?.Tmdb ?? '', 10);
       const tvdbId = Number.parseInt(item.ProviderIds?.Tvdb ?? '', 10);
@@ -128,6 +131,7 @@ export class IdentityResolutionJob {
       const now = Math.floor(Date.now() / 1000);
       const fetchedExternalIds: number[] = [];
       for (const s of series) {
+        await yieldToEventLoop();
         const identityId = await resolveGroup(this.deps.db, 'series', {
           tvdbId: s.tvdbId,
           tmdbId: s.tmdbId,
@@ -171,6 +175,7 @@ export class IdentityResolutionJob {
       const now = Math.floor(Date.now() / 1000);
       const fetchedExternalIds: number[] = [];
       for (const movie of movies) {
+        await yieldToEventLoop();
         const identityId = await resolveGroup(this.deps.db, 'movie', {
           tmdbId: movie.tmdbId,
           imdbId: movie.imdbId,
