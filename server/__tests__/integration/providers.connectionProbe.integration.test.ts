@@ -70,7 +70,7 @@ describe('GET /api/providers/test', () => {
 
   it('probes a Seerr provider at its status endpoint', async () => {
     const SEERR_URL = 'http://seerr.local';
-    server.use(http.get(`${SEERR_URL}/api/v1/status`, () => HttpResponse.json({ status: 'ok' })));
+    server.use(http.get(`${SEERR_URL}/api/v1/auth/me`, () => HttpResponse.json({ status: 'ok' })));
 
     const res = await request(authedApp)
       .get('/api/providers/test')
@@ -83,7 +83,7 @@ describe('GET /api/providers/test', () => {
     const SEERR_URL = 'http://seerr-stored.local';
     let seenKey: string | null = null;
     server.use(
-      http.get(`${SEERR_URL}/api/v1/status`, ({ request: upstream }) => {
+      http.get(`${SEERR_URL}/api/v1/auth/me`, ({ request: upstream }) => {
         seenKey = upstream.headers.get('X-Api-Key');
         return HttpResponse.json({ status: 'ok' });
       })
@@ -103,7 +103,7 @@ describe('GET /api/providers/test', () => {
     const OTHER_URL = 'http://elsewhere.local';
     let contacted = false;
     server.use(
-      http.get(`${OTHER_URL}/api/v1/status`, () => {
+      http.get(`${OTHER_URL}/api/v1/auth/me`, () => {
         contacted = true;
         return HttpResponse.json({ status: 'ok' });
       })

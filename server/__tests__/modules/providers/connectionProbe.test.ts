@@ -27,20 +27,73 @@ describe('probeConnection', () => {
     });
   });
 
+  describe('a key is proved, not assumed', () => {
+    it('fails without a required key, contacting nothing', async () => {
+      await expect(
+        probeConnection(MetadataProviderType.PLEX, 'http://plex.local:32400')
+      ).rejects.toThrow(/Enter the API key/);
+    });
+
+    it('asks Plex for something only a valid token can read', async () => {
+      let token: string | null = null;
+      server.use(
+        http.get('http://plex.local:32400/library/sections', ({ request }) => {
+          token = request.headers.get('X-Plex-Token');
+          return HttpResponse.json({ MediaContainer: {} });
+        })
+      );
+      await probeConnection(MetadataProviderType.PLEX, 'http://plex.local:32400', 'tok');
+      expect(token).toBe('tok');
+    });
+
+    it('says the key was refused when the address answered', async () => {
+      server.use(
+        http.get(
+          'http://plex.local:32400/library/sections',
+          () => new HttpResponse(null, { status: 401 })
+        )
+      );
+      await expect(
+        probeConnection(MetadataProviderType.PLEX, 'http://plex.local:32400', 'bad')
+      ).rejects.toThrow('Plex refused this API key');
+    });
+
+    it('says the address could not be reached when nothing answered', async () => {
+      server.use(http.get('http://plex.local:32400/library/sections', () => HttpResponse.error()));
+      await expect(
+        probeConnection(MetadataProviderType.PLEX, 'http://plex.local:32400', 'tok')
+      ).rejects.toThrow("Couldn't reach Plex at this address");
+    });
+
+    it('rejects a key Jellyfin refuses', async () => {
+      server.use(
+        http.get(
+          'http://jellyfin.local:8096/System/Info',
+          () => new HttpResponse(null, { status: 401 })
+        )
+      );
+      await expect(
+        probeConnection(MetadataProviderType.JELLYFIN, 'http://jellyfin.local:8096', 'bad')
+      ).rejects.toThrow();
+    });
+  });
+
   describe('SEERR', () => {
     const SEERR_URL = 'http://seerr.local';
 
-    it('resolves when the upstream /api/v1/status responds 200', async () => {
-      server.use(http.get(`${SEERR_URL}/api/v1/status`, () => HttpResponse.json({ status: 'ok' })));
+    it('resolves when the upstream /api/v1/auth/me responds 200', async () => {
+      server.use(
+        http.get(`${SEERR_URL}/api/v1/auth/me`, () => HttpResponse.json({ status: 'ok' }))
+      );
 
       await expect(
         probeConnection(MetadataProviderType.SEERR, SEERR_URL, 'test-key')
       ).resolves.toBeUndefined();
     });
 
-    it('rejects when the upstream /api/v1/status responds 4xx', async () => {
+    it('rejects when the upstream /api/v1/auth/me responds 4xx', async () => {
       server.use(
-        http.get(`${SEERR_URL}/api/v1/status`, () =>
+        http.get(`${SEERR_URL}/api/v1/auth/me`, () =>
           HttpResponse.json({ message: 'Unauthorized' }, { status: 401 })
         )
       );
@@ -50,9 +103,9 @@ describe('probeConnection', () => {
       ).rejects.toThrow();
     });
 
-    it('rejects when the upstream /api/v1/status responds 5xx', async () => {
+    it('rejects when the upstream /api/v1/auth/me responds 5xx', async () => {
       server.use(
-        http.get(`${SEERR_URL}/api/v1/status`, () =>
+        http.get(`${SEERR_URL}/api/v1/auth/me`, () =>
           HttpResponse.json({ message: 'Internal Server Error' }, { status: 500 })
         )
       );
@@ -67,7 +120,7 @@ describe('probeConnection', () => {
       let capturedHeader: string | null = null;
       let capturedSearchParams: string | null = null;
       server.use(
-        http.get(`${SEERR_URL}/api/v1/status`, ({ request }) => {
+        http.get(`${SEERR_URL}/api/v1/auth/me`, ({ request }) => {
           capturedHeader = request.headers.get('X-Api-Key');
           capturedSearchParams = new URL(request.url).searchParams.toString();
           return HttpResponse.json({ status: 'ok' });
