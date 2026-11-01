@@ -114,7 +114,7 @@ OMDB becomes an additional producer on all four already-shared rules (`csv-strin
 `RuleControl` already renders these for Radarr/Sonarr/TMDB/Plex/Jellyfin. `runtime` joins
 `runtimeMinutes`, the `range` rule minted by `specs/radarr.md`; `originCountry` joins the
 `csv-strings` rule minted by `specs/tmdb.md`, resolved there as a hardcoded ISO-3166-1 fixed-array
-branch in `csvStringOptions` — no new `Lookups` route for either.
+branch in `lookup` — no new `Lookups` route for either.
 
 **Carry-forward from TMDB's UI ticket, confirmed**: OMDB's `Country` field is single-valued (per
 OMDB's API shape), joining `originCountry` as an additional producer of that multi-value
@@ -125,7 +125,7 @@ single value into the aggregated set). The one-element-array wrapping needs to h
 change follows from this note; flagged here only so the wrapping isn't lost before that layer is
 implemented.
 
-### `awardWinner` / `oscarWinner` — confirmed `boolean`, both need `BOOLEAN_VALUE_LABELS` entries
+### `awardWinner` / `oscarWinner` — confirmed `boolean`, both need `valueLabels` entries
 
 Same shape as `hasTrailer`/`seerrHasIssue` — generic "Yes"/"No" would read ambiguously in an
 active-filter chip, and the two rules are independent signals (a title can be industry-award-winning

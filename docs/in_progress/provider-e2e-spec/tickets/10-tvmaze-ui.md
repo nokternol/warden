@@ -34,7 +34,7 @@ explicit 11-value list (Scripted, Animation, Reality, Talk Show, Documentary, Ga
 Sports, Variety, Award Show, Panel Show) — closed by editorial convention even though the API's
 `TvMazeShow.type` is typed as a bare `string`. Same FAQ states language is constrained to ISO 639-1
 codes ("Only languages that exist in the ISO 639-1 standard are available on TVmaze"). Both get new
-`ENUM_OPTIONS` entries (not `csvStringOptions` hardcoded arrays, since both are single-value
+`options` entries (not `lookup` hardcoded arrays, since both are single-value
 `dataType: string` rules, unlike TMDB's array-valued `originCountry`/`spokenLanguages`): `tvmazeType`
 transcribed in full (11 values), `language` seeded from a common working subset with the full
 ISO 639-1 table sourced at implementation time. The free-text-gap count (Radarr's `folderName`/
@@ -42,7 +42,7 @@ ISO 639-1 table sourced at implementation time. The free-text-gap count (Radarr'
 
 No tasks exist for TVMaze, so nothing appended to `11-automation-task-parameters`.
 
-Full reasoning and the exact `ENUM_OPTIONS` value tables are in `specs/tvmaze.md`'s "UI decisions"
+Full reasoning and the exact `options` value tables are in `specs/tvmaze.md`'s "UI decisions"
 section.
 
 This closes the last *per-provider* UI ticket this session's ticket queue assigned to `claude` in

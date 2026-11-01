@@ -24,12 +24,12 @@ than pasting them in.
 No `/prototype` session needed — every filterable field maps onto an existing `RuleControl`
 renderer once correctly classified. `overseerrRequestedAt`, `overseerrIssueStatus`,
 `overseerrHasComments`, and `overseerrRequestScope` confirmed as mapped (`range`, `number`/
-`ENUM_OPTIONS`, `boolean`/`BOOLEAN_VALUE_LABELS`, `string`/`ENUM_OPTIONS` respectively).
+`options`, `boolean`/`valueLabels`, `string`/`options` respectively).
 `overseerrRequestedBy` was reclassified from `string` to `csv-strings` — it's an open, per-instance
 requester list (not a fixed enum), but unlike Radarr's/Sonarr's `path` gap it *is* enumerable at
 query time, so it fits the existing `csv-strings` + `Lookups` shape rather than needing a new
 free-text control; gets a new dedicated `overseerrRequesters` lookup route. `overseerrIssueType`
-stays `csv-strings` but resolved to a hardcoded fixed-array branch in `csvStringOptions` (Overseerr's
+stays `csv-strings` but resolved to a hardcoded fixed-array branch in `lookup` (Overseerr's
 own fixed API vocabulary, four values, not per-instance data) rather than a `Lookups` route — the
 first fixed-and-small `csv-strings` set in this map, no existing precedent to reuse but the mechanism
 already fits with zero renderer changes.

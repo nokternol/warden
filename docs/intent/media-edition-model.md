@@ -24,7 +24,7 @@ target "the director's cut" specifically.
 
 ## Why it matters
 
-- **Actuator correctness (blocks part of `media-actuator-realisation.md`).** Tasks like
+- **Actuator correctness (blocks part of `docs/architecture/actuator-task-ownership.md`).** Tasks like
   `deleteFromLibrary` or `markPlayed` operate on ids resolved through this model. If a title has
   multiple editions and the model can only address one, an actuator task has no way to disambiguate
   which physical copy to act on — it either acts on the wrong one or can't act at all.
@@ -57,7 +57,7 @@ move to `docs/in_progress/`:
 
 ## Dependencies
 
-- Soft-blocks the actuator id-translation seam in `docs/intent/media-actuator-realisation.md` for
+- Soft-blocks the actuator id-translation seam in `docs/architecture/actuator-task-ownership.md` for
   any provider where multiple editions turn out to be common — that doc's `run(ids)` contract
   assumes one id addresses one item.
 - No dependency in the other direction: the actuator work can and should proceed for the common

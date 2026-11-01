@@ -96,7 +96,8 @@ would make it a second, uncoordinated producer with no precedence ordering. Also
 
 **Sonarr is partially done, still `implementing`.** [#50](https://github.com/nokternol/warden/pull/50)
 (merged) left `moveSeries`/`changeLanguageProfile` unwired — both need a single-select task
-parameter `AutomationBuilder` has no UI for yet (mirrors Radarr's `moveMovie`, same gap). Blocked
+parameter. `AutomationBuilder` now has that control, so what remains is declaring the parameter on
+each task (mirrors Radarr's `moveMovie`, same gap). Blocked
 on `tickets/11-automation-task-parameters.md`'s implementation, not `_precedence` — no Sonarr
 field collided with an already-enriched single-producer field this time. The `getLanguageProfiles()`
 lookup shipped; only the two task actions wait — revisit once `_automation-parameters.md` ships.

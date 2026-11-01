@@ -33,7 +33,7 @@ query-engine/provider-field-layer concern, not a widget-shape one; no UI control
 `specs/omdb.md` so it isn't lost before that layer is implemented.
 
 `awardWinner` and `oscarWinner` are new OMDB-only `boolean` rules (no existing rule to join), both
-given distinct `BOOLEAN_VALUE_LABELS` entries: `awardWinner` → "Award Winner"/"No Awards",
+given distinct `valueLabels` entries: `awardWinner` → "Award Winner"/"No Awards",
 `oscarWinner` → "Oscar Winner"/"No Oscar" — separate copy since they're independent signals.
 
 On-demand metadata fields (`Director`/`Writer`/`Actors`/`Plot`/`BoxOffice`/raw `Awards` text/

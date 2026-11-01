@@ -27,7 +27,7 @@ than pasting them in.
   Plex's 13. No date picker, slider, or other bespoke widget surfaced.
 - **First genuinely new boolean rule this map has added**: `jellyfinIsFavorite` (Plex's booleans
   all joined existing rules). Only decision needed was copy, not a widget — add a
-  `jellyfinIsFavorite` entry to `BOOLEAN_VALUE_LABELS` (`'Favorited'`/`'Not Favorited'`) rather than
+  `jellyfinIsFavorite` entry to `valueLabels` (`'Favorited'`/`'Not Favorited'`) rather than
   leaving it on the generic Yes/No fallback, matching the existing labeled-boolean precedent
   (`watched`, `monitored`, etc.).
 - **No new lookup route needed.** Every net-new `csv-strings` field in Jellyfin's mapping

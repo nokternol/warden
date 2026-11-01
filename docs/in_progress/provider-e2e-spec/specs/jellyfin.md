@@ -150,7 +150,7 @@ All 13 fields in the "Filter type mapping" table above map onto controls `RuleCo
   bounds decided, consistent with Plex's precedent.
 - **`csv-strings` fields** (`studio`, `fileContainer`, `videoCodec`, `audioCodec`,
   `fileResolution`, `labels`, plus `genres`/`certification` which join existing rules) render via
-  `MultiSelectFilter`, options resolved through `csvStringOptions(rule, scope, lookups)`.
+  `MultiSelectFilter`, options resolved through `lookup(rule, scope, lookups)`.
   All six non-lookup-yet fields are the same fields Plex's UI pass already named for its 6 new
   routes (`studio`, `fileContainer`, `videoCodec`, `audioCodec`, `fileResolution`, `labels`) —
   Jellyfin doesn't add any *new* csv-strings field beyond what Plex already covers; see "Options
@@ -159,11 +159,11 @@ All 13 fields in the "Filter type mapping" table above map onto controls `RuleCo
   a third producer, no new control.
 - **`jellyfinIsFavorite`** — new `boolean` field, first genuinely new boolean rule this map has
   added (Plex's booleans all joined existing rules). Renders via the same generic `booleanOptions`
-  fallback (`ref:src/components/MediaFilterBar/index.tsx#L858`): no entry in
-  `BOOLEAN_VALUE_LABELS` today, so it would render the default "Yes"/"No" pair rather than a
+  fallback: no entry in
+  `valueLabels` today, so it would render the default "Yes"/"No" pair rather than a
   purpose-labeled one (existing labeled examples: `watched` → "Watched"/"Unwatched", `monitored` →
   "Monitored"/"Unmonitored"). **Copy decision**: add a `jellyfinIsFavorite` entry —
-  `['Favorited', 'Not Favorited']` — to `BOOLEAN_VALUE_LABELS` at implementation time; "Yes"/"No"
+  `['Favorited', 'Not Favorited']` — to `valueLabels` at implementation time; "Yes"/"No"
   reads ambiguously for a filter chip shown out of context (e.g. in the active-conditions summary),
   the same reasoning the existing labeled entries already establish. No new widget, no
   `/prototype` needed — this is a value-label table entry, not a control shape decision.

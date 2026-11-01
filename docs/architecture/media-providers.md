@@ -55,9 +55,8 @@ once). None are modelled-only.
 `lookupSeries(term)`. Every actuator task is real (calls Sonarr's API): `unmonitorSeries()`,
 `triggerSeriesSearch()`, `deleteSeries()`, `deleteSeriesKeepFiles()`, `changeQualityProfile()`,
 `applyTag()` (add/remove), `refreshSeries()`, `rescanSeries()`, `renameSeries()`. None are
-modelled-only. `moveSeries` and `changeLanguageProfile` are deliberately not built as tasks — their
-automation-UI parameter shape (target root folder; target language profile id) is deferred to
-[`docs/in_progress/provider-e2e-spec/tickets/11-automation-task-parameters.md`](ref:path:docs/in_progress/provider-e2e-spec/tickets/11-automation-task-parameters.md),
+modelled-only. `moveSeries` and `changeLanguageProfile` are deliberately not built as tasks, because each needs a
+parameter (target root folder; target language profile id) that is not declared yet,
 same precedent as Radarr's `moveMovie`.
 
 **Wired into the media-item pipeline?** Yes — as `MediaSource`. Sonarr's fields (`genres`, `network`,

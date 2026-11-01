@@ -6,6 +6,11 @@ status: closed
 
 # Provider E2E Spec — Map
 
+> **Rule presentation lives on the rule descriptor.** A rule declares its `valueLabels`, `options`,
+> `shortLabel`, `lookup` and `group` in the server's rule registry, and the filter bar reads them. Where
+> these specs say a rule needs an entry or a branch in one of those, they mean declaring it on the rule.
+> Multi-value id rules have the data type `instance-ids`.
+
 ## Destination
 
 A full end-to-end handoff spec, **one markdown file per provider**, under
@@ -109,7 +114,7 @@ against it is a separate, later effort (`/tdd` or `/plan-and-go`).
 - [Jellyfin — UI pass](tickets/02-jellyfin-ui.md) — same generic controls, no `/prototype` needed;
   contributes zero *new* lookup routes since all its csv-strings fields were already named by
   Plex's UI pass (Jellyfin just joins as an additional producer); first genuinely new boolean rule
-  in the map (`jellyfinIsFavorite`) gets a `BOOLEAN_VALUE_LABELS` copy entry, not a new widget;
+  in the map (`jellyfinIsFavorite`) gets a `valueLabels` copy entry, not a new widget;
   `removeFromCollection`'s parameter deferred to the new Automation task parameters — decision
   ticket.
 - [Radarr — UI pass](tickets/03-radarr-ui.md) — no new widget shapes; confirmed `string`/`number`
@@ -120,7 +125,7 @@ against it is a separate, later effort (`/tdd` or `/plan-and-go`).
 - [Sonarr — UI pass](tickets/04-sonarr-ui.md) — no new widget shapes; `path` again left display-only
   (2nd provider to hit the missing-free-text-control gap — not yet building it unilaterally, but
   flagged as close to justifying a shared decision); `seasonCount` reclassified `number`→`range`;
-  new `languageProfileId` csv-ids lookup (not a `qualityProfiles`-pair reuse — Sonarr-only); resolved
+  new `languageProfileId` instance-ids lookup (not a `qualityProfiles`-pair reuse — Sonarr-only); resolved
   `nextAiring`'s naming mismatch to `nextAiringInDays` rather than leaving it flagged;
   `moveSeries`/`changeLanguageProfile` parameters appended to the Automation task parameters ticket.
 - [Tautulli — UI pass](tickets/05-tautulli-ui.md) — narrowest pass yet, matching its narrow decision
@@ -141,16 +146,16 @@ against it is a separate, later effort (`/tdd` or `/plan-and-go`).
   `csv-strings` (closed ISO vocabularies, following `overseerrIssueType`'s precedent even at ~250
   values); `keywords` got a new dedicated `tmdbKeywords` lookup route (open per-item tags, following
   `plexLabels`/`Tags`'s precedent). All 8 streaming-service booleans plus `hasTrailer` got
-  `BOOLEAN_VALUE_LABELS` entries. Flagged for OMDB: its single-valued `Country` field joins
+  `valueLabels` entries. Flagged for OMDB: its single-valued `Country` field joins
   `originCountry` as an additional producer and needs one-element-array wrapping at the query-engine
   layer.
 - [OMDB — UI pass](tickets/08-omdb-ui.md) — smallest ticket yet: `certification`/`genres`/`runtime`/
   `originCountry` all join existing shared rules, no new key/route/widget; confirmed the `Country`→
   `originCountry` array-wrapping is a query-engine concern, not a widget one; `awardWinner`/
-  `oscarWinner` are the only new fields, each with distinct `BOOLEAN_VALUE_LABELS` copy. No tasks.
+  `oscarWinner` are the only new fields, each with distinct `valueLabels` copy. No tasks.
 - [TVMaze — UI pass](tickets/10-tvmaze-ui.md) — `tvmazeType` and `language` both scrutinized as
   possible free-text-gap cases but resolved as closed enums (TVMaze's own FAQ documents both as
-  bounded vocabularies), each getting a new `ENUM_OPTIONS` entry — free-text-gap count stays at 2,
+  bounded vocabularies), each getting a new `options` entry — free-text-gap count stays at 2,
   no shared control built. No tasks. Caught that `99-precedence` is *not* yet unblocked — Seerr has
   its own separate, still-open UI ticket (`09-seerr-ui`), not folded into Overseerr's as the map's
   provider-count note briefly implied.

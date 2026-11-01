@@ -54,7 +54,7 @@ ticket's original scope — are unaddressed. Each still needs its own widget-sha
 - **Flagged, not fixed**: `certification` already declares `dataType: 'csv-strings'` in
   `ruleRegistry.ts` but has no lookup source wired, so its control silently renders empty today.
   Recorded in the spec as a gap the 6 new routes must not repeat — each new route ships together
-  with its `csvStringOptions` branch and `Lookups` field, not as a follow-up.
+  with its `lookup` branch and `Lookups` field, not as a follow-up.
 - Full writeup: `docs/in_progress/provider-e2e-spec/specs/plex.md`'s "Per-field widget shapes"
   subsection (under "UI decisions").
 

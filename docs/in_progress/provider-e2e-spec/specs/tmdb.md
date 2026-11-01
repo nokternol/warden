@@ -156,7 +156,7 @@ through the existing `listGenres`-shaped lookup; `certification` remains the one
 rule with no lookup source (pre-existing gap flagged by Plex's and every subsequent UI pass — not
 TMDB's to fix).
 
-### `originCountry` — (b): hardcoded fixed-array branch in `csvStringOptions`, not a `Lookups` route
+### `originCountry` — (b): hardcoded fixed-array branch in `lookup`, not a `Lookups` route
 
 ISO 3166-1 alpha-2 country codes are a closed, well-known, externally-standardized vocabulary — not
 runtime library data that grows or varies per instance the way `network`/`seerrRequestedBy` do.
@@ -166,7 +166,7 @@ every TMDB-configured instance, which is exactly the test `seerrIssueType`'s dec
 ("provider's own fixed API vocabulary," not "small"). Routing ~250 unchanging values through a
 `/api/media/*` fetch would be pure overhead for zero per-instance variance — nothing to look up.
 
-**Decision**: `csvStringOptions` gets a new branch returning a hardcoded ISO-3166-1 country list
+**Decision**: `lookup` gets a new branch returning a hardcoded ISO-3166-1 country list
 (code + display name pairs collapsed to the code strings `csv-strings` expects, e.g. sourced from a
 static table, not a live call):
 
@@ -193,7 +193,7 @@ grows with every new title added to the library, the same shape as Plex's `plexL
 `Tags`, both of which got dedicated `Lookups` routes in their UI passes. A hardcoded array is not
 possible here (unlike `originCountry`, there is no fixed enumeration to hardcode).
 
-**Decision**: new `Lookups.tmdbKeywords: string[]` field, new `csvStringOptions` branch (`if
+**Decision**: new `Lookups.tmdbKeywords: string[]` field, new `lookup` branch (`if
 (rule.key === 'keywords') return lookups.tmdbKeywords;`), new `/api/media/tmdb-keywords` route in
 `useMediaLookups.ts` returning the distinct set of keyword tags seen across the library's
 TMDB-enriched items, following the `listGenres`/`listNetworks` dedupe-and-sort pattern (same
@@ -217,7 +217,7 @@ if (rule.key === 'spokenLanguages') return ISO_LANGUAGE_CODES; // fixed array
 No new `Lookups` field, no new route. Unlike `originCountry`, no known future collision to flag —
 noted in the spec's own "Naming-collision notes" as having none.
 
-### `hasTrailer` — confirmed `boolean`, new `BOOLEAN_VALUE_LABELS` entry
+### `hasTrailer` — confirmed `boolean`, new `valueLabels` entry
 
 Same shape as `seerrHasIssue`/`seerrHasComments`. Generic "Yes"/"No" would read ambiguously
 in an active-filter chip out of context. Add:
@@ -232,7 +232,7 @@ Per the decision ticket (already settled, executing not re-litigating): 8 indepe
 booleans, not one `csv-strings` "available on any of" rule, since the underlying domain data is 8
 genuinely independent per-item facts and independent boolean rules are the only shape that can
 express an AND query ("on Netflix AND Disney"), matching the existing convention for independent
-boolean facts (`watched`, `monitored`, `ended`, `hasFile`). All 8 need `BOOLEAN_VALUE_LABELS` entries
+boolean facts (`watched`, `monitored`, `ended`, `hasFile`). All 8 need `valueLabels` entries
 — 8 generic "Yes"/"No" toggles in a filter list would be unreadable (indistinguishable from each
 other by chip alone). Add:
 

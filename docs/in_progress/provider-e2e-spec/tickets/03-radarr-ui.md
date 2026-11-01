@@ -23,8 +23,8 @@ than pasting them in.
 
 - **No field needed a `/prototype` session.** Radarr adds zero new widget shapes — every filterable
   field maps onto the four generic `RuleControl` renderers already established across
-  Plex's/Jellyfin's UI passes (`range`, `csv-strings`, `boolean`, `string`/`ENUM_OPTIONS`).
-- **`radarrStatus`** — confirmed as a legitimate `string`/`ENUM_OPTIONS` rule (same shape as
+  Plex's/Jellyfin's UI passes (`range`, `csv-strings`, `boolean`, `string`/`options`).
+- **`radarrStatus`** — confirmed as a legitimate `string`/`options` rule (same shape as
   `seriesStatus`/`tmdbStatus`). Real enum decided from the research ticket's Radarr-API audit:
   `tba`/`announced`/`inCinemas`/`released`/`deleted`.
 - **`folderName`/`path`** — dropped from filterable scope this pass rather than inventing a new

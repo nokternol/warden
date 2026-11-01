@@ -23,11 +23,11 @@ than pasting them in.
 
 - **No field needed a `/prototype` session.** Sonarr adds zero new widget shapes — every filterable
   field maps onto the four generic `RuleControl` renderers already established across
-  Plex's/Jellyfin's/Radarr's UI passes (`range`, `csv-ids`, `boolean`, `string`/`ENUM_OPTIONS`).
-- **`languageProfileId`** — wired as `csv-ids`, but *not* a reuse of `qualityProfiles`'s
+  Plex's/Jellyfin's/Radarr's UI passes (`range`, `instance-ids`, `boolean`, `string`/`options`).
+- **`languageProfileId`** — wired as `instance-ids`, but *not* a reuse of `qualityProfiles`'s
   `{ radarr, sonarr }` paired shape: language profiles only exist on Sonarr, so
   `Lookups.languageProfiles` is a new flat `MediaQualityProfile[]` field (reusing the existing
-  `MediaQualityProfile` shape) plus a new `csvIdOptions` branch and `/api/media/language-profiles`
+  `MediaQualityProfile` shape) plus a new `lookup` branch and `/api/media/language-profiles`
   route — genuinely new lookup, not a joined route.
 - **`nextAiring`** — resolved (not left flagged): filter key is `nextAiringInDays`, not
   `nextAiringDaysAgo`. The "days ago" suffix is load-bearing across every existing range-over-dates

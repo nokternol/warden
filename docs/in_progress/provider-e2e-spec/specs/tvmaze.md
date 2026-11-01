@@ -151,7 +151,7 @@ Tasks / automation options: N/A — no tasks, confirmed empty-by-design.
 
 No `/prototype` session needed — every filterable field maps onto a `RuleControl` renderer already
 established across the eight prior UI passes (`range` → `NumberRangeFilter`, `csv-strings` →
-`MultiSelectFilter`, `string` → `ENUM_OPTIONS`-driven fixed picker). No tasks exist for
+`MultiSelectFilter`, `string` → `options`-driven fixed picker). No tasks exist for
 TVMaze (confirmed: "Tasks / automation options: N/A" above), so nothing goes to
 `11-automation-task-parameters` — the ninth of ten providers with nothing to append there.
 
@@ -159,12 +159,12 @@ TVMaze (confirmed: "Tasks / automation options: N/A" above), so nothing goes to
 
 All five join existing shared rules as additional producers (`network`/`genres` are `csv-strings`
 already resolved through `lookups.networks`/`lookups.genres.series`; `seriesStatus` is the existing
-`ENUM_OPTIONS` string picker; `releaseDaysAgo`/`runtimeMinutes` are the existing `NumberRangeFilter`
+`options` string picker; `releaseDaysAgo`/`runtimeMinutes` are the existing `NumberRangeFilter`
 ranges). No control decision to make — `RuleControl` already renders these; TVMaze just adds to
 `providers`. `runtimeMinutes`'s movie/show-rule-unification question stays flagged for
 `99-precedence`, not decided here (per the spec's own "Naming-collision notes").
 
-### `tvmazeType` — closed enum confirmed; new `ENUM_OPTIONS` entry (not the third free-text-gap occurrence)
+### `tvmazeType` — closed enum confirmed; new `options` entry (not the third free-text-gap occurrence)
 
 The filter-mapping table's "no closed enum enforced client-side" phrasing was flagged as a warning
 sign matching Radarr's `folderName`/`path` and Sonarr's `path` — both genuinely free-text fields
@@ -183,7 +183,7 @@ precedent for (API type declared as loose `string`, real-world value set bounded
 **not** the third occurrence of the free-text gap — it's a closed enum that happened to be
 underspecified by the TypeScript type, not a substring/path-match field like Radarr's/Sonarr's.
 
-**Decision**: new `ENUM_OPTIONS.tvmazeType` entry, one `{ value, label }` pair per documented type
+**Decision**: new `options.tvmazeType` entry, one `{ value, label }` pair per documented type
 (value = the exact API string, label = same text — no abbreviation needed):
 
 ```
@@ -202,7 +202,7 @@ tvmazeType: [
 ]
 ```
 
-Chose `ENUM_OPTIONS` (single-value fixed picker) over a `csv-strings` hardcoded-array branch because
+Chose `options` (single-value fixed picker) over a `csv-strings` hardcoded-array branch because
 the filter-mapping table already fixed `dataType: string` (single-value equality match, matching
 `seriesType`/`seriesStatus`'s shape) — not a multi-select concept like `originCountry`/
 `spokenLanguages`. No `SEGMENT_LABEL_OVERRIDES` entry needed; the registry label ("TVMaze type" or
@@ -221,23 +221,23 @@ already renders this shape. New rule (per the spec's mapping table), but no new 
 
 ### `weight` — confirmed `range`, no new widget
 
-Numeric popularity score, no lookup needed (unlike `csv-ids`/`csv-strings` fields) — plain
+Numeric popularity score, no lookup needed (unlike `instance-ids`/`csv-strings` fields) — plain
 `NumberRangeFilter`, same treatment as Radarr's `movieFileCount`/Sonarr's `seasonCount` once those
 were reclassified to `range`. New rule, no new control.
 
-### `language` — closed enum confirmed; new `ENUM_OPTIONS` entry, seeded from a common subset (not the full ISO 639-1 set)
+### `language` — closed enum confirmed; new `options` entry, seeded from a common subset (not the full ISO 639-1 set)
 
 TVMaze's FAQ (`tvmaze.com/faq/13/shows`) states: "Only languages that exist in the ISO 639-1 standard
 are available on TVmaze" (with unavailable languages folded into their nearest ISO 639-1 variant) —
 a genuinely closed, externally-standardized vocabulary, the same class TMDB's `originCountry`/
 `spokenLanguages` resolved as (b): hardcoded fixed-array, not a `Lookups` route. But `language` here
 is `dataType: string` (single-value equality, like `seriesStatus`), not `csv-strings`
-(multi-value) — so the mechanism is `ENUM_OPTIONS`, not a `csvStringOptions` branch, mirroring
+(multi-value) — so the mechanism is `options`, not a `lookup` branch, mirroring
 `tvmazeType` above rather than TMDB's array-valued fields.
 
 ISO 639-1 itself is ~184 codes — larger than `tvmazeType`'s 11 but the same closed-vocabulary
 justification TMDB's `originCountry` used at ~250 codes (size doesn't change the shape). Rather than
-hand-transcribing the full ISO 639-1 table into this spec, **decision**: seed `ENUM_OPTIONS.language`
+hand-transcribing the full ISO 639-1 table into this spec, **decision**: seed `options.language`
 from the common subset of languages TVMaze's own library realistically surfaces (English, Japanese,
 Spanish, French, German, Korean, Italian, Portuguese, Mandarin, Chinese, Dutch, Swedish, Norwegian,
 Danish, Russian — full working set to be finalized at implementation time against a real ISO 639-1
@@ -245,7 +245,7 @@ language-name table, e.g. reusing whatever source TMDB's UI pass sourced its ISO
 `spokenLanguages` codes from), matching the "start from a reasonable common set and grow" framing
 this ticket was scoped with. Unlike `tvmazeType`'s complete 11-value enumeration (small enough to
 transcribe in full), `language`'s full list is an implementation-time data-sourcing task, not a
-UI-shape decision — the widget choice (`ENUM_OPTIONS`, single-select) is what's decided here, not
+UI-shape decision — the widget choice (`options`, single-select) is what's decided here, not
 the exhaustive value list.
 
 **Naming note**: TVMaze's `language` (single string, e.g. `"English"`) has no shape collision with
@@ -255,7 +255,7 @@ for `99-precedence`.
 
 ### Summary — free-text-gap count stays at two
 
-Both `tvmazeType` and `language` resolved as closed enums (`ENUM_OPTIONS`), not free-text gaps. The
+Both `tvmazeType` and `language` resolved as closed enums (`options`), not free-text gaps. The
 free-text-gap count (Radarr's `folderName`/`path`, Sonarr's `path`) is unchanged by this ticket. No
 shared free-text control was built here. One per-provider UI ticket remains open in the map
 (`09-seerr-ui`, unclaimed) — if a future field there or elsewhere hits the gap, it needs its own
