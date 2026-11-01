@@ -222,8 +222,10 @@ does not define its own TDD process. Each slice supplies the *input* to that ski
   session context), and comments never narrate the task. A cycle's commit message is the durable
   part of its record. The PR description summarises the slice's end state (What / Why / Changes /
   Testing).
-- **Design debt:** each row of the skill's **Design Debt** table becomes a GitHub issue labelled
-  `design-debt`, linked from the slice's PR.
+- **Findings:** a slice finishes what it finds. Work too big to fit becomes its own slice, with a
+  section here and an issue in the `MVP` milestone that G1 depends on. The builder decides this and
+  states it in the PR; the owner is not asked to sanction it. A minor observation outside the slice's
+  scope is a note in the PR description and does not become an issue.
 - **Docs:** `docs-lifecycle` triggers for every moved, renamed or behaviour-changed file. Each heal
   gets a fracture-ledger entry, Open when the slice starts and Healed when it merges. Finish with
   `graphify update .`.
@@ -241,7 +243,7 @@ does not define its own TDD process. Each slice supplies the *input* to that ski
 - **Plan sign-off:** merging the PR that adds this file. Issues are created from the merged version.
 - **Slice sign-off:** reviewing and merging its PR. The issue's checklist must be met: the step
   list posted to the issue, one commit per green cycle, deletes done, gates green, docs updated,
-  design debt filed, and, for UI slices, screenshots shown to the user (not attached to the PR).
+  findings handled, and, for UI slices, screenshots shown to the user (not attached to the PR).
 - **MVP sign-off:** ticking G1's checklist (every In-scope feature, offered provider type and offered
   task, verified on the published image on the NAS), then closing the milestone. `docs-lifecycle`
   then folds this plan's lasting content into `docs/architecture/` and deletes it.
@@ -817,6 +819,15 @@ names, so nothing is renamed twice.
   through the theme, whose token changes `DESIGN.md` records. Small additions this needed: the provider
   catalogue's `apiKeyRequired` and `hostPlaceholder`, an optional `id` on `providers.test` so a stored key
   can be probed, and display names for system automations.
+
+**F3 · Bulk actions and keyboard shortcuts**
+- **Model:** Opus 5.5.
+- **Why:** the critique found that managing many automations means repeating one row's actions, and
+  that nothing has a keyboard shortcut.
+- **Behaviours:** select automations (one, or all) and enable, disable or delete them together, with a
+  confirmation naming the count for delete and a statement of any that failed, which stay selected.
+  `/` focuses Media's title filter and `n` opens the automation builder, ignored while typing.
+- **Not included:** bulk Run Now, since a destructive task confirms its own count per automation.
 
 ### Track G — Acceptance
 
