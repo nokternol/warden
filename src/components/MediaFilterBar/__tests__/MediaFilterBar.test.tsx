@@ -1126,6 +1126,13 @@ describe('MediaFilterBar — mobile sheet', () => {
     expect(onMobileClose).toHaveBeenCalledOnce();
   });
 
+  it('names Add filter once in the mobile dialog', () => {
+    render(<MediaFilterBar {...makeProps({ mobileOpen: true, ...propsFor(['RADARR']) })} />);
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).queryByRole('heading', { name: 'Add filter' })).not.toBeInTheDocument();
+    expect(within(dialog).getAllByRole('button', { name: /^add filter/i })).toHaveLength(1);
+  });
+
   it('shows Clear all in mobile dialog when isActive', () => {
     render(<MediaFilterBar {...makeProps({ mobileOpen: true, isActive: true })} />);
     expect(screen.getAllByRole('button', { name: /clear all/i }).length).toBeGreaterThan(0);

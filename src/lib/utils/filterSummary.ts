@@ -1,49 +1,77 @@
 import type { Filter } from '@app/hooks/useMediaQueries';
-import { isInstanceScopedValue } from '@contract/schemas';
+import type { MediaProfile, MediaRuleDescriptor, MediaTag } from '@contract/media';
+import { type RangeValue, isInstanceScopedValue, isRangeValue } from '@contract/schemas';
 
-const LABELS: Record<string, string> = {
-  title: 'Title',
-  yearMin: 'Year from',
-  yearMax: 'Year until',
-  watched: 'Watched',
-  addedDaysAgoGte: 'Added ≥ days',
-  addedDaysAgoLte: 'Added ≤ days',
-  sizeOnDiskGbGte: 'Size ≥ GB',
-  sizeOnDiskGbLte: 'Size ≤ GB',
-  certification: 'Rating',
-  hasFile: 'Has file',
-  tagIds: 'Tags',
-  qualityProfileIds: 'Quality profiles',
-  genres: 'Genres',
-  imdbRatingGte: 'IMDB ≥',
-  imdbRatingLte: 'IMDB ≤',
-  monitored: 'Monitored',
-  seriesStatus: 'Status',
-  seriesType: 'Series type',
-  network: 'Network',
-  communityRatingGte: 'Rating ≥',
-  communityRatingLte: 'Rating ≤',
-  ended: 'Ended',
-  lastAiredDaysAgoGte: 'Last aired ≥ days',
-  lastAiredDaysAgoLte: 'Last aired ≤ days',
-  episodePercentageGte: 'Episodes ≥ %',
-  episodePercentageLte: 'Episodes ≤ %',
-  tmdbStatus: 'TMDB status',
-  seerrRequestStatus: 'Request status',
-  seerrHasIssue: 'Has issue',
-  lastWatchedDaysAgoGte: 'Last watched ≥ days',
-  lastWatchedDaysAgoLte: 'Last watched ≤ days',
-  plexAddedDaysAgoGte: 'Plex added ≥ days',
-  plexAddedDaysAgoLte: 'Plex added ≤ days',
-};
+/** The named instance data a filter's ids are shown through. */
+export interface FilterSummaryLookups {
+  tags: MediaTag[];
+  qualityProfiles: MediaProfile[];
+  languageProfiles: MediaProfile[];
+}
 
-export function summarizeFilters(filters: Filter[]): string[] {
+function formatRange({ min, max }: RangeValue): string {
+  if (min !== undefined && max !== undefined) return `${min}–${max}`;
+  return min !== undefined ? `${min} or more` : `up to ${max}`;
+}
+
+function namesOf(
+  rule: MediaRuleDescriptor | undefined,
+  { ids, providerId }: { ids: number[]; providerId?: number },
+  lookups: FilterSummaryLookups
+): string {
+  const entries =
+    rule?.dataType === 'instance-ids'
+      ? (lookups[rule.lookup] as {
+          id: number;
+          providerId: number;
+          label?: string;
+          name?: string;
+        }[])
+      : [];
+  const names = ids.map((id) => {
+    const entry = entries.find(
+      (e) => e.id === id && (providerId === undefined || e.providerId === providerId)
+    );
+    return entry?.label ?? entry?.name;
+  });
+  return names.every(Boolean) ? names.join(', ') : `${ids.length} selected`;
+}
+
+function formatValue(
+  rule: MediaRuleDescriptor | undefined,
+  value: Filter['value'],
+  lookups: FilterSummaryLookups
+): string {
+  if (typeof value === 'boolean') {
+    const labels = rule?.dataType === 'boolean' ? rule.valueLabels : undefined;
+    return labels ? labels[value ? 'true' : 'false'] : value ? 'Yes' : 'No';
+  }
+  if (typeof value === 'object') {
+    if (isInstanceScopedValue(value)) return namesOf(rule, value, lookups);
+    if (isRangeValue(value)) return formatRange(value);
+  }
+  if ((rule?.dataType === 'string' || rule?.dataType === 'number') && rule.options) {
+    const option = rule.options.find((o) => o.value === String(value));
+    if (option) return option.label;
+  }
+  if (rule?.dataType === 'csv-strings') return String(value).split(',').join(', ');
+  return String(value);
+}
+
+/** Words for a rule no active provider currently describes, so no chip shows a raw key. */
+function labelFromKey(key: string): string {
+  const words = key.replace(/([A-Z])/g, ' $1').toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** One readable chip per filter, worded from the served rule descriptors. */
+export function summarizeFilters(
+  filters: Filter[],
+  rules: MediaRuleDescriptor[] = [],
+  lookups: FilterSummaryLookups = { tags: [], qualityProfiles: [], languageProfiles: [] }
+): string[] {
   return filters.map(({ ruleKey, value }) => {
-    const label = LABELS[ruleKey] ?? ruleKey;
-    if (typeof value === 'boolean') {
-      return value ? label : `Not ${label.toLowerCase()}`;
-    }
-    if (isInstanceScopedValue(value)) return `${label}: ${value.ids.join(',')}`;
-    return `${label}: ${value}`;
+    const rule = rules.find((r) => r.key === ruleKey);
+    return `${rule?.label ?? labelFromKey(ruleKey)}: ${formatValue(rule, value, lookups)}`;
   });
 }

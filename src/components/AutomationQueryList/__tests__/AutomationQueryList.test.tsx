@@ -63,7 +63,7 @@ describe('AutomationQueryList', () => {
         onChange={vi.fn()}
       />
     );
-    expect(screen.getByText(/at least one include/i)).toBeInTheDocument();
+    expect(screen.getByText(/at least one query must be included/i)).toBeInTheDocument();
   });
 
   it('hides the error when at least one included query with a valid queryId is present', () => {
@@ -75,7 +75,7 @@ describe('AutomationQueryList', () => {
         onChange={vi.fn()}
       />
     );
-    expect(screen.queryByText(/at least one include/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/at least one query must be included/i)).not.toBeInTheDocument();
   });
 
   it('shows a complexity nudge when there are 3 or more exclude automationQueries', () => {
@@ -122,7 +122,7 @@ describe('AutomationQueryList', () => {
         onChange={onChange}
       />
     );
-    await user.selectOptions(screen.getByRole('combobox'), 'exclude');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Role of query 1' }), 'exclude');
     expect(onChange).toHaveBeenCalledOnce();
     const [result] = onChange.mock.calls[0] as [typeof automationQueries];
     expect(result[0].role).toBe('exclude');

@@ -149,7 +149,10 @@ function parseQuery(
   return state;
 }
 
-function buildQuery(state: FilterState, index: FieldIndex | undefined): Record<string, string> {
+export function buildQuery(
+  state: FilterState,
+  index: FieldIndex | undefined
+): Record<string, string> {
   const q: Record<string, string> = {};
   if (state.movieSort !== SORT_DEFAULT) q.movieSort = state.movieSort;
   if (state.seriesSort !== SORT_DEFAULT) q.seriesSort = state.seriesSort;
@@ -248,7 +251,9 @@ export function useMediaFilters() {
     lastSyncedQueryRef.current = nextQuery;
     if (unchanged) return;
     const r = routerRef.current;
-    void r.replace({ pathname: r.pathname, query: nextQuery }, undefined, { shallow: true });
+    // The active tab shares the URL with the filters but is not part of their state.
+    const query = r.query.tab ? { ...nextQuery, tab: r.query.tab } : nextQuery;
+    void r.replace({ pathname: r.pathname, query }, undefined, { shallow: true });
   }, [filterState, index]);
 
   const debouncedFilters = useMemo(() => {

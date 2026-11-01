@@ -35,7 +35,7 @@ describe('ensureSystemJobs()', () => {
     const rows = await db
       .select()
       .from(automations)
-      .where(eq(automations.name, 'system:identity-resolution'));
+      .where(eq(automations.taskId, 'system:identity-resolution'));
 
     expect(rows).toHaveLength(1);
     expect(rows[0].kind).toBe('system');
@@ -59,10 +59,37 @@ describe('ensureSystemJobs()', () => {
     const rows = await db
       .select()
       .from(automations)
-      .where(eq(automations.name, 'system:enrichment'));
+      .where(eq(automations.taskId, 'system:enrichment'));
 
     expect(rows).toHaveLength(1);
     expect(rows[0].kind).toBe('system');
     expect(rows[0].schedule).toBe('0 */6 * * *');
+  });
+
+  it('gives system automations display names', async () => {
+    const db = getDb();
+    await ensureSystemJobs(db);
+
+    const rows = await db.select().from(automations).where(eq(automations.kind, 'system'));
+
+    expect(rows.map((row) => row.name).sort()).toEqual(['Enrichment', 'Identity resolution']);
+  });
+
+  it('renames a row seeded under its task id, without adding a second', async () => {
+    const db = getDb();
+    await db.insert(automations).values({
+      name: 'system:enrichment',
+      taskId: 'system:enrichment',
+      schedule: '0 */6 * * *',
+      kind: 'system',
+    });
+
+    await ensureSystemJobs(db);
+
+    const rows = await db
+      .select()
+      .from(automations)
+      .where(eq(automations.taskId, 'system:enrichment'));
+    expect(rows.map((row) => row.name)).toEqual(['Enrichment']);
   });
 });

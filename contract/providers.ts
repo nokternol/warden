@@ -132,6 +132,10 @@ export const ProviderTypeDescriptorSchema = z.object({
   apiPath: z.string(),
   /** The URL every instance uses, for a hosted service; absent means the user enters a host. */
   defaultUrl: z.string().optional(),
+  /** Whether a connection needs an API key; absent means it does not. */
+  apiKeyRequired: z.boolean().optional(),
+  /** An example host on the type's default port, for a type whose host the user enters. */
+  hostPlaceholder: z.string().optional(),
   /** What the provider contributes to filtering, as short phrases. */
   filterData: z.array(z.string()),
 });
@@ -168,11 +172,19 @@ export const providers = {
     .input(z.object({ id: IdSchema }))
     .output(z.null()),
 
-  /** Probes a provider's connection details before they are saved. */
+  /**
+   * Probes a provider's connection details, saved or not. With `id` and no `apiKey`, it uses the
+   * key stored for that provider, which the client never holds.
+   */
   test: base
     .route({ method: 'GET', path: '/api/providers/test' })
     .input(
-      z.object({ type: ProviderTypeSchema, url: z.string().url(), apiKey: z.string().optional() })
+      z.object({
+        type: ProviderTypeSchema,
+        url: z.string().url(),
+        apiKey: z.string().optional(),
+        id: IdSchema.optional(),
+      })
     )
     .output(z.object({ ok: z.boolean(), error: z.string().optional() })),
 

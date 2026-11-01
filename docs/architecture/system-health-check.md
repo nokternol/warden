@@ -13,7 +13,7 @@ valid state without manual intervention.
 ```
 initializeDatabase()
   → systemHealthCheck(db)
-    → ensureSystemJobs(db)   — upserts missing system automations
+    → ensureSystemJobs(db)   — inserts missing system automations, corrects their display names
     → (future checks)
   → buildContainer(...)
   → automationService.listActive() + automationScheduler.schedule(a) per automation (seed loop)

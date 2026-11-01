@@ -1,6 +1,6 @@
 import Button from '@app/components/Button';
-import ConnectionTestIcon from '@app/components/ConnectionTestIcon';
 import type { TestStatus } from '@app/components/ConnectionTestIcon';
+import { ConnectionTestResult } from '@app/components/ConnectionTestIcon/result';
 import type { CreateProviderParams } from '@app/hooks/useProviderSettings';
 import { descriptorFor } from '@app/hooks/useProviderTypes';
 import { api } from '@app/lib/api/client';
@@ -8,6 +8,8 @@ import { apiUrlOf } from '@contract/providerUrl';
 import type { ProviderType, ProviderTypeDescriptor } from '@contract/providers';
 import { ProviderTypeSchema } from '@contract/schemas';
 import { useRef, useState } from 'react';
+
+const LABEL = 'block text-sm font-medium text-text-secondary mb-1';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -29,7 +31,8 @@ export default function AddProviderForm({
 }: {
   /** The served provider types; absent while they load. */
   types: ProviderTypeDescriptor[] | undefined;
-  onSubmit: (params: CreateProviderParams) => void;
+  /** Rejects when the save fails; the form then stays as it is and says why. */
+  onSubmit: (params: CreateProviderParams) => unknown;
   onCancel: () => void;
 }) {
   const types = servedTypes ?? [];
@@ -41,6 +44,8 @@ export default function AddProviderForm({
   });
   const [testStatus, setTestStatus] = useState<TestStatus>('idle');
   const [testError, setTestError] = useState<string | undefined>();
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const testAbortRef = useRef<AbortController | null>(null);
 
   const runTest = async (url: string, apiKey: string, type: ProviderType) => {
@@ -69,38 +74,49 @@ export default function AddProviderForm({
   };
 
   const chosen = form.type ? descriptorFor(types, form.type) : types[0];
+  const missingKey = Boolean(chosen?.apiKeyRequired) && form.apiKey.length === 0;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chosen) return;
+    if (!chosen || missingKey) return;
     const fullUrl = apiUrlOf(form.url, chosen.apiPath);
     const settings =
       chosen.type === 'JELLYFIN' && form.userId ? { userId: form.userId } : undefined;
 
-    onSubmit({
-      type: chosen.type,
-      name: form.name,
-      url: fullUrl,
-      apiKey: form.apiKey || undefined,
-      settings,
-    });
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await onSubmit({
+        type: chosen.type,
+        name: form.name,
+        url: fullUrl,
+        apiKey: form.apiKey || undefined,
+        settings,
+      });
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Couldn't add the provider.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <form
-      onSubmit={handleSubmit}
-      className="p-4 border border-primary/30 rounded-lg bg-surface-panel space-y-4"
+      onSubmit={(e) => {
+        void handleSubmit(e);
+      }}
+      className="p-4 border border-border rounded-lg bg-surface-panel space-y-4"
     >
-      <div className="text-sm font-medium text-text-primary">Add provider</div>
+      <h2 className="text-sm font-semibold text-text-primary">Add provider</h2>
       {servedTypes === undefined && (
         <p className="text-xs text-text-muted">Loading provider types…</p>
       )}
       {servedTypes?.length === 0 && (
         <p className="text-xs text-text-muted">No provider types are available to add.</p>
       )}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="add-type" className="block text-xs text-text-secondary mb-1">
+          <label htmlFor="add-type" className={LABEL}>
             Type
           </label>
           <select
@@ -113,7 +129,7 @@ export default function AddProviderForm({
               setTestStatus('idle');
               setTestError(undefined);
             }}
-            className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
+            className="field"
           >
             {types.map((t) => (
               <option key={t.type} value={t.type}>
@@ -123,7 +139,7 @@ export default function AddProviderForm({
           </select>
         </div>
         <div>
-          <label htmlFor="add-name" className="block text-xs text-text-secondary mb-1">
+          <label htmlFor="add-name" className={LABEL}>
             Name
           </label>
           <input
@@ -131,18 +147,14 @@ export default function AddProviderForm({
             type="text"
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            placeholder="My Radarr"
-            className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
+            placeholder={chosen ? `My ${chosen.label}` : undefined}
+            className="field"
             required
           />
         </div>
-        <div className="col-span-2">
-          <label htmlFor="add-url" className="block text-xs text-text-secondary mb-1">
+        <div className="sm:col-span-2">
+          <label htmlFor="add-url" className={LABEL}>
             Host URL
-            <span className="ml-1.5">
-              <ConnectionTestIcon status={testStatus} />
-            </span>
-            {testError && <span className="ml-1.5 text-xs text-danger-hover">{testError}</span>}
           </label>
           {chosen?.defaultUrl !== undefined ? (
             <input
@@ -150,7 +162,7 @@ export default function AddProviderForm({
               type="url"
               value={form.url}
               readOnly
-              className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-muted cursor-not-allowed opacity-70"
+              className="field text-text-muted cursor-not-allowed"
             />
           ) : (
             <input
@@ -161,16 +173,15 @@ export default function AddProviderForm({
                 setForm((f) => ({ ...f, url: e.target.value }));
                 setTestStatus('idle');
               }}
-              onBlur={() => chosen && runTest(form.url, form.apiKey, chosen.type)}
-              placeholder="http://localhost:7878"
-              className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
+              placeholder={chosen?.hostPlaceholder}
+              className="field"
               required
             />
           )}
         </div>
         <div>
-          <label htmlFor="add-apikey" className="block text-xs text-text-secondary mb-1">
-            API Key
+          <label htmlFor="add-apikey" className={LABEL}>
+            API key{chosen && !chosen.apiKeyRequired && ' (optional)'}
           </label>
           <input
             id="add-apikey"
@@ -180,14 +191,14 @@ export default function AddProviderForm({
               setForm((f) => ({ ...f, apiKey: e.target.value }));
               setTestStatus('idle');
             }}
-            onBlur={() => chosen && runTest(form.url, form.apiKey, chosen.type)}
-            placeholder="Optional"
-            className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
+            autoComplete="off"
+            required={chosen?.apiKeyRequired}
+            className="field"
           />
         </div>
         {chosen?.type === 'JELLYFIN' && (
           <div>
-            <label htmlFor="add-userid" className="block text-xs text-text-secondary mb-1">
+            <label htmlFor="add-userid" className={LABEL}>
               User ID
             </label>
             <input
@@ -196,17 +207,41 @@ export default function AddProviderForm({
               value={form.userId}
               onChange={(e) => setForm((f) => ({ ...f, userId: e.target.value }))}
               placeholder="Jellyfin user ID"
-              className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
+              className="field"
             />
           </div>
         )}
       </div>
-      <div className="flex gap-2 justify-end">
+
+      <ConnectionTestResult status={testStatus} error={testError} />
+      {saveError && (
+        <p role="alert" className="text-sm text-danger-text">
+          {saveError}
+        </p>
+      )}
+
+      <div className="flex flex-wrap gap-2 justify-end">
         <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" variant="primary" size="sm" disabled={!chosen}>
-          Save
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          disabled={!chosen || !form.url || testStatus === 'loading'}
+          onClick={() => {
+            if (chosen) void runTest(form.url, form.apiKey, chosen.type);
+          }}
+        >
+          Test connection
+        </Button>
+        <Button
+          type="submit"
+          variant="primary"
+          size="sm"
+          disabled={!chosen || missingKey || saving}
+        >
+          {saving ? 'Saving…' : 'Save'}
         </Button>
       </div>
     </form>

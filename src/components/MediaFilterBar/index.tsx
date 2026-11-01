@@ -78,7 +78,7 @@ export interface MediaFilterBarProps {
 function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2 rounded-lg border border-divider bg-surface-bg/40 px-2.5 py-1">
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted whitespace-nowrap select-none">
+      <span className="text-xs font-semibold uppercase tracking-wider text-text-muted whitespace-nowrap select-none">
         {label}
       </span>
       <span className="h-4 w-px bg-divider flex-shrink-0" aria-hidden="true" />
@@ -598,7 +598,7 @@ export function MediaFilterBar({
         aria-label="Filter by title"
         value={(values.shared.title as string) ?? ''}
         onChange={(e) => onRuleChange('shared', 'title', e.target.value)}
-        className="pl-8 pr-3 py-1.5 rounded-md text-xs bg-surface-bg border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary w-44"
+        className="pl-8 pr-3 py-1.5 rounded-md text-xs max-sm:text-base max-sm:min-h-[44px] bg-surface-bg border border-border-input text-text-primary placeholder:text-text-muted w-44"
       />
     </div>
   ) : null;
@@ -674,7 +674,7 @@ export function MediaFilterBar({
     <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-border/60 pt-2">
       {conditionCount > 0 ? (
         <>
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-primary-hover whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-primary-text whitespace-nowrap">
             <span className="w-1.5 h-1.5 rounded-full bg-primary-hover" aria-hidden="true" />
             Filtering by {conditionCount} {conditionCount === 1 ? 'condition' : 'conditions'}
           </span>
@@ -686,7 +686,7 @@ export function MediaFilterBar({
                   type="button"
                   onClick={c.onClear}
                   aria-label={`Remove filter: ${c.label}`}
-                  className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 pl-2 pr-1.5 py-0.5 text-[11px] font-medium text-primary-hover hover:bg-primary/20 hover:border-primary/60 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                  className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 pl-2 pr-1.5 py-0.5 text-xs font-medium text-primary-text hover:bg-primary/20 hover:border-primary/60 transition-colors"
                 >
                   {c.label}
                   <ChipX />
@@ -703,7 +703,7 @@ export function MediaFilterBar({
           <button
             type="button"
             onClick={onSaveQuery}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs font-medium border border-primary/40 text-primary-hover hover:bg-primary/10 hover:border-primary transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs font-medium border border-primary/40 text-primary-text hover:bg-primary/10 hover:border-primary transition-colors"
           >
             <svg
               width="11"
@@ -757,13 +757,13 @@ export function MediaFilterBar({
       {mobileOpen && (
         <div
           ref={dialogRef}
-          className="fixed inset-0 z-50 md:hidden bg-surface-panel flex flex-col pb-16"
+          className="fixed inset-0 z-50 md:hidden bg-surface-panel flex flex-col"
           role="dialog"
           aria-modal="true"
           aria-labelledby={dialogHeadingId}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+          <div className="flex items-center justify-between px-4 py-2 min-h-14 border-b border-border flex-shrink-0">
             <h2 id={dialogHeadingId} className="text-base font-semibold text-text-primary">
               Filters
             </h2>
@@ -771,7 +771,7 @@ export function MediaFilterBar({
               <button
                 type="button"
                 onClick={clearAll}
-                className="text-xs text-text-muted hover:text-text-primary underline underline-offset-2 transition-colors"
+                className="min-h-11 px-2 text-xs text-text-muted hover:text-text-primary underline underline-offset-2 transition-colors"
               >
                 Clear all
               </button>
@@ -804,7 +804,7 @@ export function MediaFilterBar({
                     aria-label="Filter by title"
                     value={(values.shared.title as string) ?? ''}
                     onChange={(e) => onRuleChange('shared', 'title', e.target.value)}
-                    className="w-full pl-10 pr-3 py-3 rounded-lg text-sm bg-surface-bg border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full pl-10 pr-3 py-3 rounded-lg text-sm max-sm:text-base max-sm:min-h-[44px] bg-surface-bg border border-border-input text-text-primary placeholder:text-text-muted"
                   />
                 </div>
               </div>
@@ -838,12 +838,7 @@ export function MediaFilterBar({
             ))}
 
             {/* Add filter */}
-            {filterPicker && (
-              <div>
-                <h3 className="text-sm font-semibold text-text-secondary mb-3">Add filter</h3>
-                {filterPicker}
-              </div>
-            )}
+            {filterPicker && <div>{filterPicker}</div>}
 
             {/* Year section */}
             {yearRule && (
@@ -878,7 +873,7 @@ export function MediaFilterBar({
             <button
               type="button"
               onClick={onMobileClose}
-              className="w-full py-3 rounded-sm bg-primary text-white font-semibold text-sm"
+              className="w-full py-3 rounded-sm bg-primary text-on-primary font-semibold text-sm"
             >
               Done
             </button>

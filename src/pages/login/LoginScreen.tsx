@@ -1,6 +1,7 @@
 import { ImageFader } from '@app/components/ImageFader';
 import { PlexIcon, WardenLogo } from '@app/components/Logo';
 import { useBackdrops } from '@app/hooks/useBackdrops';
+import Head from 'next/head';
 
 /** Why a sign-in attempt did not start a session. */
 export interface SignInFailure {
@@ -23,40 +24,33 @@ export interface LoginScreenProps {
   onSignIn: () => void;
 }
 
-/** The sign-in screen: backdrops, the Plex sign-in button and the last attempt's failure. */
+/** The sign-in screen: logo, name, the Plex button, what signing in does, and the last failure. */
 export function LoginScreen({ isSigningIn, failure, onSignIn }: LoginScreenProps) {
   const { backdrops } = useBackdrops();
 
   return (
-    <div className="relative min-h-screen w-full flex flex-col items-center justify-center bg-surface-bg px-6">
-      {/* Background with Cinematic Tint */}
+    <div className="relative min-h-dvh w-full flex flex-col items-center justify-center bg-surface-bg px-6">
+      <Head>
+        <title>Sign in · Warden</title>
+      </Head>
+      {/* Backdrops sit under a heavy wash so the sentence on top holds its contrast on any image. */}
       <div className="absolute inset-0 z-0">
         <ImageFader images={backdrops || []} className="opacity-50" />
-        {/* Base cinematic wash */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-surface-bg/50 to-surface-bg/90" />
+        <div className="absolute inset-0 bg-surface-bg/80" />
       </div>
 
-      <div className="relative z-10 w-full max-w-md text-center">
-        {/* Logo container */}
-        <div className="mb-6 flex justify-center">
-          <div className="p-4 rounded-lg bg-surface-panel/80 border border-primary/30 shadow-[0_0_30px_rgba(var(--color-primary-glow),0.2)]">
-            <WardenLogo isLoader={isSigningIn} className="w-20 h-20" />
-          </div>
-        </div>
-
-        <div className="mb-6">
-          <h1 className="text-4xl font-black text-text-primary tracking-tighter mb-2">Warden</h1>
-          <p className="text-text-muted text-sm font-medium leading-relaxed max-w-sm mx-auto">
-            Rule-based automation for your self-hosted media library
-          </p>
+      <div className="relative z-10 w-full max-w-sm text-center space-y-6">
+        <div className="flex flex-col items-center gap-2">
+          <WardenLogo isLoader={isSigningIn} className="w-14 h-14" />
+          <h1 className="text-xl font-semibold text-text-primary">Warden</h1>
         </div>
 
         {failure && (
           <div
             role="alert"
-            className="bg-surface-panel border border-danger/60 p-4 rounded-lg mb-6 shadow-card-elevated"
+            className="bg-surface-panel border border-danger/40 p-4 rounded-lg text-left"
           >
-            <p className="font-semibold text-danger text-sm">{FAILURE_TITLES[failure.kind]}</p>
+            <p className="font-semibold text-danger-text text-sm">{FAILURE_TITLES[failure.kind]}</p>
             <p className="text-sm text-text-primary mt-1">{failure.reason}</p>
             {failure.kind === 'refused' && (
               <p className="text-xs text-text-secondary mt-2">{REFUSED_HINT}</p>
@@ -64,28 +58,19 @@ export function LoginScreen({ isSigningIn, failure, onSignIn }: LoginScreenProps
           </div>
         )}
 
-        {/* Login Card */}
-        <div className="bg-surface-panel border border-border rounded-lg overflow-hidden shadow-card-elevated">
-          <div className="bg-primary/10 py-2 border-b border-border">
-            <span className="text-xs font-medium text-primary">Sign in to continue</span>
-          </div>
+        <button
+          type="button"
+          onClick={onSignIn}
+          disabled={isSigningIn}
+          className="w-full bg-plex hover:bg-plex-hover active:bg-plex-active text-on-primary text-sm font-medium min-h-11 py-2 rounded-sm flex items-center justify-center gap-2 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <PlexIcon className="w-5 h-5" />
+          <span>{isSigningIn ? 'Signing in…' : 'Sign in with Plex'}</span>
+        </button>
 
-          <div className="p-8">
-            <button
-              type="button"
-              onClick={onSignIn}
-              disabled={isSigningIn}
-              className="w-full bg-plex hover:bg-plex-hover active:bg-plex-active text-slate-950 font-bold py-4 rounded-sm flex items-center justify-center gap-3 transition-[background-color,transform,box-shadow,opacity] duration-150 ease-out motion-safe:hover:scale-[1.02] motion-safe:active:scale-[0.98] shadow-lg disabled:opacity-[0.4] disabled:cursor-not-allowed disabled:transform-none"
-            >
-              <PlexIcon className="w-6 h-6" />
-              <span>{isSigningIn ? 'Signing in...' : 'Sign in with Plex'}</span>
-            </button>
-
-            <p className="mt-6 text-xs text-text-muted font-medium">
-              By signing in, you agree to your server&apos;s automation policies.
-            </p>
-          </div>
-        </div>
+        <p className="text-sm text-text-secondary">
+          The first account to sign in becomes this Warden's owner.
+        </p>
       </div>
     </div>
   );

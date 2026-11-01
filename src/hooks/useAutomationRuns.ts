@@ -5,24 +5,40 @@ import { useState } from 'react';
 
 export type { AutomationRunDto };
 
-const PAGE_SIZE = 25;
+export const RUNS_PAGE_SIZE = 25;
 
 export function useAutomationRuns(opts: { automationId?: number } = {}) {
   const [page, setPage] = useState(0);
+  // A new filter starts from its first page.
+  const [pageFor, setPageFor] = useState(opts.automationId);
+  if (pageFor !== opts.automationId) {
+    setPageFor(opts.automationId);
+    setPage(0);
+  }
 
-  const { data, isLoading, mutate } = useApi(api.automations.runs, {
-    limit: PAGE_SIZE,
-    offset: page * PAGE_SIZE,
+  const { data, isLoading, error, mutate } = useApi(api.automations.runs, {
+    limit: RUNS_PAGE_SIZE,
+    offset: page * RUNS_PAGE_SIZE,
     automationId: opts.automationId,
   });
 
   return {
-    runs: data?.data ?? [],
+    runs: data?.data,
     total: data?.total ?? 0,
     isLoading,
+    error,
     page,
     nextPage: () => setPage((p) => p + 1),
     prevPage: () => setPage((p) => Math.max(0, p - 1)),
     refresh: mutate,
   };
+}
+
+/** The input that reads one automation's newest recorded run. */
+export const latestRunInput = (automationId: number) => ({ automationId, limit: 1 });
+
+/** One automation's newest recorded run, whatever its status; undefined until it answers. */
+export function useLatestRun(automationId: number): AutomationRunDto | undefined {
+  const { data } = useApi(api.automations.runs, latestRunInput(automationId));
+  return data?.data[0];
 }

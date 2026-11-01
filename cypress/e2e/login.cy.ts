@@ -62,7 +62,7 @@ describe('Login page', () => {
     cy.get('@windowOpen').should('have.been.calledOnce');
   });
 
-  it('completes full auth flow: creates PIN, polls for token, posts to backend, navigates to /dashboard', () => {
+  it('completes full auth flow: creates PIN, polls for token, posts to backend, navigates to /automations', () => {
     cy.window().then((win) => {
       const fakePopup = {
         closed: false,
@@ -78,7 +78,7 @@ describe('Login page', () => {
     cy.wait('@pollPin');
     cy.wait('@plexAuth');
 
-    cy.url().should('include', '/dashboard');
+    cy.url().should('include', '/automations');
     cy.get('@popupClose').should('have.been.called');
   });
 });

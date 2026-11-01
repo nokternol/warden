@@ -1,15 +1,19 @@
 .container {
-  @apply flex flex-col items-center justify-center text-center p-8;
+  @apply flex flex-col items-center justify-center gap-2 text-center px-6 py-12;
 }
 
 .iconWrapper {
-  @apply mb-4 text-text-secondary;
+  @apply mb-1 text-text-muted;
 }
 
 .title {
-  @apply text-xl font-semibold text-text-primary mb-2;
+  @apply text-sm font-medium text-text-primary;
 }
 
 .description {
-  @apply text-text-muted mb-6 max-w-md;
+  @apply text-xs text-text-muted max-w-sm;
+}
+
+.link {
+  @apply mt-1 inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-sm border border-border text-text-primary hover:bg-surface-hover transition-colors duration-150 max-sm:min-h-[44px];
 }

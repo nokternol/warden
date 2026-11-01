@@ -2,7 +2,7 @@ import type { Meta, Story, StoryDecorator } from '@ladle/react';
 import { LoginScreen } from './LoginScreen';
 import LoginPage from './index.page';
 
-export const meta: Meta = {
+const meta: Meta = {
   // Remove the Provider's min-h-screen wrapper so the login page fills
   // the full Ladle canvas and the backdrop images can be seen properly.
   decorators: [
@@ -33,3 +33,5 @@ export const Failed: Story = () => (
     onSignIn={() => {}}
   />
 );
+
+export default meta;

@@ -1,11 +1,15 @@
 import AppLayout from '@app/components/AppLayout';
-import AutomationRow from '@app/components/AutomationRow';
+import AsyncBoundary from '@app/components/AsyncBoundary';
+import AutomationRow, { AUTOMATION_COLUMNS } from '@app/components/AutomationRow';
 import EmptyState from '@app/components/EmptyState';
 import MediaResetControl from '@app/components/MediaResetControl';
+import RowTable from '@app/components/RowTable';
 import SidebarNav from '@app/components/SidebarNav';
 import TopBar from '@app/components/TopBar';
 import { useAutomations } from '@app/hooks/useAutomations';
 import { useMediaReset } from '@app/hooks/useMediaReset';
+import { api } from '@app/lib/api/client';
+import { useApi } from '@app/lib/api/useApi';
 import { guardPage } from '@app/lib/utils/guardPage';
 import { Monitor } from 'lucide-react';
 import type { GetServerSideProps } from 'next';
@@ -16,66 +20,71 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   return { props: {} };
 };
 
-const MonitorIcon = () => <Monitor className="w-12 h-12" strokeWidth={1.5} />;
-
 export default function SystemPage() {
-  const { automations, isLoading, run } = useAutomations({ kind: 'system' });
+  const { automations, error, refresh, run } = useAutomations({ kind: 'system' });
   const { reset } = useMediaReset();
+  const { data: movies } = useApi(api.media.browse.movie, { pageSize: 1 });
+  const { data: series } = useApi(api.media.browse.series, { pageSize: 1 });
+  const titleCount = movies && series ? movies.totalCount + series.totalCount : undefined;
 
   return (
     <AppLayout sidebar={<SidebarNav />} topBar={<TopBar title="System" />}>
-      <div className="p-6 max-w-4xl">
+      <div className="p-4 sm:p-6 space-y-8 max-w-5xl">
         <section aria-labelledby="system-automations-heading">
-          <div className="flex items-center justify-between gap-3 mb-1">
-            <div className="flex items-center gap-3">
-              <Monitor size={16} strokeWidth={1.75} className="text-primary" aria-hidden="true" />
-              <h2
-                id="system-automations-heading"
-                className="text-sm font-semibold text-text-primary"
-              >
-                System automations
-              </h2>
-            </div>
-            <MediaResetControl
-              onReset={async () => {
-                const result = await reset();
-                if (!result) throw new Error('Failed to reset media data');
-                return result;
-              }}
-            />
-          </div>
-          <p className="text-xs text-text-muted mb-4 ml-[28px]">
+          <h2
+            id="system-automations-heading"
+            className="text-sm font-semibold text-text-primary mb-1"
+          >
+            System automations
+          </h2>
+          <p className="text-xs text-text-muted mb-4 max-w-prose">
             Built-in data jobs. Their task and schedule are fixed; you can run them on demand.
           </p>
 
-          {!isLoading && automations.length === 0 ? (
-            <div className="rounded-lg border border-border bg-surface-panel overflow-hidden">
-              <EmptyState
-                icon={<MonitorIcon />}
-                title="No system automations"
-                description="System data jobs will appear here once configured."
-              />
-            </div>
-          ) : (
-            <div className="rounded-lg border border-border bg-surface-panel overflow-hidden">
-              <div className="hidden sm:grid sm:grid-cols-[1fr_160px_168px_88px] items-center px-4 py-2 border-b border-border bg-surface-bg/30">
-                <span className="text-xs font-medium text-text-muted">Automation</span>
-                <span className="text-xs font-medium text-text-muted">Schedule</span>
-                <span className="text-xs font-medium text-text-muted">Last run</span>
-                <span className="text-xs font-medium text-text-muted">Next run</span>
-              </div>
-              {automations.map((a) => (
-                <AutomationRow
-                  key={a.id}
-                  automation={a}
-                  // System rows expose only Run-now; toggle/delete are never rendered for kind=system.
-                  onToggle={() => {}}
-                  onDelete={() => {}}
-                  onRun={() => run(a.id)}
+          <AsyncBoundary
+            data={automations}
+            error={error}
+            onRetry={() => refresh()}
+            what="system automations"
+            isEmpty={(list) => list.length === 0}
+            empty={
+              <div className="rounded-lg border border-border bg-surface-panel">
+                <EmptyState
+                  icon={<Monitor size={28} strokeWidth={1.25} aria-hidden="true" />}
+                  title="No system automations"
+                  description="Warden restores these on its next start."
                 />
-              ))}
-            </div>
-          )}
+              </div>
+            }
+          >
+            {(list) => (
+              <div className="rounded-lg border border-border bg-surface-panel">
+                <RowTable label="System automations" columns={AUTOMATION_COLUMNS}>
+                  {list.map((a) => (
+                    <AutomationRow key={a.id} automation={a} onRun={() => run(a.id)} />
+                  ))}
+                </RowTable>
+              </div>
+            )}
+          </AsyncBoundary>
+        </section>
+
+        <section aria-labelledby="media-reset-heading">
+          <h2 id="media-reset-heading" className="text-sm font-semibold text-text-primary mb-1">
+            Media data
+          </h2>
+          <p className="text-xs text-text-muted mb-4 max-w-prose">
+            Clears Warden's stored identities and enrichment so they can be rebuilt. Your providers
+            and their libraries are not touched.
+          </p>
+          <MediaResetControl
+            titleCount={titleCount}
+            onReset={async () => {
+              const result = await reset();
+              if (!result) throw new Error('Failed to reset media data');
+              return result;
+            }}
+          />
         </section>
       </div>
     </AppLayout>

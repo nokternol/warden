@@ -70,12 +70,16 @@ describe('GET /api/providers/types', () => {
     expect(byType('RADARR')).toEqual({
       type: 'RADARR',
       label: 'Radarr',
+      apiKeyRequired: true,
+      hostPlaceholder: 'http://localhost:7878',
       apiPath: '/api/v3',
       filterData: ['Movie library', 'Quality profiles', 'Tags'],
     });
     expect(byType('PLEX')).toEqual({
       type: 'PLEX',
       label: 'Plex',
+      apiKeyRequired: true,
+      hostPlaceholder: 'http://localhost:32400',
       apiPath: '',
       filterData: ['Library contents', 'Item metadata'],
     });

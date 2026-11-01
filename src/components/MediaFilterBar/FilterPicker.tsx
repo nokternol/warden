@@ -128,7 +128,7 @@ export function FilterPicker({ entries, onPick }: FilterPickerProps) {
         ref={triggerRef}
         type="button"
         {...({ popovertarget: popoverId } as PopoverTargetAttr)}
-        className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs font-medium border border-dashed border-border text-text-secondary hover:border-primary hover:text-primary-hover transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs font-medium border border-dashed border-border text-text-secondary hover:border-primary hover:text-primary-text transition-colors max-sm:min-h-[44px]"
       >
         <svg
           width="11"
@@ -154,6 +154,9 @@ export function FilterPicker({ entries, onPick }: FilterPickerProps) {
         aria-label="Add filter"
       >
         <div className="sticky top-0 bg-surface-elevated border-b border-border p-2">
+          <p className="mb-2 text-xs text-text-secondary">
+            A title must match every filter you add.
+          </p>
           <input
             ref={searchRef}
             type="text"
@@ -168,7 +171,7 @@ export function FilterPicker({ entries, onPick }: FilterPickerProps) {
             }
             role="combobox"
             aria-expanded="true"
-            className="w-full px-2 py-1.5 rounded-sm text-xs bg-surface-bg border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full px-2 py-1.5 rounded-sm text-xs max-sm:text-base max-sm:min-h-[44px] bg-surface-bg border border-border-input text-text-primary placeholder:text-text-muted"
           />
         </div>
         {/* Combobox pattern (biome.json override disables useFocusableInteractive here):
@@ -176,13 +179,13 @@ export function FilterPicker({ entries, onPick }: FilterPickerProps) {
             tracks the highlighted option. */}
         <div id={listboxId} role="listbox" aria-label="Available filters" className="p-1">
           {filtered.length === 0 ? (
-            <p className="px-2 py-3 text-xs text-text-muted text-center">
+            <p className="px-2 py-3 text-xs text-text-muted text-center max-sm:min-h-[44px]">
               No filters match “{query}”
             </p>
           ) : (
             filtered.map(([label, groupEntries]) => (
               <div key={label} className="mb-1 last:mb-0">
-                <div className="px-2 pt-1.5 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-muted select-none">
+                <div className="px-2 pt-1.5 pb-0.5 text-xs font-semibold uppercase tracking-wider text-text-muted select-none">
                   {label}
                 </div>
                 {groupEntries.map((entry) => {
@@ -200,7 +203,7 @@ export function FilterPicker({ entries, onPick }: FilterPickerProps) {
                       className={cn(
                         'w-full text-left px-2 py-1.5 rounded-sm text-xs transition-colors',
                         isActive
-                          ? 'bg-primary/15 text-primary-hover'
+                          ? 'bg-primary/15 text-primary-text'
                           : 'text-text-secondary hover:bg-surface-hover'
                       )}
                     >

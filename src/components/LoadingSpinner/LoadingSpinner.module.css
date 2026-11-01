@@ -3,7 +3,7 @@
 }
 
 .icon {
-  @apply animate-spin text-primary;
+  @apply animate-spin text-primary-text;
 }
 
 .sm {

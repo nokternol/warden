@@ -1,4 +1,5 @@
 import { cn } from '@app/lib/utils/cn';
+import Head from 'next/head';
 import type { HTMLAttributes } from 'react';
 import styles from './TopBar.module.css';
 
@@ -24,6 +25,11 @@ export default function TopBar({
 }: TopBarProps) {
   return (
     <div className={cn(styles.container, sticky && styles.isSticky, className)} {...props}>
+      {title && (
+        <Head>
+          <title>{`${title} · Warden`}</title>
+        </Head>
+      )}
       <div className={styles.inner}>
         <div className={styles.titleGroup}>
           {breadcrumbs && breadcrumbs.length > 0 && (

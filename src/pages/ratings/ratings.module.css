@@ -9,8 +9,8 @@
 /* ── Instructions ── */
 .instructions {
   padding: 1.25rem 1.5rem;
-  background: var(--color-surface-panel);
-  border: 1px solid var(--color-border);
+  background: rgb(var(--color-surface-panel));
+  border: 1px solid rgb(var(--color-border));
   border-radius: 0.75rem;
 }
 
@@ -18,7 +18,7 @@
   margin: 0 0 0.875rem;
   font-size: 1rem;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: rgb(var(--color-text-primary));
 }
 
 .instructionsList {
@@ -31,16 +31,16 @@
 
 .instructionsList li {
   font-size: 0.875rem;
-  color: var(--color-text-muted);
+  color: rgb(var(--color-text-muted));
   line-height: 1.6;
 }
 
 .instructionsList strong {
-  color: var(--color-text-primary);
+  color: rgb(var(--color-text-primary));
 }
 
 .link {
-  color: var(--color-primary);
+  color: rgb(var(--color-primary));
   text-decoration: none;
 }
 
@@ -51,8 +51,8 @@
 /* ── Form Panel ── */
 .formPanel {
   padding: 1.5rem;
-  background: var(--color-surface-panel);
-  border: 1px solid var(--color-border);
+  background: rgb(var(--color-surface-panel));
+  border: 1px solid rgb(var(--color-border));
   border-radius: 0.75rem;
   display: flex;
   flex-direction: column;
@@ -63,15 +63,15 @@
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: rgb(var(--color-text-primary));
 }
 
 /* ── Error ── */
 .error {
   padding: 0.875rem 1rem;
-  background: rgb(from var(--color-danger) r g b / 0.1);
-  border: 1px solid rgb(from var(--color-danger) r g b / 0.3);
+  background: rgb(var(--color-danger) / 0.1);
+  border: 1px solid rgb(var(--color-danger) / 0.3);
   border-radius: 0.5rem;
-  color: var(--color-danger);
+  color: rgb(var(--color-danger));
   font-size: 0.875rem;
 }

@@ -1,4 +1,6 @@
 import AppLayout from '@app/components/AppLayout';
+import { LoadError } from '@app/components/AsyncBoundary';
+import EmptyState from '@app/components/EmptyState';
 import MediaCard from '@app/components/MediaCard';
 import { MediaFilterBar } from '@app/components/MediaFilterBar';
 import RatingsPanel from '@app/components/RatingsPanel';
@@ -28,7 +30,6 @@ import { descriptorFor, useProviderTypes } from '@app/hooks/useProviderTypes';
 import type { ManagedSeries } from '@app/hooks/useSeries';
 import { useSeries } from '@app/hooks/useSeries';
 import { toFilters } from '@app/lib/mediaQueryAdapters';
-import { resolveNavItems } from '@app/lib/navigation';
 import { cn } from '@app/lib/utils/cn';
 import { guardPage } from '@app/lib/utils/guardPage';
 import type { MediaRuleDescriptor } from '@contract/media';
@@ -46,6 +47,7 @@ import {
   Tv2,
 } from 'lucide-react';
 import type { GetServerSideProps } from 'next';
+import { useRouter } from 'next/router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const RATINGS_PANEL_OFFERED = isOfferedSection(scope, 'mediaRatingsPanel');
@@ -207,9 +209,9 @@ function SortFieldPicker({
         aria-expanded={open}
         aria-label="Sort by"
         className={cn(
-          'flex items-center gap-1 text-xs font-medium px-1.5 py-1 rounded transition-colors focus:outline-none focus:ring-1 focus:ring-primary',
+          'flex items-center gap-1 text-xs font-medium px-1.5 py-1 max-sm:min-h-[44px] rounded transition-colors',
           isNonDefault
-            ? 'text-primary hover:text-primary-hover'
+            ? 'text-primary-text hover:text-primary-text'
             : 'text-text-secondary hover:text-text-primary'
         )}
       >
@@ -243,9 +245,9 @@ function SortFieldPicker({
               }}
               onKeyDown={(e) => handleMenuKeyDown(e, index)}
               className={cn(
-                'w-full text-left px-3 py-1.5 text-xs transition-colors focus:outline-none focus:bg-surface-panel',
+                'w-full text-left px-3 py-1.5 max-sm:min-h-[44px] text-xs transition-colors focus:bg-surface-panel',
                 field === opt.value
-                  ? 'text-primary font-medium'
+                  ? 'text-primary-text font-medium'
                   : 'text-text-secondary hover:bg-surface-panel'
               )}
             >
@@ -264,6 +266,7 @@ function SortBar({
   count,
   tab,
   isLoading,
+  failed,
   density,
   onDensityChange,
 }: {
@@ -272,6 +275,7 @@ function SortBar({
   count: number;
   tab: ActiveTab;
   isLoading: boolean;
+  failed: boolean;
   density: CardDensity;
   onDensityChange: (d: CardDensity) => void;
 }) {
@@ -293,11 +297,11 @@ function SortBar({
         <button
           type="button"
           onClick={handleDirToggle}
-          aria-label={dir === 'asc' ? 'Sort ascending' : 'Sort descending'}
+          aria-label={dir === 'asc' ? 'Sort descending' : 'Sort ascending'}
           className={cn(
-            'flex items-center justify-center w-6 h-6 rounded transition-colors focus:outline-none focus:ring-1 focus:ring-primary',
+            'flex items-center justify-center size-11 sm:size-6 rounded transition-colors',
             isNonDefault
-              ? 'text-primary hover:text-primary-hover'
+              ? 'text-primary-text hover:text-primary-text'
               : 'text-text-muted hover:text-text-secondary'
           )}
         >
@@ -334,7 +338,7 @@ function SortBar({
                 'flex items-center justify-center w-7 h-7 transition-colors',
                 i > 0 && 'border-l border-border',
                 density === value
-                  ? 'bg-primary text-white'
+                  ? 'bg-primary text-on-primary'
                   : 'text-text-muted hover:text-text-secondary hover:bg-surface-hover'
               )}
             >
@@ -346,7 +350,7 @@ function SortBar({
         <div aria-live="polite" aria-atomic="true" className="flex items-center">
           {isLoading ? (
             <span className="inline-block h-3 w-16 rounded bg-surface-elevated animate-pulse" />
-          ) : (
+          ) : failed ? null : (
             <span className="text-xs text-text-muted tabular-nums">
               <span className="text-text-secondary font-medium">{count.toLocaleString()}</span>{' '}
               {tab === 'movies' ? 'movies' : 'series'}
@@ -415,6 +419,10 @@ export interface MediaSlice<T> {
   isFetchingMore: boolean;
   hasMore: boolean;
   fetchMore: () => void;
+  error?: Error;
+  refresh?: () => unknown;
+  /** Sources that failed while the browse itself succeeded. */
+  sourceErrors?: { provider: string; error: string }[];
 }
 
 interface Lookups {
@@ -462,6 +470,23 @@ export interface MediaContentProps {
   // card density
   density: CardDensity;
   onDensityChange: (d: CardDensity) => void;
+}
+
+/** Results may be partial when a source failed, so the failure is stated beside them. */
+function SourceErrors({ errors = [] }: { errors?: { provider: string; error: string }[] }) {
+  if (errors.length === 0) return null;
+  return (
+    <div
+      role="alert"
+      className="mb-4 rounded-lg border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-text-primary"
+    >
+      {errors.map(({ provider, error }) => (
+        <p key={provider} className="break-words">
+          Couldn't reach {provider}: {error}
+        </p>
+      ))}
+    </div>
+  );
 }
 
 // ─── MediaContent ─────────────────────────────────────────────────────────────
@@ -521,6 +546,7 @@ export function MediaContent({
         count={activeTab === 'movies' ? movies.totalCount : series.totalCount}
         tab={activeTab}
         isLoading={activeTab === 'movies' ? movies.isLoading : series.isLoading}
+        failed={Boolean(activeTab === 'movies' ? movies.error : series.error)}
         density={density}
         onDensityChange={onDensityChange}
       />
@@ -534,6 +560,8 @@ export function MediaContent({
           tabIndex={activeTab === 'movies' ? 0 : undefined}
           className={cn(activeTab !== 'movies' && 'hidden')}
         >
+          <h2 className="sr-only">Movies</h2>
+          <SourceErrors errors={movies.sourceErrors} />
           <VirtualMediaGrid
             items={movies.items}
             isLoading={movies.isLoading}
@@ -565,49 +593,33 @@ export function MediaContent({
               </MediaCard>
             )}
           />
-          {movies.hasMore && !movies.isFetchingMore && (
+          {movies.hasMore && !movies.isFetchingMore && !movies.error && (
             <div ref={movieSentinelRef} style={{ height: 1 }} />
           )}
+          {movies.error && <LoadError what="movies" onRetry={() => movies.refresh?.()} />}
           {!movies.isLoading &&
+            !movies.error &&
             movies.items.length === 0 &&
             sources &&
             (!sources.movie.configured ? (
-              <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
-                <ServerOff size={32} strokeWidth={1.25} className="text-text-muted" />
-                <p className="text-sm font-medium text-text-secondary">
-                  No {providerLabel(sources.movie.ownerType)} connection configured.
-                </p>
-                <p className="text-xs text-text-muted">
-                  Add a {providerLabel(sources.movie.ownerType)} provider in Settings to manage your
-                  movie library.
-                </p>
-                <a
-                  href="/settings"
-                  className="text-xs text-primary hover:underline underline-offset-2"
-                >
-                  Go to Settings
-                </a>
-              </div>
+              <EmptyState
+                icon={<ServerOff size={28} strokeWidth={1.25} aria-hidden="true" />}
+                title={`No ${providerLabel(sources.movie.ownerType)} connection configured`}
+                description={`Add a ${providerLabel(sources.movie.ownerType)} provider to manage your movie library.`}
+                action={{ label: 'Go to Providers', href: '/settings' }}
+              />
             ) : activeFilterCount > 0 ? (
-              <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
-                <SearchX size={32} strokeWidth={1.25} className="text-text-muted" />
-                <p className="text-sm text-text-secondary">No movies match your current filters.</p>
-                <button
-                  type="button"
-                  onClick={clearAll}
-                  className="text-xs text-primary hover:underline underline-offset-2"
-                >
-                  Clear filters
-                </button>
-              </div>
+              <EmptyState
+                icon={<SearchX size={28} strokeWidth={1.25} aria-hidden="true" />}
+                title="No movies match your current filters"
+                action={{ label: 'Clear filters', onClick: clearAll }}
+              />
             ) : (
-              <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
-                <Film size={32} strokeWidth={1.25} className="text-text-muted" />
-                <p className="text-sm text-text-secondary">Your movie library is empty.</p>
-                <p className="text-xs text-text-muted">
-                  Movies synced from {providerLabel(sources.movie.ownerType)} will appear here.
-                </p>
-              </div>
+              <EmptyState
+                icon={<Film size={28} strokeWidth={1.25} aria-hidden="true" />}
+                title="Your movie library is empty"
+                description={`Movies synced from ${providerLabel(sources.movie.ownerType)} will appear here.`}
+              />
             ))}
         </section>
 
@@ -619,6 +631,8 @@ export function MediaContent({
           tabIndex={activeTab === 'series' ? 0 : undefined}
           className={cn(activeTab !== 'series' && 'hidden')}
         >
+          <h2 className="sr-only">Series</h2>
+          <SourceErrors errors={series.sourceErrors} />
           <VirtualMediaGrid
             items={series.items}
             isLoading={series.isLoading}
@@ -650,49 +664,33 @@ export function MediaContent({
               </MediaCard>
             )}
           />
-          {series.hasMore && !series.isFetchingMore && (
+          {series.hasMore && !series.isFetchingMore && !series.error && (
             <div ref={seriesSentinelRef} style={{ height: 1 }} />
           )}
+          {series.error && <LoadError what="series" onRetry={() => series.refresh?.()} />}
           {!series.isLoading &&
+            !series.error &&
             series.items.length === 0 &&
             sources &&
             (!sources.series.configured ? (
-              <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
-                <ServerOff size={32} strokeWidth={1.25} className="text-text-muted" />
-                <p className="text-sm font-medium text-text-secondary">
-                  No {providerLabel(sources.series.ownerType)} connection configured.
-                </p>
-                <p className="text-xs text-text-muted">
-                  Add a {providerLabel(sources.series.ownerType)} provider in Settings to manage
-                  your series library.
-                </p>
-                <a
-                  href="/settings"
-                  className="text-xs text-primary hover:underline underline-offset-2"
-                >
-                  Go to Settings
-                </a>
-              </div>
+              <EmptyState
+                icon={<ServerOff size={28} strokeWidth={1.25} aria-hidden="true" />}
+                title={`No ${providerLabel(sources.series.ownerType)} connection configured`}
+                description={`Add a ${providerLabel(sources.series.ownerType)} provider to manage your series library.`}
+                action={{ label: 'Go to Providers', href: '/settings' }}
+              />
             ) : activeFilterCount > 0 ? (
-              <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
-                <SearchX size={32} strokeWidth={1.25} className="text-text-muted" />
-                <p className="text-sm text-text-secondary">No series match your current filters.</p>
-                <button
-                  type="button"
-                  onClick={clearAll}
-                  className="text-xs text-primary hover:underline underline-offset-2"
-                >
-                  Clear filters
-                </button>
-              </div>
+              <EmptyState
+                icon={<SearchX size={28} strokeWidth={1.25} aria-hidden="true" />}
+                title="No series match your current filters"
+                action={{ label: 'Clear filters', onClick: clearAll }}
+              />
             ) : (
-              <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
-                <Tv2 size={32} strokeWidth={1.25} className="text-text-muted" />
-                <p className="text-sm text-text-secondary">Your series library is empty.</p>
-                <p className="text-xs text-text-muted">
-                  Series synced from {providerLabel(sources.series.ownerType)} will appear here.
-                </p>
-              </div>
+              <EmptyState
+                icon={<Tv2 size={28} strokeWidth={1.25} aria-hidden="true" />}
+                title="Your series library is empty"
+                description={`Series synced from ${providerLabel(sources.series.ownerType)} will appear here.`}
+              />
             ))}
         </section>
       </div>
@@ -733,7 +731,7 @@ export default function MediaPage() {
     clearAll,
     isActive,
   } = useMediaFilters();
-  const { rules = [] } = useMediaRules();
+  const { rules = [], error: rulesError, refresh: refreshRules } = useMediaRules();
 
   const movies = useMovies({
     filters: toFilters(debouncedFilters, 'movie', rules),
@@ -744,43 +742,47 @@ export default function MediaPage() {
     sort: values.seriesSort,
   });
   const lookups = useMediaLookups();
-  const { sources } = useMediaSources();
+  const { sources, error: sourcesError, refresh: refreshSources } = useMediaSources();
 
   const { save: saveQuery } = useMediaQueries();
   const [density, setDensity] = useCardDensity();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<ActiveTab>('movies');
+  const router = useRouter();
+  const routeQuery = router.query;
+  const [activeTab, setActiveTab] = useState<ActiveTab>(
+    routeQuery.tab === 'series' ? 'series' : 'movies'
+  );
+  // The confirmation describes the filters that were saved; it ends when they change.
+  const [saved, setSaved] = useState<{ name: string; values: FilterState } | null>(null);
+
+  /** The tab lives in the URL so a reload stays on it. Movies is the default and has no param. */
+  const changeTab = (tab: ActiveTab) => {
+    setActiveTab(tab);
+    const { tab: _previous, ...rest } = router.query;
+    void router.replace(
+      { pathname: router.pathname, query: tab === 'series' ? { ...rest, tab } : rest },
+      undefined,
+      { shallow: true }
+    );
+  };
 
   const activeFilterCount = countActiveFilters(values, activeTab);
 
-  const mobileNav = (
-    <nav className="flex items-center justify-around h-16 px-2">
-      {resolveNavItems('/media').items.map((item) => (
-        <a
-          key={item.id}
-          href={item.href}
-          className={cn(
-            'flex flex-col items-center gap-0.5 px-4 py-2 text-xs transition-colors min-h-[44px] justify-center',
-            item.active ? 'text-primary' : 'text-text-muted hover:text-text-primary'
-          )}
-        >
-          {item.icon}
-          <span>{item.label}</span>
-        </a>
-      ))}
-    </nav>
-  );
+  const loadFailures = [
+    { what: 'media sources', error: sourcesError, onRetry: refreshSources },
+    { what: 'filters', error: rulesError, onRetry: refreshRules },
+    { what: 'filter options', error: lookups.error, onRetry: lookups.refresh },
+  ].filter((failure) => failure.error);
 
   return (
     <>
       <AppLayout
-        mobileNav={mobileNav}
         sidebar={<SidebarNav />}
         topBar={
           <TopBar
             sticky
-            title="Managed Media"
+            title="Media"
             actions={
               <>
                 <Tabs
@@ -789,24 +791,24 @@ export default function MediaPage() {
                       value: 'movies',
                       label: 'Movies',
                       count: movies.totalCount,
-                      loading: movies.isLoading,
+                      loading: movies.isLoading || Boolean(movies.error),
                     },
                     {
                       value: 'series',
                       label: 'Series',
                       count: series.totalCount,
-                      loading: series.isLoading,
+                      loading: series.isLoading || Boolean(series.error),
                     },
                   ]}
                   active={activeTab}
-                  onChange={setActiveTab}
+                  onChange={changeTab}
                 />
                 <button
                   type="button"
                   className={cn(
-                    'md:hidden flex items-center gap-2 px-3 py-1.5 rounded-sm text-sm font-medium border transition-colors',
+                    'md:hidden flex items-center gap-2 px-3 py-1.5 max-sm:min-h-[44px] rounded-sm text-sm font-medium border transition-colors',
                     isActive
-                      ? 'bg-primary text-white border-primary'
+                      ? 'bg-primary text-on-primary border-primary'
                       : 'bg-transparent text-text-primary border-border hover:bg-surface-hover'
                   )}
                   onClick={() => setFiltersOpen(true)}
@@ -814,7 +816,7 @@ export default function MediaPage() {
                   <Filter size={16} strokeWidth={2} aria-hidden="true" />
                   Filters
                   {isActive && (
-                    <span className="bg-white/30 rounded-full w-5 h-5 flex items-center justify-center text-xs leading-none">
+                    <span className="bg-on-primary/20 rounded-full w-5 h-5 flex items-center justify-center text-xs leading-none">
                       {activeFilterCount}
                     </span>
                   )}
@@ -824,6 +826,18 @@ export default function MediaPage() {
           />
         }
       >
+        {saved?.values === values && (
+          <p role="status" className="px-3 sm:px-6 pt-3 text-sm text-success">
+            Saved query {saved.name}.
+          </p>
+        )}
+        {loadFailures.length > 0 && (
+          <div className="px-3 sm:px-6 pt-3 space-y-2">
+            {loadFailures.map(({ what, onRetry }) => (
+              <LoadError key={what} what={what} onRetry={onRetry} />
+            ))}
+          </div>
+        )}
         <MediaContent
           rules={rules}
           values={values}
@@ -851,9 +865,10 @@ export default function MediaPage() {
       <SaveQueryDialog
         open={saveDialogOpen}
         onClose={() => setSaveDialogOpen(false)}
-        onSave={(name) => {
+        onSave={async (name) => {
           const contentType = activeTab === 'movies' ? 'movie' : 'series';
-          return saveQuery(name, contentType, toFilters(values, contentType, rules));
+          await saveQuery(name, contentType, toFilters(values, contentType, rules));
+          setSaved({ name, values });
         }}
       />
     </>

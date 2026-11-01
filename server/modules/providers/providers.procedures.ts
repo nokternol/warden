@@ -98,6 +98,21 @@ async function resolveTaskOptions(
  * after an instance is updated or deleted so media caches never serve data
  * from a provider that changed.
  */
+/**
+ * A stored key, for probing the address it was saved with. The client never holds this key, so
+ * sending it to another host would hand it to whoever runs that host: a changed address needs the
+ * key entered again.
+ */
+function storedKeyFor(
+  stored: { url: string; apiKey?: string | null },
+  url: string
+): string | undefined {
+  if (new URL(url).origin !== new URL(stored.url).origin) {
+    throw new Error('Enter the API key to test a different address');
+  }
+  return stored.apiKey ?? undefined;
+}
+
 export function createProvidersProcedures(
   cradle: ProvidersCradle,
   invalidateMediaCaches: () => void
@@ -156,7 +171,12 @@ export function createProvidersProcedures(
     test: api.providers.test.handler(async ({ input }) => {
       assertOfferedType(input.type);
       try {
-        await probeConnection(input.type as MetadataProviderType, input.url, input.apiKey);
+        const apiKey =
+          input.apiKey ??
+          (input.id === undefined
+            ? undefined
+            : await storedKeyFor(await providerSettingsService.findById(input.id), input.url));
+        await probeConnection(input.type as MetadataProviderType, input.url, apiKey);
         return { ok: true };
       } catch (err) {
         return { ok: false, error: err instanceof Error ? err.message : String(err) };

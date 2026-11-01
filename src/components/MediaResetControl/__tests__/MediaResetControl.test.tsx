@@ -38,3 +38,13 @@ describe('MediaResetControl', () => {
     expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
   });
 });
+
+describe('MediaResetControl on open', () => {
+  it('moves focus to the confirmation input and states the count it has', async () => {
+    const user = userEvent.setup();
+    render(<MediaResetControl onReset={vi.fn()} titleCount={1234} />);
+    await user.click(screen.getByRole('button', { name: /reset media data/i }));
+    expect(screen.getByRole('textbox')).toHaveFocus();
+    expect(screen.getByText(/1,234 titles/)).toBeInTheDocument();
+  });
+});

@@ -17,14 +17,14 @@ export default function Toggle({ checked, onChange, disabled = false, label }: T
       onClick={() => !disabled && onChange(!checked)}
       disabled={disabled}
       className={cn(
-        'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-bg focus-visible:outline-none',
-        checked ? 'bg-primary' : 'bg-surface-elevated',
+        'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-150 max-sm:after:absolute max-sm:after:-inset-x-1 max-sm:after:-inset-y-3',
+        checked ? 'bg-primary' : 'bg-border-input',
         disabled && 'opacity-40 cursor-not-allowed'
       )}
     >
       <span
         className={cn(
-          'inline-block h-4 w-4 rounded-full bg-white shadow-sm transform transition-transform duration-150',
+          'inline-block h-4 w-4 rounded-full bg-surface-bg shadow-sm transform transition-transform duration-150',
           checked ? 'translate-x-[18px]' : 'translate-x-0.5'
         )}
       />

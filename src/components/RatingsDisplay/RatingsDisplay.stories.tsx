@@ -73,7 +73,7 @@ export const PartialSources: Story = () => (
 
 export const Empty: Story = () => (
   <div style={{ padding: '1.5rem' }}>
-    <p style={{ color: 'var(--color-text-muted)' }}>No data — RatingsDisplay renders null</p>
+    <p style={{ color: 'rgb(var(--color-text-muted))' }}>No data — RatingsDisplay renders null</p>
     <RatingsDisplay ratings={null} />
   </div>
 );

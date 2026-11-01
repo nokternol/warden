@@ -79,6 +79,43 @@ describe('GET /api/providers/test', () => {
     expect(res.status).toBe(200);
   });
 
+  it("probes with a saved provider's stored key when given its id", async () => {
+    const SEERR_URL = 'http://seerr-stored.local';
+    let seenKey: string | null = null;
+    server.use(
+      http.get(`${SEERR_URL}/api/v1/status`, ({ request: upstream }) => {
+        seenKey = upstream.headers.get('X-Api-Key');
+        return HttpResponse.json({ status: 'ok' });
+      })
+    );
+    const created = await request(authedApp)
+      .post('/api/providers')
+      .send({ type: MetadataProviderType.SEERR, name: 'Seerr', url: SEERR_URL, apiKey: 'stored' });
+
+    const res = await request(authedApp)
+      .get('/api/providers/test')
+      .query({ type: MetadataProviderType.SEERR, url: SEERR_URL, id: created.body.data.id });
+
+    expect(res.status).toBe(200);
+    expect(seenKey).toBe('stored');
+
+    // The key stays with the host it was saved for.
+    const OTHER_URL = 'http://elsewhere.local';
+    let contacted = false;
+    server.use(
+      http.get(`${OTHER_URL}/api/v1/status`, () => {
+        contacted = true;
+        return HttpResponse.json({ status: 'ok' });
+      })
+    );
+    const elsewhere = await request(authedApp)
+      .get('/api/providers/test')
+      .query({ type: MetadataProviderType.SEERR, url: OTHER_URL, id: created.body.data.id });
+    expect(elsewhere.body.data.ok).toBe(false);
+    expect(elsewhere.body.data.error).toMatch(/enter the api key/i);
+    expect(contacted).toBe(false);
+  });
+
   it('refuses to probe a type that is not offered, without contacting it', async () => {
     const OMDB_URL = 'http://omdb.local';
     let contacted = false;

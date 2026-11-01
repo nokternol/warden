@@ -1,20 +1,19 @@
+import { LoadError, SkeletonRows } from '@app/components/AsyncBoundary';
 import Badge from '@app/components/Badge';
+import Button from '@app/components/Button';
+import { rowTableStyles as table } from '@app/components/RowTable';
 import type { AutomationRunDto } from '@app/hooks/useAutomationRuns';
 import { type RunItemDto, useRunItems } from '@app/hooks/useRunItems';
+import { RUN_STATUS } from '@app/lib/runStatus';
 import { cn } from '@app/lib/utils/cn';
 import { ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import styles from './RunRow.module.css';
 
 /** The run table's columns, in order — the header and every row's cells follow it. */
-const COLUMNS = ['Automation', 'Status', 'Ran At', 'Items', 'Error'] as const;
-
-/** How each run status reads on its badge. */
-const STATUS_BADGE = {
-  success: { variant: 'success', label: 'success' },
-  error: { variant: 'error', label: 'error' },
-  skipped: { variant: 'warning', label: 'Invalid' },
-} as const;
+export const RUN_COLUMNS = ['Automation', 'Status', 'Ran at', 'Items', 'Details'].map((label) => ({
+  label,
+}));
 
 function formatDate(dateStr: string): string {
   try {
@@ -40,8 +39,8 @@ function Root({ run, defaultExpanded = false }: RunRowProps) {
 
   return (
     <>
-      <tr className={styles.row}>
-        <td className={styles.nameCell}>
+      <tr className={table.row}>
+        <td className={table.nameCell}>
           <div className={styles.name}>
             {targetedAny ? (
               <ExpandToggle open={open} onToggle={() => setOpen(!open)} />
@@ -51,30 +50,21 @@ function Root({ run, defaultExpanded = false }: RunRowProps) {
             {run.automationName}
           </div>
         </td>
-        <td className={styles.badgeCell}>
-          <Badge variant={STATUS_BADGE[run.status].variant} size="sm">
-            {STATUS_BADGE[run.status].label}
+        <td className={table.cell} data-label="Status">
+          <Badge variant={RUN_STATUS[run.status].variant} size="sm">
+            {RUN_STATUS[run.status].label}
           </Badge>
         </td>
-        <td className={styles.cell}>{formatDate(run.ranAt)}</td>
-        <td className={styles.cell}>{run.itemCount !== null ? run.itemCount : '—'}</td>
-        <td
-          className={cn(
-            styles.cell,
-            run.status === 'skipped' ? styles.reasonCell : styles.errorCell
-          )}
-        >
-          {run.error ? (
-            run.status === 'skipped' ? (
-              <span className={styles.reason}>{run.error}</span>
-            ) : (
-              <span className={styles.error} title={run.error}>
-                {run.error.length > 60 ? `${run.error.slice(0, 60)}…` : run.error}
-              </span>
-            )
-          ) : (
-            '—'
-          )}
+        <td className={table.cell} data-label="Ran at">
+          {formatDate(run.ranAt)}
+        </td>
+        <td className={table.cell} data-label="Items">
+          {run.itemCount !== null ? run.itemCount : '—'}
+        </td>
+        <td className={table.blockCell}>
+          <span className={run.status === 'error' ? styles.error : undefined}>
+            {run.error ?? <span className="max-lg:hidden">—</span>}
+          </span>
         </td>
       </tr>
       {open && <TargetedItems runId={run.id} />}
@@ -101,8 +91,8 @@ function ExpandToggle({ open, onToggle }: { open: boolean; onToggle: () => void 
 /** The detail row listing a run's targeted titles. */
 function TargetedItems({ runId }: { runId: number }) {
   return (
-    <tr className={styles.detailRow}>
-      <td colSpan={COLUMNS.length} className={styles.detailCell}>
+    <tr className={cn(table.detailRow, styles.itemsRow)}>
+      <td colSpan={RUN_COLUMNS.length} className={cn(table.detailCell, styles.itemsCell)}>
         <TargetedItemList runId={runId} />
       </td>
     </tr>
@@ -114,9 +104,15 @@ function Note({ children }: { children: React.ReactNode }) {
 }
 
 function TargetedItemList({ runId }: { runId: number }) {
-  const { items, total, isLoading } = useRunItems(runId);
+  const { items, total, error, refresh, isFetchingMore, loadMore } = useRunItems(runId);
 
-  if (isLoading) return <Note>Loading items…</Note>;
+  if (!items) {
+    return error ? (
+      <LoadError what="this run's items" onRetry={() => refresh()} />
+    ) : (
+      <SkeletonRows count={2} />
+    );
+  }
   if (items.length === 0) return <Note>No items recorded for this run.</Note>;
 
   return (
@@ -127,10 +123,24 @@ function TargetedItemList({ runId }: { runId: number }) {
         ))}
       </ul>
       {total > items.length && (
-        <p className={styles.pageNote}>
-          Showing {items.length} of {total} items
-        </p>
+        <div className={styles.pageNote}>
+          <span>
+            Showing {items.length} of {total} items
+          </span>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={isFetchingMore}
+            onClick={() => {
+              void loadMore();
+            }}
+          >
+            Show more items
+          </Button>
+        </div>
       )}
+      {error && <LoadError what="more items" onRetry={() => refresh()} />}
     </>
   );
 }
@@ -144,28 +154,13 @@ function TargetedItem({ item }: { item: RunItemDto }) {
       {item.year !== null && <span className={styles.itemYear}>{item.year}</span>}
       {item.deleted && (
         <Badge variant="default" size="sm" title="This item has since left its source">
-          removed
+          Removed
         </Badge>
       )}
     </li>
   );
 }
 
-/** The run table's header row, naming the columns each `RunRow` fills. */
-function Head() {
-  return (
-    <thead>
-      <tr className={styles.headRow}>
-        {COLUMNS.map((column) => (
-          <th key={column} className={styles.columnHeader}>
-            {column}
-          </th>
-        ))}
-      </tr>
-    </thead>
-  );
-}
-
-const RunRow = Object.assign(Root, { Head });
+const RunRow = Root;
 
 export default RunRow;

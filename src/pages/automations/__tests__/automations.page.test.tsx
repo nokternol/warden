@@ -31,7 +31,7 @@ describe('AutomationsPage', () => {
 
       const current = await screen.findByRole('listitem', { current: 'step' });
       expect(current).toHaveTextContent('Connect a source');
-      expect(within(current).getByRole('link', { name: /settings/i })).toHaveAttribute(
+      expect(within(current).getByRole('link', { name: /providers/i })).toHaveAttribute(
         'href',
         '/settings'
       );
@@ -56,8 +56,10 @@ describe('AutomationsPage', () => {
 
     it('asks for an automation when only system automations exist', async () => {
       server.use(
-        mockProcedure(contract.automations.list, () =>
-          MOCK_AUTOMATIONS.map((a) => ({ ...a, kind: 'system' as const }))
+        mockProcedure(contract.automations.list, ({ request }) =>
+          new URL(request.url).searchParams.get('kind') === 'user'
+            ? []
+            : MOCK_AUTOMATIONS.map((a) => ({ ...a, kind: 'system' as const }))
         )
       );
 
@@ -140,11 +142,51 @@ describe('AutomationsPage', () => {
     });
   });
 
+  it('confirms a created automation by name once the builder closes', async () => {
+    server.use(
+      mockProcedure(contract.providers.tasks, () => [
+        {
+          providerId: 1,
+          type: 'RADARR',
+          tasks: [{ id: 'un', label: 'Unmonitor movie', destructive: false, enabled: true }],
+        },
+      ]),
+      mockProcedure(contract.automations.create, () => ({
+        ...MOCK_AUTOMATIONS[0],
+        id: 99,
+        name: 'Clean',
+      }))
+    );
+    const user = userEvent.setup();
+    render(<AutomationsPage />, { wrapper: Wrapper });
+
+    await user.click(await screen.findByRole('button', { name: 'New automation' }));
+    await user.type(await screen.findByLabelText('Name'), 'Clean');
+    await user.click(await screen.findByRole('radio', { name: /Unmonitor movie/ }));
+    await user.click(screen.getByRole('button', { name: 'Create automation' }));
+
+    expect(await screen.findByText('Created Clean.')).toHaveAttribute('role', 'status');
+    expect(screen.queryByRole('button', { name: 'Create automation' })).not.toBeInTheDocument();
+  });
+
   // Last in the file: Run now schedules revalidation timers (see useAutomations) that outlive the
   // test's SWR cache, so a later test running past them would hit the torn-down cache.
   it('POSTs /:id/run when a Run-now control is clicked', async () => {
     let runUrl = '';
     server.use(
+      mockProcedure(contract.providers.tasks, () =>
+        MOCK_AUTOMATIONS.flatMap((a) =>
+          a.provider
+            ? [
+                {
+                  providerId: a.provider.id,
+                  type: a.provider.type,
+                  tasks: [{ id: a.taskId, label: 'Unmonitor', destructive: false, enabled: true }],
+                },
+              ]
+            : []
+        )
+      ),
       mockProcedure(contract.automations.run, ({ request }) => {
         runUrl = request.url;
         return null;

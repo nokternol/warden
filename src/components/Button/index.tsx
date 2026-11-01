@@ -47,7 +47,7 @@ export default function Button({
           />
         </svg>
       )}
-      <span>{loading ? 'Loading...' : children}</span>
+      <span className={styles.label}>{loading ? 'Loading...' : children}</span>
     </button>
   );
 }

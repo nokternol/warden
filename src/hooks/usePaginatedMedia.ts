@@ -10,6 +10,7 @@ interface PaginatedPage<T> {
   page: number;
   pageSize: number;
   yearRange?: { min: number | null; max: number | null };
+  errors?: { provider: string; error: string }[];
 }
 
 /** What to browse: the saved-query `Filter` entries and the sort order. */
@@ -50,7 +51,9 @@ export function usePaginatedMedia<T>(
     });
   };
 
-  const { data, isLoading, isValidating, setSize, error } = useSWRInfinite<PaginatedPage<T>>(
+  const { data, isLoading, isValidating, setSize, error, mutate } = useSWRInfinite<
+    PaginatedPage<T>
+  >(
     getKey,
     ([procedure, input]: ReturnType<typeof apiKey<BrowseQuery>>) =>
       procedure(input) as Promise<PaginatedPage<T>>,
@@ -107,5 +110,10 @@ export function usePaginatedMedia<T>(
       void setSize((s) => s + 1);
     }, [setSize]),
     error: error as Error | undefined,
+    // Each page reports the sources that failed for it; one source is stated once.
+    sourceErrors: Array.from(
+      new Map(data?.flatMap((page) => page.errors ?? []).map((e) => [e.provider, e])).values()
+    ),
+    refresh: mutate,
   };
 }

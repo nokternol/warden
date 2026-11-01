@@ -20,7 +20,7 @@
 }
 
 .image {
-  @apply w-full h-full object-cover transition-opacity duration-300;
+  @apply w-full h-full object-cover transition-opacity duration-150;
 }
 
 .imageLoading {

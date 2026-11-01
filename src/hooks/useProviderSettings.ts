@@ -31,6 +31,7 @@ export function useProviderSettings() {
     providers,
     isLoading,
     error,
+    refresh: mutate,
     create,
     update,
     remove,

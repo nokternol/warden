@@ -1,14 +1,17 @@
 import AppLayout from '@app/components/AppLayout';
+import AsyncBoundary, { LoadError } from '@app/components/AsyncBoundary';
 import Button from '@app/components/Button';
-import Card from '@app/components/Card';
 import EmptyState from '@app/components/EmptyState';
-import RunRow from '@app/components/RunRow';
+import RowTable from '@app/components/RowTable';
+import RunRow, { RUN_COLUMNS } from '@app/components/RunRow';
 import SidebarNav from '@app/components/SidebarNav';
 import TopBar from '@app/components/TopBar';
-import { useAutomationRuns } from '@app/hooks/useAutomationRuns';
+import { RUNS_PAGE_SIZE, useAutomationRuns } from '@app/hooks/useAutomationRuns';
+import { useAutomations } from '@app/hooks/useAutomations';
 import { guardPage } from '@app/lib/utils/guardPage';
 import { History } from 'lucide-react';
 import type { GetServerSideProps } from 'next';
+import { useRouter } from 'next/router';
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const refusal = await guardPage(ctx);
@@ -16,43 +19,88 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   return { props: {} };
 };
 
-const RunsIcon = () => <History className="w-12 h-12" strokeWidth={1.5} />;
+const RunsIcon = () => <History size={28} strokeWidth={1.25} aria-hidden="true" />;
 
 export default function RunsPage() {
-  const { runs, isLoading, page, nextPage, prevPage } = useAutomationRuns();
-  const PAGE_SIZE = 25;
-  const hasMore = runs.length === PAGE_SIZE;
+  const router = useRouter();
+  const param = router.query.automationId;
+  const automationId = typeof param === 'string' && /^\d+$/.test(param) ? Number(param) : undefined;
+  const { automations, error: automationsError, refresh: refreshAutomations } = useAutomations();
+  const { runs, total, error, refresh, page, nextPage, prevPage } = useAutomationRuns({
+    automationId,
+  });
+  const hasMore = (page + 1) * RUNS_PAGE_SIZE < total;
   const hasPrev = page > 0;
 
   return (
     <AppLayout sidebar={<SidebarNav />} topBar={<TopBar title="Runs" />}>
-      <div className="p-6">
-        <Card variant="outlined" padding="none">
-          {isLoading ? (
-            <div className="p-8 text-center text-[var(--color-text-secondary)] text-sm">
-              Loading runs…
+      <div className="p-4 sm:p-6 space-y-4 max-w-5xl">
+        <div className="max-w-xs">
+          <label
+            htmlFor="runs-automation"
+            className="block text-sm font-medium text-text-secondary mb-1"
+          >
+            Automation
+          </label>
+          <select
+            id="runs-automation"
+            className="field"
+            value={automationId ?? ''}
+            onChange={(e) => {
+              void router.replace(
+                {
+                  pathname: router.pathname,
+                  query: e.target.value ? { automationId: e.target.value } : {},
+                },
+                undefined,
+                { shallow: true }
+              );
+            }}
+          >
+            <option value="">All automations</option>
+            {automations?.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+          {automationsError && (
+            <div className="mt-2">
+              <LoadError what="automation names" onRetry={() => refreshAutomations()} />
             </div>
-          ) : runs.length === 0 ? (
-            <EmptyState
-              icon={<RunsIcon />}
-              title="No runs yet"
-              description="Runs will appear here once your automations have executed."
-            />
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <RunRow.Head />
-                  <tbody>
-                    {runs.map((run) => (
-                      <RunRow key={run.id} run={run} />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="flex items-center justify-between px-4 py-3 border-t border-white/5">
-                <span className="text-xs text-[var(--color-text-secondary)]">
-                  Page {page + 1} · {runs.length} {runs.length === 1 ? 'run' : 'runs'}
+          )}
+        </div>
+
+        <AsyncBoundary
+          data={runs}
+          error={error}
+          onRetry={() => refresh()}
+          what="runs"
+          isEmpty={(list) => list.length === 0 && page === 0}
+          empty={
+            <div className="rounded-lg border border-border bg-surface-panel">
+              <EmptyState
+                icon={<RunsIcon />}
+                title="No runs yet"
+                description={
+                  automationId === undefined
+                    ? 'Runs will appear here once your automations have executed.'
+                    : 'This automation has not run yet.'
+                }
+              />
+            </div>
+          }
+        >
+          {(list) => (
+            <div className="rounded-lg border border-border bg-surface-panel">
+              <RowTable label="Runs" columns={RUN_COLUMNS}>
+                {list.map((run) => (
+                  <RunRow key={run.id} run={run} />
+                ))}
+              </RowTable>
+              <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-divider">
+                <span className="text-xs text-text-secondary">
+                  Page {page + 1} · {total} {total === 1 ? 'run' : 'runs'}
                 </span>
                 <div className="flex gap-2">
                   <Button variant="secondary" size="sm" onClick={prevPage} disabled={!hasPrev}>
@@ -63,9 +111,9 @@ export default function RunsPage() {
                   </Button>
                 </div>
               </div>
-            </>
+            </div>
           )}
-        </Card>
+        </AsyncBoundary>
       </div>
     </AppLayout>
   );

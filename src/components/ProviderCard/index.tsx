@@ -1,7 +1,7 @@
 import Badge from '@app/components/Badge';
 import Button from '@app/components/Button';
-import ConnectionTestIcon from '@app/components/ConnectionTestIcon';
 import type { TestStatus } from '@app/components/ConnectionTestIcon';
+import { ConnectionTestResult } from '@app/components/ConnectionTestIcon/result';
 import Toggle from '@app/components/Toggle';
 import type { ProviderSummary, UpdateProviderParams } from '@app/hooks/useProviderSettings';
 import type { ProviderTaskDescriptor } from '@app/hooks/useProviderTasks';
@@ -11,12 +11,12 @@ import { apiUrlOf, hostOf } from '@contract/providerUrl';
 import type { ProviderTypeDescriptor } from '@contract/providers';
 import {
   BarChart2,
-  Bell,
   ChevronDown,
   ChevronUp,
   Clapperboard,
   Database,
   Film,
+  Inbox,
   Play,
   Plug,
   Star,
@@ -33,7 +33,7 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
   RADARR: <Clapperboard size={15} strokeWidth={1.75} />,
   SONARR: <Tv size={15} strokeWidth={1.75} />,
   TAUTULLI: <BarChart2 size={15} strokeWidth={1.75} />,
-  SEERR: <Bell size={15} strokeWidth={1.75} />,
+  SEERR: <Inbox size={15} strokeWidth={1.75} />,
   TMDB: <Star size={15} strokeWidth={1.75} />,
   OMDB: <Database size={15} strokeWidth={1.75} />,
 };
@@ -46,21 +46,25 @@ function ProviderTypeIcon({ type }: { type: string }) {
   );
 }
 
-function StatusIndicator({ isActive }: { isActive: boolean }) {
+const CONNECTION_LABELS: Record<TestStatus, string> = {
+  idle: 'Not tested',
+  loading: 'Testing…',
+  pass: 'Connected',
+  fail: 'Connection failed',
+};
+
+/** Connected is only ever claimed from a test result; an active provider may be unreachable. */
+function StatusIndicator({ isActive, test }: { isActive: boolean; test: TestStatus }) {
+  const tone = !isActive
+    ? 'text-text-muted'
+    : test === 'pass'
+      ? 'text-success'
+      : test === 'fail'
+        ? 'text-danger-text'
+        : 'text-text-secondary';
   return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1.5 text-xs font-medium',
-        isActive ? 'text-success' : 'text-text-muted'
-      )}
-    >
-      <span
-        className={cn(
-          'inline-block w-1.5 h-1.5 rounded-full',
-          isActive ? 'bg-success' : 'bg-text-muted'
-        )}
-      />
-      {isActive ? 'Connected' : 'Inactive'}
+    <span className={cn('text-xs font-medium', tone)}>
+      {isActive ? CONNECTION_LABELS[test] : 'Inactive'}
     </span>
   );
 }
@@ -88,7 +92,8 @@ export default function ProviderCard({
   typeDescriptor?: ProviderTypeDescriptor;
   tasks: ProviderTaskDescriptor[];
   onUpdate: (patch: UpdateProviderParams) => Promise<unknown>;
-  onDelete: () => void;
+  /** Rejects when the removal fails; the confirmation then stays and says why. */
+  onDelete: () => unknown;
 }) {
   const apiPath = typeDescriptor?.apiPath ?? '';
   const [expanded, setExpanded] = useState(false);
@@ -104,6 +109,9 @@ export default function ProviderCard({
   const [testStatus, setTestStatus] = useState<TestStatus>('idle');
   const [testError, setTestError] = useState<string | undefined>();
   const testAbortRef = useRef<AbortController | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const [localEnabledTasks, setLocalEnabledTasks] = useState<string[] | null>(null);
   const [taskToggleLoading, setTaskToggleLoading] = useState<string | null>(null);
@@ -126,7 +134,7 @@ export default function ProviderCard({
     setTestError(undefined);
     try {
       const result = await api.providers.test(
-        { type: provider.type, url, apiKey: apiKey || undefined },
+        { type: provider.type, url, apiKey: apiKey || undefined, id: provider.id },
         { signal: ac.signal }
       );
       if (result.ok) {
@@ -152,10 +160,30 @@ export default function ProviderCard({
       patch.settings = { ...(provider.settings ?? {}), userId: editForm.userId };
     }
 
-    await onUpdate(patch);
-    setEditing(false);
-    setTestStatus('idle');
-    setTestError(undefined);
+    setSaving(true);
+    setActionError(null);
+    try {
+      await onUpdate(patch);
+      setEditing(false);
+      setTestStatus('idle');
+      setTestError(undefined);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Couldn't save the provider.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setRemoving(true);
+    setActionError(null);
+    try {
+      await onDelete();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Couldn't delete the provider.");
+    } finally {
+      setRemoving(false);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -168,6 +196,7 @@ export default function ProviderCard({
     setEditing(false);
     setTestStatus('idle');
     setTestError(undefined);
+    setActionError(null);
   };
 
   const handleTaskToggle = async (taskId: string, enabled: boolean) => {
@@ -208,9 +237,7 @@ export default function ProviderCard({
     <div
       className={cn(
         'rounded-lg border transition-colors duration-150',
-        expanded
-          ? 'border-primary/30 bg-surface-panel'
-          : 'border-border bg-surface-panel hover:border-border/80'
+        expanded ? 'border-border-input bg-surface-panel' : 'border-border bg-surface-panel'
       )}
     >
       {/* ─── Header ─────────────────────────────────────────────────────────── */}
@@ -223,7 +250,7 @@ export default function ProviderCard({
             setConfirming(false);
           }
         }}
-        className="w-full flex items-start gap-3 p-4 text-left focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-bg focus-visible:outline-none rounded-lg"
+        className="w-full flex items-start gap-3 p-4 text-left rounded-lg"
         aria-expanded={expanded}
       >
         <ProviderTypeIcon type={provider.type} />
@@ -231,51 +258,61 @@ export default function ProviderCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium text-sm text-text-primary">{provider.name}</span>
-            <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full font-medium">
-              {typeDescriptor?.label ?? provider.type}
-            </span>
-            <StatusIndicator isActive={provider.isActive} />
+            <Badge size="sm">{typeDescriptor?.label ?? provider.type}</Badge>
+            <StatusIndicator isActive={provider.isActive} test={testStatus} />
           </div>
-          <div className="text-xs text-text-muted mt-0.5 truncate">{provider.url}</div>
+          <div className="text-xs text-text-muted mt-0.5 break-all">{provider.url}</div>
           {summary && <div className="text-xs text-text-muted mt-1">{summary}</div>}
         </div>
 
         <div className="shrink-0 text-text-muted mt-1">
           {expanded ? (
-            <ChevronUp size={16} strokeWidth={1.75} />
+            <ChevronUp size={16} strokeWidth={1.75} aria-hidden="true" />
           ) : (
-            <ChevronDown size={16} strokeWidth={1.75} />
+            <ChevronDown size={16} strokeWidth={1.75} aria-hidden="true" />
           )}
         </div>
       </button>
 
       {/* ─── Expanded content ─────────────────────────────────────────────── */}
       {expanded && (
-        <div className="border-t border-border/50 px-4 pb-4 pt-3 space-y-4">
+        <div className="border-t border-divider px-4 pb-4 pt-3 space-y-4">
           {/* Connection section */}
           <section>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                Connection
-              </span>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <h3 className="text-xs font-medium text-text-muted">Connection</h3>
               {!editing && !confirming && (
-                <button
-                  type="button"
-                  onClick={() => setEditing(true)}
-                  className="text-xs text-text-secondary hover:text-text-primary transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-bg focus-visible:outline-none rounded"
-                >
-                  Edit
-                </button>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={testStatus === 'loading'}
+                    onClick={() => {
+                      void runTest(hostOf(provider.url, apiPath), '');
+                    }}
+                  >
+                    Test connection
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setEditing(true)}
+                  >
+                    Edit
+                  </Button>
+                </div>
               )}
             </div>
 
             {editing ? (
               <form onSubmit={handleSave} className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label
                       htmlFor={`edit-${provider.id}-name`}
-                      className="block text-xs text-text-secondary mb-1"
+                      className="block text-sm font-medium text-text-secondary mb-1"
                     >
                       Name
                     </label>
@@ -284,20 +321,16 @@ export default function ProviderCard({
                       type="text"
                       value={editForm.name}
                       onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
-                      className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
+                      className="field"
                       required
                     />
                   </div>
                   <div>
                     <label
                       htmlFor={`edit-${provider.id}-url`}
-                      className="block text-xs text-text-secondary mb-1"
+                      className="block text-sm font-medium text-text-secondary mb-1"
                     >
                       Host URL
-                      <span className="ml-1.5">
-                        <ConnectionTestIcon status={testStatus} />
-                      </span>
-                      {testError && <span className="ml-1.5 text-danger-hover">{testError}</span>}
                     </label>
                     <input
                       id={`edit-${provider.id}-url`}
@@ -307,17 +340,16 @@ export default function ProviderCard({
                         setEditForm((f) => ({ ...f, url: e.target.value }));
                         setTestStatus('idle');
                       }}
-                      onBlur={() => runTest(editForm.url, editForm.apiKey)}
-                      className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
+                      className="field"
                       required
                     />
                   </div>
                   <div>
                     <label
                       htmlFor={`edit-${provider.id}-apikey`}
-                      className="block text-xs text-text-secondary mb-1"
+                      className="block text-sm font-medium text-text-secondary mb-1"
                     >
-                      API Key <span className="opacity-50">(leave blank to keep existing)</span>
+                      API key <span className="font-normal text-text-muted">(blank keeps it)</span>
                     </label>
                     <input
                       id={`edit-${provider.id}-apikey`}
@@ -327,16 +359,15 @@ export default function ProviderCard({
                         setEditForm((f) => ({ ...f, apiKey: e.target.value }));
                         setTestStatus('idle');
                       }}
-                      onBlur={() => runTest(editForm.url, editForm.apiKey)}
                       placeholder="••••••••"
-                      className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
+                      className="field"
                     />
                   </div>
                   {provider.type === 'JELLYFIN' && (
                     <div>
                       <label
                         htmlFor={`edit-${provider.id}-userid`}
-                        className="block text-xs text-text-secondary mb-1"
+                        className="block text-sm font-medium text-text-secondary mb-1"
                       >
                         User ID
                       </label>
@@ -345,12 +376,18 @@ export default function ProviderCard({
                         type="text"
                         value={editForm.userId}
                         onChange={(e) => setEditForm((f) => ({ ...f, userId: e.target.value }))}
-                        className="w-full px-3 py-1.5 text-sm bg-surface-bg border border-border rounded text-text-primary focus:border-primary focus:outline-none transition-colors"
+                        className="field"
                       />
                     </div>
                   )}
                 </div>
-                <div className="flex gap-2 justify-end">
+                <ConnectionTestResult status={testStatus} error={testError} />
+                {actionError && (
+                  <p role="alert" className="text-sm text-danger-text">
+                    {actionError}
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-2 justify-end">
                   <Button type="button" variant="secondary" size="sm" onClick={handleCancelEdit}>
                     Cancel
                   </Button>
@@ -358,18 +395,21 @@ export default function ProviderCard({
                     type="button"
                     variant="secondary"
                     size="sm"
-                    onClick={() => runTest(editForm.url, editForm.apiKey)}
+                    onClick={() => {
+                      void runTest(editForm.url, editForm.apiKey);
+                    }}
                   >
                     Test connection
                   </Button>
-                  <Button type="submit" variant="primary" size="sm">
-                    Save
+                  <Button type="submit" variant="primary" size="sm" disabled={saving}>
+                    {saving ? 'Saving…' : 'Save'}
                   </Button>
                 </div>
               </form>
             ) : (
-              <div className="space-y-0.5">
-                <div className="text-sm text-text-secondary">{provider.url}</div>
+              <div className="space-y-1">
+                <ConnectionTestResult status={testStatus} error={testError} />
+                <div className="text-sm text-text-secondary break-all">{provider.url}</div>
                 {provider.apiKey && (
                   <div className="text-xs text-text-muted">API key configured</div>
                 )}
@@ -386,9 +426,7 @@ export default function ProviderCard({
               {/* Filter data */}
               {filterData.length > 0 && (
                 <section>
-                  <div className="text-xs font-medium text-text-muted uppercase tracking-wide mb-2">
-                    Filter data
-                  </div>
+                  <h3 className="text-xs font-medium text-text-muted mb-2">Filter data</h3>
                   <div className="flex flex-wrap gap-1.5">
                     {filterData.map((label) => (
                       <span
@@ -405,9 +443,7 @@ export default function ProviderCard({
               {/* Available tasks */}
               {hasTasks && (
                 <section>
-                  <div className="text-xs font-medium text-text-muted uppercase tracking-wide mb-2">
-                    Available tasks
-                  </div>
+                  <h3 className="text-xs font-medium text-text-muted mb-2">Available tasks</h3>
                   <div className="space-y-0">
                     {allTasks.map((task, idx) => {
                       const isEnabled = enabledTasks.includes(task.id);
@@ -417,7 +453,7 @@ export default function ProviderCard({
                           key={task.id}
                           className={cn(
                             'flex items-center gap-3 py-2.5',
-                            idx < allTasks.length - 1 && 'border-b border-border/40'
+                            idx < allTasks.length - 1 && 'border-b border-divider'
                           )}
                         >
                           <Toggle
@@ -429,7 +465,7 @@ export default function ProviderCard({
                           <div className="flex flex-1 min-w-0 items-center gap-2">
                             <span
                               className={cn(
-                                'text-sm font-medium truncate',
+                                'text-sm font-medium',
                                 isEnabled ? 'text-text-primary' : 'text-text-muted'
                               )}
                             >
@@ -452,7 +488,9 @@ export default function ProviderCard({
                     })}
                   </div>
                   {taskToggleError && (
-                    <p className="text-xs text-danger-hover mt-2">{taskToggleError}</p>
+                    <p role="alert" className="text-xs text-danger-text mt-2">
+                      {taskToggleError}
+                    </p>
                   )}
                 </section>
               )}
@@ -460,35 +498,49 @@ export default function ProviderCard({
               {/* Delete / confirm */}
               <section className="pt-1">
                 {confirming ? (
-                  <div className="flex items-start gap-3 p-3 rounded bg-danger/5 border border-danger/20">
-                    <div className="flex-1">
-                      <p className="text-sm text-text-primary">
+                  <div className="p-3 rounded bg-danger/10 border border-danger/40 space-y-2">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <p className="flex-1 min-w-48 text-sm text-text-primary">
                         Delete <span className="font-medium">{provider.name}</span>? All associated
                         task configurations will be removed.
                       </p>
+                      <div className="flex gap-2 shrink-0">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setConfirming(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="danger"
+                          size="sm"
+                          disabled={removing}
+                          onClick={() => {
+                            void handleDelete();
+                          }}
+                        >
+                          {removing ? 'Deleting…' : 'Delete'}
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex gap-2 shrink-0">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setConfirming(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button type="button" variant="danger" size="sm" onClick={onDelete}>
-                        Delete
-                      </Button>
-                    </div>
+                    {actionError && (
+                      <p role="alert" className="text-sm text-danger-text">
+                        {actionError}
+                      </p>
+                    )}
                   </div>
                 ) : (
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
+                    size="sm"
                     onClick={() => setConfirming(true)}
-                    className="text-xs text-text-muted hover:text-danger-hover transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-bg focus-visible:outline-none rounded"
                   >
                     Delete provider
-                  </button>
+                  </Button>
                 )}
               </section>
             </>

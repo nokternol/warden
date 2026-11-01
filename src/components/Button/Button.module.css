@@ -1,29 +1,33 @@
 .base {
-  @apply inline-flex items-center justify-center font-medium rounded-sm transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed;
+  @apply inline-flex items-center justify-center font-medium rounded-sm transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed;
 }
 
 .primary {
-  @apply bg-primary hover:bg-primary-hover active:bg-primary-active text-white focus-visible:ring-primary;
+  @apply bg-primary hover:bg-primary-hover active:bg-primary-active text-on-primary;
 }
 
 .secondary {
-  @apply bg-surface-panel border border-border text-text-primary hover:bg-surface-hover active:bg-surface-bg focus-visible:ring-primary;
+  @apply bg-surface-panel border border-border text-text-primary hover:bg-surface-hover active:bg-surface-bg;
 }
 
 .danger {
-  @apply bg-danger hover:bg-danger-hover active:bg-danger-active text-white focus-visible:ring-danger;
+  @apply bg-danger hover:bg-danger-hover active:bg-danger-active text-on-danger;
 }
 
 .sm {
-  @apply px-3 py-1.5 text-sm;
+  @apply px-3 py-1.5 text-sm max-sm:min-h-[44px];
 }
 
 .md {
-  @apply px-4 py-2 text-base;
+  @apply px-4 py-2 text-base max-sm:min-h-[44px];
 }
 
 .lg {
   @apply px-6 py-3 text-lg;
+}
+
+.label {
+  @apply inline-flex items-center gap-1.5;
 }
 
 .spinner {

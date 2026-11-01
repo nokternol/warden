@@ -3,9 +3,9 @@
 }
 
 .primary {
-  background-color: rgb(from var(--color-primary) r g b / 0.1);
-  border-color: rgb(from var(--color-primary) r g b / 0.2);
-  @apply text-primary;
+  background-color: rgb(var(--color-primary) / 0.1);
+  border-color: rgb(var(--color-primary) / 0.2);
+  @apply text-primary-text;
 }
 
 .default {
@@ -13,26 +13,26 @@
 }
 
 .success {
-  background-color: rgb(from var(--color-success) r g b / 0.1);
-  border-color: rgb(from var(--color-success) r g b / 0.2);
+  background-color: rgb(var(--color-success) / 0.1);
+  border-color: rgb(var(--color-success) / 0.2);
   @apply text-success;
 }
 
 .warning {
-  background-color: rgb(from var(--color-warning) r g b / 0.1);
-  border-color: rgb(from var(--color-warning) r g b / 0.2);
+  background-color: rgb(var(--color-warning) / 0.1);
+  border-color: rgb(var(--color-warning) / 0.2);
   @apply text-warning;
 }
 
 .error {
-  background-color: rgb(from var(--color-danger) r g b / 0.1);
-  border-color: rgb(from var(--color-danger) r g b / 0.2);
-  @apply text-danger;
+  background-color: rgb(var(--color-danger) / 0.1);
+  border-color: rgb(var(--color-danger) / 0.2);
+  @apply text-danger-text;
 }
 
 .info {
-  background-color: rgb(from var(--color-info) r g b / 0.1);
-  border-color: rgb(from var(--color-info) r g b / 0.2);
+  background-color: rgb(var(--color-info) / 0.1);
+  border-color: rgb(var(--color-info) / 0.2);
   @apply text-info;
 }
 

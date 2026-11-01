@@ -33,7 +33,7 @@ export default function Sidebar({
       {logo && <div className={styles.logoWrapper}>{logo}</div>}
 
       {/* Main Navigation */}
-      <nav className={styles.navMain}>
+      <nav aria-label="Main" className={styles.navMain}>
         {items.map((item) => (
           <SidebarItem key={item.id} item={item} onClick={onItemClick} />
         ))}
@@ -43,7 +43,7 @@ export default function Sidebar({
       {bottomItems && bottomItems.length > 0 && (
         <>
           <div className={styles.divider} />
-          <nav className={styles.navBottom}>
+          <nav aria-label="Configuration" className={styles.navBottom}>
             {bottomItems.map((item) => (
               <SidebarItem key={item.id} item={item} onClick={onItemClick} />
             ))}

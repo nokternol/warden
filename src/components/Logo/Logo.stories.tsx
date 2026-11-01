@@ -41,6 +41,6 @@ export const PlexIconDefault: Story = () => (
   <div className="bg-surface-bg p-12 flex items-center gap-4">
     <PlexIcon />
     <PlexIcon className="w-8 h-8 text-yellow-500" />
-    <PlexIcon className="w-12 h-12 text-primary" />
+    <PlexIcon className="w-12 h-12 text-primary-text" />
   </div>
 );

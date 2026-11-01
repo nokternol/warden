@@ -34,7 +34,7 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => (
 describe('MediaPage', () => {
   it('renders the page title', () => {
     render(<MediaPage />, { wrapper: Wrapper });
-    expect(screen.getByText(/managed media/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Media' })).toBeInTheDocument();
   });
 
   it('renders AppLayout with sidebar', () => {
@@ -128,5 +128,47 @@ describe('MediaPage', () => {
     await waitFor(() => {
       expect(screen.queryByText(/no radarr 4k connection configured/i)).toBeInTheDocument();
     });
+  });
+});
+
+describe('MediaPage sort direction', () => {
+  it('names the direction a click on the control will apply', async () => {
+    const user = setupUser();
+    render(<MediaPage />, { wrapper: Wrapper });
+
+    await user.click(screen.getAllByRole('button', { name: 'Sort descending' })[0]);
+
+    expect(await screen.findAllByRole('button', { name: 'Sort ascending' })).not.toHaveLength(0);
+  });
+});
+
+describe('MediaPage save confirmation', () => {
+  it('confirms a saved query until the filters change', async () => {
+    const user = setupUser();
+    render(
+      <SWRConfig value={{ provider: () => new Map() }}>
+        <MediaPage />
+      </SWRConfig>
+    );
+    const title = await screen.findAllByPlaceholderText('Filter by title…');
+    await user.type(title[0] as HTMLElement, 'a');
+    await user.click(await screen.findByRole('button', { name: 'Save as query' }));
+    await user.type(screen.getByPlaceholderText('e.g. Unwatched 4K movies'), 'Mine');
+    await user.keyboard('{Enter}');
+    expect(await screen.findByText('Saved query Mine.')).toBeInTheDocument();
+    await user.type(title[0] as HTMLElement, 'b');
+    await waitFor(() => expect(screen.queryByText('Saved query Mine.')).not.toBeInTheDocument());
+  });
+});
+
+describe('MediaPage heading order', () => {
+  it('names each tab panel with a level 2 heading, so title headings do not skip a level', async () => {
+    render(
+      <SWRConfig value={{ provider: () => new Map() }}>
+        <MediaPage />
+      </SWRConfig>
+    );
+    expect(await screen.findByRole('heading', { level: 1, name: 'Media' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: 'Movies' })).toBeInTheDocument();
   });
 });

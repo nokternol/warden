@@ -20,7 +20,12 @@ export default function SidebarItem({ item, onClick }: SidebarItemProps) {
   const activeStyles = item.active ? styles.itemActive : styles.itemInactive;
 
   return (
-    <Link href={item.href} onClick={handleClick} className={cn(styles.itemBase, activeStyles)}>
+    <Link
+      href={item.href}
+      onClick={handleClick}
+      aria-current={item.active ? 'page' : undefined}
+      className={cn(styles.itemBase, activeStyles)}
+    >
       <div className={styles.itemIcon}>{item.icon}</div>
       <span className={styles.itemLabel}>{item.label}</span>
       {item.badge !== undefined && (

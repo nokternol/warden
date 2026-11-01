@@ -110,6 +110,7 @@ const RATINGS_RESPONSE: AggregatedRatings = {
 };
 
 export const providersHandlers = [
+  mockProcedure(contract.providers.tasks, () => []),
   mockProcedure(contract.providers.metadata, ({ request }) => {
     const type = new URL(request.url).searchParams.get('type') ?? '';
     return RESPONSE_BY_TYPE[type];

@@ -6,7 +6,9 @@ import type { ContentType } from '@contract/schemas';
 export function useMediaRules(contentType?: ContentType): {
   rules: MediaRuleDescriptor[] | undefined;
   isLoading: boolean;
+  error: Error | undefined;
+  refresh: () => unknown;
 } {
-  const { data, isLoading } = useApi(api.media.rules, { contentType });
-  return { rules: data, isLoading };
+  const { data, isLoading, error, mutate } = useApi(api.media.rules, { contentType });
+  return { rules: data, isLoading, error, refresh: mutate };
 }

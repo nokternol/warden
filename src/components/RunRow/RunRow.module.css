@@ -1,61 +1,25 @@
-/* ── Header ────────────────────────────────────────────────────────────────── */
-.headRow {
-  @apply border-b border-divider;
-}
-
-.columnHeader {
-  @apply px-4 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wide;
-}
-
-/* ── Run row ───────────────────────────────────────────────────────────────── */
-.row {
-  @apply border-b border-divider last:border-0 hover:bg-surface-hover transition-colors;
-}
-
-.cell {
-  @apply px-4 py-3 text-sm text-text-secondary;
-}
-
-.nameCell {
-  @apply px-4 py-3 text-sm font-medium text-text-primary;
-}
-
-.badgeCell {
-  @apply px-4 py-3;
-}
-
-.errorCell {
-  @apply max-w-xs truncate;
-}
-
-.reasonCell {
-  @apply max-w-sm;
-}
-
-.reason {
-  @apply text-text-secondary;
-}
+/* What a run adds to the shared row table: its expand toggle and its targeted titles. */
 
 .name {
   @apply flex items-center gap-2;
 }
 
 .error {
-  @apply text-danger;
+  @apply text-danger-text;
 }
 
 /* ── Expand toggle ─────────────────────────────────────────────────────────── */
 .toggle {
-  @apply p-1 -ml-1 shrink-0 rounded text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors;
+  @apply p-1 -ml-1 shrink-0 rounded text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors duration-150 max-lg:size-11 max-lg:flex max-lg:items-center max-lg:justify-center;
 }
 
 /* Holds the toggle's width on a row with nothing to expand, keeping names aligned. */
 .togglePlaceholder {
-  @apply w-6 -ml-1 shrink-0;
+  @apply w-6 -ml-1 shrink-0 max-lg:hidden;
 }
 
 .chevron {
-  @apply w-4 h-4 transition-transform;
+  @apply w-4 h-4 transition-transform duration-150;
 }
 
 .chevronOpen {
@@ -63,12 +27,12 @@
 }
 
 /* ── Targeted items ────────────────────────────────────────────────────────── */
-.detailRow {
-  @apply border-b border-divider bg-surface-bg;
+.itemsRow {
+  @apply bg-surface-bg;
 }
 
-.detailCell {
-  @apply px-4 pt-1 pb-4 pl-11;
+.itemsCell {
+  @apply lg:pl-11;
 }
 
 .note {
@@ -80,7 +44,7 @@
 }
 
 .pageNote {
-  @apply mt-2 text-xs text-text-secondary;
+  @apply mt-3 flex flex-wrap items-center gap-3 text-xs text-text-secondary;
 }
 
 .item {
@@ -92,7 +56,7 @@
 }
 
 .itemTitle {
-  @apply truncate;
+  @apply break-words min-w-0;
 }
 
 .itemTitleRemoved {

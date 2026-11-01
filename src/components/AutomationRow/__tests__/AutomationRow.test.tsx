@@ -1,8 +1,11 @@
 import StatusDot from '@app/components/StatusDot';
 import type { AutomationDto } from '@app/hooks/useAutomations';
-import { render, screen } from '@testing-library/react';
+import { contract } from '@contract/index';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { mockProcedure } from '@tests/mocks/contract';
+import { server } from '@tests/mocks/server';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AutomationRow from '../index';
 
 const mockAutomation: AutomationDto = {
@@ -23,7 +26,32 @@ const mockAutomation: AutomationDto = {
   updatedAt: '2024-01-01T00:00:00Z',
 };
 
+const enabledRunButton = async () => {
+  const button = screen.getByTitle('Run now');
+  await waitFor(() => expect(button).toBeEnabled());
+  return button;
+};
+
 describe('AutomationRow', () => {
+  beforeEach(() => {
+    server.use(
+      mockProcedure(contract.providers.tasks, () => [
+        {
+          providerId: 1,
+          type: 'RADARR',
+          tasks: [
+            {
+              id: mockAutomation.taskId,
+              label: 'Unmonitor movie',
+              destructive: false,
+              enabled: true,
+            },
+          ],
+        },
+      ])
+    );
+  });
+
   it('renders the automation name', () => {
     render(<AutomationRow automation={mockAutomation} onToggle={vi.fn()} onDelete={vi.fn()} />);
     expect(screen.getByText('Archive old movies')).toBeInTheDocument();
@@ -75,7 +103,7 @@ describe('AutomationRow', () => {
         onRun={onRun}
       />
     );
-    await user.click(screen.getByTitle('Run now'));
+    await user.click(await enabledRunButton());
     expect(onRun).toHaveBeenCalledTimes(1);
   });
 
@@ -90,7 +118,7 @@ describe('AutomationRow', () => {
         onRun={onRun}
       />
     );
-    await user.click(screen.getByTitle('Run now'));
+    await user.click(await enabledRunButton());
     expect(await screen.findByTitle('Run triggered')).toBeInTheDocument();
   });
 
@@ -105,8 +133,8 @@ describe('AutomationRow', () => {
         onRun={onRun}
       />
     );
-    await user.click(screen.getByTitle('Run now'));
-    const failButton = await screen.findByTitle('Run failed — click to retry');
+    await user.click(await enabledRunButton());
+    const failButton = await screen.findByTitle('Run failed, click to retry');
     expect(failButton.parentElement?.className).not.toMatch(/opacity-0/);
   });
 

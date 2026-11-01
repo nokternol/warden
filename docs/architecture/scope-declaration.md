@@ -58,7 +58,7 @@ the default of an injectable `scope` parameter. The client has no cradle, so it 
   server, whether the request is a page load or Next's client-side data fetch. Deferring a page needs no
   change to the page.
 - **Navigation.** [`resolveNavItems`](ref:path:src/lib/navigation.tsx) leaves out deferred pages, and it
-  is the only way to read the navigation: the sidebar and Media's mobile bar both use it.
+  is the only way to read the navigation: the sidebar and the mobile navigation bar both use it.
 - **Sections.** [The media page](ref:path:src/pages/media/index.page.tsx) renders the ratings panel only
   while `mediaRatingsPanel` is offered. While it is deferred, cards get no click handler, so
   [`MediaCard`](ref:path:src/components/MediaCard/index.tsx) renders them non-interactive.
@@ -101,7 +101,8 @@ no copy. [`useProviderTypes`](ref:path:src/hooks/useProviderTypes.ts) fetches th
 
 - [`AddProviderForm`](ref:path:src/components/AddProviderForm/index.tsx) offers exactly the served
   types by label, starts on the first, appends the chosen type's `apiPath` on save, and fills in and
-  locks a `defaultUrl`. While the types load, or when none are served, it says so and disables Save.
+  locks a `defaultUrl`. It asks for an API key where the type's `apiKeyRequired` says so, and shows the
+  type's `hostPlaceholder`. While the types load, or when none are served, it says so and disables Save.
 - [`ProviderCard`](ref:path:src/components/ProviderCard/index.tsx) shows its type's label and
   filter data, and round-trips the host through `apiPath` when editing. A row of a deferred type gets
   no descriptor: it shows its raw type and no filter data.

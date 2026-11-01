@@ -26,7 +26,7 @@ describe('RunsPage', () => {
     render(<RunsPage />);
 
     await waitFor(() => {
-      const badges = screen.getAllByText(/success/i);
+      const badges = screen.getAllByText('Succeeded');
       expect(badges.length).toBeGreaterThan(0);
     });
   });
@@ -36,7 +36,7 @@ describe('RunsPage', () => {
 
     await waitFor(() => {
       // Check for the error badge specifically (not the column header)
-      const badges = screen.getAllByText(/error/i);
+      const badges = screen.getAllByText('Failed');
       // At least one should be a badge (the mock data has an error run)
       expect(badges.length).toBeGreaterThan(0);
     });
