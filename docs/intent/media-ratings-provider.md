@@ -77,7 +77,7 @@ decision at the time this doc was written, not a state this doc changes.
 | OMDB | `imdbRating` / `imdbVotes` | IMDb 0–10 | Designed — same named metric as Radarr's, two paths to the same concept. |
 | OMDB | `rottenTomatoesRating` / `rottenTomatoesVotes` | RT 0–100% | Spec'd, second producer alongside Radarr's bundled copy. |
 | OMDB | `metacriticRating` / `metacriticVotes` | Metacritic 0–100 | Spec'd, second producer alongside Radarr's bundled copy. Self-collision note: OMDB exposes the same number twice (`Ratings[]` entry and a separate top-level `Metascore` field) — only `Ratings[]` should ever be parsed. |
-| TVMaze | `rating.average` | TVMaze 0–10 | **Explicitly deferred, not spec'd as an `EnrichmentFields` entry** (`specs/tvmaze.md`). Already consumed by `ratingsAggregation.ts`'s blended average; that usage is unchanged by this doc. `TvMazeProvider`'s rating read site carries a JSDoc note pointing here, per the requirement that this intent survive `docs/in_progress/`'s eventual deletion. |
+| TVMaze | `rating.average` | TVMaze 0–10 | **Explicitly deferred, not spec'd as an `EnrichmentFields` entry** (the TVMaze decision). Already consumed by `ratingsAggregation.ts`'s blended average; that usage is unchanged by this doc. `TvMazeProvider`'s rating read site carries a JSDoc note pointing here, per the requirement that this intent survive `docs/in_progress/`'s eventual deletion. |
 
 ## Naming-confusion risk, not just a field collision
 

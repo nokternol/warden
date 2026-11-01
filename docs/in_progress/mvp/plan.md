@@ -860,7 +860,7 @@ names, so nothing is renamed twice.
 2. Remaining parameterized tasks (`moveMovie`, `moveSeries`, `changeLanguageProfile`) and the
    `text`/`fields` parameter shapes.
 3. Maintenance of soft-deleted `media_item` rows (retention or purge policy).
-4. Provider e2e Phases 5–10 and any provider type not offered in the MVP. After C2 and C5, adding one
+4. Any provider type not offered in the MVP. After C2 and C5, adding one
    is a server-only change.
 5. Un-deferring each deferred surface, resolving its duplicate mechanism first (ratings vs rating
    filters, search vs title filter).
