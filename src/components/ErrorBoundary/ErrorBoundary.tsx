@@ -58,8 +58,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         <div className="min-h-screen bg-surface-bg flex items-center justify-center p-4">
           <div className="max-w-md w-full bg-surface-panel border border-border rounded-lg p-6">
             <h2 className="text-xl font-semibold text-danger-text mb-2">Something went wrong</h2>
-            <p className="text-text-secondary text-sm mb-4">
-              An unexpected error occurred. This has been logged and will be investigated.
+            <p className="text-text-secondary text-sm mb-4">An unexpected error occurred.</p>
+            <p className="text-text-secondary text-sm mb-4 break-words font-mono">
+              {this.state.error.message}
             </p>
             {process.env.NODE_ENV === 'development' && (
               <details className="mb-4">
