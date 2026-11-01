@@ -9,7 +9,7 @@ import helmet from 'helmet';
 import next from 'next';
 import { buildContainer, scopePerRequest } from './container';
 import { loadConfig } from './kernel/config';
-import { SESSION_TTL_SECONDS } from './kernel/config';
+import { SESSION_COOKIE, SESSION_TTL_SECONDS } from './kernel/config';
 import { closeDatabase, initializeDatabase } from './kernel/db';
 import { getChildLogger } from './kernel/logger';
 import {
@@ -79,12 +79,7 @@ async function startServer() {
         secret: config.SESSION_SECRET,
         resave: false,
         saveUninitialized: false,
-        cookie: {
-          maxAge: SESSION_TTL_SECONDS * 1000,
-          httpOnly: true,
-          sameSite: 'lax',
-          secure: config.NODE_ENV === 'production',
-        },
+        cookie: SESSION_COOKIE,
         store: new DrizzleStore({
           db,
           ttl: SESSION_TTL_SECONDS,

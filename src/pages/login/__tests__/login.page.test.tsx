@@ -7,8 +7,13 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import LoginPage from '../index.page';
 
 // The Plex OAuth popup and PIN polling talk to plex.tv; the page only needs the token it yields.
+const signInSetup = vi.hoisted(() => ({ fails: false }));
+
 vi.mock('@app/lib/utils/plexOAuth', () => ({
   PlexOAuth: class {
+    constructor() {
+      if (signInSetup.fails) throw new Error('Could not start sign-in');
+    }
     preparePopup() {}
     login() {
       return Promise.resolve('plex-token');
@@ -18,6 +23,23 @@ vi.mock('@app/lib/utils/plexOAuth', () => ({
 }));
 
 describe('LoginPage', () => {
+  it('reports a failure to start sign-in rather than staying on Signing in', async () => {
+    server.use(
+      mockProcedureFailure(contract.auth.me, 401, {
+        type: 'UNAUTHORIZED',
+        message: 'Authentication required',
+      })
+    );
+    signInSetup.fails = true;
+    render(<LoginPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /sign in with plex/i }));
+
+    expect(await screen.findByText(/could not start sign-in/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sign in with plex/i })).toBeEnabled();
+    signInSetup.fails = false;
+  });
+
   it('tells an account the server refuses that it is not the owner, and why', async () => {
     server.use(
       mockProcedureFailure(contract.auth.me, 401, {
