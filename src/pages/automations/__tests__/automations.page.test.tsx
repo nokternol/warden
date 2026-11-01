@@ -142,6 +142,33 @@ describe('AutomationsPage', () => {
     });
   });
 
+  it('confirms a created automation by name once the builder closes', async () => {
+    server.use(
+      mockProcedure(contract.providers.tasks, () => [
+        {
+          providerId: 1,
+          type: 'RADARR',
+          tasks: [{ id: 'un', label: 'Unmonitor movie', destructive: false, enabled: true }],
+        },
+      ]),
+      mockProcedure(contract.automations.create, () => ({
+        ...MOCK_AUTOMATIONS[0],
+        id: 99,
+        name: 'Clean',
+      }))
+    );
+    const user = userEvent.setup();
+    render(<AutomationsPage />, { wrapper: Wrapper });
+
+    await user.click(await screen.findByRole('button', { name: 'New automation' }));
+    await user.type(await screen.findByLabelText('Name'), 'Clean');
+    await user.click(await screen.findByRole('radio', { name: /Unmonitor movie/ }));
+    await user.click(screen.getByRole('button', { name: 'Create automation' }));
+
+    expect(await screen.findByText('Created Clean.')).toHaveAttribute('role', 'status');
+    expect(screen.queryByRole('button', { name: 'Create automation' })).not.toBeInTheDocument();
+  });
+
   // Last in the file: Run now schedules revalidation timers (see useAutomations) that outlive the
   // test's SWR cache, so a later test running past them would hit the torn-down cache.
   it('POSTs /:id/run when a Run-now control is clicked', async () => {

@@ -131,6 +131,17 @@ describe('MediaPage', () => {
   });
 });
 
+describe('MediaPage sort direction', () => {
+  it('names the direction a click on the control will apply', async () => {
+    const user = setupUser();
+    render(<MediaPage />, { wrapper: Wrapper });
+
+    await user.click(screen.getAllByRole('button', { name: 'Sort descending' })[0]);
+
+    expect(await screen.findAllByRole('button', { name: 'Sort ascending' })).not.toHaveLength(0);
+  });
+});
+
 describe('MediaPage heading order', () => {
   it('names each tab panel with a level 2 heading, so title headings do not skip a level', async () => {
     render(
