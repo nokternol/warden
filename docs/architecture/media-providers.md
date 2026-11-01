@@ -55,10 +55,9 @@ once). None are modelled-only.
 `lookupSeries(term)`. Every actuator task is real (calls Sonarr's API): `unmonitorSeries()`,
 `triggerSeriesSearch()`, `deleteSeries()`, `deleteSeriesKeepFiles()`, `changeQualityProfile()`,
 `applyTag()` (add/remove), `refreshSeries()`, `rescanSeries()`, `renameSeries()`. None are
-modelled-only. `moveSeries` and `changeLanguageProfile` are deliberately not built as tasks — their
-automation-UI parameter shape (target root folder; target language profile id) is deferred to
-[`docs/in_progress/provider-e2e-spec/tickets/11-automation-task-parameters.md`](ref:path:docs/in_progress/provider-e2e-spec/tickets/11-automation-task-parameters.md),
-same precedent as Radarr's `moveMovie`.
+modelled-only. `moveSeries` and `changeLanguageProfile` are deliberately not built as tasks, because each needs a
+parameter (target root folder; target language profile id) that is not declared yet,
+the same reason Radarr's `moveMovie` is not built.
 
 **Wired into the media-item pipeline?** Yes — as `MediaSource`. Sonarr's fields (`genres`, `network`,
 `seriesType`, `communityRating`, `episodePercentage`, `lastAiredAt`, `hasFile` (derived from
@@ -148,7 +147,7 @@ Actuator tasks (`deleteItem`, `refreshMetadata`, `markPlayed`, `markUnplayed`, `
 kept prefixed and separate from `plexAddedAt` — mutually-exclusive server choices), and `isFavorite`
 (`UserData.IsFavorite`, no other producer). Loses precedence to Tautulli and Plex for `playCount`/
 `lastWatchedAt` (`contestedFieldPrecedence`: Tautulli > Plex > Jellyfin, a fixed literal order pending
-the settings-driven `primaryMediaServer` Plex/Jellyfin swap `_precedence.md` designs). `genres`/
+the settings-driven `primaryMediaServer` Plex/Jellyfin swap, which nothing calls yet). `genres`/
 `certification` are deliberately not wired as Jellyfin-producer fields — same construction-time-vs-
 enrichment-overwrite gap Plex's `genres`/`certification` hit, blocked on precedence-ordering machinery.
 Gated into `ruleRegistry.ts` (`studio`, `runtimeMinutes`, `fileContainer`, `videoCodec`, `audioCodec`,

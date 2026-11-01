@@ -2,9 +2,7 @@
 
 **Status:** approved when this file merges to `main`. Execution is tracked in GitHub Issues (see
 [Tracking and sign-off](#tracking-and-sign-off)). Each slice below is one PR, built test-first (`/tdd`
-or the `plan-and-go:tdd-engineer` persona). The provider e2e implementation work (tracked in
-[`provider-e2e-spec/specs/_implementation-map.md`](../provider-e2e-spec/specs/_implementation-map.md))
-widens provider coverage and is sequenced after this MVP (see [Post-MVP](#post-mvp-parked-in-order)).
+or the `plan-and-go:tdd-engineer` persona). Wider provider coverage is sequenced after this MVP (see [Post-MVP](#post-mvp-parked-in-order)).
 
 ## Definition of done
 
@@ -862,7 +860,7 @@ names, so nothing is renamed twice.
 2. Remaining parameterized tasks (`moveMovie`, `moveSeries`, `changeLanguageProfile`) and the
    `text`/`fields` parameter shapes.
 3. Maintenance of soft-deleted `media_item` rows (retention or purge policy).
-4. Provider e2e Phases 5–10 and any provider type not offered in the MVP. After C2 and C5, adding one
+4. Any provider type not offered in the MVP. After C2 and C5, adding one
    is a server-only change.
 5. Un-deferring each deferred surface, resolving its duplicate mechanism first (ratings vs rating
    filters, search vs title filter).

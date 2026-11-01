@@ -57,9 +57,9 @@ these, but currently emits into the void — no consumer subscribes to either fo
   trigger confirmation shipped without it: it's no longer needed for "did the click register," only for
   a live in-progress/duration signal for jobs that outlast a page's polling window.
 - **A visual pass on top, once the live state exists to design against**: honest verb naming (Run Now /
-  Disable / Archive, none of which claims to control an in-flight process — "Pause" was considered and
+  Disable / Enable / Delete, none of which claims to control an in-flight process — "Pause" was considered and
   rejected as a lie for cross-system jobs), a designed "running…" affordance, and specialised columns for
-  the System → Tasks screen now that run-duration data exists to show.
+  the System page now that run-duration data exists to show.
 
 ## Blockers / friction
 

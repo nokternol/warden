@@ -1,7 +1,7 @@
 # Inter-provider dependency has no representation
 
 **Status:** INTENT (future state, not built). Discovered while examining actuator translation (see
-`docs/intent/media-actuator-realisation.md`) and originally recorded alongside the media identity model's
+`docs/architecture/actuator-task-ownership.md`) and originally recorded alongside the media identity model's
 open items — reclassified here on its own: this is an **identity/provider-configuration** issue, not the
 `MediaItem` field-shape one (`docs/architecture/media-field-provider-role.md`, shipped, unrelated theme).
 
@@ -10,7 +10,7 @@ open items — reclassified here on its own: this is an **identity/provider-conf
 Tautulli's data is entirely Plex-keyed — it has no identity space of its own; every fact it contributes
 is matched by a Plex rating key. Yet nothing in provider configuration declares, validates, or even
 represents "this provider requires that provider to be configured." If a user configures Tautulli without
-Plex, its enrichment (and, per `media-actuator-realisation.md`, its `deleteWatchHistory` actuator task)
+Plex, its enrichment (and, per `docs/architecture/actuator-task-ownership.md`, its `deleteWatchHistory` actuator task)
 silently resolves nothing, every time, with no error surfaced anywhere.
 
 This is the same *class* of fracture as the original MediaSource-privileging discovery documented in

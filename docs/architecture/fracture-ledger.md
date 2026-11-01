@@ -62,7 +62,7 @@ is graphed, dated, and verified against code, not inferred from a plan.
 - **One surface stays a translator, deliberately:** `MOVIE_PARAM_TO_KEY`/`SERIES_PARAM_TO_KEY` +
   `toFilterValues()` in `media.handler.ts` still bridge the browse path's renamed URL params to registry
   keys — its deletion needs the client to emit registry keys for browsing too, which wasn't in this
-  phase's scope. `src/pages/media/mediaQueryAdapters.ts`'s `toBrowseParams()` mirrors it client-side
+  phase's scope. `src/lib/mediaQueryAdapters.ts`'s `toBrowseParams()` mirrors it client-side
   (`GET /api/media/movies|series` still expects the old param names) until that translator is retired;
   `toSaveValues()` in the same file is the permanent save-path adapter, not a shim. That translator was
   retired by MVP slice C3; see "Browse and save — two filter encodings" below.
@@ -492,6 +492,31 @@ Earlier entries in this ledger use the names that were current when they healed 
   The deferred code and its tests stay; the two ratings mechanisms (F10) and two title lookups (F11) are
   blocked here, and unifying them stays post-MVP work.
 
+### Docs against code — statements the code had moved past (recorded and healed 2026-11-01, MVP slice B4)
+
+- **Fracture:** the core model's example used an `addedBy=list` rule that does not exist, it allowed one
+  active provider per type where Radarr and Sonarr allow several, and it said roles come from `implements`
+  where adapters bind two of the three. The precedence
+  comment said a Plex/Jellyfin swap was unbuilt beside the unused function that implements it, the
+  implementation map said the automation builder had no single-select control, this ledger cited a moved
+  path, and three intent docs pointed at files that no longer exist.
+- **How it misled:** each read as current fact, so a reader would plan around a rule that was never
+  there or rebuild something that exists.
+- **Healed by:** correcting each statement. The core model's example is now the MVP's destination
+  scenario, built from rules and a task that exist. The old provider spec plan is deleted, and an architecture doc no longer leans on an in-progress ticket.
+
 ## Open
 
-No fracture is currently open.
+### Ratings — two mechanisms, one blocked (recorded 2026-11-01, MVP slice B4)
+
+- **Fracture:** rating filters run through enrichment, while `/api/providers/ratings` is a separate
+  aggregation feeding its own page and panel.
+- **Status:** the second mechanism is deferred in `contract/scope.ts`, so it is unreachable but present.
+  Unifying them comes before un-deferring it, per the post-MVP list in `docs/in_progress/mvp/plan.md`.
+
+### Title lookup — two mechanisms, one blocked (recorded 2026-11-01, MVP slice B4)
+
+- **Fracture:** the title filter and the Search page's cross-provider metadata search both look up a
+  title.
+- **Status:** Search is deferred in `contract/scope.ts`, so it is unreachable but present. Unifying them
+  comes before un-deferring it, per the post-MVP list in `docs/in_progress/mvp/plan.md`.
