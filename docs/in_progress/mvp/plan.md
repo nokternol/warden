@@ -224,11 +224,10 @@ does not define its own TDD process. Each slice supplies the *input* to that ski
   session context), and comments never narrate the task. A cycle's commit message is the durable
   part of its record. The PR description summarises the slice's end state (What / Why / Changes /
   Testing).
-- **Findings:** a finding made while building or reviewing a slice is fixed in that slice if it is
-  small. If it would fail acceptance (a wrong result, a data or security risk, or a promised feature
-  or the [Definition of done](#definition-of-done) not met), it goes to the owner to decide, and if
-  it is not fixed in the slice it becomes an issue in the `MVP` milestone that G1 depends on. Anything
-  else is a note in the PR description and does not become an issue.
+- **Findings:** a slice finishes what it finds. Work too big to fit becomes its own slice, with a
+  section here and an issue in the `MVP` milestone that G1 depends on. The builder decides this and
+  states it in the PR; the owner is not asked to sanction it. A minor observation outside the slice's
+  scope is a note in the PR description and does not become an issue.
 - **Docs:** `docs-lifecycle` triggers for every moved, renamed or behaviour-changed file. Each heal
   gets a fracture-ledger entry, Open when the slice starts and Healed when it merges. Finish with
   `graphify update .`.
@@ -817,6 +816,15 @@ names, so nothing is renamed twice.
   System, against the constraints above: contrast, focus, reduced motion, an explicit state for every
   async boundary, density, and glossary names. Run `playwright-cli` screenshots at 1440px and 400px.
 - Any fix that changes behavior gets a test. Pure visual fixes are verified by screenshot.
+
+**F3 · Bulk actions and keyboard shortcuts**
+- **Model:** Opus 5.5.
+- **Why:** the critique found that managing many automations means repeating one row's actions, and
+  that nothing has a keyboard shortcut.
+- **Behaviours:** select automations (one, or all) and enable, disable or delete them together, with a
+  confirmation naming the count for delete and a statement of any that failed, which stay selected.
+  `/` focuses Media's title filter and `n` opens the automation builder, ignored while typing.
+- **Not included:** bulk Run Now, since a destructive task confirms its own count per automation.
 
 ### Track G — Acceptance
 
