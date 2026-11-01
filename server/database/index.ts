@@ -15,6 +15,17 @@ export type DrizzleDb = LibSQLDatabase<typeof schema> & { $client: Client };
 const MIGRATIONS_DIR = path.resolve(__dirname, 'migrations');
 
 /**
+ * Write-ahead logging with normal sync: a commit appends to the log instead of forcing a disk sync.
+ * The driver runs on the server's main thread, so on a NAS's disks a sync per write would stall every
+ * request while a job writes a whole library. A power cut can lose the last commits but cannot corrupt
+ * the database.
+ */
+export async function useCheapWrites(client: Client): Promise<void> {
+  await client.execute('PRAGMA journal_mode = WAL');
+  await client.execute('PRAGMA synchronous = NORMAL');
+}
+
+/**
  * Copies a database that holds data before pending migrations change it, so a bad migration on an
  * unattended install can be undone by restoring the file. Named for the migration count it was at.
  */
@@ -32,6 +43,8 @@ export async function backUpBeforeMigrating(
   const { rows } = await client.execute('SELECT count(*) AS applied FROM __drizzle_migrations');
   const applied = Number(rows[0].applied);
   if (applied >= journal.entries.length) return;
+  // A copy of the main file alone misses whatever is still in the write-ahead log.
+  await client.execute('PRAGMA wal_checkpoint(TRUNCATE)');
   const backup = `${dbFile}.before-migration-${applied}`;
   copyFileSync(dbFile, backup);
   log.info('Backed up the database before migrating', { backup });
@@ -65,6 +78,7 @@ export async function initializeDatabase(config: AppConfig): Promise<DrizzleDb> 
     _client = createClient({ url });
     _db = drizzle(_client, { schema });
 
+    if (url !== ':memory:') await useCheapWrites(_client);
     if (url !== ':memory:')
       await backUpBeforeMigrating(_client, url.slice('file:'.length), MIGRATIONS_DIR);
 

@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { mediaIdentity } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
+import { yieldToEventLoop } from '../../kernel/yieldToEventLoop';
 import type { EnrichableField, MediaEnricher } from './enrichment/enricher';
 import type { EnrichmentQueries } from './enrichment/enrichment.queries';
 import { contestedFieldPrecedence, resolvePrecedence } from './enrichment/precedence';
@@ -77,6 +78,7 @@ export class EnrichmentJob {
     );
 
     for (const { identityId, item } of hydrated) {
+      await yieldToEventLoop();
       const resolved = resolvedByKey.get(identityKey(item));
       const values: EnrichmentWriteValues = {
         playCount: resolved?.playCount ?? null,

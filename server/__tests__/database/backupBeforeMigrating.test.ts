@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createClient } from '@libsql/client';
-import { backUpBeforeMigrating } from '@server/database/index';
+import { backUpBeforeMigrating, useCheapWrites } from '@server/database/index';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const MIGRATIONS = path.resolve(__dirname, '../../database/migrations');
@@ -46,6 +46,27 @@ describe('backUpBeforeMigrating', () => {
     const client = createClient({ url: `file:${file}` });
     await backUpBeforeMigrating(client, file, MIGRATIONS);
     expect(existsSync(`${file}.before-migration-0`)).toBe(false);
+    client.close();
+  });
+
+  it('includes writes still in the write-ahead log', async () => {
+    const client = await database(3);
+    await useCheapWrites(client);
+    await client.execute('CREATE TABLE kept (id INTEGER)');
+    await backUpBeforeMigrating(client, file, MIGRATIONS);
+    client.close();
+
+    const copy = createClient({ url: `file:${file}.before-migration-3` });
+    const { rows } = await copy.execute("SELECT name FROM sqlite_master WHERE name = 'kept'");
+    expect(rows).toHaveLength(1);
+    copy.close();
+  });
+
+  it('writes without forcing a disk sync per commit', async () => {
+    const client = await database(0);
+    await useCheapWrites(client);
+    expect((await client.execute('PRAGMA journal_mode')).rows[0].journal_mode).toBe('wal');
+    expect((await client.execute('PRAGMA synchronous')).rows[0].synchronous).toBe(1);
     client.close();
   });
 });
