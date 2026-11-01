@@ -1,4 +1,5 @@
 import { api } from '@server/kernel/api';
+import { ConflictError } from '@server/kernel/errors';
 import { getChildLogger } from '@server/kernel/logger';
 import type { AutomationExecutor } from './automationExecutor';
 import type { AutomationRunService } from './automationRunService';
@@ -59,6 +60,9 @@ export function createAutomationProcedures(cradle: Cradle) {
 
     run: api.automations.run.handler(async ({ input }) => {
       await automationService.getById(input.id);
+      if (automationExecutor.isRunning(input.id)) {
+        throw new ConflictError('This automation is already running.');
+      }
       void automationExecutor.execute(input.id).catch((err) => {
         log.error('Background automation run failed', { automationId: input.id, err });
       });
@@ -66,8 +70,11 @@ export function createAutomationProcedures(cradle: Cradle) {
     }),
 
     runs: api.automations.runs.handler(async ({ input }) => {
-      const data = await automationRunService.listRuns(input);
-      return { data, total: data.length };
+      const [data, total] = await Promise.all([
+        automationRunService.listRuns(input),
+        automationRunService.countRuns(input),
+      ]);
+      return { data, total };
     }),
 
     runItems: api.automations.runItems.handler(async ({ input }) =>

@@ -215,16 +215,16 @@ export class IdentityResolutionJob {
     providerId: number,
     fetchedExternalIds: number[]
   ): Promise<void> {
+    // An empty answer is far likelier to be a provider fault than a library emptied overnight.
+    if (fetchedExternalIds.length === 0) return;
     await this.deps.db
       .update(mediaItems)
       .set({ deleted: true })
       .where(
-        fetchedExternalIds.length > 0
-          ? and(
-              eq(mediaItems.providerId, providerId),
-              notInArray(mediaItems.externalId, fetchedExternalIds)
-            )
-          : eq(mediaItems.providerId, providerId)
+        and(
+          eq(mediaItems.providerId, providerId),
+          notInArray(mediaItems.externalId, fetchedExternalIds)
+        )
       );
   }
 

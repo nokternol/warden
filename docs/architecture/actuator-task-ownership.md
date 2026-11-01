@@ -144,6 +144,8 @@ Choosing a different task, or changing the queries, clears the confirmation: the
 
 The automation row's Run Now uses the same preview: a user automation's destructive task, or one the catalogue no longer describes, confirms inline with the count before it runs ([`src/components/AutomationRow/index.tsx`](ref:path:src/components/AutomationRow/index.tsx)).
 
+**Run safety.** A run is written as `running`, with its targets, before its task acts, and finished in place, so a restart mid-task leaves a record: startup closes any run still `running` as failed, stating some items may have changed. A run's outcome is one status, so a failure can mean a task changed some of its items. Before acting, a user run is skipped with its reason if a filter would match a title that has no stored value and that field has not been loaded or has no connected provider, since no play history reads as unwatched. A destructive task is skipped if it would act on more than half the titles it was evaluated against (20 or more), since nobody is watching a scheduled run. Runs through one provider take turns, and a second Run Now on a running automation answers 409.
+
 ## Non-source execution: id translation through the identity graph
 
 Earlier phases derived target ids by evaluating the automation's query against the provider instance **as

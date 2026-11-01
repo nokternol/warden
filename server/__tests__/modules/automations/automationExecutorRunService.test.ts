@@ -232,7 +232,14 @@ describe('AutomationExecutor writes to automation_runs', () => {
 
       await new IdentityResolutionJob({
         db: getDb(),
-        movieSources: [{ providerId: provider.id, provider: { getMovies: async () => [] } }],
+        movieSources: [
+          {
+            providerId: provider.id,
+            provider: {
+              getMovies: async () => [createRadarrMovie({ id: 9, tmdbId: 109, title: 'Other' })],
+            },
+          },
+        ],
       }).runForMovies();
 
       const [run] = await automationRunService.listRuns({ automationId: automation.id });

@@ -33,6 +33,6 @@ describe('automation run status', () => {
 
   it('is declared once, as the status a recorded run carries', () => {
     expect(AutomationRunSchema.shape.status).toBe(AutomationRunStatusSchema);
-    expect(AutomationRunStatusSchema.options).toEqual(['success', 'error', 'skipped']);
+    expect(AutomationRunStatusSchema.options).toEqual(['running', 'success', 'error', 'skipped']);
   });
 });

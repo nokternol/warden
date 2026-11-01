@@ -48,7 +48,8 @@ async function startServer() {
     });
 
     // Seed the cron scheduler with active automations from DB
-    const { automationService, automationScheduler } = container.cradle;
+    const { automationService, automationScheduler, automationRunService } = container.cradle;
+    await automationRunService.closeInterruptedRuns();
     const activeAutomations = await automationService.listActive();
     for (const a of activeAutomations) {
       automationScheduler.schedule(a);

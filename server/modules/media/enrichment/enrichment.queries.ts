@@ -15,6 +15,17 @@ interface Deps {
 export class EnrichmentQueries {
   constructor(private deps: Deps) {}
 
+  /** Whether any title holds a value for this field, so its absence on one title means something. */
+  async hasValues(field: keyof EnrichmentFields): Promise<boolean> {
+    const [row] = await this.deps.db
+      .select({ id: mediaEnrichment.fieldId })
+      .from(mediaEnrichment)
+      .innerJoin(enrichmentField, eq(enrichmentField.id, mediaEnrichment.fieldId))
+      .where(eq(enrichmentField.key, field))
+      .limit(1);
+    return row !== undefined;
+  }
+
   async getByIdentityIds(ids: number[]): Promise<Map<number, Partial<EnrichmentFields>>> {
     if (ids.length === 0) return new Map();
     const rows = await this.deps.db

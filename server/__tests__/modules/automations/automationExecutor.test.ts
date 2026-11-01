@@ -734,7 +734,11 @@ describe('AutomationExecutor', () => {
         providerSettingsService,
         mediaQueryService,
         providerFactory: mockFactory,
-        automationRunService: { createRun: vi.fn() } as unknown as AutomationRunService,
+        automationRunService: {
+          beginRun: async () => ({ id: 1 }),
+          finishRun: async () => ({ id: 1, ranAt: new Date().toISOString() }),
+          createRun: vi.fn(),
+        } as unknown as AutomationRunService,
       });
 
       await executorWithFactory.execute(automation.id);
@@ -768,7 +772,11 @@ describe('AutomationExecutor', () => {
         providerSettingsService,
         mediaQueryService,
         providerFactory: mockFactory,
-        automationRunService: { createRun: vi.fn() } as unknown as AutomationRunService,
+        automationRunService: {
+          beginRun: async () => ({ id: 1 }),
+          finishRun: async () => ({ id: 1, ranAt: new Date().toISOString() }),
+          createRun: vi.fn(),
+        } as unknown as AutomationRunService,
       });
 
       await executorWithFactory.execute(automation.id);
@@ -839,7 +847,11 @@ describe('AutomationExecutor', () => {
         mediaQueryService: mockMediaQueryService as unknown as MediaQueryService,
         providerSettingsService: mockProviderSettingsService as unknown as ProviderSettingsService,
         providerFactory: { create: () => mockRadarr },
-        automationRunService: { createRun: vi.fn() } as unknown as AutomationRunService,
+        automationRunService: {
+          beginRun: async () => ({ id: 1 }),
+          finishRun: async () => ({ id: 1, ranAt: new Date().toISOString() }),
+          createRun: vi.fn(),
+        } as unknown as AutomationRunService,
       });
 
       await legacyExecutor.execute(99);
@@ -922,7 +934,11 @@ describe('AutomationExecutor', () => {
         mediaQueryService: mockMediaQueryService as unknown as MediaQueryService,
         providerSettingsService: mockProviderSettingsService as unknown as ProviderSettingsService,
         providerFactory: mockFactory,
-        automationRunService: { createRun: vi.fn() } as unknown as AutomationRunService,
+        automationRunService: {
+          beginRun: async () => ({ id: 1 }),
+          finishRun: async () => ({ id: 1, ranAt: new Date().toISOString() }),
+          createRun: vi.fn(),
+        } as unknown as AutomationRunService,
       });
 
       await executorWithMocks.execute(99);
@@ -1148,7 +1164,11 @@ describe('AutomationExecutor', () => {
         providerSettingsService,
         mediaQueryService,
         providerFactory: mockFactory,
-        automationRunService: { createRun: vi.fn() } as unknown as AutomationRunService,
+        automationRunService: {
+          beginRun: async () => ({ id: 1 }),
+          finishRun: async () => ({ id: 1, ranAt: new Date().toISOString() }),
+          createRun: vi.fn(),
+        } as unknown as AutomationRunService,
       });
 
       await executorWithFactory.execute(automation.id);
@@ -1196,7 +1216,11 @@ describe('AutomationExecutor', () => {
         providerSettingsService,
         mediaQueryService,
         providerFactory: mockFactory,
-        automationRunService: { createRun: vi.fn() } as unknown as AutomationRunService,
+        automationRunService: {
+          beginRun: async () => ({ id: 1 }),
+          finishRun: async () => ({ id: 1, ranAt: new Date().toISOString() }),
+          createRun: vi.fn(),
+        } as unknown as AutomationRunService,
       });
 
       await executorWithFactory.execute(automation.id);
@@ -1214,7 +1238,11 @@ describe('AutomationExecutor', () => {
         providerSettingsService,
         mediaQueryService,
         providerFactory: { create: () => radarrSource(movies) },
-        automationRunService: { createRun: vi.fn() } as unknown as AutomationRunService,
+        automationRunService: {
+          beginRun: async () => ({ id: 1 }),
+          finishRun: async () => ({ id: 1, ranAt: new Date().toISOString() }),
+          createRun: vi.fn(),
+        } as unknown as AutomationRunService,
       });
     }
 
@@ -1332,7 +1360,11 @@ describe('AutomationExecutor', () => {
         providerSettingsService,
         mediaQueryService,
         providerFactory: mockFactory,
-        automationRunService: { createRun: vi.fn() } as unknown as AutomationRunService,
+        automationRunService: {
+          beginRun: async () => ({ id: 1 }),
+          finishRun: async () => ({ id: 1, ranAt: new Date().toISOString() }),
+          createRun: vi.fn(),
+        } as unknown as AutomationRunService,
       });
 
       await hoistExecutor.execute(automation.id);

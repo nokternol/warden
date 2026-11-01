@@ -5,6 +5,7 @@ export const RUN_STATUS: Record<
   AutomationRunStatus,
   { variant: 'success' | 'error' | 'warning'; label: string }
 > = {
+  running: { variant: 'warning', label: 'Running' },
   success: { variant: 'success', label: 'Succeeded' },
   error: { variant: 'error', label: 'Failed' },
   skipped: { variant: 'warning', label: 'Invalid' },
