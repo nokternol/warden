@@ -27,6 +27,8 @@ export interface TautulliHistoryItem {
   duration: number;
   play_duration: number;
   played_at?: number;
+  media_type?: string;
+  grandparent_rating_key?: string;
 }
 
 interface TautulliResponse<T> {
@@ -35,6 +37,8 @@ interface TautulliResponse<T> {
     data: T;
   };
 }
+
+const HISTORY_PAGE_SIZE = 1000;
 
 export class TautulliProvider extends BaseProviderConnection implements MediaActuator {
   public readonly actuatorType = MetadataProviderType.TAUTULLI;
@@ -71,9 +75,17 @@ export class TautulliProvider extends BaseProviderConnection implements MediaAct
     return this.command<TautulliHomeStat[]>('get_home_stats');
   }
 
+  /** Every play on record. Tautulli answers with 25 rows unless asked for more. */
   public async getHistory(): Promise<TautulliHistoryItem[]> {
-    const data = await this.command<{ data: TautulliHistoryItem[] }>('get_history');
-    return data.data;
+    const history: TautulliHistoryItem[] = [];
+    for (let start = 0; ; start += HISTORY_PAGE_SIZE) {
+      const { data } = await this.command<{ data: TautulliHistoryItem[] }>('get_history', {
+        start,
+        length: HISTORY_PAGE_SIZE,
+      });
+      history.push(...data);
+      if (data.length < HISTORY_PAGE_SIZE) return history;
+    }
   }
 
   public async searchHistory(title: string): Promise<TautulliHistoryItem[]> {

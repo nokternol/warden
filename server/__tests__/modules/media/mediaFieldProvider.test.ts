@@ -456,4 +456,15 @@ describe('jellyfinFieldProvider.toEnrichmentFields', () => {
     expect(result.playCount).toBe(3);
     expect(result.lastWatchedAt).toBe('2024-05-01T12:00:00.000Z');
   });
+
+  it('counts a play of an episode as a play of its show, which a series is matched by', () => {
+    const byKey = tautulliFieldProvider.visit([
+      { rating_key: 'ep1', grandparent_rating_key: 'show', media_type: 'episode', played_at: 5 },
+      { rating_key: 'ep2', grandparent_rating_key: 'show', media_type: 'episode', played_at: 9 },
+      { rating_key: 'film', media_type: 'movie', played_at: 3 },
+    ] as never);
+    expect(byKey.get('show')).toEqual({ playCount: 2, lastPlayedUnix: 9 });
+    expect(byKey.get('film')?.playCount).toBe(1);
+    expect(byKey.has('ep1')).toBe(false);
+  });
 });

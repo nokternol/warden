@@ -20,16 +20,6 @@ export interface SeerrRequest {
   createdAt: string;
 }
 
-interface SeerrRequestsResponse {
-  results: SeerrRequest[];
-  pageInfo: {
-    pages: number;
-    pageSize: number;
-    results: number;
-    page: number;
-  };
-}
-
 export interface SeerrIssue {
   id: number;
   status: number;
@@ -52,23 +42,31 @@ interface SeerrSearchResponse {
   totalResults: number;
 }
 
+const SEERR_PAGE_SIZE = 100;
+
 export class SeerrProvider extends BaseProviderConnection {
   private get authHeader() {
     return { 'X-Api-Key': this.provider.apiKey ?? '' };
   }
 
   public async getRequests(): Promise<SeerrRequest[]> {
-    const resp = await this.client
-      .get('api/v1/request', { headers: this.authHeader })
-      .json<SeerrRequestsResponse>();
-    return resp.results;
+    return this.allPages<SeerrRequest>('api/v1/request');
   }
 
   public async getIssues(): Promise<SeerrIssue[]> {
-    const resp = await this.client
-      .get('api/v1/issue', { headers: this.authHeader })
-      .json<{ results: SeerrIssue[] }>();
-    return resp.results;
+    return this.allPages<SeerrIssue>('api/v1/issue');
+  }
+
+  /** Every result of a paged list. Seerr answers with 10 unless asked for more. */
+  private async allPages<T>(path: string): Promise<T[]> {
+    const results: T[] = [];
+    for (let skip = 0; ; skip += SEERR_PAGE_SIZE) {
+      const page = await this.client
+        .get(path, { headers: this.authHeader, searchParams: { take: SEERR_PAGE_SIZE, skip } })
+        .json<{ results: T[] }>();
+      results.push(...page.results);
+      if (page.results.length < SEERR_PAGE_SIZE) return results;
+    }
   }
 
   public async search(query: string): Promise<SeerrSearchResult[]> {

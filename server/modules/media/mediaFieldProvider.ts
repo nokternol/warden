@@ -110,14 +110,19 @@ export const tautulliFieldProvider: MediaFieldProvider<
   visit: (history) => {
     const byKey = new Map<string, PlayHistoryFields>();
     for (const item of history) {
-      const existing = byKey.get(item.rating_key);
+      // A play of an episode is a play of its show, which is what a series is matched by.
+      const key =
+        item.media_type === 'episode' && item.grandparent_rating_key
+          ? item.grandparent_rating_key
+          : item.rating_key;
+      const existing = byKey.get(key);
       const playCount = (existing?.playCount ?? 0) + 1;
       const lastPlayedUnix =
         item.played_at !== undefined &&
         (existing?.lastPlayedUnix === undefined || item.played_at > existing.lastPlayedUnix)
           ? item.played_at
           : existing?.lastPlayedUnix;
-      byKey.set(item.rating_key, { playCount, lastPlayedUnix });
+      byKey.set(key, { playCount, lastPlayedUnix });
     }
     return byKey;
   },
