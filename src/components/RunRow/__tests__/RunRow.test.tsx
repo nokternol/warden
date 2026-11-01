@@ -1,7 +1,8 @@
+import RowTable from '@app/components/RowTable';
 import type { AutomationRunDto } from '@app/hooks/useAutomationRuns';
 import { render, screen, setupUser, within } from '@tests/helpers/component';
 import { describe, expect, it } from 'vitest';
-import RunRow from '../index';
+import RunRow, { RUN_COLUMNS } from '../index';
 
 const run: AutomationRunDto = {
   id: 1,
@@ -56,12 +57,9 @@ describe('RunRow', () => {
 
   it("spans an expanded run's titles across every column of the table head", async () => {
     render(
-      <table>
-        <RunRow.Head />
-        <tbody>
-          <RunRow run={run} defaultExpanded />
-        </tbody>
-      </table>
+      <RowTable label="Runs" columns={RUN_COLUMNS}>
+        <RunRow run={run} defaultExpanded />
+      </RowTable>
     );
 
     const titles = (await screen.findByText('Alien')).closest('td') as HTMLTableCellElement;

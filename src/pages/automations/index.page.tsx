@@ -1,10 +1,11 @@
 import AppLayout from '@app/components/AppLayout';
 import AsyncBoundary from '@app/components/AsyncBoundary';
 import AutomationBuilder from '@app/components/AutomationBuilder';
-import AutomationRow from '@app/components/AutomationRow';
+import AutomationRow, { AUTOMATION_COLUMNS } from '@app/components/AutomationRow';
 import Button from '@app/components/Button';
 import EmptyState from '@app/components/EmptyState';
 import QueryRow from '@app/components/QueryRow';
+import RowTable from '@app/components/RowTable';
 import SetupChecklist from '@app/components/SetupChecklist';
 import SidebarNav from '@app/components/SidebarNav';
 import TopBar from '@app/components/TopBar';
@@ -161,16 +162,19 @@ export default function AutomationsPage() {
           >
             {(list) => (
               <div className="rounded-lg border border-border bg-surface-panel">
-                <AutomationRow.Head />
-                {list.map((a) => (
-                  <AutomationRow
-                    key={a.id}
-                    automation={a}
-                    onToggle={() => setStatus(a.id, a.status === 'active' ? 'disabled' : 'active')}
-                    onDelete={() => removeAutomation(a.id)}
-                    onRun={() => run(a.id)}
-                  />
-                ))}
+                <RowTable label="Your automations" columns={AUTOMATION_COLUMNS}>
+                  {list.map((a) => (
+                    <AutomationRow
+                      key={a.id}
+                      automation={a}
+                      onToggle={() =>
+                        setStatus(a.id, a.status === 'active' ? 'disabled' : 'active')
+                      }
+                      onDelete={() => removeAutomation(a.id)}
+                      onRun={() => run(a.id)}
+                    />
+                  ))}
+                </RowTable>
               </div>
             )}
           </AsyncBoundary>

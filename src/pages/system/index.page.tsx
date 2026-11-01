@@ -1,8 +1,9 @@
 import AppLayout from '@app/components/AppLayout';
 import AsyncBoundary from '@app/components/AsyncBoundary';
-import AutomationRow from '@app/components/AutomationRow';
+import AutomationRow, { AUTOMATION_COLUMNS } from '@app/components/AutomationRow';
 import EmptyState from '@app/components/EmptyState';
 import MediaResetControl from '@app/components/MediaResetControl';
+import RowTable from '@app/components/RowTable';
 import SidebarNav from '@app/components/SidebarNav';
 import TopBar from '@app/components/TopBar';
 import { useAutomations } from '@app/hooks/useAutomations';
@@ -58,10 +59,11 @@ export default function SystemPage() {
           >
             {(list) => (
               <div className="rounded-lg border border-border bg-surface-panel">
-                <AutomationRow.Head />
-                {list.map((a) => (
-                  <AutomationRow key={a.id} automation={a} onRun={() => run(a.id)} />
-                ))}
+                <RowTable label="System automations" columns={AUTOMATION_COLUMNS}>
+                  {list.map((a) => (
+                    <AutomationRow key={a.id} automation={a} onRun={() => run(a.id)} />
+                  ))}
+                </RowTable>
               </div>
             )}
           </AsyncBoundary>

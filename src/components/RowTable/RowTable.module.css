@@ -1,0 +1,48 @@
+/*
+  The one table for rows of records: below lg each row stacks into a card with cells labelled from
+  data-label, so a phone never scrolls sideways and nothing is hidden.
+*/
+.table {
+  @apply w-full;
+}
+
+.head {
+  @apply max-lg:sr-only;
+}
+
+.headRow {
+  @apply border-b border-divider;
+}
+
+.columnHeader {
+  @apply px-4 py-2 text-left text-xs font-medium text-text-muted;
+}
+
+.row {
+  @apply border-b border-divider last:border-0 hover:bg-surface-hover transition-colors duration-150 max-lg:block max-lg:py-2;
+}
+
+.cell {
+  @apply px-4 py-3 align-top text-sm text-text-secondary max-lg:flex max-lg:items-center max-lg:justify-between max-lg:gap-3 max-lg:py-1;
+}
+
+.cell[data-label]::before {
+  @apply lg:hidden text-xs text-text-muted;
+  content: attr(data-label);
+}
+
+.nameCell {
+  @apply px-4 py-3 align-top text-sm font-medium text-text-primary max-lg:block max-lg:py-1;
+}
+
+.blockCell {
+  @apply px-4 py-3 align-top text-sm text-text-secondary break-words lg:max-w-sm max-lg:block max-lg:py-1 max-lg:empty:hidden;
+}
+
+.detailRow {
+  @apply border-b border-divider last:border-0 max-lg:block;
+}
+
+.detailCell {
+  @apply px-4 pt-1 pb-4 max-lg:block max-lg:pt-3;
+}

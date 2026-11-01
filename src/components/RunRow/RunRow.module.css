@@ -1,42 +1,4 @@
-/*
-  One table: below sm each row stacks into a card, with cells labelled from data-label, so a phone
-  never scrolls sideways and errors stay inline.
-*/
-
-/* ── Header ────────────────────────────────────────────────────────────────── */
-.head {
-  @apply max-sm:sr-only;
-}
-
-.headRow {
-  @apply border-b border-divider;
-}
-
-.columnHeader {
-  @apply px-4 py-2 text-left text-xs font-medium text-text-muted;
-}
-
-/* ── Run row ───────────────────────────────────────────────────────────────── */
-.row {
-  @apply border-b border-divider last:border-0 hover:bg-surface-hover transition-colors duration-150 max-sm:block max-sm:py-2;
-}
-
-.cell {
-  @apply px-4 py-3 text-sm text-text-secondary max-sm:flex max-sm:items-center max-sm:justify-between max-sm:gap-3 max-sm:py-1;
-}
-
-.cell[data-label]::before {
-  @apply sm:hidden text-xs text-text-muted;
-  content: attr(data-label);
-}
-
-.nameCell {
-  @apply px-4 py-3 text-sm font-medium text-text-primary max-sm:block max-sm:py-1;
-}
-
-.detailsCell {
-  @apply px-4 py-3 text-sm text-text-secondary break-words sm:max-w-sm max-sm:block max-sm:py-1 max-sm:empty:hidden;
-}
+/* What a run adds to the shared row table: its expand toggle and its targeted titles. */
 
 .name {
   @apply flex items-center gap-2;
@@ -48,12 +10,12 @@
 
 /* ── Expand toggle ─────────────────────────────────────────────────────────── */
 .toggle {
-  @apply p-1 -ml-1 shrink-0 rounded text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors duration-150 max-sm:size-11 max-sm:flex max-sm:items-center max-sm:justify-center;
+  @apply p-1 -ml-1 shrink-0 rounded text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors duration-150 max-lg:size-11 max-lg:flex max-lg:items-center max-lg:justify-center;
 }
 
 /* Holds the toggle's width on a row with nothing to expand, keeping names aligned. */
 .togglePlaceholder {
-  @apply w-6 -ml-1 shrink-0 max-sm:hidden;
+  @apply w-6 -ml-1 shrink-0 max-lg:hidden;
 }
 
 .chevron {
@@ -65,12 +27,12 @@
 }
 
 /* ── Targeted items ────────────────────────────────────────────────────────── */
-.detailRow {
-  @apply border-b border-divider bg-surface-bg max-sm:block;
+.itemsRow {
+  @apply bg-surface-bg;
 }
 
-.detailCell {
-  @apply px-4 pt-1 pb-4 sm:pl-11 max-sm:block max-sm:pt-3;
+.itemsCell {
+  @apply lg:pl-11;
 }
 
 .note {

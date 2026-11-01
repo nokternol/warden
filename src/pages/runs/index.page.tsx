@@ -2,7 +2,8 @@ import AppLayout from '@app/components/AppLayout';
 import AsyncBoundary, { LoadError } from '@app/components/AsyncBoundary';
 import Button from '@app/components/Button';
 import EmptyState from '@app/components/EmptyState';
-import RunRow from '@app/components/RunRow';
+import RowTable from '@app/components/RowTable';
+import RunRow, { RUN_COLUMNS } from '@app/components/RunRow';
 import SidebarNav from '@app/components/SidebarNav';
 import TopBar from '@app/components/TopBar';
 import { RUNS_PAGE_SIZE, useAutomationRuns } from '@app/hooks/useAutomationRuns';
@@ -92,14 +93,11 @@ export default function RunsPage() {
         >
           {(list) => (
             <div className="rounded-lg border border-border bg-surface-panel">
-              <table className="w-full">
-                <RunRow.Head />
-                <tbody>
-                  {list.map((run) => (
-                    <RunRow key={run.id} run={run} />
-                  ))}
-                </tbody>
-              </table>
+              <RowTable label="Runs" columns={RUN_COLUMNS}>
+                {list.map((run) => (
+                  <RunRow key={run.id} run={run} />
+                ))}
+              </RowTable>
               <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-divider">
                 <span className="text-xs text-text-secondary">
                   Page {page + 1} · {total} {total === 1 ? 'run' : 'runs'}

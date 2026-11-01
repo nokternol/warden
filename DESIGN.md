@@ -268,7 +268,7 @@ Confident and minimal. Clear affordances, stripped-back surfaces, full state voc
 - **Destructive actions** state a count before they can be confirmed: disabled until it arrives, and a failed count blocks with a retry.
 
 ### Tables and rows
-- One convention for Automations, System and Runs: a panel with a `text-xs` medium muted header in sentence case, divider-separated rows, and always-visible actions with 16px icons and labels naming the row. Below the layout's breakpoint, cells stack with their own labels and nothing scrolls sideways.
+- One table for Automations, System and Runs, `RowTable`: a panel with a `text-xs` medium muted header in sentence case, divider-separated rows, and always-visible actions with 16px icons and labels naming the row. Below the layout's breakpoint, cells stack with their own labels and nothing scrolls sideways.
 
 ## 6. Do's and Don'ts
 

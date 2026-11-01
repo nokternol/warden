@@ -1,6 +1,7 @@
 import Badge from '@app/components/Badge';
 import Button from '@app/components/Button';
 import ConnectionTestIcon from '@app/components/ConnectionTestIcon';
+import { type RowTableColumn, rowTableStyles as table } from '@app/components/RowTable';
 import StatusDot from '@app/components/StatusDot';
 import { useAutomationPreview } from '@app/hooks/useAutomationPreview';
 import { useLatestRun } from '@app/hooks/useAutomationRuns';
@@ -14,33 +15,21 @@ import { Power, PowerOff, Trash2, Zap } from 'lucide-react';
 import { useState } from 'react';
 
 const RUN_FEEDBACK_DISMISS_MS = 2000;
-const GRID = 'lg:grid lg:grid-cols-[minmax(0,1fr)_140px_180px_72px_112px] lg:gap-x-3';
+
+export const AUTOMATION_COLUMNS: RowTableColumn[] = [
+  { label: 'Automation' },
+  { label: 'Schedule', className: 'lg:w-[140px]' },
+  { label: 'Last run', className: 'lg:w-[200px]' },
+  { label: 'Next run', className: 'lg:w-[96px]' },
+  { label: 'Actions', className: 'lg:w-[136px]' },
+];
+
 const ICON_BUTTON =
   'size-11 lg:size-8 flex items-center justify-center rounded text-text-muted transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed';
 
 type RunStatus = 'idle' | 'loading' | 'pass' | 'fail';
 
 const message = (err: unknown, fallback: string) => (err instanceof Error ? err.message : fallback);
-
-/** The header naming the columns every row fills; rows label their own cells below `lg`. */
-function Head() {
-  return (
-    <div
-      className={cn(GRID, 'hidden lg:grid items-center px-4 py-2 border-b border-divider')}
-      aria-hidden="true"
-    >
-      {['Automation', 'Schedule', 'Last run', 'Next run'].map((column) => (
-        <span key={column} className="text-xs font-medium text-text-muted">
-          {column}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function CellLabel({ children }: { children: string }) {
-  return <span className="lg:hidden text-text-muted">{children} </span>;
-}
 
 /** The last attempt's outcome, its reason in full, and the way to that automation's runs. */
 function LastRun({ automation }: { automation: AutomationDto }) {
@@ -214,11 +203,11 @@ function Root({
           : 'Run now';
 
   return (
-    <div className="px-4 py-3 border-b border-divider last:border-0">
-      <div className={cn(GRID, 'space-y-2 lg:space-y-0 lg:items-start')}>
+    <>
+      <tr className={table.row}>
         {/* Name, queries, provider and task */}
-        <div className="min-w-0">
-          <div className="flex items-start gap-2">
+        <td className={table.nameCell}>
+          <div className="flex items-start gap-2 min-w-0">
             <StatusDot status={status} />
             <span className="text-sm font-medium text-text-primary leading-5 break-words min-w-0">
               {name}
@@ -228,6 +217,9 @@ function Root({
             ) : (
               <span className="sr-only">Active</span>
             )}
+            <span role="status" className="sr-only">
+              {runStatus === 'pass' ? `Run of ${name} triggered` : ''}
+            </span>
           </div>
           {isUserAutomation && (
             <p className="mt-0.5 pl-4 text-xs text-text-muted break-words">
@@ -239,126 +231,134 @@ function Root({
               <span>{taskLabel}</span>
             </p>
           )}
-        </div>
+        </td>
 
-        <div className="text-xs text-text-secondary leading-5">
-          <CellLabel>Schedule</CellLabel>
-          {safeHumanSchedule(automation.schedule)}
-        </div>
+        <td className={table.cell} data-label="Schedule">
+          <span className="text-xs leading-5">{safeHumanSchedule(automation.schedule)}</span>
+        </td>
 
-        <div>
+        <td className={table.blockCell}>
           <LastRun automation={automation} />
-        </div>
+        </td>
 
-        <div className="text-xs text-text-secondary leading-5 whitespace-nowrap">
-          <CellLabel>Next run</CellLabel>
-          {status === 'active' && automation.nextRun ? relativeTime(automation.nextRun) : '—'}
-        </div>
+        <td className={table.cell} data-label="Next run">
+          <span className="text-xs leading-5 whitespace-nowrap">
+            {status === 'active' && automation.nextRun ? relativeTime(automation.nextRun) : '—'}
+          </span>
+        </td>
 
         {/* Actions: always visible, because a phone has no hover */}
-        <div className="flex items-center gap-1 lg:justify-end">
-          {onRun && (
-            <button
-              type="button"
-              onClick={() => {
-                if (needsRunConfirmation) setConfirming('run');
-                else void run();
-              }}
-              disabled={runStatus === 'loading' || !tasksKnown}
-              title={runTitle}
-              aria-label={`Run ${name} now`}
-              className={cn(
-                ICON_BUTTON,
-                runStatus === 'fail'
-                  ? 'text-danger-text hover:bg-danger/10'
-                  : 'hover:text-text-primary hover:bg-surface-hover'
-              )}
-            >
-              {runStatus === 'idle' ? (
-                <Zap size={16} strokeWidth={2} aria-hidden="true" />
-              ) : (
-                <ConnectionTestIcon status={runStatus} />
-              )}
-            </button>
-          )}
-          {isUserAutomation && onToggle && (
-            <button
-              type="button"
-              onClick={() => {
-                void act(onToggle, "Couldn't change the automation's status.");
-              }}
-              disabled={pending}
-              title={status === 'active' ? 'Disable' : 'Enable'}
-              aria-label={`${status === 'active' ? 'Disable' : 'Enable'} ${name}`}
-              className={cn(ICON_BUTTON, 'hover:text-text-primary hover:bg-surface-hover')}
-            >
-              {status === 'active' ? (
-                <PowerOff size={16} strokeWidth={2} aria-hidden="true" />
-              ) : (
-                <Power size={16} strokeWidth={2} aria-hidden="true" />
-              )}
-            </button>
-          )}
-          {isUserAutomation && onDelete && (
-            <button
-              type="button"
-              onClick={() => setConfirming('delete')}
-              disabled={pending}
-              title="Delete automation"
-              aria-label={`Delete ${name}`}
-              className={cn(ICON_BUTTON, 'hover:text-danger-text hover:bg-danger/10')}
-            >
-              <Trash2 size={16} strokeWidth={2} aria-hidden="true" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {confirming === 'run' && (
-        <RunConfirmation
-          automation={automation}
-          taskLabel={taskLabel}
-          onConfirm={() => {
-            void run();
-          }}
-          onCancel={() => setConfirming(null)}
-        />
-      )}
-
-      {confirming === 'delete' && onDelete && (
-        <div className="mt-3 rounded border border-danger/40 bg-danger/10 px-3 py-2.5 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-text-primary">Delete {name} and its run history?</p>
-          <div className="flex gap-2">
-            <Button type="button" variant="secondary" size="sm" onClick={() => setConfirming(null)}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              variant="danger"
-              size="sm"
-              disabled={pending}
-              onClick={() => {
-                void act(onDelete, "Couldn't delete the automation.");
-              }}
-            >
-              {pending ? 'Deleting…' : 'Delete'}
-            </Button>
+        <td className={table.blockCell}>
+          <div className="flex items-center gap-1 lg:justify-end">
+            {onRun && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (needsRunConfirmation) setConfirming('run');
+                  else void run();
+                }}
+                disabled={runStatus === 'loading' || !tasksKnown}
+                title={runTitle}
+                aria-label={`Run ${name} now`}
+                className={cn(
+                  ICON_BUTTON,
+                  runStatus === 'fail'
+                    ? 'text-danger-text hover:bg-danger/10'
+                    : 'hover:text-text-primary hover:bg-surface-hover'
+                )}
+              >
+                {runStatus === 'idle' ? (
+                  <Zap size={16} strokeWidth={2} aria-hidden="true" />
+                ) : (
+                  <ConnectionTestIcon status={runStatus} />
+                )}
+              </button>
+            )}
+            {isUserAutomation && onToggle && (
+              <button
+                type="button"
+                onClick={() => {
+                  void act(onToggle, "Couldn't change the automation's status.");
+                }}
+                disabled={pending}
+                title={status === 'active' ? 'Disable' : 'Enable'}
+                aria-label={`${status === 'active' ? 'Disable' : 'Enable'} ${name}`}
+                className={cn(ICON_BUTTON, 'hover:text-text-primary hover:bg-surface-hover')}
+              >
+                {status === 'active' ? (
+                  <PowerOff size={16} strokeWidth={2} aria-hidden="true" />
+                ) : (
+                  <Power size={16} strokeWidth={2} aria-hidden="true" />
+                )}
+              </button>
+            )}
+            {isUserAutomation && onDelete && (
+              <button
+                type="button"
+                onClick={() => setConfirming('delete')}
+                disabled={pending}
+                title="Delete automation"
+                aria-label={`Delete ${name}`}
+                className={cn(ICON_BUTTON, 'hover:text-danger-text hover:bg-danger/10')}
+              >
+                <Trash2 size={16} strokeWidth={2} aria-hidden="true" />
+              </button>
+            )}
           </div>
-        </div>
-      )}
+        </td>
+      </tr>
 
-      {actionError && (
-        <p role="alert" className="mt-2 text-xs text-danger-text">
-          {actionError}
-        </p>
+      {(confirming || actionError) && (
+        <tr className={table.detailRow}>
+          <td colSpan={AUTOMATION_COLUMNS.length} className={table.detailCell}>
+            {confirming === 'run' && (
+              <RunConfirmation
+                automation={automation}
+                taskLabel={taskLabel}
+                onConfirm={() => {
+                  void run();
+                }}
+                onCancel={() => setConfirming(null)}
+              />
+            )}
+
+            {confirming === 'delete' && onDelete && (
+              <div className="mt-3 rounded border border-danger/40 bg-danger/10 px-3 py-2.5 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm text-text-primary">Delete {name} and its run history?</p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setConfirming(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="danger"
+                    size="sm"
+                    disabled={pending}
+                    onClick={() => {
+                      void act(onDelete, "Couldn't delete the automation.");
+                    }}
+                  >
+                    {pending ? 'Deleting…' : 'Delete'}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {actionError && (
+              <p role="alert" className="mt-2 text-xs text-danger-text">
+                {actionError}
+              </p>
+            )}
+          </td>
+        </tr>
       )}
-      <span role="status" className="sr-only">
-        {runStatus === 'pass' ? `Run of ${name} triggered` : ''}
-      </span>
-    </div>
+    </>
   );
 }
 
-const AutomationRow = Object.assign(Root, { Head });
-
-export default AutomationRow;
+export default Root;

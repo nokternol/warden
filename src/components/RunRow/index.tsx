@@ -1,6 +1,7 @@
-import { LoadError } from '@app/components/AsyncBoundary';
+import { LoadError, SkeletonRows } from '@app/components/AsyncBoundary';
 import Badge from '@app/components/Badge';
 import Button from '@app/components/Button';
+import { rowTableStyles as table } from '@app/components/RowTable';
 import type { AutomationRunDto } from '@app/hooks/useAutomationRuns';
 import { type RunItemDto, useRunItems } from '@app/hooks/useRunItems';
 import { RUN_STATUS } from '@app/lib/runStatus';
@@ -10,7 +11,9 @@ import { useState } from 'react';
 import styles from './RunRow.module.css';
 
 /** The run table's columns, in order — the header and every row's cells follow it. */
-const COLUMNS = ['Automation', 'Status', 'Ran at', 'Items', 'Details'] as const;
+export const RUN_COLUMNS = ['Automation', 'Status', 'Ran at', 'Items', 'Details'].map((label) => ({
+  label,
+}));
 
 function formatDate(dateStr: string): string {
   try {
@@ -36,8 +39,8 @@ function Root({ run, defaultExpanded = false }: RunRowProps) {
 
   return (
     <>
-      <tr className={styles.row}>
-        <td className={styles.nameCell}>
+      <tr className={table.row}>
+        <td className={table.nameCell}>
           <div className={styles.name}>
             {targetedAny ? (
               <ExpandToggle open={open} onToggle={() => setOpen(!open)} />
@@ -47,20 +50,20 @@ function Root({ run, defaultExpanded = false }: RunRowProps) {
             {run.automationName}
           </div>
         </td>
-        <td className={styles.cell} data-label="Status">
+        <td className={table.cell} data-label="Status">
           <Badge variant={RUN_STATUS[run.status].variant} size="sm">
             {RUN_STATUS[run.status].label}
           </Badge>
         </td>
-        <td className={styles.cell} data-label="Ran at">
+        <td className={table.cell} data-label="Ran at">
           {formatDate(run.ranAt)}
         </td>
-        <td className={styles.cell} data-label="Items">
+        <td className={table.cell} data-label="Items">
           {run.itemCount !== null ? run.itemCount : '—'}
         </td>
-        <td className={styles.detailsCell}>
+        <td className={table.blockCell}>
           <span className={run.status === 'error' ? styles.error : undefined}>
-            {run.error ?? <span className="max-sm:hidden">—</span>}
+            {run.error ?? <span className="max-lg:hidden">—</span>}
           </span>
         </td>
       </tr>
@@ -88,8 +91,8 @@ function ExpandToggle({ open, onToggle }: { open: boolean; onToggle: () => void 
 /** The detail row listing a run's targeted titles. */
 function TargetedItems({ runId }: { runId: number }) {
   return (
-    <tr className={styles.detailRow}>
-      <td colSpan={COLUMNS.length} className={styles.detailCell}>
+    <tr className={cn(table.detailRow, styles.itemsRow)}>
+      <td colSpan={RUN_COLUMNS.length} className={cn(table.detailCell, styles.itemsCell)}>
         <TargetedItemList runId={runId} />
       </td>
     </tr>
@@ -107,7 +110,7 @@ function TargetedItemList({ runId }: { runId: number }) {
     return error ? (
       <LoadError what="this run's items" onRetry={() => refresh()} />
     ) : (
-      <Note>Loading items…</Note>
+      <SkeletonRows count={2} />
     );
   }
   if (items.length === 0) return <Note>No items recorded for this run.</Note>;
@@ -158,21 +161,6 @@ function TargetedItem({ item }: { item: RunItemDto }) {
   );
 }
 
-/** The run table's header row, naming the columns each `RunRow` fills. */
-function Head() {
-  return (
-    <thead className={styles.head}>
-      <tr className={styles.headRow}>
-        {COLUMNS.map((column) => (
-          <th key={column} className={styles.columnHeader}>
-            {column}
-          </th>
-        ))}
-      </tr>
-    </thead>
-  );
-}
-
-const RunRow = Object.assign(Root, { Head });
+const RunRow = Root;
 
 export default RunRow;
