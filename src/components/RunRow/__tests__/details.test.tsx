@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { mockProcedure } from '@tests/mocks/contract';
 import { server } from '@tests/mocks/server';
+import { http, HttpResponse } from 'msw';
 import { SWRConfig } from 'swr';
 import { describe, expect, it } from 'vitest';
 import RunRow from '../index';
@@ -59,5 +60,34 @@ describe('RunRow details', () => {
     await user.click(screen.getByRole('button', { name: 'Show more items' }));
     expect(await screen.findByText('Title 149')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Show more items' })).not.toBeInTheDocument();
+  });
+
+  it('says so when more items fail to load, keeping those already shown', async () => {
+    const user = userEvent.setup();
+    let calls = 0;
+    server.use(
+      http.get('*/api/automations/runs/50/items', () => {
+        calls += 1;
+        if (calls > 1) return new HttpResponse(null, { status: 500 });
+        return HttpResponse.json({
+          status: 'ok',
+          data: {
+            data: Array.from({ length: 100 }, (_, i) => ({
+              mediaItemId: i,
+              title: `Title ${i}`,
+              year: 2000,
+              deleted: false,
+            })),
+            total: 150,
+          },
+        });
+      })
+    );
+    row();
+    await user.click(screen.getByRole('button', { name: 'Show items' }));
+    expect(await screen.findByText('Title 99')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Show more items' }));
+    expect(await screen.findByText(/couldn.t load more items/i)).toBeInTheDocument();
+    expect(screen.getByText('Title 99')).toBeInTheDocument();
   });
 });

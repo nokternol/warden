@@ -137,6 +137,7 @@ function TargetedItemList({ runId }: { runId: number }) {
           </Button>
         </div>
       )}
+      {error && <LoadError what="more items" onRetry={() => refresh()} />}
     </>
   );
 }

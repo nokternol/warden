@@ -1,5 +1,5 @@
 import AppLayout from '@app/components/AppLayout';
-import AsyncBoundary from '@app/components/AsyncBoundary';
+import AsyncBoundary, { LoadError } from '@app/components/AsyncBoundary';
 import Button from '@app/components/Button';
 import EmptyState from '@app/components/EmptyState';
 import RunRow from '@app/components/RunRow';
@@ -24,7 +24,7 @@ export default function RunsPage() {
   const router = useRouter();
   const param = router.query.automationId;
   const automationId = typeof param === 'string' && /^\d+$/.test(param) ? Number(param) : undefined;
-  const { automations } = useAutomations();
+  const { automations, error: automationsError, refresh: refreshAutomations } = useAutomations();
   const { runs, total, error, refresh, page, nextPage, prevPage } = useAutomationRuns({
     automationId,
   });
@@ -63,6 +63,11 @@ export default function RunsPage() {
               </option>
             ))}
           </select>
+          {automationsError && (
+            <div className="mt-2">
+              <LoadError what="automation names" onRetry={() => refreshAutomations()} />
+            </div>
+          )}
         </div>
 
         <AsyncBoundary

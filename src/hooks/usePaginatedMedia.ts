@@ -110,7 +110,10 @@ export function usePaginatedMedia<T>(
       void setSize((s) => s + 1);
     }, [setSize]),
     error: error as Error | undefined,
-    sourceErrors: data?.[0]?.errors ?? [],
+    // Each page reports the sources that failed for it; one source is stated once.
+    sourceErrors: Array.from(
+      new Map(data?.flatMap((page) => page.errors ?? []).map((e) => [e.provider, e])).values()
+    ),
     refresh: mutate,
   };
 }

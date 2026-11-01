@@ -75,6 +75,12 @@ describe('a failed load says what failed and offers a retry, never an empty stat
     await alertNaming(/couldn.t load media sources/i);
   });
 
+  it('Automation names on Runs', async () => {
+    server.use(mockProcedureFailure(contract.automations.list, 500));
+    page(<RunsPage />);
+    await alertNaming(/couldn.t load automation names/i);
+  });
+
   it('retries and recovers', async () => {
     server.use(mockProcedureFailure(contract.automations.runs, 500));
     page(<RunsPage />);
