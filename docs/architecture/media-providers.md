@@ -147,7 +147,7 @@ Actuator tasks (`deleteItem`, `refreshMetadata`, `markPlayed`, `markUnplayed`, `
 kept prefixed and separate from `plexAddedAt` — mutually-exclusive server choices), and `isFavorite`
 (`UserData.IsFavorite`, no other producer). Loses precedence to Tautulli and Plex for `playCount`/
 `lastWatchedAt` (`contestedFieldPrecedence`: Tautulli > Plex > Jellyfin, a fixed literal order pending
-the settings-driven `primaryMediaServer` Plex/Jellyfin swap `_precedence.md` designs). `genres`/
+the settings-driven `primaryMediaServer` Plex/Jellyfin swap, which nothing calls yet). `genres`/
 `certification` are deliberately not wired as Jellyfin-producer fields — same construction-time-vs-
 enrichment-overwrite gap Plex's `genres`/`certification` hit, blocked on precedence-ordering machinery.
 Gated into `ruleRegistry.ts` (`studio`, `runtimeMinutes`, `fileContainer`, `videoCodec`, `audioCodec`,

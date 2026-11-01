@@ -503,7 +503,7 @@ Earlier entries in this ledger use the names that were current when they healed 
 - **How it misled:** each read as current fact, so a reader would plan around a rule that was never
   there or rebuild something that exists.
 - **Healed by:** correcting each statement. The core model's example is now the MVP's destination
-  scenario, built from rules and a task that exist. The provider specs state which of their names are retired, and an architecture doc no longer leans on an in-progress ticket.
+  scenario, built from rules and a task that exist. The old provider spec plan is deleted, and an architecture doc no longer leans on an in-progress ticket.
 
 ## Open
 

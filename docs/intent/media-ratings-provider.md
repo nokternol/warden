@@ -1,7 +1,6 @@
 # MediaRatingsProvider role
 
-**Status:** INTENT (future state, not built). Extracted from the provider-e2e-spec map's
-per-provider decision sessions (`docs/in_progress/provider-e2e-spec/`) after ratings kept
+**Status:** INTENT (future state, not built). Extracted from the per-provider decision sessions after ratings kept
 resurfacing scattered across Radarr, Sonarr, Plex, Jellyfin, TMDB, OMDB, and TVMaze's specs with
 inconsistent treatment — some folded into the shared multi-producer `EnrichmentFields` pattern used
 for genres/certification/studio, some kept provider-prefixed and separate, one deferred outright.
@@ -54,7 +53,7 @@ A `MediaRatingsProvider` role with its own persistence, distinct from both `Norm
   award-signal booleans, not numeric ratings. Plausible future input to a blending algorithm's
   weighting, but not itself a rating value; stays a regular OMDB `EnrichmentFields` entry.
 - **`BoxOffice`** (OMDB) — financial data, unrelated to ratings; already deferred as on-demand
-  item-detail metadata in `specs/omdb.md` for unrelated reasons.
+  item-detail metadata for OMDB for unrelated reasons.
 
 ## Per-provider ratings inventory
 
@@ -64,18 +63,18 @@ decision at the time this doc was written, not a state this doc changes.
 | Provider | Field(s) | Scale | Status |
 |---|---|---|---|
 | Radarr | `imdbRating` | IMDb 0–10 | **Already live** — wired today, movie-only, `ruleRegistry.ts`'s `imdbRating` rule. |
-| Radarr | `imdbVotes` | vote count | Spec'd (`specs/radarr.md`), not yet built. |
+| Radarr | `imdbVotes` | vote count | Designed, not yet built. |
 | Radarr | `tmdbRating` | TMDB 0–10 | Declared on `NormalizedMovie` today but **orphaned/unpopulated** — no source writes it yet. Spec'd via Radarr's bundled `ratings.tmdb` pull, superseded as primary producer by TMDB's own direct call (see below). |
 | Radarr | `tmdbRatingVotes` | vote count | Spec'd, not yet built. |
-| Radarr | `metacriticRating` / `metacriticVotes` | Metacritic 0–100 | Spec'd (`specs/radarr.md`), collision with OMDB's own Metacritic value. |
+| Radarr | `metacriticRating` / `metacriticVotes` | Metacritic 0–100 | Designed, collision with OMDB's own Metacritic value. |
 | Radarr | `rottenTomatoesRating` / `rottenTomatoesVotes` | RT 0–100% | Spec'd, collision with OMDB's own RT value. |
 | Radarr | `traktRating` / `traktVotes` | Trakt scale (unconfirmed range) | Spec'd, no known collision. |
 | Sonarr | `communityRating` | Sonarr's own 0–10 | **Already live** — wired today, series-only, `ruleRegistry.ts`'s `communityRating` rule. |
-| Sonarr | `communityRatingVotes` | vote count | Spec'd (`specs/sonarr.md`), not yet built. |
-| Plex | `plexRating` / `plexAudienceRating` | Opaque — whatever the configured metadata agent supplies | Spec'd (`specs/plex.md`), kept provider-prefixed by design (scale/provenance too agent-dependent to merge into any specific-scale field). |
-| Jellyfin | `jellyfinCommunityRating` / `jellyfinCriticRating` | Opaque, same reasoning as Plex | Spec'd (`specs/jellyfin.md`), kept provider-prefixed by design. |
-| TMDB | `tmdbRating` / `tmdbRatingVotes` | TMDB 0–10 | Spec'd (`specs/tmdb.md`) — same underlying data as Radarr's bundled copy, TMDB's own direct API call decided as the higher-precedence producer of this field ("same-source dedup," not new redundancy). |
-| OMDB | `imdbRating` / `imdbVotes` | IMDb 0–10 | Spec'd (`specs/omdb.md`) — same named metric as Radarr's, two paths to the same concept. |
+| Sonarr | `communityRatingVotes` | vote count | Designed, not yet built. |
+| Plex | `plexRating` / `plexAudienceRating` | Opaque — whatever the configured metadata agent supplies | Designed, kept provider-prefixed by design (scale/provenance too agent-dependent to merge into any specific-scale field). |
+| Jellyfin | `jellyfinCommunityRating` / `jellyfinCriticRating` | Opaque, same reasoning as Plex | Designed, kept provider-prefixed by design. |
+| TMDB | `tmdbRating` / `tmdbRatingVotes` | TMDB 0–10 | Designed — same underlying data as Radarr's bundled copy, TMDB's own direct API call decided as the higher-precedence producer of this field ("same-source dedup," not new redundancy). |
+| OMDB | `imdbRating` / `imdbVotes` | IMDb 0–10 | Designed — same named metric as Radarr's, two paths to the same concept. |
 | OMDB | `rottenTomatoesRating` / `rottenTomatoesVotes` | RT 0–100% | Spec'd, second producer alongside Radarr's bundled copy. |
 | OMDB | `metacriticRating` / `metacriticVotes` | Metacritic 0–100 | Spec'd, second producer alongside Radarr's bundled copy. Self-collision note: OMDB exposes the same number twice (`Ratings[]` entry and a separate top-level `Metascore` field) — only `Ratings[]` should ever be parsed. |
 | TVMaze | `rating.average` | TVMaze 0–10 | **Explicitly deferred, not spec'd as an `EnrichmentFields` entry** (`specs/tvmaze.md`). Already consumed by `ratingsAggregation.ts`'s blended average; that usage is unchanged by this doc. `TvMazeProvider`'s rating read site carries a JSDoc note pointing here, per the requirement that this intent survive `docs/in_progress/`'s eventual deletion. |
