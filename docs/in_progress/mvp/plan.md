@@ -860,19 +860,11 @@ names, so nothing is renamed twice.
 2. Remaining parameterized tasks (`moveMovie`, `moveSeries`, `changeLanguageProfile`) and the
    `text`/`fields` parameter shapes.
 3. Maintenance of soft-deleted `media_item` rows (retention or purge policy).
-4. Provider coverage designed but not built. The designs are in git at `46747ea`, under
-   `docs/in_progress/provider-e2e-spec/specs/`:
-   - Seerr: six filters (`seerrRequestedDaysAgo`, `seerrRequestedBy`, `seerrIssueType`, `seerrIssueStatus`,
-     `seerrHasComments`, `seerrRequestScope`) and ten request and issue tasks (`overseerr.md`).
-   - Radarr `moveMovie`, Sonarr `moveSeries` and `changeLanguageProfile`, which also appear in item 2.
-   - Tautulli `fileBitrate` (`tautulli.md`).
-   - Plex `genres`/`certification` and Radarr `runtime`/`studio`, which wait on item 1 (`_precedence.md`).
-   - TMDB, OMDB and TVMaze fields, with those types (`tmdb.md`, `omdb.md`, `tvmaze.md`).
-5. Any other provider type not offered in the MVP. After C2 and C5, adding one
+4. Any provider type not offered in the MVP. After C2 and C5, adding one
    is a server-only change.
-6. Un-deferring each deferred surface, resolving its duplicate mechanism first (ratings vs rating
+5. Un-deferring each deferred surface, resolving its duplicate mechanism first (ratings vs rating
    filters, search vs title filter).
-7. Invalid automations surfaced as issues to solve: an Automations page badge with the reason and
+6. Invalid automations surfaced as issues to solve: an Automations page badge with the reason and
    a link to fix the offending query, beyond the skipped run D4 records on the Runs page.
-8. `docs/intent/`: automation archive, realtime run state, ratings provider, inter-provider
+7. `docs/intent/`: automation archive, realtime run state, ratings provider, inter-provider
    dependency, editions, per-consumer watchlist.
