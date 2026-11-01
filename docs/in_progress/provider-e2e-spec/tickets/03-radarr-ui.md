@@ -9,6 +9,15 @@ parent: docs/in_progress/provider-e2e-spec/map.md
 
 # Radarr — UI pass
 
+> **Written before rule presentation moved to the server.** The decisions here stand; the mechanics they
+> name do not. A rule now declares its presentation on the descriptor in `ruleRegistry.ts`:
+> `BOOLEAN_VALUE_LABELS` is `valueLabels`, `ENUM_OPTIONS` is `options`, `SEGMENT_LABEL_OVERRIDES` is
+> `shortLabel`, `csvStringOptions` and `csvIdOptions` are `lookup` (which names an API procedure, so it has
+> no branches), `csv-ids` is `instance-ids`, and `ruleRendersControl` is gone. Line references into
+> `MediaFilterBar` are out of date. A `string` rule with no `options` renders a text filter, a `csv-strings`
+> rule with a fixed list has no descriptor shape yet and needs one added, and a rule that cannot be described
+> is not served at all, so it has no control rather than an empty one.
+
 ## Question
 
 For every field Radarr's decision ticket chose to wire as a UI filter, and every task chosen to
@@ -23,8 +32,8 @@ than pasting them in.
 
 - **No field needed a `/prototype` session.** Radarr adds zero new widget shapes — every filterable
   field maps onto the four generic `RuleControl` renderers already established across
-  Plex's/Jellyfin's UI passes (`range`, `csv-strings`, `boolean`, `string`/`options`).
-- **`radarrStatus`** — confirmed as a legitimate `string`/`options` rule (same shape as
+  Plex's/Jellyfin's UI passes (`range`, `csv-strings`, `boolean`, `string`/`ENUM_OPTIONS`).
+- **`radarrStatus`** — confirmed as a legitimate `string`/`ENUM_OPTIONS` rule (same shape as
   `seriesStatus`/`tmdbStatus`). Real enum decided from the research ticket's Radarr-API audit:
   `tba`/`announced`/`inCinemas`/`released`/`deleted`.
 - **`folderName`/`path`** — dropped from filterable scope this pass rather than inventing a new

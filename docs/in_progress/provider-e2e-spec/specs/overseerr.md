@@ -9,6 +9,15 @@ source_research: docs/in_progress/provider-e2e-spec/research/overseerr.md
 
 # Overseerr — E2E spec
 
+> **Written before rule presentation moved to the server.** The decisions here stand; the mechanics they
+> name do not. A rule now declares its presentation on the descriptor in `ruleRegistry.ts`:
+> `BOOLEAN_VALUE_LABELS` is `valueLabels`, `ENUM_OPTIONS` is `options`, `SEGMENT_LABEL_OVERRIDES` is
+> `shortLabel`, `csvStringOptions` and `csvIdOptions` are `lookup` (which names an API procedure, so it has
+> no branches), `csv-ids` is `instance-ids`, and `ruleRendersControl` is gone. Line references into
+> `MediaFilterBar` are out of date. A `string` rule with no `options` renders a text filter, a `csv-strings`
+> rule with a fixed list has no descriptor shape yet and needs one added, and a rule that cannot be described
+> is not served at all, so it has no control rather than an empty one.
+
 This spec covers the request-manager provider. In Warden it is one provider type, `SEERR`
 (`SeerrProvider`), which serves an Overseerr server and a Seerr server alike because their APIs match.
 The user's live instance is Overseerr until the NAS upgrades to Seerr. Every field and rule key takes
@@ -150,7 +159,7 @@ parameter shapes don't fit anything `AutomationBuilder` or `useProviderTasks.ts`
 below needed a `/prototype` session: every filterable field maps onto the four generic `RuleControl`
 renderers already established across Plex/Jellyfin/Radarr/Sonarr/Tautulli's passes (`range` →
 `NumberRangeFilter`, `csv-strings` → `MultiSelectFilter`, `boolean` → `OptionFilter`,
-`string`/`number` → `OptionFilter` with a fixed `options` entry). The three complex task
+`string`/`number` → `OptionFilter` with a fixed `ENUM_OPTIONS` entry). The three complex task
 parameters are **not** prototyped here — characterized and deferred to
 [`11-automation-task-parameters`](../tickets/11-automation-task-parameters.md) per that ticket's own
 scope.
@@ -165,10 +174,10 @@ control, no lookup.
 
 The mapping table's `string` classification does not survive scrutiny, for the same reason Radarr's
 `folderName`/`path` and Sonarr's `path` didn't: `RuleControl`'s `string`/`number` branch is strictly
-an `options`-keyed fixed-value picker (confirmed again by reading `the descriptor shape` and
-`options` at, and the set of people who've
+an `ENUM_OPTIONS`-keyed fixed-value picker (confirmed again by reading `ruleRendersControl` and
+`ENUM_OPTIONS` at `ref:src/components/MediaFilterBar/index.tsx#L885`), and the set of people who've
 requested media on a given Overseerr instance is not a fixed enum — it's an open, per-instance,
-growing list of arbitrary usernames. `options[rule.key]` would need to be hand-maintained per
+growing list of arbitrary usernames. `ENUM_OPTIONS[rule.key]` would need to be hand-maintained per
 deployment, which is not what that table is for (it holds the provider's own fixed API vocabulary —
 `seriesStatus`, `radarrStatus`, etc. — not runtime library data).
 
@@ -182,8 +191,8 @@ separate "requester id" to preserve). So the fix isn't "defer, no control exists
 mapping table chose the wrong dataType for a field that already has a fitting one."
 
 **Decision: `seerrRequestedBy` is `csv-strings`**, filter key unchanged
-(`seerrRequestedBy`), rendering via `MultiSelectFilter`/`lookup`. Needs a new
-dedicated lookup: `Lookups` gains `seerrRequesters: string[]`, `lookup` gets a new
+(`seerrRequestedBy`), rendering via `MultiSelectFilter`/`csvStringOptions`. Needs a new
+dedicated lookup: `Lookups` gains `seerrRequesters: string[]`, `csvStringOptions` gets a new
 branch (`if (rule.key === 'seerrRequestedBy') return lookups.seerrRequesters;`), and
 `useMediaLookups.ts` gets a new `/api/media/seerr-requesters` route returning the distinct set of
 `MediaRequest.requestedBy` display names/identifiers seen on the instance, following the
@@ -205,11 +214,12 @@ Overseerr pass adds to it — worth stating explicitly since the ticket asked to
 
 ### `seerrIssueType` — `csv-strings`, options sourced from a hardcoded fixed array, not `Lookups`
 
-Confirmed the mechanism question by reading `lookup` directly: it's a plain function, `(rule, scope, lookups)
+Confirmed the mechanism question by reading `csvStringOptions` directly
+(`ref:src/components/MediaFilterBar/index.tsx#L953`): it's a plain function, `(rule, scope, lookups)
 => string[] | null`, dispatching on `rule.key` with an `if` chain — nothing about `csv-strings` as a
 `dataType` structurally requires the options come from `lookups`/a fetched route. `lookups` is just
 one parameter available to reach for; a branch can return a literal array and ignore it entirely,
-exactly the way `options` is a hardcoded table for `string`/`number` rules. Checked whether any
+exactly the way `ENUM_OPTIONS` is a hardcoded table for `string`/`number` rules. Checked whether any
 existing `csv-strings` field already does this (a precedent to point to) — it doesn't:
 `certification` is the one `csv-strings` rule in the registry with no options source at all today
 (still an open, cross-provider-flagged gap per Plex's and Jellyfin's specs, not fixed), and every
@@ -217,7 +227,7 @@ existing `csv-strings` field already does this (a precedent to point to) — it 
 `lookups`. So this is the first genuinely fixed-and-small `csv-strings` value set in the map — no
 precedent to reuse, but nothing blocks the mechanism either.
 
-**Decision: `seerrIssueType` gets a hardcoded fixed-array branch in `lookup`**, not a
+**Decision: `seerrIssueType` gets a hardcoded fixed-array branch in `csvStringOptions`**, not a
 new lookup route:
 
 ```
@@ -225,17 +235,17 @@ if (rule.key === 'seerrIssueType') return ['video', 'audio', 'subtitle', 'other'
 ```
 
 Reasoning: Overseerr's `Issue.issueType` enum is fixed API vocabulary (four values, not runtime
-library data that grows per-instance) — the same category of thing `options` exists for, just
+library data that grows per-instance) — the same category of thing `ENUM_OPTIONS` exists for, just
 needed as a multi-select rather than single-value. Routing it through a `/api/media/*` fetch would
 be pure overhead: a network round-trip to return four values that never change and aren't specific
 to any instance's data, unlike `seerrRequestedBy`'s genuinely per-instance requester list above.
-`MultiSelectFilter`/`lookup`'s signature already accommodates this with zero
-changes to the renderer — only `lookup`'s body gets a new `if` arm, same footprint as
-`options` gaining an entry. No new `Lookups` field, no new route, no `useMediaLookups.ts` change.
+`MultiSelectFilter`/`csvStringOptions`'s signature already accommodates this with zero
+changes to the renderer — only `csvStringOptions`'s body gets a new `if` arm, same footprint as
+`ENUM_OPTIONS` gaining an entry. No new `Lookups` field, no new route, no `useMediaLookups.ts` change.
 
 ### `seerrIssueStatus` — confirmed as `number`, mirrors `seerrRequestStatus`
 
-Clean win as flagged. Add to `options`:
+Clean win as flagged. Add to `ENUM_OPTIONS` (`ref:src/components/MediaFilterBar/index.tsx#L885`):
 
 ```
 seerrIssueStatus: [
@@ -248,24 +258,25 @@ Same shape as the already-wired `seerrRequestStatus` entry directly above it in 
 numeric-equality `OptionFilter`, no new control. Given the naming-collision note in this spec's own
 "Naming-collision notes" section (four distinct `status` fields), the segment label should read
 "Issue status," not bare "Status" — add `seerrIssueStatus: 'Issue status'` to
-`SEGMENT_LABEL_OVERRIDES` rather than leaving it
+`SEGMENT_LABEL_OVERRIDES` (`ref:src/components/MediaFilterBar/index.tsx#L870`) rather than leaving it
 to default to the registry label, so the filter UI disambiguates from `seerrRequestStatus`
 (already overridden to plain `'Status'`) and any future `seerrMediaStatus`.
 
-### `seerrHasComments` — confirmed as `boolean`, add a `valueLabels` entry
+### `seerrHasComments` — confirmed as `boolean`, add a `BOOLEAN_VALUE_LABELS` entry
 
-Same shape as `seerrHasIssue`. Add to `valueLabels`, matching `seerrHasIssue`'s existing
+Same shape as `seerrHasIssue`. Add to `BOOLEAN_VALUE_LABELS`
+(`ref:src/components/MediaFilterBar/index.tsx#L850`), matching `seerrHasIssue`'s existing
 `['Has Issue', 'No Issue']` pattern rather than falling back to the generic `Yes`/`No` pair:
 
 ```
 seerrHasComments: ['Has Comments', 'No Comments'],
 ```
 
-### `seerrRequestScope` — confirmed as `string`/`options`, genuine closed set
+### `seerrRequestScope` — confirmed as `string`/`ENUM_OPTIONS`, genuine closed set
 
 Unlike `seerrRequestedBy`, this one is legitimately a fixed two-value enum — `"all"`/`"partial"`
 is Overseerr's own derived vocabulary (from `MediaRequest.seasons`), not open per-instance data,
-same category as `seriesStatus`/`radarrStatus`. Add to `options`:
+same category as `seriesStatus`/`radarrStatus`. Add to `ENUM_OPTIONS`:
 
 ```
 seerrRequestScope: [

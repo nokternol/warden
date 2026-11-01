@@ -9,6 +9,15 @@ parent: docs/in_progress/provider-e2e-spec/map.md
 
 # Tvmaze — UI pass
 
+> **Written before rule presentation moved to the server.** The decisions here stand; the mechanics they
+> name do not. A rule now declares its presentation on the descriptor in `ruleRegistry.ts`:
+> `BOOLEAN_VALUE_LABELS` is `valueLabels`, `ENUM_OPTIONS` is `options`, `SEGMENT_LABEL_OVERRIDES` is
+> `shortLabel`, `csvStringOptions` and `csvIdOptions` are `lookup` (which names an API procedure, so it has
+> no branches), `csv-ids` is `instance-ids`, and `ruleRendersControl` is gone. Line references into
+> `MediaFilterBar` are out of date. A `string` rule with no `options` renders a text filter, a `csv-strings`
+> rule with a fixed list has no descriptor shape yet and needs one added, and a rule that cannot be described
+> is not served at all, so it has no control rather than an empty one.
+
 ## Question
 
 For every field Tvmaze's decision ticket chose to wire as a UI filter, and every task chosen to
@@ -34,7 +43,7 @@ explicit 11-value list (Scripted, Animation, Reality, Talk Show, Documentary, Ga
 Sports, Variety, Award Show, Panel Show) — closed by editorial convention even though the API's
 `TvMazeShow.type` is typed as a bare `string`. Same FAQ states language is constrained to ISO 639-1
 codes ("Only languages that exist in the ISO 639-1 standard are available on TVmaze"). Both get new
-`options` entries (not `lookup` hardcoded arrays, since both are single-value
+`ENUM_OPTIONS` entries (not `csvStringOptions` hardcoded arrays, since both are single-value
 `dataType: string` rules, unlike TMDB's array-valued `originCountry`/`spokenLanguages`): `tvmazeType`
 transcribed in full (11 values), `language` seeded from a common working subset with the full
 ISO 639-1 table sourced at implementation time. The free-text-gap count (Radarr's `folderName`/
@@ -42,7 +51,7 @@ ISO 639-1 table sourced at implementation time. The free-text-gap count (Radarr'
 
 No tasks exist for TVMaze, so nothing appended to `11-automation-task-parameters`.
 
-Full reasoning and the exact `options` value tables are in `specs/tvmaze.md`'s "UI decisions"
+Full reasoning and the exact `ENUM_OPTIONS` value tables are in `specs/tvmaze.md`'s "UI decisions"
 section.
 
 This closes the last *per-provider* UI ticket this session's ticket queue assigned to `claude` in

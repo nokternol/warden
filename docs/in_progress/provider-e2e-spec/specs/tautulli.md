@@ -9,6 +9,15 @@ source_research: docs/in_progress/provider-e2e-spec/research/tautulli.md
 
 # Tautulli — E2E spec
 
+> **Written before rule presentation moved to the server.** The decisions here stand; the mechanics they
+> name do not. A rule now declares its presentation on the descriptor in `ruleRegistry.ts`:
+> `BOOLEAN_VALUE_LABELS` is `valueLabels`, `ENUM_OPTIONS` is `options`, `SEGMENT_LABEL_OVERRIDES` is
+> `shortLabel`, `csvStringOptions` and `csvIdOptions` are `lookup` (which names an API procedure, so it has
+> no branches), `csv-ids` is `instance-ids`, and `ruleRendersControl` is gone. Line references into
+> `MediaFilterBar` are out of date. A `string` rule with no `options` renders a text filter, a `csv-strings`
+> rule with a fixed list has no descriptor shape yet and needs one added, and a rule that cannot be described
+> is not served at all, so it has no control rather than an empty one.
+
 Tautulli is a `MediaEnricher` + `MediaActuator`. This spec applies a standing scoping premise: **only
 per-item fields and per-item tasks are in scope.** Tautulli's API surface is heavily user-scoped,
 session-scoped, library-level, and aggregate/reporting-shaped — all excluded by that premise, not
@@ -120,7 +129,7 @@ far, matching the decision ticket's narrow scope.
   (`specs/plex.md`'s "Per-field widget shapes") and Jellyfin's UI pass already confirmed as an
   additional-producer join rather than a new route (`specs/jellyfin.md`'s "Options sources").
   Tautulli joins as a third producer into those same routes/rules — `render via
-  MultiSelectFilter`, options through `lookup(rule, scope, lookups)`, no new
+  MultiSelectFilter`, options through `csvStringOptions(rule, scope, lookups)`, no new
   control or route. Extending Jellyfin's aggregation note: `listStudios`-style dedupe+sort lookups
   should read from every configured provider's already-fetched library data (Radarr + Jellyfin +
   Tautulli), not just the first one wired.

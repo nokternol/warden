@@ -9,6 +9,15 @@ source_research: docs/in_progress/provider-e2e-spec/research/omdb.md
 
 # OMDB — E2E spec
 
+> **Written before rule presentation moved to the server.** The decisions here stand; the mechanics they
+> name do not. A rule now declares its presentation on the descriptor in `ruleRegistry.ts`:
+> `BOOLEAN_VALUE_LABELS` is `valueLabels`, `ENUM_OPTIONS` is `options`, `SEGMENT_LABEL_OVERRIDES` is
+> `shortLabel`, `csvStringOptions` and `csvIdOptions` are `lookup` (which names an API procedure, so it has
+> no branches), `csv-ids` is `instance-ids`, and `ruleRendersControl` is gone. Line references into
+> `MediaFilterBar` are out of date. A `string` rule with no `options` renders a text filter, a `csv-strings`
+> rule with a fixed list has no descriptor shape yet and needs one added, and a rule that cannot be described
+> is not served at all, so it has no control rather than an empty one.
+
 OMDB is completely inert today — `OmdbProvider` implements none of `MediaSource`/`MediaEnricher`/
 `MediaActuator`, consumed only by an ad hoc `ratingsAggregation.ts` route outside the enrichment
 pipeline. This spec turns it into a real `MediaEnricher`. Same standing principles as every provider
@@ -114,7 +123,7 @@ OMDB becomes an additional producer on all four already-shared rules (`csv-strin
 `RuleControl` already renders these for Radarr/Sonarr/TMDB/Plex/Jellyfin. `runtime` joins
 `runtimeMinutes`, the `range` rule minted by `specs/radarr.md`; `originCountry` joins the
 `csv-strings` rule minted by `specs/tmdb.md`, resolved there as a hardcoded ISO-3166-1 fixed-array
-branch in `lookup` — no new `Lookups` route for either.
+branch in `csvStringOptions` — no new `Lookups` route for either.
 
 **Carry-forward from TMDB's UI ticket, confirmed**: OMDB's `Country` field is single-valued (per
 OMDB's API shape), joining `originCountry` as an additional producer of that multi-value
@@ -125,7 +134,7 @@ single value into the aggregated set). The one-element-array wrapping needs to h
 change follows from this note; flagged here only so the wrapping isn't lost before that layer is
 implemented.
 
-### `awardWinner` / `oscarWinner` — confirmed `boolean`, both need `valueLabels` entries
+### `awardWinner` / `oscarWinner` — confirmed `boolean`, both need `BOOLEAN_VALUE_LABELS` entries
 
 Same shape as `hasTrailer`/`seerrHasIssue` — generic "Yes"/"No" would read ambiguously in an
 active-filter chip, and the two rules are independent signals (a title can be industry-award-winning

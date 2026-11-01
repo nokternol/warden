@@ -9,6 +9,15 @@ parent: docs/in_progress/provider-e2e-spec/map.md
 
 # Sonarr — UI pass
 
+> **Written before rule presentation moved to the server.** The decisions here stand; the mechanics they
+> name do not. A rule now declares its presentation on the descriptor in `ruleRegistry.ts`:
+> `BOOLEAN_VALUE_LABELS` is `valueLabels`, `ENUM_OPTIONS` is `options`, `SEGMENT_LABEL_OVERRIDES` is
+> `shortLabel`, `csvStringOptions` and `csvIdOptions` are `lookup` (which names an API procedure, so it has
+> no branches), `csv-ids` is `instance-ids`, and `ruleRendersControl` is gone. Line references into
+> `MediaFilterBar` are out of date. A `string` rule with no `options` renders a text filter, a `csv-strings`
+> rule with a fixed list has no descriptor shape yet and needs one added, and a rule that cannot be described
+> is not served at all, so it has no control rather than an empty one.
+
 ## Question
 
 For every field Sonarr's decision ticket chose to wire as a UI filter, and every task chosen to
@@ -23,11 +32,11 @@ than pasting them in.
 
 - **No field needed a `/prototype` session.** Sonarr adds zero new widget shapes — every filterable
   field maps onto the four generic `RuleControl` renderers already established across
-  Plex's/Jellyfin's/Radarr's UI passes (`range`, `instance-ids`, `boolean`, `string`/`options`).
-- **`languageProfileId`** — wired as `instance-ids`, but *not* a reuse of `qualityProfiles`'s
+  Plex's/Jellyfin's/Radarr's UI passes (`range`, `csv-ids`, `boolean`, `string`/`ENUM_OPTIONS`).
+- **`languageProfileId`** — wired as `csv-ids`, but *not* a reuse of `qualityProfiles`'s
   `{ radarr, sonarr }` paired shape: language profiles only exist on Sonarr, so
   `Lookups.languageProfiles` is a new flat `MediaQualityProfile[]` field (reusing the existing
-  `MediaQualityProfile` shape) plus a new `lookup` branch and `/api/media/language-profiles`
+  `MediaQualityProfile` shape) plus a new `csvIdOptions` branch and `/api/media/language-profiles`
   route — genuinely new lookup, not a joined route.
 - **`nextAiring`** — resolved (not left flagged): filter key is `nextAiringInDays`, not
   `nextAiringDaysAgo`. The "days ago" suffix is load-bearing across every existing range-over-dates

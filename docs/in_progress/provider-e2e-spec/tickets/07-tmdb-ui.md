@@ -9,6 +9,15 @@ parent: docs/in_progress/provider-e2e-spec/map.md
 
 # Tmdb — UI pass
 
+> **Written before rule presentation moved to the server.** The decisions here stand; the mechanics they
+> name do not. A rule now declares its presentation on the descriptor in `ruleRegistry.ts`:
+> `BOOLEAN_VALUE_LABELS` is `valueLabels`, `ENUM_OPTIONS` is `options`, `SEGMENT_LABEL_OVERRIDES` is
+> `shortLabel`, `csvStringOptions` and `csvIdOptions` are `lookup` (which names an API procedure, so it has
+> no branches), `csv-ids` is `instance-ids`, and `ruleRendersControl` is gone. Line references into
+> `MediaFilterBar` are out of date. A `string` rule with no `options` renders a text filter, a `csv-strings`
+> rule with a fixed list has no descriptor shape yet and needs one added, and a rule that cannot be described
+> is not served at all, so it has no control rather than an empty one.
+
 ## Question
 
 For every field Tmdb's decision ticket chose to wire as a UI filter, and every task chosen to
@@ -27,14 +36,14 @@ appended to `11-automation-task-parameters`, unlike every prior provider's UI pa
 
 `genres`/`certification`/`year` confirmed as joining the existing shared rules with no new key,
 route, or widget. Of the three `csv-strings` judgment calls: `originCountry` and `spokenLanguages`
-both resolved (b) — hardcoded fixed-array branches in `lookup` (ISO-3166-1 country codes,
+both resolved (b) — hardcoded fixed-array branches in `csvStringOptions` (ISO-3166-1 country codes,
 ISO-639-1 language codes), following `overseerrIssueType`'s precedent for closed,
 externally-standardized vocabularies rather than per-instance runtime data, despite `originCountry`'s
 larger size (~250 codes) than any prior fixed-array example. `keywords` resolved (a) — a new
 dedicated `tmdbKeywords` `Lookups` route, following `plexLabels`/Jellyfin `Tags`'s precedent for
 open, unbounded, per-item tag vocabularies; confirmed no existing route to reuse, since Plex/Jellyfin
 tags are separate provider-specific tag spaces from TMDB's editorial keywords. `hasTrailer` and all
-8 streaming-service booleans got `valueLabels` entries (8 independent boolean rules per the
+8 streaming-service booleans got `BOOLEAN_VALUE_LABELS` entries (8 independent boolean rules per the
 decision ticket, not one aggregate rule — labels listed in full in `specs/tmdb.md`).
 
 Flagged for OMDB's UI ticket (next): OMDB's `Country` field is single-valued, joining `originCountry`

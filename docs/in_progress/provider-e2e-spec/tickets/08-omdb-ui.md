@@ -9,6 +9,15 @@ parent: docs/in_progress/provider-e2e-spec/map.md
 
 # Omdb — UI pass
 
+> **Written before rule presentation moved to the server.** The decisions here stand; the mechanics they
+> name do not. A rule now declares its presentation on the descriptor in `ruleRegistry.ts`:
+> `BOOLEAN_VALUE_LABELS` is `valueLabels`, `ENUM_OPTIONS` is `options`, `SEGMENT_LABEL_OVERRIDES` is
+> `shortLabel`, `csvStringOptions` and `csvIdOptions` are `lookup` (which names an API procedure, so it has
+> no branches), `csv-ids` is `instance-ids`, and `ruleRendersControl` is gone. Line references into
+> `MediaFilterBar` are out of date. A `string` rule with no `options` renders a text filter, a `csv-strings`
+> rule with a fixed list has no descriptor shape yet and needs one added, and a rule that cannot be described
+> is not served at all, so it has no control rather than an empty one.
+
 ## Question
 
 For every field Omdb's decision ticket chose to wire as a UI filter, and every task chosen to
@@ -33,7 +42,7 @@ query-engine/provider-field-layer concern, not a widget-shape one; no UI control
 `specs/omdb.md` so it isn't lost before that layer is implemented.
 
 `awardWinner` and `oscarWinner` are new OMDB-only `boolean` rules (no existing rule to join), both
-given distinct `valueLabels` entries: `awardWinner` → "Award Winner"/"No Awards",
+given distinct `BOOLEAN_VALUE_LABELS` entries: `awardWinner` → "Award Winner"/"No Awards",
 `oscarWinner` → "Oscar Winner"/"No Oscar" — separate copy since they're independent signals.
 
 On-demand metadata fields (`Director`/`Writer`/`Actors`/`Plot`/`BoxOffice`/raw `Awards` text/

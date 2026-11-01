@@ -9,6 +9,15 @@ source_research: docs/in_progress/provider-e2e-spec/research/sonarr.md
 
 # Sonarr — E2E spec
 
+> **Written before rule presentation moved to the server.** The decisions here stand; the mechanics they
+> name do not. A rule now declares its presentation on the descriptor in `ruleRegistry.ts`:
+> `BOOLEAN_VALUE_LABELS` is `valueLabels`, `ENUM_OPTIONS` is `options`, `SEGMENT_LABEL_OVERRIDES` is
+> `shortLabel`, `csvStringOptions` and `csvIdOptions` are `lookup` (which names an API procedure, so it has
+> no branches), `csv-ids` is `instance-ids`, and `ruleRendersControl` is gone. Line references into
+> `MediaFilterBar` are out of date. A `string` rule with no `options` renders a text filter, a `csv-strings`
+> rule with a fixed list has no descriptor shape yet and needs one added, and a rule that cannot be described
+> is not served at all, so it has no control rather than an empty one.
+
 Sonarr is a `MediaSource` (show) + `MediaActuator`, symmetric to Radarr — see
 [`specs/radarr.md`](radarr.md) for the parallel shared decisions (delete-keep-files, move task,
 refresh/rescan/rename tasks, queue/history and instance-scoped commands all out of scope, and the
@@ -117,7 +126,7 @@ Tracked in `specs/_implementation-map.md`.
 
 | Domain field | Filter key | dataType | Notes |
 |---|---|---|---|
-| `languageProfileId` | `languageProfileIds` | `instance-ids` | New rule; instanceScoped, same pattern as the existing `qualityProfileIds` show rule. |
+| `languageProfileId` | `languageProfileIds` | `csv-ids` | New rule; instanceScoped, same pattern as the existing `qualityProfileIds` show rule. |
 | `nextAiring` | `nextAiringDaysAgo` | `range` | New rule; "days ago" framing doesn't fit a future date — see below. |
 | `path` | `path` | `string` | New rule; substring match, same shape as `title`. |
 | `images` | — | — | No filter, display/on-demand only (poster/fanart, per spec's own note). |
@@ -146,13 +155,13 @@ the rule.
 Same generic-control survey as `specs/plex.md`'s "Per-field widget shapes" and `specs/radarr.md`'s
 mirror of it — **no field needed a `/prototype` session or a further `impeccable` pass.** Sonarr adds
 zero new widget shapes to `RuleControl`; every filterable field maps onto the four generic renderers
-already established (`range` → `NumberRangeFilter`, `instance-ids` → `MultiSelectFilter`, `boolean` →
-`OptionFilter`, `string`/`number` → `OptionFilter` with a fixed `options` entry — unused by any
+already established (`range` → `NumberRangeFilter`, `csv-ids` → `MultiSelectFilter`, `boolean` →
+`OptionFilter`, `string`/`number` → `OptionFilter` with a fixed `ENUM_OPTIONS` entry — unused by any
 Sonarr field this pass). This closes out the items the ticket flagged for scrutiny:
 
-### `languageProfileId` — `instance-ids`, new dedicated lookup (not a `qualityProfiles`-shaped pair)
+### `languageProfileId` — `csv-ids`, new dedicated lookup (not a `qualityProfiles`-shaped pair)
 
-Confirmed via `lookup` that
+Confirmed via `csvIdOptions` (`ref:src/components/MediaFilterBar/index.tsx#L916`) that
 `qualityProfileIds` branches on `scope` (`movie` → `lookups.qualityProfiles.radarr`, `show` →
 `lookups.qualityProfiles.sonarr`) because quality profiles exist as a concept on both Radarr and
 Sonarr. Language profiles are Sonarr-only — Radarr has no equivalent concept — so mirroring the
@@ -163,7 +172,7 @@ only ever has one live side.
 **Decision: add a flat `Lookups.languageProfiles: MediaQualityProfile[]` field** (reusing the
 existing `MediaQualityProfile` shape — `{ id, name, providerId, providerName }` — since a language
 profile is structurally identical to a quality profile: an instance-scoped id/name pair), not a
-`{ radarr, sonarr }` record. `lookup` gets a new branch:
+`{ radarr, sonarr }` record. `csvIdOptions` gets a new branch:
 
 ```
 if (rule.key === 'languageProfileIds') {
@@ -208,7 +217,7 @@ than leaving flagged: **the filter key is `nextAiringInDays`**, not `nextAiringD
 ### `path` — dropped from filterable scope, per Radarr's precedent
 
 Same situation Radarr hit with `folderName`/`path`: `string` dataType is strictly a fixed-enum
-picker keyed by `options[rule.key]` (confirmed again via `RuleControl`'s `string`/`number`
+picker keyed by `ENUM_OPTIONS[rule.key]` (confirmed again via `RuleControl`'s `string`/`number`
 branch) — never free text, and no free-text/substring `dataType` exists anywhere in
 `ruleRegistry.ts`. Sonarr's `path` is described in the spec as "substring match, same shape as
 `title`" — the identical mismatch, not a new one.
@@ -229,7 +238,7 @@ title-variant fields and Radarr's `folderName`/`path`.
 
 ### `seasonCount` — reclassified to `range`
 
-Same reasoning as Radarr's `movieFileCount`: `number` dataType is the fixed-`options`-picker
+Same reasoning as Radarr's `movieFileCount`: `number` dataType is the fixed-`ENUM_OPTIONS`-picker
 shape, not a numeric input, and season counts (0, 1, 2, 3…) have no natural small enum the way a
 status code does.
 
@@ -259,11 +268,11 @@ filter rule, so no `RuleControl` branch or lookup applies. No widget decision ne
   above), `episodeCount` (spans `episodeCount`/`totalEpisodeCount`). All render via
   `NumberRangeFilter`, no new bounds decided, consistent with prior providers' precedent of leaving
   numeric rules unbounded.
-- **`instance-ids`**: `languageProfileIds` — new dedicated `Lookups.languageProfiles` field and
-  `lookup` branch (see above), not a reuse of `qualityProfiles`'s paired shape.
+- **`csv-ids`**: `languageProfileIds` — new dedicated `Lookups.languageProfiles` field and
+  `csvIdOptions` branch (see above), not a reuse of `qualityProfiles`'s paired shape.
 - **Dropped from filterable scope**: `path` (see above, matches Radarr's `folderName`/`path`
   precedent), plus the already-noted not-filtered set (`images`, `profileId`).
-- **No new `boolean` or `string`/`options` fields this pass** — `hasFile`'s predicate fix reuses
+- **No new `boolean` or `string`/`ENUM_OPTIONS` fields this pass** — `hasFile`'s predicate fix reuses
   the existing rule/control, no new boolean surfaces.
 
 ### Tasks

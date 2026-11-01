@@ -5,7 +5,7 @@
 Radarr tags, that are not on the watchlist of any of a chosen set of Plex-server consumers. Two of the
 three predicates already exist (Radarr `tagIds`, `docs/architecture/media-query-engine.md`'s `role: 'exclude'`
 source mechanism for the "not on any" shape); this doc covers the remaining one — the third predicate,
-"downloaded X days ago" via Plex's own `addedAt`, is staged at `docs/in_progress/plex-added-date.md`.
+"downloaded X days ago" via Plex's own `addedAt`, is built as the `plexAddedDaysAgo` rule.
 
 ## Per-consumer watchlist, not a flattened boolean
 
@@ -88,5 +88,4 @@ for this predicate either way.
   per enrichment pass; no caching layer exists on our side the way Overseerr's own etag cache does internally.
 
 These are unresolved enough to warrant a wayfinder pass (grilling + prototype on the array-column/enricher
-shape) before this gets a phase plan — see the sibling assessment that split this doc from
-`docs/in_progress/plex-added-date.md`.
+shape) before this gets a phase plan — the Plex added-date work this doc was split from has shipped.

@@ -57,7 +57,7 @@ once). None are modelled-only.
 `applyTag()` (add/remove), `refreshSeries()`, `rescanSeries()`, `renameSeries()`. None are
 modelled-only. `moveSeries` and `changeLanguageProfile` are deliberately not built as tasks, because each needs a
 parameter (target root folder; target language profile id) that is not declared yet,
-same precedent as Radarr's `moveMovie`.
+the same reason Radarr's `moveMovie` is not built.
 
 **Wired into the media-item pipeline?** Yes — as `MediaSource`. Sonarr's fields (`genres`, `network`,
 `seriesType`, `communityRating`, `episodePercentage`, `lastAiredAt`, `hasFile` (derived from

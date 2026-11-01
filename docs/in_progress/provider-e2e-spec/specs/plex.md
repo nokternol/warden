@@ -9,6 +9,15 @@ source_research: docs/in_progress/provider-e2e-spec/research/plex.md
 
 # Plex — E2E spec
 
+> **Written before rule presentation moved to the server.** The decisions here stand; the mechanics they
+> name do not. A rule now declares its presentation on the descriptor in `ruleRegistry.ts`:
+> `BOOLEAN_VALUE_LABELS` is `valueLabels`, `ENUM_OPTIONS` is `options`, `SEGMENT_LABEL_OVERRIDES` is
+> `shortLabel`, `csvStringOptions` and `csvIdOptions` are `lookup` (which names an API procedure, so it has
+> no branches), `csv-ids` is `instance-ids`, and `ruleRendersControl` is gone. Line references into
+> `MediaFilterBar` are out of date. A `string` rule with no `options` renders a text filter, a `csv-strings`
+> rule with a fixed list has no descriptor shape yet and needs one added, and a rule that cannot be described
+> is not served at all, so it has no control rather than an empty one.
+
 Plex is a `MediaEnricher` + `MediaActuator` and the identity anchor (`plexRatingKey`). This spec
 applies two standing principles decided across this map's sessions:
 
@@ -173,7 +182,7 @@ labels `FilterGroup` already uses. Picking one renders that rule's real control 
 A rule with an active value renders regardless of "added" state — existing/deep-linked filters never
 silently disappear. Clearing a visible-but-inactive filter's value (via its own control) returns it
 to the pool. Title and Year are unaffected — they stay outside this mechanic as permanent, always-on
-controls.
+controls (`ref:src/components/MediaFilterBar/index.tsx#L1174`).
 
 **Verified**: `src/components/MediaFilterBar/MediaFilterBar.stories.tsx`'s `Interactive` story,
 in-browser via Ladle — crowding reduced from all-rules-visible to Title + Year + one "Add filter (N)"
@@ -198,7 +207,7 @@ source, not inventing new widget shapes:
   implementation finds a natural bound.
 - **`csv-strings` fields** (`studio`, `fileContainer`, `videoCodec`, `audioCodec`, `fileResolution`,
   `labels`, plus `genres`/`certification` which join existing rules) render via
-  `MultiSelectFilter`, options resolved through `lookup(rule, scope, lookups)`.
+  `MultiSelectFilter`, options resolved through `csvStringOptions(rule, scope, lookups)`.
 - **`playCount`/`lastWatchedAt`** stay on their already-wired `boolean`/`range` controls — Plex adds
   no new control, only a new producer.
 
@@ -206,12 +215,12 @@ source, not inventing new widget shapes:
 following the existing `listNetworks`/`listGenres` precedent exactly (`contract/media.ts`
 + `media.procedures.ts`) — an in-process `MediaCache<string[]>`, computed by dedupe+sort over
 already-fetched library data (no dedicated DB distinct-query), added to the `Lookups` interface and
-wired into `lookup`. Considered and rejected: one combined "facets" endpoint returning all
+wired into `csvStringOptions`. Considered and rejected: one combined "facets" endpoint returning all
 six lists — diverges from the established per-field pattern and couples six independent caches'
 invalidation together for a marginal round-trip saving.
 
 **Known gap to not repeat**: `certification` already has `dataType: 'csv-strings'` in
 `ruleRegistry.ts` but no lookup source wired in the frontend, so its control silently renders empty
-today. Each of the 6 new routes above must ship
-together with its `lookup` branch and `Lookups` field in the same change — not as a
+today (`ref:src/components/MediaFilterBar/index.tsx#L966`). Each of the 6 new routes above must ship
+together with its `csvStringOptions` branch and `Lookups` field in the same change — not as a
 follow-up — so none of them repeat that gap.

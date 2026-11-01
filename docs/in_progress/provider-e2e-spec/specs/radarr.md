@@ -9,6 +9,15 @@ source_research: docs/in_progress/provider-e2e-spec/research/radarr.md
 
 # Radarr — E2E spec
 
+> **Written before rule presentation moved to the server.** The decisions here stand; the mechanics they
+> name do not. A rule now declares its presentation on the descriptor in `ruleRegistry.ts`:
+> `BOOLEAN_VALUE_LABELS` is `valueLabels`, `ENUM_OPTIONS` is `options`, `SEGMENT_LABEL_OVERRIDES` is
+> `shortLabel`, `csvStringOptions` and `csvIdOptions` are `lookup` (which names an API procedure, so it has
+> no branches), `csv-ids` is `instance-ids`, and `ruleRendersControl` is gone. Line references into
+> `MediaFilterBar` are out of date. A `string` rule with no `options` renders a text filter, a `csv-strings`
+> rule with a fixed list has no descriptor shape yet and needs one added, and a rule that cannot be described
+> is not served at all, so it has no control rather than an empty one.
+
 Radarr is a `MediaSource` (movie) + `MediaActuator` — its own fields normalize directly onto
 `NormalizedMovie` (`normalizeMedia.ts`) with no enrichment step, and its tasks are real API calls
 (`radarrProvider.ts`). This spec extends that existing shape; it doesn't change Radarr's role.
@@ -105,7 +114,7 @@ a second, uncoordinated producer with no precedence ordering between them. Block
 
 | Domain field | Filter key | dataType | Notes |
 |---|---|---|---|
-| `folderName` / `path` | — | — | **Corrected in "UI decisions" below**: not filterable this pass. `string` dataType is a fixed-`options` picker, not free text (confirmed against `RuleControl`) — substring-match-on-path doesn't fit any existing control. Left display-only, same as `overview`/title-variant fields, rather than inventing a new generic free-text `dataType` unilaterally. |
+| `folderName` / `path` | — | — | **Corrected in "UI decisions" below**: not filterable this pass. `string` dataType is a fixed-`ENUM_OPTIONS` picker, not free text (confirmed against `RuleControl`) — substring-match-on-path doesn't fit any existing control. Left display-only, same as `overview`/title-variant fields, rather than inventing a new generic free-text `dataType` unilaterally. |
 | `movieFileCount` | `movieFileCount` | `range` | **Corrected in "UI decisions" below**: reclassified from `number` to `range` — same shape as `sizeOnDiskGb`; a range with equal min/max still expresses exact-count match, and avoids inventing new UI for a value space with no natural small enum. |
 | `releaseGroups` | `releaseGroups` | `csv-strings` | New rule. Multi-select-by-string-value, same shape as `genres`/`certification`. |
 | `overview` | — | — | No filter, display/on-demand only (plot synopsis). |
@@ -143,15 +152,15 @@ mirror of it — **no field needed a `/prototype` session or a further `impeccab
 zero new widget shapes to `RuleControl`; every filterable field maps onto the four generic renderers
 already established (`range` → `NumberRangeFilter`, `csv-strings` → `MultiSelectFilter`,
 `boolean` → `OptionFilter` with `booleanOptions`, `string`/`number` → `OptionFilter` with a fixed
-`options` entry). This closes out the four items the ticket flagged for scrutiny:
+`ENUM_OPTIONS` entry). This closes out the four items the ticket flagged for scrutiny:
 
-### `radarrStatus` — confirmed as `string`/`options`, real enum decided
+### `radarrStatus` — confirmed as `string`/`ENUM_OPTIONS`, real enum decided
 
 Radarr's own `status` field enum, per `docs/in_progress/provider-e2e-spec/research/radarr.md`'s
 Radarr-API audit: `tba` / `announced` / `inCinemas` / `released` / `deleted`. This is the actual
 value set the provider returns (not just a filter-shape guess), so `radarrStatus` is a legitimate
-`options`-backed `string` rule — same shape as `seriesStatus`/`tmdbStatus`, no bespoke control.
-Add to `options`:
+`ENUM_OPTIONS`-backed `string` rule — same shape as `seriesStatus`/`tmdbStatus`, no bespoke control.
+Add to `ENUM_OPTIONS` (`ref:src/components/MediaFilterBar/index.tsx#L885`):
 
 ```
 radarrStatus: [
@@ -163,18 +172,18 @@ radarrStatus: [
 ]
 ```
 
-Without this entry the rule would render nothing (`the descriptor shape` correctly excludes any
-`string`/`number` rule missing an `options` entry) — this decision is what makes the field
+Without this entry the rule would render nothing (`ruleRendersControl` correctly excludes any
+`string`/`number` rule missing an `ENUM_OPTIONS` entry) — this decision is what makes the field
 actually filterable, not just typed in the registry.
 
 ### `folderName` / `path` — dropped from filterable scope this pass, not given a new control
 
-Confirmed by reading `RuleControl`'s `string`/`number` branch and `options`
+Confirmed by reading `RuleControl`'s `string`/`number` branch and `ENUM_OPTIONS`
 (`src/components/MediaFilterBar/index.tsx` ~L880-988): `string` dataType is *only* a fixed-enum
-picker keyed by `options[rule.key]`, never free text. A substring-match-on-filesystem-path
+picker keyed by `ENUM_OPTIONS[rule.key]`, never free text. A substring-match-on-filesystem-path
 filter is not enumerable, so `folderPath`'s `dataType: 'string'` classification in the mapping table
 above does not fit any control this codebase has today — confirmed by grepping every `dataType` in
-`ruleRegistry.ts`: only `string` / `range` / `boolean` / `csv-strings` / `instance-ids` exist, no
+`ruleRegistry.ts`: only `string` / `range` / `boolean` / `csv-strings` / `csv-ids` exist, no
 free-text/substring type anywhere in the registry.
 
 **Decision: leave `folderName`/`path` unfiltered (display-only) for this pass**, rather than
@@ -208,8 +217,8 @@ that design.
 ### `movieFileCount` — reclassified to `range`
 
 Confirmed the concern: `number` dataType (per `RuleControl`'s `string`/`number` branch) is the same
-fixed-`options`-picker shape as `string`, not a numeric input — `movieFileCount`'s actual value
-space (0, 1, 2, 3…) has no natural small enum, so an `options` entry doesn't fit the way
+fixed-`ENUM_OPTIONS`-picker shape as `string`, not a numeric input — `movieFileCount`'s actual value
+space (0, 1, 2, 3…) has no natural small enum, so an `ENUM_OPTIONS` entry doesn't fit the way
 `seerrRequestStatus`'s small fixed status-code set does.
 
 **Decision: reclassify `movieFileCount` to `range` dataType**, same shape as `sizeOnDiskGb`. A
@@ -233,7 +242,7 @@ the way `studio` does (see below).
 
 **`collectionTmdbId` stays unfiltered** — no rule. The spec is explicit that the only confirmed need is
 "filter by collection name," and no id-based "list movies in collection X" use case has been
-confirmed. Wiring an unused `instance-ids` rule (which would additionally need its own id→label lookup,
+confirmed. Wiring an unused `csv-ids` rule (which would additionally need its own id→label lookup,
 i.e. collection id → collection name, doubling the new-route surface for a rule nothing asks for)
 isn't justified speculatively; add it later if an id-based use case is actually confirmed.
 
@@ -246,16 +255,16 @@ isn't justified speculatively; add it later if an id-based use case is actually 
 - **`csv-strings` fields**: `releaseGroups` and `collectionName` are genuinely new to this map and
   each get their own dedicated lookup route, following `listNetworks`/`listGenres` exactly — an
   in-process `MediaCache<string[]>`, dedupe+sort over already-fetched Radarr data, added to the
-  `Lookups` interface and wired into `lookup`, shipped together with the route in the same
+  `Lookups` interface and wired into `csvStringOptions`, shipped together with the route in the same
   change (not a follow-up), per the known-gap warning Plex's UI pass first recorded for
   `certification`. **`studio` is not new** — Plex's UI pass already named and reconciled a shared
   `studio` route across Plex/Radarr/Jellyfin (`specs/plex.md`'s "Options-source decision"); Radarr
   joins that route as an additional producer, no new route needed.
 - **`boolean`**: `isAvailable` renders via `OptionFilter`/`booleanOptions`. No entry in
-  `valueLabels` today for this key — following Jellyfin's `jellyfinIsFavorite` precedent,
+  `BOOLEAN_VALUE_LABELS` today for this key — following Jellyfin's `jellyfinIsFavorite` precedent,
   add an `isAvailable` entry (`['Available', 'Unavailable']`) rather than leaving it on the generic
   Yes/No fallback, since "Available: Yes/No" reads ambiguously as a filter chip.
-- **`string`/`options`**: `radarrStatus` only (see above) — no bespoke control.
+- **`string`/`ENUM_OPTIONS`**: `radarrStatus` only (see above) — no bespoke control.
 - **Dropped from filterable scope**: `folderName`/`path` (see above), plus the already-noted
   `movieFileCount`→`range` and the not-filtered set (`overview`, title-variant fields,
   `minimumAvailability`/`rootFolderPath`, `website`/`youTubeTrailerId`, `collectionTmdbId`).

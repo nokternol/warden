@@ -9,6 +9,15 @@ parent: docs/in_progress/provider-e2e-spec/map.md
 
 # Jellyfin — UI pass
 
+> **Written before rule presentation moved to the server.** The decisions here stand; the mechanics they
+> name do not. A rule now declares its presentation on the descriptor in `ruleRegistry.ts`:
+> `BOOLEAN_VALUE_LABELS` is `valueLabels`, `ENUM_OPTIONS` is `options`, `SEGMENT_LABEL_OVERRIDES` is
+> `shortLabel`, `csvStringOptions` and `csvIdOptions` are `lookup` (which names an API procedure, so it has
+> no branches), `csv-ids` is `instance-ids`, and `ruleRendersControl` is gone. Line references into
+> `MediaFilterBar` are out of date. A `string` rule with no `options` renders a text filter, a `csv-strings`
+> rule with a fixed list has no descriptor shape yet and needs one added, and a rule that cannot be described
+> is not served at all, so it has no control rather than an empty one.
+
 ## Question
 
 For every field Jellyfin's decision ticket chose to wire as a UI filter, and every task chosen to
@@ -27,7 +36,7 @@ than pasting them in.
   Plex's 13. No date picker, slider, or other bespoke widget surfaced.
 - **First genuinely new boolean rule this map has added**: `jellyfinIsFavorite` (Plex's booleans
   all joined existing rules). Only decision needed was copy, not a widget — add a
-  `jellyfinIsFavorite` entry to `valueLabels` (`'Favorited'`/`'Not Favorited'`) rather than
+  `jellyfinIsFavorite` entry to `BOOLEAN_VALUE_LABELS` (`'Favorited'`/`'Not Favorited'`) rather than
   leaving it on the generic Yes/No fallback, matching the existing labeled-boolean precedent
   (`watched`, `monitored`, etc.).
 - **No new lookup route needed.** Every net-new `csv-strings` field in Jellyfin's mapping

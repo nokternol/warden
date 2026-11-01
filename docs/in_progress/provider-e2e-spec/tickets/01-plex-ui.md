@@ -9,6 +9,15 @@ parent: docs/in_progress/provider-e2e-spec/map.md
 
 # Plex — UI pass
 
+> **Written before rule presentation moved to the server.** The decisions here stand; the mechanics they
+> name do not. A rule now declares its presentation on the descriptor in `ruleRegistry.ts`:
+> `BOOLEAN_VALUE_LABELS` is `valueLabels`, `ENUM_OPTIONS` is `options`, `SEGMENT_LABEL_OVERRIDES` is
+> `shortLabel`, `csvStringOptions` and `csvIdOptions` are `lookup` (which names an API procedure, so it has
+> no branches), `csv-ids` is `instance-ids`, and `ruleRendersControl` is gone. Line references into
+> `MediaFilterBar` are out of date. A `string` rule with no `options` renders a text filter, a `csv-strings`
+> rule with a fixed list has no descriptor shape yet and needs one added, and a rule that cannot be described
+> is not served at all, so it has no control rather than an empty one.
+
 ## Question
 
 For every field Plex's decision ticket chose to wire as a UI filter, and every task chosen to
@@ -54,7 +63,7 @@ ticket's original scope — are unaddressed. Each still needs its own widget-sha
 - **Flagged, not fixed**: `certification` already declares `dataType: 'csv-strings'` in
   `ruleRegistry.ts` but has no lookup source wired, so its control silently renders empty today.
   Recorded in the spec as a gap the 6 new routes must not repeat — each new route ships together
-  with its `lookup` branch and `Lookups` field, not as a follow-up.
+  with its `csvStringOptions` branch and `Lookups` field, not as a follow-up.
 - Full writeup: `docs/in_progress/provider-e2e-spec/specs/plex.md`'s "Per-field widget shapes"
   subsection (under "UI decisions").
 

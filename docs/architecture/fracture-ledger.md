@@ -494,10 +494,12 @@ Earlier entries in this ledger use the names that were current when they healed 
 
 ### Docs against code — statements the code had moved past (recorded and healed 2026-11-01, MVP slice B4)
 
-- **Fracture:** the core model's example used an `addedBy=list` rule that does not exist, the precedence
+- **Fracture:** the core model's example used an `addedBy=list` rule that does not exist, it allowed one
+  active provider per type where Radarr and Sonarr allow several, and it said roles come from `implements`
+  where adapters bind two of the three. The precedence
   comment said a Plex/Jellyfin swap was unbuilt beside the unused function that implements it, the
   implementation map said the automation builder had no single-select control, this ledger cited a moved
-  path, and two intent docs pointed at a deleted file.
+  path, and three intent docs pointed at files that no longer exist.
 - **How it misled:** each read as current fact, so a reader would plan around a rule that was never
   there or rebuild something that exists.
 - **Healed by:** correcting each statement. The core model's example is now the MVP's destination
