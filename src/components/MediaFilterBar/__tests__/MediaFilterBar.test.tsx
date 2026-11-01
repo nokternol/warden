@@ -799,6 +799,13 @@ describe('MediaFilterBar — multi-value controls', () => {
     expect(screen.queryByRole('menu', { name: /movie tags/i })).not.toBeInTheDocument();
   });
 
+  it('does not offer a multi-value rule whose lookup has nothing to choose', async () => {
+    const user = setupUser();
+    render(<MediaFilterBar {...makeProps({ lookups: EMPTY_LOOKUPS })} />);
+    await user.click(screen.getByRole('button', { name: /add filter/i }));
+    expect(screen.queryByRole('option', { name: /movie tags/i })).not.toBeInTheDocument();
+  });
+
   it('calls onRuleChange when a tag is selected', async () => {
     const onRuleChange = vi.fn();
     const user = setupUser();
