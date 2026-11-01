@@ -1,4 +1,5 @@
 import { type ContentType, isInstanceScopedValue, isRangeValue } from '@contract/schemas';
+import { isOfferedProviderType, scope } from '@contract/scope';
 import { eq } from 'drizzle-orm';
 import {
   type MetadataProviderType,
@@ -99,7 +100,8 @@ function computeHealth(
   for (const { ruleKey } of filters) {
     const rule = getRule(ruleKey, contentType);
     if (!rule) continue;
-    for (const pt of rule.providers) {
+    // A provider type that cannot be configured cannot be missing.
+    for (const pt of rule.providers.filter((type) => isOfferedProviderType(scope, type))) {
       const existing = providerMap.get(pt);
       if (existing) {
         existing.keys.push(ruleKey);
