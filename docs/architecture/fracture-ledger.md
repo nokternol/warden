@@ -503,21 +503,20 @@ Earlier entries in this ledger use the names that were current when they healed 
 - **How it misled:** each read as current fact, so a reader would plan around a rule that was never
   there or rebuild something that exists.
 - **Healed by:** correcting each statement. The core model's example is now the MVP's destination
-  scenario, built from rules and a task that exist. The provider specs use the rule descriptor's names,
-  and an architecture doc no longer leans on an in-progress ticket.
+  scenario, built from rules and a task that exist. The provider specs state which of their names are retired, and an architecture doc no longer leans on an in-progress ticket.
 
 ## Open
 
 ### Ratings — two mechanisms, one blocked (recorded 2026-11-01, MVP slice B4)
 
 - **Fracture:** rating filters run through enrichment, while `/api/providers/ratings` is a separate
-  aggregation feeding its own page and panel (F10).
+  aggregation feeding its own page and panel.
 - **Status:** the second mechanism is deferred in `contract/scope.ts`, so it is unreachable but present.
   Unifying them comes before un-deferring it, per the post-MVP list in `docs/in_progress/mvp/plan.md`.
 
 ### Title lookup — two mechanisms, one blocked (recorded 2026-11-01, MVP slice B4)
 
 - **Fracture:** the title filter and the Search page's cross-provider metadata search both look up a
-  title (F11).
+  title.
 - **Status:** Search is deferred in `contract/scope.ts`, so it is unreachable but present. Unifying them
   comes before un-deferring it, per the post-MVP list in `docs/in_progress/mvp/plan.md`.

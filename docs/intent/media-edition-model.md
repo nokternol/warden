@@ -24,7 +24,7 @@ target "the director's cut" specifically.
 
 ## Why it matters
 
-- **Actuator correctness (blocks part of `docs/architecture/actuator-task-ownership.md`).** Tasks like
+- **Actuator correctness (a limit on `docs/architecture/actuator-task-ownership.md`).** Tasks like
   `deleteFromLibrary` or `markPlayed` operate on ids resolved through this model. If a title has
   multiple editions and the model can only address one, an actuator task has no way to disambiguate
   which physical copy to act on — it either acts on the wrong one or can't act at all.
@@ -57,8 +57,6 @@ move to `docs/in_progress/`:
 
 ## Dependencies
 
-- Soft-blocks the actuator id-translation seam in `docs/architecture/actuator-task-ownership.md` for
-  any provider where multiple editions turn out to be common — that doc's `run(ids)` contract
-  assumes one id addresses one item.
-- No dependency in the other direction: the actuator work can and should proceed for the common
-  single-edition case without waiting on this.
+- Limits the actuator id translation in `docs/architecture/actuator-task-ownership.md` for any provider
+  where multiple editions turn out to be common: a task's `run(ids)` assumes one id addresses one item.
+- No dependency in the other direction: the actuator work is built for the common single-edition case.
