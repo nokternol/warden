@@ -176,7 +176,7 @@ export function MultiSelectFilter<T extends string | number>({
         onClick={() => setIsOpen((open) => !open)}
         onKeyDown={onTriggerKeyDown}
         className={cn(
-          'flex items-center gap-1.5 px-2.5 rounded-md text-xs font-medium border transition-colors h-7',
+          'flex items-center gap-1.5 px-2.5 rounded-md text-xs font-medium border transition-colors h-7 max-md:h-11',
           activeCount > 0
             ? 'bg-primary text-on-primary border-primary'
             : 'bg-surface-panel text-text-secondary border-border hover:bg-surface-hover'
@@ -286,7 +286,7 @@ export function MultiSelectFilter<T extends string | number>({
               tabIndex={-1}
               onClick={clearSelection}
               onKeyDown={(e) => onItemKeyDown(e, renderOrder.length, clearSelection)}
-              className="border-t border-border mt-1 px-3 py-2.5 text-xs text-text-secondary hover:bg-surface-hover focus:bg-surface-hover cursor-pointer select-none"
+              className="border-t border-border mt-1 px-3 py-2.5 max-sm:min-h-[44px] max-sm:flex max-sm:items-center text-xs text-text-secondary hover:bg-surface-hover focus:bg-surface-hover cursor-pointer select-none"
             >
               Clear selection
             </div>

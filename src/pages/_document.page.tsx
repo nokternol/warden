@@ -1,3 +1,4 @@
+import { semanticTokens } from '@app/styles/theme';
 import { Head, Html, Main, NextScript } from 'next/document';
 
 export default function Document() {
@@ -14,7 +15,16 @@ export default function Document() {
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-        <meta name="theme-color" content="#1f2937" />
+        <meta
+          name="theme-color"
+          media="(prefers-color-scheme: light)"
+          content={semanticTokens.surfacePanel}
+        />
+        <meta
+          name="theme-color"
+          media="(prefers-color-scheme: dark)"
+          content={semanticTokens.surfacePanelDark}
+        />
       </Head>
       <body>
         <Main />

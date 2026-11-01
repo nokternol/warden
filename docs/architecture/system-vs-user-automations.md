@@ -70,7 +70,7 @@ Feedback is split into two independent pieces, neither of which involves the dom
   its own `idle | loading | pass | fail` status per row, reusing the same status-icon vocabulary
   [`ConnectionTestIcon`](ref:path:src/components/ConnectionTestIcon/index.tsx) already established for
   provider connection tests. The Run Now icon swaps to a spinner while the POST is in flight, then a
-  check or a cross for ~2s once it settles, before reverting to idle. This confirms the click was
+  check for ~2s once it succeeds, before reverting to idle. This confirms the click was
   *received*, not that the underlying job has *finished* — a distinction the row is careful not to
   blur (title text reads "Run triggered", never "Run complete"). Row actions are always visible, and a
   failed trigger stays as an inline alert at the row. A user automation whose task is destructive

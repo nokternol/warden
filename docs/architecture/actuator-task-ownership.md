@@ -142,6 +142,8 @@ fetches a preview only for a destructive task, states it in a confirmation (*"De
 affect 214 movies"*), and will not save a destructive automation until that confirmation is ticked.
 Choosing a different task, or changing the queries, clears the confirmation: the count it stated no longer holds. A non-destructive task asks nothing.
 
+The automation row's Run Now uses the same preview: a user automation's destructive task, or one the catalogue no longer describes, confirms inline with the count before it runs ([`src/components/AutomationRow/index.tsx`](ref:path:src/components/AutomationRow/index.tsx)).
+
 ## Non-source execution: id translation through the identity graph
 
 Earlier phases derived target ids by evaluating the automation's query against the provider instance **as

@@ -115,7 +115,7 @@ export function NumberRangeFilter({
         aria-haspopup="dialog"
         onClick={() => setIsOpen((o) => !o)}
         className={cn(
-          'flex items-center gap-1 px-2.5 rounded-md text-xs font-medium border transition-colors h-7',
+          'flex items-center gap-1 px-2.5 rounded-md text-xs font-medium border transition-colors h-7 max-md:h-11',
           isActive
             ? 'bg-primary text-on-primary border-primary'
             : 'bg-surface-panel text-text-secondary border-border hover:bg-surface-hover'
