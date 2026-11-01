@@ -25,8 +25,10 @@ function Controlled({
         max={max}
         dataMin={dataMin}
         dataMax={dataMax}
-        onChangeMin={setMin}
-        onChangeMax={setMax}
+        onChange={(range) => {
+          setMin(range.min);
+          setMax(range.max);
+        }}
       />
       <p className="text-xs text-text-muted font-mono">
         min: <span className="text-text-secondary">{min ?? 'undefined'}</span> max:{' '}

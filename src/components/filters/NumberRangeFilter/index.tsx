@@ -14,16 +14,15 @@ export function NumberRangeFilter({
   max,
   dataMin = null,
   dataMax = null,
-  onChangeMin,
-  onChangeMax,
+  onChange,
 }: {
   label: string;
   min: number | undefined;
   max: number | undefined;
   dataMin?: number | null;
   dataMax?: number | null;
-  onChangeMin: (v: number | undefined) => void;
-  onChangeMax: (v: number | undefined) => void;
+  /** The whole range at once, so neither bound is computed from a value the other just replaced. */
+  onChange: (range: { min?: number; max?: number }) => void;
 }) {
   const id = useId();
   const [isOpen, setIsOpen] = useState(false);
@@ -61,18 +60,16 @@ export function NumberRangeFilter({
     if (!isOpen) return;
     const handler = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        onChangeMin(parseNumber(draftMinRef.current));
-        onChangeMax(parseNumber(draftMaxRef.current));
+        onChange({ min: parseNumber(draftMinRef.current), max: parseNumber(draftMaxRef.current) });
         setIsOpen(false);
       }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [isOpen, onChangeMin, onChangeMax]);
+  }, [isOpen, onChange]);
 
   const commitAndClose = () => {
-    onChangeMin(parseNumber(draftMinRef.current));
-    onChangeMax(parseNumber(draftMaxRef.current));
+    onChange({ min: parseNumber(draftMinRef.current), max: parseNumber(draftMaxRef.current) });
     setIsOpen(false);
     triggerRef.current?.focus();
   };
@@ -80,8 +77,7 @@ export function NumberRangeFilter({
   const clearAndClose = () => {
     draftMinRef.current = '';
     draftMaxRef.current = '';
-    onChangeMin(undefined);
-    onChangeMax(undefined);
+    onChange({});
     setIsOpen(false);
     triggerRef.current?.focus();
   };

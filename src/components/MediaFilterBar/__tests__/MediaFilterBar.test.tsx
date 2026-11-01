@@ -806,6 +806,18 @@ describe('MediaFilterBar — multi-value controls', () => {
     expect(screen.queryByRole('option', { name: /movie tags/i })).not.toBeInTheDocument();
   });
 
+  it('applies both ends of a range together, keeping the minimum', async () => {
+    const onRuleChange = vi.fn();
+    const user = setupUser();
+    render(<MediaFilterBar {...makeProps({ onRuleChange })} />);
+    await user.click(screen.getByRole('button', { name: 'Year filter' }));
+    await user.type(screen.getByLabelText('From'), '2');
+    await user.type(screen.getByLabelText('To'), '7');
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    expect(onRuleChange).toHaveBeenCalledTimes(1);
+    expect(onRuleChange).toHaveBeenCalledWith('shared', 'year', { min: 2, max: 7 });
+  });
+
   it('calls onRuleChange when a tag is selected', async () => {
     const onRuleChange = vi.fn();
     const user = setupUser();

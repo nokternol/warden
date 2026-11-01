@@ -11,8 +11,10 @@ const setup = (props: Partial<Parameters<typeof NumberRangeFilter>[0]> = {}) => 
       label="Size"
       min={undefined}
       max={undefined}
-      onChangeMin={onChangeMin}
-      onChangeMax={onChangeMax}
+      onChange={(range) => {
+        onChangeMin(range.min);
+        onChangeMax(range.max);
+      }}
       {...props}
     />
   );
