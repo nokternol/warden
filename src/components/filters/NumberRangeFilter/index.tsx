@@ -56,20 +56,28 @@ export function NumberRangeFilter({
     requestAnimationFrame(() => fromInputRef.current?.focus());
   }, [isOpen, min, max]);
 
+  // Closing without a change is not a change: an empty range means "remove this filter", which only
+  // Clear asks for.
+  const applyDrafts = useRef(() => {});
+  applyDrafts.current = () => {
+    const next = { min: parseNumber(draftMinRef.current), max: parseNumber(draftMaxRef.current) };
+    if (next.min !== (min ?? undefined) || next.max !== (max ?? undefined)) onChange(next);
+  };
+
   useEffect(() => {
     if (!isOpen) return;
     const handler = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        onChange({ min: parseNumber(draftMinRef.current), max: parseNumber(draftMaxRef.current) });
+        applyDrafts.current();
         setIsOpen(false);
       }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [isOpen, onChange]);
+  }, [isOpen]);
 
   const commitAndClose = () => {
-    onChange({ min: parseNumber(draftMinRef.current), max: parseNumber(draftMaxRef.current) });
+    applyDrafts.current();
     setIsOpen(false);
     triggerRef.current?.focus();
   };

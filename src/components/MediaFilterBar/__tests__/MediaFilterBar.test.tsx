@@ -806,6 +806,16 @@ describe('MediaFilterBar — multi-value controls', () => {
     expect(screen.queryByRole('option', { name: /movie tags/i })).not.toBeInTheDocument();
   });
 
+  it('keeps a range filter that was opened and closed with nothing entered', async () => {
+    const onRuleChange = vi.fn();
+    const user = setupUser();
+    render(<MediaFilterBar {...makeProps({ onRuleChange })} />);
+    await user.click(screen.getByRole('button', { name: 'Year filter' }));
+    await user.click(document.body);
+    expect(onRuleChange).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Year filter' })).toBeInTheDocument();
+  });
+
   it('applies both ends of a range together, keeping the minimum', async () => {
     const onRuleChange = vi.fn();
     const user = setupUser();
