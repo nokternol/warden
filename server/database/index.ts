@@ -48,7 +48,11 @@ export async function initializeDatabase(config: AppConfig): Promise<DrizzleDb> 
 
     return _db;
   } catch (error) {
-    log.error('Failed to initialize database', { error });
+    // A libsql error's fields do not serialize, so the message is logged explicitly.
+    log.error('Failed to initialize database', {
+      message: error instanceof Error ? error.message : String(error),
+      dbPath: config.DB_PATH,
+    });
     _db = null;
     _client = null;
     throw error;
