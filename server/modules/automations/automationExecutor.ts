@@ -12,7 +12,7 @@ import {
   mediaSourceFor,
   resolveActuatorTargets,
 } from '../media';
-import type { MediaSource, MediaSourceFactory } from '../media';
+import type { EnrichmentFields, MediaSource, MediaSourceFactory } from '../media';
 import type { MediaQueryService, QueryHealth } from '../mediaQueries';
 import {
   type ActuatorTask,
@@ -57,9 +57,12 @@ interface RunPlan {
   task: ActuatorTask;
   targets: RunTargets;
   actuatorIds: Parameters<ActuatorTask['run']>[0];
-  /** How many titles the query was evaluated against. */
+  /** How many source copies the query was evaluated against, and how many it matched. */
   poolSize: number;
+  matchedCount: number;
 }
+
+const ENRICHMENT_TASK_ID = 'system:enrichment';
 
 /** Below this many targets a destructive run is small enough to be its own limit. */
 const REACH_CHECK_MIN_ITEMS = 20;
@@ -68,10 +71,14 @@ const REACH_CHECK_MIN_ITEMS = 20;
  * Why a destructive run should not proceed: a query matching most of a library is almost always a
  * fault, such as data that failed to load, and nobody is watching a scheduled run to stop it.
  */
-function excessiveReach({ task, actuatorIds, poolSize }: RunPlan): string | undefined {
-  if (!task.destructive || actuatorIds.length < REACH_CHECK_MIN_ITEMS) return undefined;
-  if (actuatorIds.length * 2 <= poolSize) return undefined;
-  return `Not run: this would act on ${actuatorIds.length} of ${poolSize} titles, more than half the library. Narrow its queries if that is intended.`;
+export function excessiveReach({
+  task,
+  matchedCount,
+  poolSize,
+}: Pick<RunPlan, 'task' | 'matchedCount' | 'poolSize'>): string | undefined {
+  if (!task.destructive || matchedCount < REACH_CHECK_MIN_ITEMS) return undefined;
+  if (matchedCount * 2 <= poolSize) return undefined;
+  return `Not run: this would act on ${matchedCount} of ${poolSize} titles, more than half the library. Narrow its queries if that is intended.`;
 }
 
 /** A source that remembers how many items it returned. */
@@ -216,15 +223,18 @@ export class AutomationExecutor {
 
       // Runs through one provider take turns, so each plans against what the last one changed.
       await this.takeProviderTurn(automation.provider.id, async () => {
+        // The wait may be long: what runs is the automation as it stands when its turn comes.
+        const current = await this.automationService.getById(automationId);
+        if (automation.status === 'active' && current.status !== 'active') return;
         const providerSettings = await this.providerSettingsService.findById(
           automation.provider!.id
         );
-        const problems = await this.blockingProblems(providerSettings, automationQueries);
+        const problems = await this.blockingProblems(providerSettings, current.queries ?? []);
         if (problems.length > 0) {
           await this.recordSkip(automationId, taskId, problems.join('; '));
           return;
         }
-        const plan = await this.planRun(automation.taskId, providerSettings, automationQueries);
+        const plan = await this.planRun(current.taskId, providerSettings, current.queries ?? []);
         targets = plan.targets;
         itemCount = targets.items.length;
         const excess = excessiveReach(plan);
@@ -234,7 +244,7 @@ export class AutomationExecutor {
         }
         const run = await this.automationRunService.beginRun({ automationId, kind, targets });
         runId = run.id;
-        await plan.task.run(plan.actuatorIds, automation.taskParameter);
+        await plan.task.run(plan.actuatorIds, current.taskParameter);
         await this.recordResult(
           automationId,
           taskId,
@@ -322,9 +332,10 @@ export class AutomationExecutor {
   }
 
   /**
-   * A title with no stored value reads as having none: no play history reads as unwatched. A filter
-   * that matches such a title can only be trusted once its field has been loaded, or a task could
-   * act on titles it should not.
+   * A title with no stored value reads as having none: no play history reads as unwatched. Until
+   * enrichment data is known to be complete, a filter on it can select the wrong titles, whether
+   * an include matches a title it should not or an exclude fails to protect one. Fields a source
+   * supplies itself arrive with the catalog, so only enrichment-only rules are checked.
    */
   private async missingEnrichment(
     queryId: number,
@@ -334,17 +345,29 @@ export class AutomationExecutor {
     if (!this.enrichmentQueries) return [];
     const { filters } = await this.mediaQueryService.getById(queryId);
     const problems: string[] = [];
-    for (const { ruleKey, value } of filters) {
+    for (const { ruleKey } of filters) {
       const rule = getRule(ruleKey, contentType);
-      if (!rule?.sourceField || !rule.predicate({} as never, value)) continue;
+      if (!rule?.sourceField || rule.providers.some(isMediaSourceType)) continue;
       const producers = providerStatus.filter((s) => s.affectedFilterKeys.includes(ruleKey));
+      // A required provider's absence is already reported by the health check.
+      if (producers.some((s) => s.required && !s.configured)) continue;
       if (!producers.some((s) => s.configured)) {
         problems.push(`${rule.label} filter has no connected provider to supply its data`);
-      } else if (!(await this.enrichmentQueries.hasValues(rule.sourceField))) {
-        problems.push(`${rule.label} filter's data has not been loaded yet`);
+      } else if (!(await this.enrichmentIsComplete(rule.sourceField, contentType))) {
+        problems.push(`${rule.label} filter's data has not finished loading`);
       }
     }
     return problems;
+  }
+
+  /** The latest enrichment run finished cleanly, and this content type has values for the field. */
+  private async enrichmentIsComplete(
+    field: keyof EnrichmentFields,
+    contentType: ContentType
+  ): Promise<boolean> {
+    const latest = await this.automationRunService.latestStatusOfTask(ENRICHMENT_TASK_ID);
+    if (latest !== 'success') return false;
+    return (await this.enrichmentQueries?.hasValues(field, contentType)) ?? false;
   }
 
   /**
@@ -412,6 +435,7 @@ export class AutomationExecutor {
         targets: { contentType, items: [...targetById.values()] },
         actuatorIds: [...targetById.keys()],
         poolSize: mediaSource.count(),
+        matchedCount: matched.length,
       };
     }
 
@@ -426,9 +450,15 @@ export class AutomationExecutor {
       );
     }
     const entries = await this.mediaSourceFactory.sourcesFor(contentType);
+    let fetched: ReturnType<MediaSource['getMediaItems']> | undefined;
     const pooled = counting({
-      getMediaItems: async () =>
-        (await Promise.all(entries.map((e) => e.source.getMediaItems()))).flat(),
+      // Fetched once, so what a run excludes is judged on the same catalog as what it includes.
+      getMediaItems: () => {
+        fetched ??= Promise.all(entries.map((e) => e.source.getMediaItems())).then((all) =>
+          all.flat()
+        );
+        return fetched;
+      },
       idOf: () => undefined,
     });
     const matched = await this.mediaQueryEngine.evaluate({
@@ -436,16 +466,36 @@ export class AutomationExecutor {
       contentType,
       clauses: querySpecs,
     });
-    const { actuatorIds, addressed } = await resolveActuatorTargets(
-      this.db,
-      providerSettings.type,
-      matched
-    );
+    const resolved = await resolveActuatorTargets(this.db, providerSettings.type, matched);
+    // Copies of one title share an actuator id, so an exclude on any copy protects the title.
+    const excludes = querySpecs.filter((spec) => spec.role === 'exclude');
+    const protectedIds = new Set<string>();
+    if (excludes.length > 0) {
+      const excluded = await this.mediaQueryEngine.evaluate({
+        source: pooled,
+        contentType,
+        clauses: excludes.map((spec) => ({ ...spec, role: 'include' as const })),
+      });
+      const { actuatorIds } = await resolveActuatorTargets(
+        this.db,
+        providerSettings.type,
+        excluded
+      );
+      for (const id of actuatorIds) protectedIds.add(id);
+    }
+    const actuatorIds = resolved.actuatorIds.filter((id) => !protectedIds.has(id));
     return {
       task,
-      targets: { contentType, items: addressed },
+      targets: {
+        contentType,
+        items: resolved.addressed.filter((item) => {
+          const id = resolved.actuatorIdOf(item);
+          return id !== undefined && !protectedIds.has(id);
+        }),
+      },
       actuatorIds,
       poolSize: pooled.count(),
+      matchedCount: resolved.addressed.length,
     };
   }
 

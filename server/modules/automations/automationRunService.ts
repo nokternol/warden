@@ -169,10 +169,36 @@ export class AutomationRunService {
 
   /** A run still marked running at startup was cut off: its task may have acted on some items. */
   async closeInterruptedRuns(): Promise<void> {
+    const interrupted = await this.db
+      .select({ automationId: automationRuns.automationId, itemCount: automationRuns.itemCount })
+      .from(automationRuns)
+      .where(eq(automationRuns.status, 'running'));
+    for (const { automationId, itemCount } of interrupted) {
+      await this.db
+        .update(automations)
+        .set({
+          lastRunAt: new Date().toISOString(),
+          lastRunItemCount: itemCount ?? 0,
+          lastRunStatus: 'error',
+          lastRunError: INTERRUPTED_RUN_ERROR,
+        })
+        .where(eq(automations.id, automationId));
+    }
     await this.db
       .update(automationRuns)
       .set({ status: 'error', error: INTERRUPTED_RUN_ERROR })
       .where(eq(automationRuns.status, 'running'));
+  }
+
+  async latestStatusOfTask(taskId: string): Promise<AutomationRunStatus | undefined> {
+    const [row] = await this.db
+      .select({ status: automationRuns.status })
+      .from(automationRuns)
+      .innerJoin(automations, eq(automationRuns.automationId, automations.id))
+      .where(eq(automations.taskId, taskId))
+      .orderBy(desc(automationRuns.id))
+      .limit(1);
+    return row?.status as AutomationRunStatus | undefined;
   }
 
   async countRuns(opts: Pick<ListRunsOptions, 'automationId'> = {}): Promise<number> {

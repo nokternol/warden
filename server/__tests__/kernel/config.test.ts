@@ -95,6 +95,9 @@ describe('config', () => {
       process.env.BYPASS_AUTH = 'true';
       Reflect.deleteProperty(process.env, 'DB_PATH');
       expect(() => loadConfig()).toThrow(/BYPASS_AUTH needs its own DB_PATH/);
+      _resetConfig();
+      process.env.DB_PATH = 'config/db/warden.db';
+      expect(() => loadConfig()).toThrow(/BYPASS_AUTH needs its own DB_PATH/);
     });
 
     it('leaves the auth bypass off unless BYPASS_AUTH is "true"', () => {

@@ -1,5 +1,6 @@
-import { eq, inArray, sql } from 'drizzle-orm';
-import { enrichmentField, mediaEnrichment } from '../../../database/schema';
+import type { ContentType } from '@contract/schemas';
+import { and, eq, inArray, sql } from 'drizzle-orm';
+import { enrichmentField, mediaEnrichment, mediaIdentity } from '../../../database/schema';
 import type { DrizzleDb } from '../../../kernel/db';
 import type { EnrichmentFields } from '../mediaFieldProvider';
 
@@ -15,13 +16,14 @@ interface Deps {
 export class EnrichmentQueries {
   constructor(private deps: Deps) {}
 
-  /** Whether any title holds a value for this field, so its absence on one title means something. */
-  async hasValues(field: keyof EnrichmentFields): Promise<boolean> {
+  /** Whether any title of this content type holds a value for this field. */
+  async hasValues(field: keyof EnrichmentFields, contentType: ContentType): Promise<boolean> {
     const [row] = await this.deps.db
       .select({ id: mediaEnrichment.fieldId })
       .from(mediaEnrichment)
       .innerJoin(enrichmentField, eq(enrichmentField.id, mediaEnrichment.fieldId))
-      .where(eq(enrichmentField.key, field))
+      .innerJoin(mediaIdentity, eq(mediaIdentity.id, mediaEnrichment.mediaIdentityId))
+      .where(and(eq(enrichmentField.key, field), eq(mediaIdentity.kind, contentType)))
       .limit(1);
     return row !== undefined;
   }
@@ -46,10 +48,13 @@ export class EnrichmentQueries {
 
   async replaceFields(mediaIdentityId: number, values: Partial<EnrichmentFields>): Promise<void> {
     const keys = Object.keys(values) as (keyof EnrichmentFields)[];
-    await this.deps.db
+    const removeExisting = this.deps.db
       .delete(mediaEnrichment)
       .where(eq(mediaEnrichment.mediaIdentityId, mediaIdentityId));
-    if (keys.length === 0) return;
+    if (keys.length === 0) {
+      await removeExisting;
+      return;
+    }
 
     const fieldRows = await this.deps.db
       .select()
@@ -68,7 +73,8 @@ export class EnrichmentQueries {
       );
     }
 
-    await this.deps.db.insert(mediaEnrichment).values(
+    // One batch, so a run reading meanwhile never sees a title with its values gone.
+    const insertValues = this.deps.db.insert(mediaEnrichment).values(
       keys.flatMap((key) => {
         const fieldId = fieldIdByKey.get(key);
         return fieldId === undefined
@@ -76,5 +82,6 @@ export class EnrichmentQueries {
           : [{ mediaIdentityId, fieldId, value: JSON.stringify(values[key]) }];
       })
     );
+    await this.deps.db.batch([removeExisting, insertValues]);
   }
 }

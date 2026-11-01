@@ -32,14 +32,18 @@ export async function resolveActuatorTargets(
   db: DrizzleDb,
   actuatorType: MetadataProviderType,
   items: MediaItem[]
-): Promise<{ actuatorIds: string[]; addressed: MediaItem[] }> {
+): Promise<{
+  actuatorIds: string[];
+  addressed: MediaItem[];
+  actuatorIdOf: (item: MediaItem) => string | undefined;
+}> {
   const column = ADDRESS_COLUMN_BY_TYPE[actuatorType as AddressedActuatorType];
   if (!column) {
     throw new Error(`Provider type "${actuatorType}" has no actuator addressing space`);
   }
 
   const match = sourceCopyMatch(items);
-  if (!match) return { actuatorIds: [], addressed: [] };
+  if (!match) return { actuatorIds: [], addressed: [], actuatorIdOf: () => undefined };
 
   const rows = await db
     .select({
@@ -60,5 +64,6 @@ export async function resolveActuatorTargets(
   return {
     actuatorIds: [...new Set(actuatorIdByItemKey.values())],
     addressed: items.filter((item) => actuatorIdByItemKey.has(itemKey(item) ?? '')),
+    actuatorIdOf: (item) => actuatorIdByItemKey.get(itemKey(item) ?? ''),
   };
 }

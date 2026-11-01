@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { z } from 'zod';
 import { getChildLogger } from './logger';
 
@@ -55,10 +56,14 @@ const configSchema = z
     path: ['BYPASS_AUTH'],
   })
   // Whoever bypasses sign-in is testing, so they get a database of their own.
-  .refine((config) => !(config.BYPASS_AUTH && config.DB_PATH === DEFAULT_DB_PATH), {
-    message: 'BYPASS_AUTH needs its own DB_PATH, such as :memory:, not the default database',
-    path: ['BYPASS_AUTH'],
-  });
+  .refine(
+    (config) =>
+      !(config.BYPASS_AUTH && path.resolve(config.DB_PATH) === path.resolve(DEFAULT_DB_PATH)),
+    {
+      message: 'BYPASS_AUTH needs its own DB_PATH, such as :memory:, not the default database',
+      path: ['BYPASS_AUTH'],
+    }
+  );
 
 export type AppConfig = z.infer<typeof configSchema>;
 

@@ -28,6 +28,13 @@ describe('instance selection', () => {
     expect(storedSelection(OPTIONS, ['1:2'], ['1:2', '2:1'])).toEqual({ ids: [1], providerId: 2 });
   });
 
+  it('narrows on a removal too, so a removed option cannot still match', () => {
+    expect(storedSelection(OPTIONS, ['1:1', '2:1', '2:3'], ['1:1', '2:3'])).toEqual({
+      ids: [3],
+      providerId: 2,
+    });
+  });
+
   it('stores both when every option sharing an id is chosen', () => {
     expect(storedSelection(OPTIONS, ['1:1'], ['1:1', '2:1'])).toEqual({
       ids: [1, 1],

@@ -16,8 +16,7 @@ const MIGRATIONS_DIR = path.resolve(__dirname, 'migrations');
 
 /**
  * Copies a database that holds data before pending migrations change it, so a bad migration on an
- * unattended install can be undone by restoring the file. Named for the migration count it was at,
- * so a restart does not overwrite the copy.
+ * unattended install can be undone by restoring the file. Named for the migration count it was at.
  */
 export async function backUpBeforeMigrating(
   client: Client,

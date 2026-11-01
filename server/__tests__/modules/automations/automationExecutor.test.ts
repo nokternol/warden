@@ -111,6 +111,30 @@ function sonarrSource(
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
+/** Connects a play-history provider and records an enrichment run, as a running install has. */
+async function markEnrichmentLoaded(
+  providerSettingsService: ProviderSettingsService,
+  status: 'success' | 'error' = 'success'
+) {
+  const db = getDb();
+  await providerSettingsService.create({
+    type: MetadataProviderType.TAUTULLI,
+    name: 'Tautulli',
+    url: 'http://localhost:8181',
+    apiKey: 'k',
+  });
+  const [job] = await db
+    .insert(automations)
+    .values({
+      name: 'Enrichment',
+      kind: 'system',
+      taskId: 'system:enrichment',
+      schedule: '0 * * * *',
+    })
+    .returning();
+  await db.insert(automationRuns).values({ automationId: job.id, status, kind: 'system' });
+}
+
 async function seedRadarrProvider(providerSettingsService: ProviderSettingsService) {
   return providerSettingsService.create({
     type: MetadataProviderType.RADARR,
@@ -950,6 +974,8 @@ describe('AutomationExecutor', () => {
   // ─── Tier 2 enrichment filtering ─────────────────────────────────────────
 
   describe('Tier 2 enrichment — watched filter uses tautulliPlayCount from DB', () => {
+    beforeEach(() => markEnrichmentLoaded(providerSettingsService));
+
     it('only executes task on movies whose enrichment row shows playCount > 0', async () => {
       const db = getDb();
 
@@ -998,7 +1024,66 @@ describe('AutomationExecutor', () => {
     });
   });
 
+  describe('Tier 2 enrichment — trusting the data', () => {
+    async function watchedAutomation(valuesHeldBy: 'movie' | 'series' = 'movie') {
+      const db = getDb();
+      const provider = await seedRadarrProvider(providerSettingsService);
+      const [identity] = await db.insert(mediaIdentity).values({ kind: valuesHeldBy }).returning();
+      await new EnrichmentQueries({ db }).replaceFields(identity.id, { playCount: 3 });
+      const query = await mediaQueryService.create({
+        name: 'Unwatched',
+        contentType: 'movie',
+        filters: [{ ruleKey: 'watched', value: false }],
+      });
+      const automation = await seedAutomation(automationService, {
+        queryId: query.id,
+        providerId: provider.id,
+        taskId: 'unmonitorMovie',
+      });
+      const runner = new AutomationExecutor({
+        automationService,
+        automationRunService: new AutomationRunService({ db }),
+        providerSettingsService,
+        mediaQueryService,
+        providerFactory: {
+          create: () =>
+            radarrSource([], {
+              unmonitorMovies: async () => {},
+              triggerMoviesSearch: async () => {},
+            }),
+        },
+        db,
+      });
+      await runner.execute(automation.id);
+      const [run] = await new AutomationRunService({ db }).listRuns({
+        automationId: automation.id,
+      });
+      return run;
+    }
+
+    it('skips while the latest enrichment run did not finish cleanly', async () => {
+      await markEnrichmentLoaded(providerSettingsService, 'error');
+      const run = await watchedAutomation();
+      expect(run.status).toBe('skipped');
+      expect(run.error).toMatch(/has not finished loading/);
+    });
+
+    it('skips when only another content type has values', async () => {
+      await markEnrichmentLoaded(providerSettingsService);
+      const run = await watchedAutomation('series');
+      expect(run.status).toBe('skipped');
+    });
+
+    it('runs once enrichment has finished and values exist', async () => {
+      await markEnrichmentLoaded(providerSettingsService);
+      const run = await watchedAutomation();
+      expect(run.status).toBe('success');
+    });
+  });
+
   describe('Tier 2 enrichment — lastWatchedDaysAgo filter uses lastWatchedAt from DB', () => {
+    beforeEach(() => markEnrichmentLoaded(providerSettingsService));
+
     it('only executes task on movies whose enrichment row shows lastPlayed >= N days ago', async () => {
       const db = getDb();
       const tenDaysAgoUnix = Math.floor((Date.now() - 10 * 86_400_000) / 1000);
@@ -1064,6 +1149,8 @@ describe('AutomationExecutor', () => {
   // ─── Tier 2 enrichment — shows ───────────────────────────────────────────
 
   describe('Tier 2 enrichment — watched filter on shows uses enrichment DB (mergeShowEnrichment)', () => {
+    beforeEach(() => markEnrichmentLoaded(providerSettingsService));
+
     it('only executes task on shows whose enrichment row shows playCount > 0', async () => {
       const db = getDb();
 
