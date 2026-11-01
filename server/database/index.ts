@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { type Client, createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
@@ -11,6 +11,32 @@ import * as schema from './schema';
 const log = getChildLogger('Database');
 
 export type DrizzleDb = LibSQLDatabase<typeof schema> & { $client: Client };
+
+const MIGRATIONS_DIR = path.resolve(__dirname, 'migrations');
+
+/**
+ * Copies a database that holds data before pending migrations change it, so a bad migration on an
+ * unattended install can be undone by restoring the file. Named for the migration count it was at,
+ * so a restart does not overwrite the copy.
+ */
+export async function backUpBeforeMigrating(
+  client: Client,
+  dbFile: string,
+  migrationsDir: string
+): Promise<void> {
+  if (!existsSync(dbFile) || statSync(dbFile).size === 0) return;
+  const journal = JSON.parse(readFileSync(path.join(migrationsDir, 'meta/_journal.json'), 'utf-8'));
+  const tables = await client.execute(
+    "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = '__drizzle_migrations'"
+  );
+  if (tables.rows.length === 0) return;
+  const { rows } = await client.execute('SELECT count(*) AS applied FROM __drizzle_migrations');
+  const applied = Number(rows[0].applied);
+  if (applied >= journal.entries.length) return;
+  const backup = `${dbFile}.before-migration-${applied}`;
+  copyFileSync(dbFile, backup);
+  log.info('Backed up the database before migrating', { backup });
+}
 
 let _db: DrizzleDb | null = null;
 let _client: ReturnType<typeof createClient> | null = null;
@@ -40,8 +66,11 @@ export async function initializeDatabase(config: AppConfig): Promise<DrizzleDb> 
     _client = createClient({ url });
     _db = drizzle(_client, { schema });
 
+    if (url !== ':memory:')
+      await backUpBeforeMigrating(_client, url.slice('file:'.length), MIGRATIONS_DIR);
+
     await migrate(_db, {
-      migrationsFolder: path.resolve(__dirname, 'migrations'),
+      migrationsFolder: MIGRATIONS_DIR,
     });
 
     log.info('Database connection established and migrations applied');

@@ -3,6 +3,8 @@ import { getChildLogger } from './logger';
 
 const log = getChildLogger('Config');
 
+const DEFAULT_DB_PATH = './config/db/warden.db';
+
 const configSchema = z
   .object({
     // Server
@@ -17,7 +19,7 @@ const configSchema = z
     LOG_DIR: z.string().default('./config/logs'),
 
     // Database
-    DB_PATH: z.string().default('./config/db/warden.db'),
+    DB_PATH: z.string().default(DEFAULT_DB_PATH),
     DB_LOGGING: z
       .string()
       .default('false')
@@ -50,6 +52,11 @@ const configSchema = z
   })
   .refine((config) => !(config.BYPASS_AUTH && config.NODE_ENV === 'production'), {
     message: 'BYPASS_AUTH must not be enabled in production',
+    path: ['BYPASS_AUTH'],
+  })
+  // Whoever bypasses sign-in is testing, so they get a database of their own.
+  .refine((config) => !(config.BYPASS_AUTH && config.DB_PATH === DEFAULT_DB_PATH), {
+    message: 'BYPASS_AUTH needs its own DB_PATH, such as :memory:, not the default database',
     path: ['BYPASS_AUTH'],
   });
 

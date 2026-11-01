@@ -18,6 +18,10 @@ Everything written into the repo must be **durable**: useful to a future reader 
 - **Code comments** describe the code: what it does, why, and its constraints. Change language ("changed from…", "now we…", "fixed so that…") doesn't belong here, because once the change merges the comment is narrating a past that the reader can't see.
 - **Commits & PR bodies** describe the change they contain: what changed and why — What / Why / Changes / Testing. Change language ("X now requires sign-in") is correct here, since a commit *is* a change. What's excluded is the session's process: attempts, mistakes fixed along the way, "first… then…", RED/GREEN/REFACTOR steps, cycle-by-cycle evolution, or review back-and-forth.
 
+## Running the app
+
+`BYPASS_AUTH=true` is refused on the default database. Run with `DB_PATH=:memory:` or a scratch file, never against `config/db/`, which holds real provider config.
+
 ## UI changes
 
 Ladle story first, then in-place. (1) Create/update the component's `.stories.tsx`; `yarn ladle serve` + `playwright-cli` to iterate in isolation. (2) Then `yarn dev` + `playwright-cli` to verify in context. Don't skip the story step for non-trivial component work.

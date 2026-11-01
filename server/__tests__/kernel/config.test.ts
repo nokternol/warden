@@ -91,11 +91,18 @@ describe('config', () => {
       expect(config.TRUST_PROXY).toBe(true);
     });
 
+    it('refuses the auth bypass on the default database', () => {
+      process.env.BYPASS_AUTH = 'true';
+      Reflect.deleteProperty(process.env, 'DB_PATH');
+      expect(() => loadConfig()).toThrow(/BYPASS_AUTH needs its own DB_PATH/);
+    });
+
     it('leaves the auth bypass off unless BYPASS_AUTH is "true"', () => {
       expect(loadConfig().BYPASS_AUTH).toBe(false);
 
       _resetConfig();
       process.env.BYPASS_AUTH = 'true';
+      process.env.DB_PATH = ':memory:';
       expect(loadConfig().BYPASS_AUTH).toBe(true);
     });
 
