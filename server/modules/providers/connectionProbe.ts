@@ -4,9 +4,10 @@ import ky from 'ky';
 import { PROVIDER_CATALOGUE } from './providerCatalogue';
 
 /**
- * Probes a provider's connection details with one cheap call to its upstream
- * API; resolves when the provider answers, rejects otherwise. TVmaze is public
- * and keyless, so it resolves without a call.
+ * Probes a provider's connection details with one cheap call to its upstream API; resolves when
+ * the provider accepts them, rejects otherwise. Each call uses an endpoint that demands the key,
+ * since a public one would pass with any key or none. TVmaze is public and keyless, so it resolves
+ * without a call.
  */
 export async function probeConnection(
   type: MetadataProviderType,
@@ -15,6 +16,9 @@ export async function probeConnection(
 ): Promise<void> {
   const base = apiUrlOf(host, PROVIDER_CATALOGUE[type].apiPath);
   const key = apiKey ?? '';
+  if (PROVIDER_CATALOGUE[type].apiKeyRequired && key === '') {
+    throw new Error('Enter the API key to test this connection');
+  }
   const timeout = 8000;
 
   switch (type) {
@@ -24,7 +28,7 @@ export async function probeConnection(
       break;
     case MetadataProviderType.PLEX:
       await ky
-        .get(`${base}/identity`, {
+        .get(`${base}/library/sections`, {
           headers: { 'X-Plex-Token': key, Accept: 'application/json' },
           timeout,
         })
@@ -32,11 +36,11 @@ export async function probeConnection(
       break;
     case MetadataProviderType.JELLYFIN:
       await ky
-        .get(`${base}/System/Ping`, {
+        .get(`${base}/System/Info`, {
           headers: { 'X-Emby-Authorization': `MediaBrowser Token="${key}"` },
           timeout,
         })
-        .text();
+        .json();
       break;
     case MetadataProviderType.TAUTULLI:
       await ky
@@ -44,7 +48,7 @@ export async function probeConnection(
         .json();
       break;
     case MetadataProviderType.SEERR:
-      await ky.get(`${base}/api/v1/status`, { headers: { 'X-Api-Key': key }, timeout }).json();
+      await ky.get(`${base}/api/v1/auth/me`, { headers: { 'X-Api-Key': key }, timeout }).json();
       break;
     case MetadataProviderType.TVMAZE:
       return;
