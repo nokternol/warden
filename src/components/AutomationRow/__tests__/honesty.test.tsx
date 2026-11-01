@@ -128,6 +128,19 @@ describe('Run Now on a destructive task', () => {
     return button;
   };
 
+  it('confirms a task the catalogue no longer describes, since it could be destructive', async () => {
+    server.use(
+      mockProcedure(contract.providers.tasks, () => [{ providerId: 1, type: 'RADARR', tasks: [] }])
+    );
+    const user = userEvent.setup();
+    const onRun = vi.fn();
+    renderRow({ onRun });
+    await screen.findByText('Task no longer offered');
+    await user.click(await runButton());
+    expect(onRun).not.toHaveBeenCalled();
+    expect(await screen.findByRole('button', { name: /cancel/i })).toBeInTheDocument();
+  });
+
   it('confirms inline, stating the count, before running', async () => {
     destructive();
     const user = userEvent.setup();

@@ -1,8 +1,11 @@
 import StatusDot from '@app/components/StatusDot';
 import type { AutomationDto } from '@app/hooks/useAutomations';
+import { contract } from '@contract/index';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { mockProcedure } from '@tests/mocks/contract';
+import { server } from '@tests/mocks/server';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AutomationRow from '../index';
 
 const mockAutomation: AutomationDto = {
@@ -30,6 +33,25 @@ const enabledRunButton = async () => {
 };
 
 describe('AutomationRow', () => {
+  beforeEach(() => {
+    server.use(
+      mockProcedure(contract.providers.tasks, () => [
+        {
+          providerId: 1,
+          type: 'RADARR',
+          tasks: [
+            {
+              id: mockAutomation.taskId,
+              label: 'Unmonitor movie',
+              destructive: false,
+              enabled: true,
+            },
+          ],
+        },
+      ])
+    );
+  });
+
   it('renders the automation name', () => {
     render(<AutomationRow automation={mockAutomation} onToggle={vi.fn()} onDelete={vi.fn()} />);
     expect(screen.getByText('Archive old movies')).toBeInTheDocument();

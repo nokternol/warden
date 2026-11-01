@@ -174,6 +174,19 @@ describe('AutomationsPage', () => {
   it('POSTs /:id/run when a Run-now control is clicked', async () => {
     let runUrl = '';
     server.use(
+      mockProcedure(contract.providers.tasks, () =>
+        MOCK_AUTOMATIONS.flatMap((a) =>
+          a.provider
+            ? [
+                {
+                  providerId: a.provider.id,
+                  type: a.provider.type,
+                  tasks: [{ id: a.taskId, label: 'Unmonitor', destructive: false, enabled: true }],
+                },
+              ]
+            : []
+        )
+      ),
       mockProcedure(contract.automations.run, ({ request }) => {
         runUrl = request.url;
         return null;

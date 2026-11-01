@@ -73,7 +73,7 @@ function LastRun({ automation }: { automation: AutomationDto }) {
         </p>
       )}
       <p className="text-xs text-text-muted">
-        {itemCount > 0 && `${itemCount} items · `}
+        {itemCount > 0 && `${itemCount} ${itemCount === 1 ? 'item' : 'items'} · `}
         <a
           href={`/runs?automationId=${automation.id}`}
           aria-label={`Runs of ${automation.name}`}
@@ -172,7 +172,8 @@ function Root({
     tasksForProvider(availability, automation.provider.id).find((t) => t.id === automation.taskId);
   // Until the task catalogue answers, a user automation might be destructive, so it cannot run yet.
   const tasksKnown = !isUserAutomation || availability !== undefined || Boolean(tasksError);
-  const needsRunConfirmation = isUserAutomation && (task?.destructive ?? Boolean(tasksError));
+  // A task the catalogue no longer describes could still be destructive, so it confirms too.
+  const needsRunConfirmation = isUserAutomation && (task?.destructive ?? true);
   const taskLabel = task?.label ?? 'Task no longer offered';
   const extraQueries = automation.queries.length - 1;
 
