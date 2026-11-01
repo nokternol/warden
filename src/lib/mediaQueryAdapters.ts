@@ -53,6 +53,19 @@ export function toFilters(
 }
 
 /**
+ * Whether Media can show exactly this query. A filter whose rule is no longer offered has no
+ * control or URL param, so Media would show a wider set than the query selects.
+ */
+export function canOpenInMedia(
+  query: { contentType: ContentType; filters: Filter[] },
+  rules: MediaRuleDescriptor[]
+): boolean {
+  return query.filters.every(({ ruleKey }) =>
+    rules.some((r) => r.key === ruleKey && r.contentTypes.includes(query.contentType))
+  );
+}
+
+/**
  * The Media page URL showing a saved query: its filters as the params Media reads its filter state
  * from, on the query's own tab. The inverse of `toFilters`.
  */

@@ -3,6 +3,7 @@ import Button from '@app/components/Button';
 import { useFilterSummaryLookups } from '@app/hooks/useMediaLookups';
 import type { MediaQueryRecord, QueryHealth } from '@app/hooks/useMediaQueries';
 import { useMediaRules } from '@app/hooks/useMediaRules';
+import { canOpenInMedia } from '@app/lib/mediaQueryAdapters';
 import { summarizeFilters } from '@app/lib/utils/filterSummary';
 import { Clapperboard, Trash2 } from 'lucide-react';
 import { useState } from 'react';
@@ -44,6 +45,7 @@ export default function QueryRow({
   const { rules } = useMediaRules();
   const lookups = useFilterSummaryLookups();
   const parts = summarizeFilters(query.filters, rules, lookups);
+  const openable = !rules || canOpenInMedia(query, rules);
   const date = new Date(query.createdAt).toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
@@ -90,6 +92,11 @@ export default function QueryRow({
               <span className="text-xs text-text-muted">No filters</span>
             )}
           </div>
+          {!openable && (
+            <p className="text-xs text-text-secondary mt-1.5">
+              Uses a filter that is no longer available, so it can't open in Media.
+            </p>
+          )}
           {healthReasons(query.health).map((reason) => (
             <p key={reason} className="text-xs text-text-secondary mt-1.5">
               {reason}
@@ -129,7 +136,7 @@ export default function QueryRow({
                 variant="secondary"
                 size="sm"
                 aria-label={`Load ${query.name} in Media`}
-                disabled={!rules}
+                disabled={!rules || !openable}
                 onClick={onLoad}
                 className="gap-1.5"
               >

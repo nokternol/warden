@@ -1,4 +1,4 @@
-import { mediaHref } from '@app/lib/mediaQueryAdapters';
+import { canOpenInMedia, mediaHref } from '@app/lib/mediaQueryAdapters';
 import type { MediaRuleDescriptor } from '@contract/media';
 import { describe, expect, it } from 'vitest';
 
@@ -22,6 +22,26 @@ const RULES: MediaRuleDescriptor[] = [
     contentTypes: ['series'],
   },
 ];
+
+describe('canOpenInMedia', () => {
+  it('is true when every filter has an offered rule for the content type', () => {
+    expect(
+      canOpenInMedia(
+        { contentType: 'movie', filters: [{ ruleKey: 'watched', value: false }] },
+        RULES
+      )
+    ).toBe(true);
+  });
+
+  it('is false when a filter would be lost, since Media would show a wider set', () => {
+    expect(
+      canOpenInMedia(
+        { contentType: 'series', filters: [{ ruleKey: 'watched', value: false }] },
+        RULES
+      )
+    ).toBe(false);
+  });
+});
 
 describe('mediaHref', () => {
   it('turns a query into the URL Media reads its filters from', () => {

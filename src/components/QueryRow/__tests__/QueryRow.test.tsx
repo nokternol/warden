@@ -8,7 +8,7 @@ const mockQuery: MediaQueryRecord = {
   id: 1,
   name: 'Stale Movies',
   contentType: 'movie',
-  filters: [{ ruleKey: 'yearMax', value: 2020 }],
+  filters: [{ ruleKey: 'year', value: { max: 2020 } }],
   health: { status: 'healthy', providerStatus: [], qualificationIssues: [] },
   createdAt: '2024-01-15T00:00:00Z',
 };
@@ -27,6 +27,13 @@ describe('QueryRow', () => {
     await waitFor(() => expect(load).toBeEnabled());
     await user.click(load);
     expect(onLoad).toHaveBeenCalledTimes(1);
+  });
+
+  it('will not open in Media when a filter would be lost, and says why', async () => {
+    const query = { ...mockQuery, filters: [{ ruleKey: 'noLongerOffered', value: 'x' }] };
+    render(<QueryRow query={query} onLoad={vi.fn()} onDelete={vi.fn()} />);
+    expect(await screen.findByText(/no longer available/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /load/i })).toBeDisabled();
   });
 
   it('shows confirm UI before calling onDelete', async () => {
