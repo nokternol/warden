@@ -224,8 +224,11 @@ does not define its own TDD process. Each slice supplies the *input* to that ski
   session context), and comments never narrate the task. A cycle's commit message is the durable
   part of its record. The PR description summarises the slice's end state (What / Why / Changes /
   Testing).
-- **Design debt:** each row of the skill's **Design Debt** table becomes a GitHub issue labelled
-  `design-debt`, linked from the slice's PR.
+- **Findings:** a finding made while building or reviewing a slice is fixed in that slice if it is
+  small. If it would fail acceptance (a wrong result, a data or security risk, or a promised feature
+  or the [Definition of done](#definition-of-done) not met), it goes to the owner to decide, and if
+  it is not fixed in the slice it becomes an issue in the `MVP` milestone that G1 depends on. Anything
+  else is a note in the PR description and does not become an issue.
 - **Docs:** `docs-lifecycle` triggers for every moved, renamed or behaviour-changed file. Each heal
   gets a fracture-ledger entry, Open when the slice starts and Healed when it merges. Finish with
   `graphify update .`.
@@ -243,7 +246,7 @@ does not define its own TDD process. Each slice supplies the *input* to that ski
 - **Plan sign-off:** merging the PR that adds this file. Issues are created from the merged version.
 - **Slice sign-off:** reviewing and merging its PR. The issue's checklist must be met: the step
   list posted to the issue, one commit per green cycle, deletes done, gates green, docs updated,
-  design debt filed, and, for UI slices, screenshots shown to the user (not attached to the PR).
+  findings handled, and, for UI slices, screenshots shown to the user (not attached to the PR).
 - **MVP sign-off:** ticking G1's checklist (every In-scope feature, offered provider type and offered
   task, verified on the published image on the NAS), then closing the milestone. `docs-lifecycle`
   then folds this plan's lasting content into `docs/architecture/` and deletes it.
