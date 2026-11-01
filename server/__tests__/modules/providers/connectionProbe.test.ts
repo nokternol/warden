@@ -46,7 +46,7 @@ describe('probeConnection', () => {
       expect(token).toBe('tok');
     });
 
-    it('rejects a key Plex refuses', async () => {
+    it('says the key was refused when the address answered', async () => {
       server.use(
         http.get(
           'http://plex.local:32400/library/sections',
@@ -55,7 +55,14 @@ describe('probeConnection', () => {
       );
       await expect(
         probeConnection(MetadataProviderType.PLEX, 'http://plex.local:32400', 'bad')
-      ).rejects.toThrow();
+      ).rejects.toThrow('Plex refused this API key');
+    });
+
+    it('says the address could not be reached when nothing answered', async () => {
+      server.use(http.get('http://plex.local:32400/library/sections', () => HttpResponse.error()));
+      await expect(
+        probeConnection(MetadataProviderType.PLEX, 'http://plex.local:32400', 'tok')
+      ).rejects.toThrow("Couldn't reach Plex at this address");
     });
 
     it('rejects a key Jellyfin refuses', async () => {

@@ -1,6 +1,6 @@
 import { apiUrlOf } from '@contract/providerUrl';
 import { MetadataProviderType } from '@server/database/schema';
-import ky from 'ky';
+import ky, { HTTPError } from 'ky';
 import { PROVIDER_CATALOGUE } from './providerCatalogue';
 
 /**
@@ -19,6 +19,23 @@ export async function probeConnection(
   if (PROVIDER_CATALOGUE[type].apiKeyRequired && key === '') {
     throw new Error('Enter the API key to test this connection');
   }
+  const { label } = PROVIDER_CATALOGUE[type];
+  try {
+    await callProvider(type, base, key);
+  } catch (err) {
+    throw new Error(describeFailure(err, label));
+  }
+}
+
+/** One status answers both questions: a refused key means the address already worked. */
+function describeFailure(err: unknown, label: string): string {
+  if (!(err instanceof HTTPError)) return `Couldn't reach ${label} at this address`;
+  const { status } = err.response;
+  if (status === 401 || status === 403) return `${label} refused this API key`;
+  return `${label} answered with an error (${status})`;
+}
+
+async function callProvider(type: MetadataProviderType, base: string, key: string): Promise<void> {
   const timeout = 8000;
 
   switch (type) {
