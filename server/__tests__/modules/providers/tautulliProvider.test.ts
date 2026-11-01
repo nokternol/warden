@@ -114,4 +114,30 @@ describe('TautulliProvider — actuator tasks', () => {
 
     expect(deleteCalls).toEqual([]);
   });
+
+  it('reads every page of play history, not just the first', async () => {
+    const starts: string[] = [];
+    server.use(
+      http.get('*/api/v2', ({ request }) => {
+        const url = new URL(request.url);
+        const start = Number(url.searchParams.get('start'));
+        starts.push(String(start));
+        const count = start === 0 ? 1000 : 3;
+        return HttpResponse.json({
+          response: {
+            result: 'success',
+            data: {
+              data: Array.from({ length: count }, (_, i) => ({ rating_key: `${start + i}` })),
+            },
+          },
+        });
+      })
+    );
+    const history = await new TautulliProvider(
+      { url: 'http://tautulli.local:8181', apiKey: 'k' } as never,
+      { debug() {}, info() {}, warn() {}, error() {} } as never
+    ).getHistory();
+    expect(history).toHaveLength(1003);
+    expect(starts).toEqual(['0', '1000']);
+  });
 });
