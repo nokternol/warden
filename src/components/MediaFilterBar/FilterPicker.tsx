@@ -154,6 +154,9 @@ export function FilterPicker({ entries, onPick }: FilterPickerProps) {
         aria-label="Add filter"
       >
         <div className="sticky top-0 bg-surface-elevated border-b border-border p-2">
+          <p className="mb-2 text-xs text-text-secondary">
+            A title must match every filter you add.
+          </p>
           <input
             ref={searchRef}
             type="text"
@@ -168,7 +171,7 @@ export function FilterPicker({ entries, onPick }: FilterPickerProps) {
             }
             role="combobox"
             aria-expanded="true"
-            className="w-full px-2 py-1.5 rounded-sm text-xs bg-surface-bg border border-border text-text-primary placeholder:text-text-muted"
+            className="w-full px-2 py-1.5 rounded-sm text-xs max-sm:text-base max-sm:min-h-[44px] bg-surface-bg border border-border-input text-text-primary placeholder:text-text-muted"
           />
         </div>
         {/* Combobox pattern (biome.json override disables useFocusableInteractive here):

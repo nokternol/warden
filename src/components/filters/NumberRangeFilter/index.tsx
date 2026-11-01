@@ -155,7 +155,7 @@ export function NumberRangeFilter({
                 placeholder={fromPlaceholder}
                 onChange={(e) => setDraftMin(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="w-full px-2 py-1.5 rounded text-xs bg-surface-bg border border-border text-text-primary placeholder:text-text-muted tabular-nums"
+                className="w-full px-2 py-1.5 rounded text-xs max-sm:text-base max-sm:min-h-[44px] bg-surface-bg border border-border-input text-text-primary placeholder:text-text-muted tabular-nums"
               />
             </div>
             <span className="text-text-muted text-xs pb-[9px] flex-shrink-0">–</span>
@@ -173,7 +173,7 @@ export function NumberRangeFilter({
                 placeholder={toPlaceholder}
                 onChange={(e) => setDraftMax(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="w-full px-2 py-1.5 rounded text-xs bg-surface-bg border border-border text-text-primary placeholder:text-text-muted tabular-nums"
+                className="w-full px-2 py-1.5 rounded text-xs max-sm:text-base max-sm:min-h-[44px] bg-surface-bg border border-border-input text-text-primary placeholder:text-text-muted tabular-nums"
               />
             </div>
           </div>

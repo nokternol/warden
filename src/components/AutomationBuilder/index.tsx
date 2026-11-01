@@ -489,6 +489,10 @@ export default function AutomationBuilder({
                   !isValidCron && customSchedule && 'border-danger'
                 )}
               />
+              <p className="mt-1.5 text-xs text-text-muted max-w-prose">
+                Five fields: minute, hour, day of month, month, day of week. A * means every value,
+                so 0 3 * * 1-5 runs at 03:00, Monday to Friday.
+              </p>
             </div>
           )}
 

@@ -598,7 +598,7 @@ export function MediaFilterBar({
         aria-label="Filter by title"
         value={(values.shared.title as string) ?? ''}
         onChange={(e) => onRuleChange('shared', 'title', e.target.value)}
-        className="pl-8 pr-3 py-1.5 rounded-md text-xs bg-surface-bg border border-border text-text-primary placeholder:text-text-muted w-44"
+        className="pl-8 pr-3 py-1.5 rounded-md text-xs max-sm:text-base max-sm:min-h-[44px] bg-surface-bg border border-border-input text-text-primary placeholder:text-text-muted w-44"
       />
     </div>
   ) : null;
@@ -804,7 +804,7 @@ export function MediaFilterBar({
                     aria-label="Filter by title"
                     value={(values.shared.title as string) ?? ''}
                     onChange={(e) => onRuleChange('shared', 'title', e.target.value)}
-                    className="w-full pl-10 pr-3 py-3 rounded-lg text-sm bg-surface-bg border border-border text-text-primary placeholder:text-text-muted"
+                    className="w-full pl-10 pr-3 py-3 rounded-lg text-sm max-sm:text-base max-sm:min-h-[44px] bg-surface-bg border border-border-input text-text-primary placeholder:text-text-muted"
                   />
                 </div>
               </div>

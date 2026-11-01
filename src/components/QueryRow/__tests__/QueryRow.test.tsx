@@ -1,6 +1,10 @@
 import type { MediaQueryRecord } from '@app/hooks/useMediaQueries';
+import { contract } from '@contract/index';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { mockProcedureFailure } from '@tests/mocks/contract';
+import { server } from '@tests/mocks/server';
+import { SWRConfig } from 'swr';
 import { describe, expect, it, vi } from 'vitest';
 import QueryRow from '../index';
 
@@ -34,6 +38,16 @@ describe('QueryRow', () => {
     render(<QueryRow query={query} onLoad={vi.fn()} onDelete={vi.fn()} />);
     expect(await screen.findByText(/no longer available/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /load/i })).toBeDisabled();
+  });
+
+  it('says so when filter names fail to load', async () => {
+    server.use(mockProcedureFailure(contract.media.tags, 500));
+    render(
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        <QueryRow query={mockQuery} onLoad={vi.fn()} onDelete={vi.fn()} />
+      </SWRConfig>
+    );
+    expect(await screen.findByText(/couldn.t load filter names/i)).toBeInTheDocument();
   });
 
   it('shows confirm UI before calling onDelete', async () => {

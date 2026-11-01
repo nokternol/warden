@@ -7,10 +7,14 @@ export type MediaQualityProfile = MediaProfile;
 
 /** Just the instance data that names a saved filter's ids, flattened across providers. */
 export function useFilterSummaryLookups() {
-  const { data: tags } = useApi(api.media.tags, undefined);
-  const { data: profiles } = useApi(api.media.qualityProfiles, undefined);
-  const { data: languageProfiles } = useApi(api.media.languageProfiles, undefined);
+  const { data: tags, error: tagsError } = useApi(api.media.tags, undefined);
+  const { data: profiles, error: profilesError } = useApi(api.media.qualityProfiles, undefined);
+  const { data: languageProfiles, error: languageError } = useApi(
+    api.media.languageProfiles,
+    undefined
+  );
   return {
+    failed: Boolean(tagsError || profilesError || languageError),
     tags: [...(tags?.radarr ?? []), ...(tags?.sonarr ?? [])],
     qualityProfiles: [...(profiles?.radarr ?? []), ...(profiles?.sonarr ?? [])],
     languageProfiles: languageProfiles ?? [],
