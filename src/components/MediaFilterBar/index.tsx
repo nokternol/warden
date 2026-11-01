@@ -309,11 +309,12 @@ function RuleControl({
           max={readRangeBound(values, scope, rule.key, 'max')}
           dataMin={dataMin}
           dataMax={dataMax}
-          onChangeMin={(v) =>
-            onRuleChange(scope, rule.key, rangePatch(value as RangeValue | undefined, 'min', v))
-          }
-          onChangeMax={(v) =>
-            onRuleChange(scope, rule.key, rangePatch(value as RangeValue | undefined, 'max', v))
+          onChange={({ min, max }) =>
+            onRuleChange(
+              scope,
+              rule.key,
+              min === undefined && max === undefined ? undefined : { min, max }
+            )
           }
         />
       );
