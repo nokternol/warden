@@ -79,6 +79,15 @@ describe('MediaQueryEngine', () => {
   });
 });
 
+describe('matchItems — a filter naming no rule', () => {
+  it('fails rather than widening what the query selects', () => {
+    const item = normalizeRadarrMovie(createRadarrMovie(), 1);
+    expect(() => matchItems([item], [{ ruleKey: 'retiredRule', value: 'x' }], 'movie')).toThrow(
+      /no longer exists: retiredRule/
+    );
+  });
+});
+
 describe('matchItems — per-entry provider gate', () => {
   const items = [
     normalizeRadarrMovie(

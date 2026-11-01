@@ -88,7 +88,7 @@ EXPOSE 5057
 # /api/health is a public route. busybox wget ships with alpine, so no extra package is needed.
 # start-period covers Next.js preparation and migrations before failures count.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
-  CMD wget -q -O /dev/null http://127.0.0.1:5057/api/health || exit 1
+  CMD wget -q -O /dev/null http://127.0.0.1:${PORT:-5057}/api/health || exit 1
 
 # The container starts as root so the entrypoint can adopt PUID/PGID, then runs the server as that
 # user. dumb-init stays PID 1 so signals are forwarded correctly.

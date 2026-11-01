@@ -222,7 +222,8 @@ export const AutomationRunSchema = z
 /** One source copy a run targeted, titled through its group; `deleted` once it left its source. */
 export const RunItemSchema = z
   .object({
-    mediaItemId: z.number(),
+    id: z.number(),
+    mediaItemId: z.number().nullable(),
     title: z.string().nullable(),
     year: z.number().nullable(),
     deleted: z.boolean(),

@@ -187,6 +187,17 @@ check_adapts_to_volume_owner() {
   pass "$label"
 }
 
+# The health check follows PORT, so a changed port does not report a serving container as unhealthy.
+check_health_follows_port() {
+  local name="$NAME-id"
+  docker volume create "$name-config" >/dev/null
+  run_app "$name" "$name-config" -e PORT=5058
+  wait_healthy "$name"
+  docker rm -f "$name" >/dev/null
+  docker volume rm -f "$name-config" >/dev/null
+  pass "the health check follows PORT"
+}
+
 check_honours_tz() {
   local offset
   offset="$(docker exec "$CID" node -e 'process.stdout.write(String(new Date().getTimezoneOffset()))')"
@@ -314,6 +325,7 @@ check_healthy_and_serves_login
 check_image_optimiser_allows_poster_hosts
 check_runs_as_configured_identity
 check_honours_tz
+check_health_follows_port
 check_restart_keeps_data
 check_stops_within_budget
 if [[ "$MODE" == image ]]; then

@@ -15,6 +15,7 @@ import {
 } from '@server/modules/automations/automationRunService';
 import { AutomationService } from '@server/modules/automations/automationService';
 import type { NormalizedMovie } from '@server/modules/media';
+import { resetMediaData } from '@server/modules/media/mediaReset';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -238,6 +239,23 @@ describe('AutomationRunService', () => {
 
   // ─── listItemRuns ─────────────────────────────────────────────────────────
 
+  describe('a run outlives its media rows', () => {
+    it('still lists a title as removed after the media data is reset', async () => {
+      const { automation, provider } = await seedFixtures();
+      const run = await service.createRun({
+        automationId: automation.id,
+        status: 'success',
+        targets: movies(catalogMovie(provider.id, 1, 'Heat')),
+      });
+      await resetMediaData(getDb());
+
+      const { data, total } = await service.listRunItems(run.id);
+
+      expect(total).toBe(1);
+      expect(data[0]).toMatchObject({ title: 'Heat', mediaItemId: null, deleted: true });
+    });
+  });
+
   describe('listItemRuns', () => {
     it('lists the runs that targeted an item, newest first', async () => {
       const { automation, provider } = await seedFixtures();
@@ -261,7 +279,7 @@ describe('AutomationRunService', () => {
       });
       const [heatCopy] = (await service.listRunItems(first.id)).data;
 
-      const runs = await service.listItemRuns(heatCopy.mediaItemId);
+      const runs = await service.listItemRuns(heatCopy.mediaItemId as number);
 
       expect(runs.map((r) => r.id)).toEqual([third.id, first.id]);
     });

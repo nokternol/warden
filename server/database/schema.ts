@@ -306,21 +306,23 @@ export type MediaItem = typeof mediaItems.$inferSelect;
 export type NewMediaItem = typeof mediaItems.$inferInsert;
 
 // ---------------------------------------------------------------------------
-// automationRunItems — the source copies a run targeted. Titles resolve by join
-// through media_item → media_identity at read time; the run's ranAt dates it.
+// automationRunItems — the source copies a run targeted, with the title and year from when it
+// targeted them, so a run's history outlives the media rows: mediaItemId empties when a provider's
+// copies or the media data are removed. The run's ranAt dates it.
 // ---------------------------------------------------------------------------
 export const automationRunItems = sqliteTable(
   'automation_run_items',
   {
+    id: integer('id').primaryKey({ autoIncrement: true }),
     runId: integer('runId')
       .notNull()
       .references(() => automationRuns.id, { onDelete: 'cascade' }),
-    mediaItemId: integer('mediaItemId')
-      .notNull()
-      .references(() => mediaItems.id, { onDelete: 'cascade' }),
+    mediaItemId: integer('mediaItemId').references(() => mediaItems.id, { onDelete: 'set null' }),
+    title: text('title'),
+    year: integer('year'),
   },
   (table) => [
-    primaryKey({ columns: [table.runId, table.mediaItemId] }),
+    uniqueIndex('idx_automation_run_items_run_item').on(table.runId, table.mediaItemId),
     index('idx_automation_run_items_media_item').on(table.mediaItemId),
   ]
 );

@@ -20,6 +20,7 @@ import { OptionFilter } from '../filters/OptionFilter';
 import { TextFilter } from '../filters/TextFilter';
 import type { PickerEntry } from './FilterPicker';
 import { FilterPicker } from './FilterPicker';
+import { type InstanceOption, optionKey, selectedKeys, storedSelection } from './instanceSelection';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -160,27 +161,6 @@ function bySource<T>(pair: { radarr: T; sonarr: T }, scope: ContentScope): T {
 }
 
 /** An id option from an instance's lookup, carrying the instance it belongs to. */
-interface InstanceOption {
-  id: number;
-  displayName: string;
-  providerId: number;
-  providerName: string;
-}
-
-/** The single instance every selected option belongs to, or `undefined` when the
- *  selection spans zero or several instances. A mixed selection stays unqualified:
- *  each item is matched in its own instance's id space, since one instance's ids
- *  cannot qualify another's. */
-function qualifyingProviderId(
-  options: InstanceOption[],
-  selectedIds: number[]
-): number | undefined {
-  const providerIds = new Set(
-    options.filter((o) => selectedIds.includes(o.id)).map((o) => o.providerId)
-  );
-  return providerIds.size === 1 ? Array.from(providerIds)[0] : undefined;
-}
-
 function tagOption(t: MediaTag): InstanceOption {
   return { id: t.id, displayName: t.label, providerId: t.providerId, providerName: t.providerName };
 }
@@ -219,6 +199,13 @@ function hasMultipleInstances(
 function stringOptions(lookup: StringLookup, scope: ContentScope, lookups: Lookups): string[] {
   if (lookup === 'genres') return scope === 'movie' ? lookups.genres.movies : lookups.genres.series;
   return lookups[lookup];
+}
+
+/** A multi-value rule whose lookup returned nothing has no value to choose, so it isn't offered. */
+function hasChoices(rule: MediaRuleDescriptor, scope: ContentScope, lookups: Lookups): boolean {
+  if (rule.dataType === 'instance-ids') return idOptions(rule.lookup, scope, lookups).length > 0;
+  if (rule.dataType === 'csv-strings') return stringOptions(rule.lookup, scope, lookups).length > 0;
+  return true;
 }
 
 // ─── Value access + range collapse ────────────────────────────────────────────
@@ -385,24 +372,28 @@ function RuleControl({
     case 'instance-ids': {
       const options = idOptions(rule.lookup, scope, lookups);
       const grouped = rule.instanceScoped === true && hasMultipleInstances(scope, sources);
+      const qualifier =
+        scope === 'movie'
+          ? values.movieQualifiers[rule.key]
+          : scope === 'series'
+            ? values.seriesQualifiers[rule.key]
+            : undefined;
+      const selected = selectedKeys(options, parseIds(value as string | undefined), qualifier);
       return (
         <MultiSelectFilter
           label={rule.label}
           options={options.map((o) => ({
-            value: o.id,
+            value: optionKey(o),
             label: o.displayName,
             group: grouped ? o.providerName : undefined,
           }))}
-          selected={parseIds(value as string | undefined)}
+          selected={selected}
           spanNote={grouped ? SPANS_INSTANCES_NOTE : undefined}
-          onChange={(ids) => {
+          onChange={(next) => {
+            const { ids, providerId } = storedSelection(options, selected, next);
             onRuleChange(scope, rule.key, toCsv(ids));
             if (rule.instanceScoped && (scope === 'movie' || scope === 'series')) {
-              onQualifierChange(
-                scope,
-                rule.key,
-                grouped ? qualifyingProviderId(options, ids) : undefined
-              );
+              onQualifierChange(scope, rule.key, grouped ? providerId : undefined);
             }
           }}
         />
@@ -505,11 +496,13 @@ export function MediaFilterBar({
         .map(([heading, entries]): [string, PickerEntry[]] => [
           heading,
           entries
-            .filter(({ rule, scope }) => !isRuleVisible(rule, scope))
+            .filter(
+              ({ rule, scope }) => !isRuleVisible(rule, scope) && hasChoices(rule, scope, lookups)
+            )
             .map(({ rule, scope }) => ({ rule, scope, group: heading })),
         ])
         .filter(([, entries]) => entries.length > 0),
-    [sections, isRuleVisible]
+    [sections, isRuleVisible, lookups]
   );
 
   const handlePick = (entry: PickerEntry) => {

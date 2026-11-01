@@ -44,6 +44,7 @@ describe('RunRow details', () => {
         const offset = Number(url.searchParams.get('offset') ?? 0);
         const limit = Number(url.searchParams.get('limit') ?? 100);
         const all = Array.from({ length: 150 }, (_, i) => ({
+          id: i,
           mediaItemId: i,
           title: `Title ${i}`,
           year: null,
@@ -73,6 +74,7 @@ describe('RunRow details', () => {
           status: 'ok',
           data: {
             data: Array.from({ length: 100 }, (_, i) => ({
+              id: i,
               mediaItemId: i,
               title: `Title ${i}`,
               year: 2000,

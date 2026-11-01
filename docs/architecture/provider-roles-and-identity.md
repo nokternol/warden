@@ -117,14 +117,14 @@ never addresses it, so no task receives an id for media that has gone. `resolveG
 `media_identity`, so a title that returns reuses its retained group, and the upsert clears the mark on the
 same row.
 
-`automation_run_items(runId, mediaItemId)` links a run to every source copy it targeted. The composite
-primary key answers "what did this run touch", and the `mediaItemId` index answers "which runs touched this
+`automation_run_items(runId, mediaItemId, title, year)` links a run to every source copy it targeted. The
+`runId` and `mediaItemId` unique index answers "what did this run touch", and the `mediaItemId` index answers "which runs touched this
 item" (`AutomationRunService.listRunItems` / `listItemRuns`,
 [`server/modules/automations/automationRunService.ts`](ref:path:server/modules/automations/automationRunService.ts)).
-There is no title or payload column: titles and years resolve at read time through `media_item` →
-`media_identity`. Both keys cascade, so deleting a run, a provider (and with it its copies) or the derived
-media data (`resetMediaData`) removes the links rather than blocking. In those cases the run row and its
-`itemCount` remain and its item list shrinks.
+A link keeps the title and year from when the run targeted the copy, so a run's history outlives the media
+rows. Deleting a run removes its links. Deleting a provider deletes its automations and their runs. Removing
+copies a surviving run targeted, through another provider's deletion or the derived media data
+(`resetMediaData`), empties `mediaItemId`, and the run still lists those titles as removed.
 
 The executor records **targeted** items, because `ActuatorTask.run(ids)` is batch-shaped and returns
 nothing per item; the run's status and error cover the whole batch, including a run whose task threw

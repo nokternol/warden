@@ -151,8 +151,20 @@ describe('GET /api/automations/runs', () => {
     expect(res.status).toBe(200);
     expect(res.body.data.total).toBe(3);
     expect(res.body.data.data).toEqual([
-      { mediaItemId: expect.any(Number), title: 'Heat', year: 1990, deleted: false },
-      { mediaItemId: expect.any(Number), title: 'Ronin', year: 1992, deleted: false },
+      {
+        id: expect.any(Number),
+        mediaItemId: expect.any(Number),
+        title: 'Heat',
+        year: 1990,
+        deleted: false,
+      },
+      {
+        id: expect.any(Number),
+        mediaItemId: expect.any(Number),
+        title: 'Ronin',
+        year: 1992,
+        deleted: false,
+      },
     ]);
   });
 });

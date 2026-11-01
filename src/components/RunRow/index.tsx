@@ -119,7 +119,7 @@ function TargetedItemList({ runId }: { runId: number }) {
     <>
       <ul className={styles.itemList}>
         {items.map((item) => (
-          <TargetedItem key={item.mediaItemId} item={item} />
+          <TargetedItem key={item.id} item={item} />
         ))}
       </ul>
       {total > items.length && (

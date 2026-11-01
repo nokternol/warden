@@ -102,6 +102,25 @@ describe('MediaQueryService', () => {
     expect(dto.health.status).toBe('degraded');
   });
 
+  it('does not report a provider type that cannot be configured as missing', async () => {
+    await getDb().insert(metadataProviders).values({
+      type: MetadataProviderType.SONARR,
+      name: 'Sonarr',
+      url: 'http://s',
+      isActive: true,
+    });
+    await service.create({
+      name: 'Series genres',
+      contentType: 'series',
+      filters: [{ ruleKey: 'genres', value: 'Drama' }],
+    });
+    const [dto] = await service.list();
+    expect(dto.health.status).toBe('healthy');
+    expect(dto.health.providerStatus.map((p) => p.providerType)).toEqual([
+      MetadataProviderType.SONARR,
+    ]);
+  });
+
   it('flags a qualificationIssue and degrades health when an entry is qualified to a providerId that is not an active instance', async () => {
     const db = getDb();
     const [provider] = await db

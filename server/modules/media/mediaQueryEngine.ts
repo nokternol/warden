@@ -1,5 +1,6 @@
 import { type ContentType, isInstanceScopedValue } from '@contract/schemas';
 import type { DrizzleDb } from '../../kernel/db';
+import { ValidationError } from '../../kernel/errors';
 import { type QueryResult, evaluateCombination } from './combinationEvaluator';
 import type { EnrichmentQueries } from './enrichment/enrichment.queries';
 import { mergeEnrichment } from './enrichmentMerge';
@@ -42,7 +43,8 @@ export type { MediaItemSet };
 
 /**
  * The engine's match primitive: the subset of `items` satisfying every predicate
- * in `filters` under the registry for `contentType`. Unknown keys pass through.
+ * in `filters` under the registry for `contentType`. A key naming no rule throws: treating it as
+ * matching everything widens an include, and matching nothing widens through an exclude.
  * A filter whose value names a `providerId` is a claim about one instance's namespace — an
  * item from another instance cannot satisfy it, so it fails the entry outright rather
  * than falling through to the predicate.
@@ -55,7 +57,8 @@ export function matchItems<T extends NormalizedMovie | NormalizedSeries>(
   return items.filter((item) =>
     filters.every(({ ruleKey, value }) => {
       const rule = getRule(ruleKey, contentType);
-      if (!rule) return true;
+      if (!rule)
+        throw new ValidationError(`This query uses a filter that no longer exists: ${ruleKey}`);
       if (isInstanceScopedValue(value) && value.providerId !== undefined) {
         if (item._sourceIds.providerId !== value.providerId) return false;
       }
