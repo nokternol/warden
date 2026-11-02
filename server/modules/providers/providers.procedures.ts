@@ -172,10 +172,14 @@ export function createProvidersProcedures(
       assertOfferedType(input.type);
       const stored =
         input.id === undefined ? undefined : await providerSettingsService.findById(input.id);
-      // Only a test of exactly what is saved describes the provider; a test of an address or key
-      // being edited says nothing about the saved one, so it is not kept.
+      // Only a test of what is saved describes the provider; a test of an address or key being
+      // edited says nothing about the saved one, so it is not kept. The address is compared by
+      // origin, as the stored key is: callers send the host, and a saved URL carries its type's
+      // API path (Radarr's /api/v3), so the two strings differ for the same saved provider.
       const testsSaved =
-        stored !== undefined && input.apiKey === undefined && input.url === stored.url;
+        stored !== undefined &&
+        input.apiKey === undefined &&
+        new URL(input.url).origin === new URL(stored.url).origin;
       let result: { ok: true } | { ok: false; error: string };
       try {
         const apiKey =
