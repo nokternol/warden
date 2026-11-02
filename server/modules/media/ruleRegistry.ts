@@ -281,8 +281,8 @@ export const MEDIA_RULES = [
     predicate: (item, value) => item.hasFile === asBool(value),
   },
   {
-    key: 'fileSizeBytes',
-    label: 'File size (bytes)',
+    key: 'fileSizeGb',
+    label: 'File size (GB)',
     group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
@@ -291,7 +291,7 @@ export const MEDIA_RULES = [
     required: false,
     predicate: (item, value) => {
       if (item.fileSizeBytes === undefined) return false;
-      return inRange(item.fileSizeBytes, value);
+      return inRange(item.fileSizeBytes / 1_073_741_824, value);
     },
   },
   {
