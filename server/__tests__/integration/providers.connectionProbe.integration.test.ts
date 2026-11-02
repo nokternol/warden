@@ -116,6 +116,87 @@ describe('GET /api/providers/test', () => {
     expect(contacted).toBe(false);
   });
 
+  describe("a saved provider's last test", () => {
+    async function saved(url: string) {
+      const created = await request(authedApp)
+        .post('/api/providers')
+        .send({
+          type: MetadataProviderType.SEERR,
+          name: 'Seerr',
+          url,
+          apiKey: 'stored',
+          isActive: false,
+        });
+      return created.body.data.id as number;
+    }
+    async function lastTestOf(id: number) {
+      const list = await request(authedApp).get('/api/providers');
+      return list.body.data.find((p: { id: number }) => p.id === id).lastTest;
+    }
+
+    it('is absent before the provider has been tested', async () => {
+      const id = await saved('http://seerr-untested.local');
+
+      expect(await lastTestOf(id)).toBeNull();
+    });
+
+    it('is kept after a successful test of the saved settings', async () => {
+      const url = 'http://seerr-ok.local';
+      server.use(http.get(`${url}/api/v1/auth/me`, () => HttpResponse.json({ status: 'ok' })));
+      const id = await saved(url);
+
+      await request(authedApp)
+        .get('/api/providers/test')
+        .query({ type: MetadataProviderType.SEERR, url, id });
+
+      const lastTest = await lastTestOf(id);
+      expect(lastTest).toMatchObject({ ok: true, error: null });
+      expect(Date.now() - Date.parse(lastTest.at)).toBeLessThan(60_000);
+    });
+
+    it('is kept, with its reason, after a failed test of the saved settings', async () => {
+      const url = 'http://seerr-down.local';
+      server.use(http.get(`${url}/api/v1/auth/me`, () => new HttpResponse(null, { status: 401 })));
+      const id = await saved(url);
+
+      await request(authedApp)
+        .get('/api/providers/test')
+        .query({ type: MetadataProviderType.SEERR, url, id });
+
+      const lastTest = await lastTestOf(id);
+      expect(lastTest.ok).toBe(false);
+      expect(lastTest.error).toEqual(expect.any(String));
+    });
+
+    it('is not changed by testing an address being edited, which is not yet saved', async () => {
+      const url = 'http://seerr-saved.local';
+      const draft = 'http://seerr-draft.local';
+      server.use(http.get(`${draft}/api/v1/auth/me`, () => HttpResponse.json({ status: 'ok' })));
+      const id = await saved(url);
+
+      await request(authedApp)
+        .get('/api/providers/test')
+        .query({ type: MetadataProviderType.SEERR, url: draft, apiKey: 'new', id });
+
+      expect(await lastTestOf(id)).toBeNull();
+    });
+
+    it('is cleared when the saved address changes', async () => {
+      const url = 'http://seerr-moving.local';
+      server.use(http.get(`${url}/api/v1/auth/me`, () => HttpResponse.json({ status: 'ok' })));
+      const id = await saved(url);
+      await request(authedApp)
+        .get('/api/providers/test')
+        .query({ type: MetadataProviderType.SEERR, url, id });
+
+      await request(authedApp)
+        .patch(`/api/providers/${id}`)
+        .send({ url: 'http://seerr-moved.local' });
+
+      expect(await lastTestOf(id)).toBeNull();
+    });
+  });
+
   it('refuses to probe a type that is not offered, without contacting it', async () => {
     const OMDB_URL = 'http://omdb.local';
     let contacted = false;

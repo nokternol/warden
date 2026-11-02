@@ -198,6 +198,10 @@ export const ProviderSchema = z
     apiKey: z.union([z.literal('***'), z.null()]),
     settings: z.record(z.string(), z.unknown()).nullable(),
     isActive: z.boolean(),
+    /** The last connection test of the saved address and key; null until one has run. */
+    lastTest: z
+      .object({ ok: z.boolean(), at: IsoDateSchema, error: z.string().nullable() })
+      .nullable(),
     createdAt: IsoDateSchema,
     updatedAt: IsoDateSchema,
   })

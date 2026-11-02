@@ -15,6 +15,7 @@ const provider: ProviderSummary = {
   apiKey: '***',
   settings: null,
   isActive: true,
+  lastTest: null,
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
 };
@@ -29,6 +30,23 @@ describe('ProviderCard state', () => {
     renderCard();
     expect(screen.queryByText('Connected')).not.toBeInTheDocument();
     expect(screen.getByText('Not tested')).toBeInTheDocument();
+  });
+
+  it("shows the provider's last stored test result before anything is tested on the page", () => {
+    renderCard({
+      provider: { ...provider, lastTest: { ok: true, at: '2024-01-02T00:00:00Z', error: null } },
+    });
+    expect(screen.getByText('Connected')).toBeInTheDocument();
+  });
+
+  it('shows a stored failed test as failed', () => {
+    renderCard({
+      provider: {
+        ...provider,
+        lastTest: { ok: false, at: '2024-01-02T00:00:00Z', error: 'Radarr rejected the API key' },
+      },
+    });
+    expect(screen.getByText('Connection failed')).toBeInTheDocument();
   });
 
   it('says Connected once a test with the stored key has passed', async () => {

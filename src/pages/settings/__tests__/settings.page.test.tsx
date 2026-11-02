@@ -25,6 +25,7 @@ function makeProvider(overrides: Partial<ProviderSummary> = {}): ProviderSummary
     apiKey: '***',
     settings: null,
     isActive: true,
+    lastTest: null,
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z',
     ...overrides,

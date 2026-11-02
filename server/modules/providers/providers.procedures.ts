@@ -170,17 +170,24 @@ export function createProvidersProcedures(
 
     test: api.providers.test.handler(async ({ input }) => {
       assertOfferedType(input.type);
+      const stored =
+        input.id === undefined ? undefined : await providerSettingsService.findById(input.id);
+      // Only a test of exactly what is saved describes the provider; a test of an address or key
+      // being edited says nothing about the saved one, so it is not kept.
+      const testsSaved =
+        stored !== undefined && input.apiKey === undefined && input.url === stored.url;
+      let result: { ok: true } | { ok: false; error: string };
       try {
         const apiKey =
           input.apiKey ??
-          (input.id === undefined
-            ? undefined
-            : await storedKeyFor(await providerSettingsService.findById(input.id), input.url));
+          (stored === undefined ? undefined : await storedKeyFor(stored, input.url));
         await probeConnection(input.type as MetadataProviderType, input.url, apiKey);
-        return { ok: true };
+        result = { ok: true };
       } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+        result = { ok: false, error: err instanceof Error ? err.message : String(err) };
       }
+      if (testsSaved) await providerSettingsService.recordTest(stored.id, result);
+      return result;
     }),
 
     // ─── Capabilities ──────────────────────────────────────────────────────
