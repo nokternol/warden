@@ -118,15 +118,13 @@ describe('GET /api/providers/test', () => {
 
   describe("a saved provider's last test", () => {
     async function saved(url: string) {
-      const created = await request(authedApp)
-        .post('/api/providers')
-        .send({
-          type: MetadataProviderType.SEERR,
-          name: 'Seerr',
-          url,
-          apiKey: 'stored',
-          isActive: false,
-        });
+      const created = await request(authedApp).post('/api/providers').send({
+        type: MetadataProviderType.SEERR,
+        name: 'Seerr',
+        url,
+        apiKey: 'stored',
+        isActive: false,
+      });
       return created.body.data.id as number;
     }
     async function lastTestOf(id: number) {
