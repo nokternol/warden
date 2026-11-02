@@ -57,6 +57,10 @@ RUN apk add --no-cache dumb-init su-exec
 
 ENV NODE_ENV=production
 
+# The version /api/health reports. CI passes the release tag or commit sha; a local build is "local".
+ARG COMMIT_TAG=local
+ENV COMMIT_TAG=$COMMIT_TAG
+
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY package.json ./
 

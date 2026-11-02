@@ -28,7 +28,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - run: docker build -t warden:smoke .
+      # The version /api/health reports: the tag for a release, the commit otherwise.
+      - run: docker build --build-arg COMMIT_TAG=${{ github.ref_type == 'tag' && github.ref_name || github.sha }} -t warden:smoke .
       - run: SMOKE_SKIP_BUILD=1 IMAGE=warden:smoke scripts/container-smoke.sh
       - run: SMOKE_SKIP_BUILD=1 IMAGE=warden:smoke scripts/container-smoke.sh --compose
       # What is published is the image that was smoked: hand it to the publish job instead of

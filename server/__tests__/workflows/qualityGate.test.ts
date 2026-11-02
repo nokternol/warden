@@ -57,6 +57,24 @@ describe('quality gate workflow: container smoke', () => {
   });
 });
 
+describe('quality gate workflow: image version', () => {
+  const dockerfile = readFileSync(path.join(__dirname, '../../../Dockerfile'), 'utf8');
+  const runtimeStage = dockerfile.slice(dockerfile.lastIndexOf('FROM '));
+
+  it('builds the image with the version it reports, the tag for a release and the commit otherwise', () => {
+    const build = container.steps.find((s) => /docker build/.test(s.run ?? ''));
+
+    expect(build?.run).toMatch(
+      /--build-arg COMMIT_TAG=\$\{\{ github\.ref_type == 'tag' && github\.ref_name \|\| github\.sha \}\}/
+    );
+  });
+
+  it('carries that version into the running container, where the health check reports it', () => {
+    expect(runtimeStage).toMatch(/^ARG COMMIT_TAG=local$/m);
+    expect(runtimeStage).toMatch(/^ENV COMMIT_TAG=\$COMMIT_TAG$/m);
+  });
+});
+
 describe('quality gate workflow: triggers', () => {
   it('runs on pushes to main and on v* tags', () => {
     expect(workflow.on.push?.branches).toEqual(['main']);
