@@ -102,6 +102,22 @@ describe('MediaQueryService', () => {
     expect(dto.health.status).toBe('degraded');
   });
 
+  it('is healthy when a filter has a connected provider, though others that could supply it are not', async () => {
+    await getDb().insert(metadataProviders).values({
+      type: MetadataProviderType.RADARR,
+      name: 'Radarr',
+      url: 'http://r',
+      isActive: true,
+    });
+    await service.create({
+      name: 'Early 2000s',
+      contentType: 'movie',
+      filters: [{ ruleKey: 'year', value: { min: 2000, max: 2005 } }],
+    });
+    const [dto] = await service.list();
+    expect(dto.health.status).toBe('healthy');
+  });
+
   it('does not report a provider type that cannot be configured as missing', async () => {
     await getDb().insert(metadataProviders).values({
       type: MetadataProviderType.SONARR,

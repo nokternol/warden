@@ -27,6 +27,7 @@ function makeProvider(overrides: Partial<ProviderSummary> = {}): ProviderSummary
     apiKey: '***',
     settings: null,
     isActive: true,
+    lastTest: null,
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z',
     ...overrides,
@@ -122,6 +123,17 @@ describe('AutomationBuilder', () => {
     expect(await screen.findByText('Radarr 4K')).toBeInTheDocument();
     expect(screen.getByText('Radarr 1080p')).toBeInTheDocument();
     expect(screen.getAllByRole('radio', { name: /unmonitor movie/i })).toHaveLength(2);
+  });
+
+  it("heads each instance's tasks with its name and its type's display name, not the type code", async () => {
+    mockApi(
+      [makeProvider({ id: 1, name: 'Home' })],
+      [{ providerId: 1, type: 'RADARR', tasks: [ENABLED_UNMONITOR] }]
+    );
+    renderBuilder();
+    expect(await screen.findByText('Home')).toBeInTheDocument();
+    expect(await screen.findByText('Radarr')).toBeInTheDocument();
+    expect(screen.queryByText('RADARR')).not.toBeInTheDocument();
   });
 
   it('does not offer tasks for an inactive provider instance', async () => {

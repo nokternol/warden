@@ -106,8 +106,13 @@ export default function ProviderCard({
     apiKey: '',
     userId: typeof provider.settings?.userId === 'string' ? provider.settings.userId : '',
   });
-  const [testStatus, setTestStatus] = useState<TestStatus>('idle');
-  const [testError, setTestError] = useState<string | undefined>();
+  // Starts from the last stored test of the saved settings, so a reload does not forget it.
+  const [testStatus, setTestStatus] = useState<TestStatus>(
+    provider.lastTest ? (provider.lastTest.ok ? 'pass' : 'fail') : 'idle'
+  );
+  const [testError, setTestError] = useState<string | undefined>(
+    provider.lastTest?.error ?? undefined
+  );
   const testAbortRef = useRef<AbortController | null>(null);
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);

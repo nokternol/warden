@@ -674,19 +674,25 @@ describe('series predicates', () => {
 // ─── File-tech and release-date predicates (Plex-sourced, shared) ────────────
 
 describe('file-tech and release-date predicates', () => {
-  it('fileSizeBytes — movie: passes within min/max bounds', () => {
-    const rule = getRule('fileSizeBytes', 'movie')!;
-    expect(rule.predicate({ ...baseMovie, fileSizeBytes: 1000 }, { min: 500 })).toBe(true);
-    expect(rule.predicate({ ...baseMovie, fileSizeBytes: 1000 }, { min: 1500 })).toBe(false);
-    expect(rule.predicate({ ...baseMovie, fileSizeBytes: 1000 }, { max: 1500 })).toBe(true);
-    expect(rule.predicate({ ...baseMovie, fileSizeBytes: 1000 }, { max: 500 })).toBe(false);
-    expect(rule.predicate(baseMovie, { min: 500 })).toBe(false);
+  it('fileSizeGb — movie: compares the file size in GB (1 GB = 1,073,741,824 bytes)', () => {
+    const rule = getRule('fileSizeGb', 'movie')!;
+    const eightGb = { ...baseMovie, fileSizeBytes: 8_589_934_592 };
+    expect(rule.label).toBe('File size (GB)');
+    expect(rule.predicate(eightGb, { min: 5 })).toBe(true);
+    expect(rule.predicate(eightGb, { min: 10 })).toBe(false);
+    expect(rule.predicate(eightGb, { max: 10 })).toBe(true);
+    expect(rule.predicate(eightGb, { max: 5 })).toBe(false);
+    expect(rule.predicate(baseMovie, { min: 0 })).toBe(false);
   });
 
-  it('fileSizeBytes — series: passes within min/max bounds', () => {
-    const rule = getRule('fileSizeBytes', 'series')!;
-    expect(rule.predicate({ ...baseSeries, fileSizeBytes: 1000 }, { min: 500 })).toBe(true);
-    expect(rule.predicate(baseSeries, { min: 500 })).toBe(false);
+  it('fileSizeGb — series: compares the file size in GB', () => {
+    const rule = getRule('fileSizeGb', 'series')!;
+    expect(rule.predicate({ ...baseSeries, fileSizeBytes: 8_589_934_592 }, { min: 5 })).toBe(true);
+    expect(rule.predicate(baseSeries, { min: 0 })).toBe(false);
+  });
+
+  it('offers no byte-denominated file size filter', () => {
+    expect(getRule('fileSizeBytes', 'movie')).toBeUndefined();
   });
 
   it('releaseDaysAgo — movie: passes within min/max bounds', () => {
@@ -751,7 +757,13 @@ describe('Jellyfin-only predicates', () => {
     const rule = getRule('jellyfinIsFavorite', 'movie')!;
     expect(rule.predicate({ ...baseMovie, isFavorite: true }, true)).toBe(true);
     expect(rule.predicate({ ...baseMovie, isFavorite: true }, false)).toBe(false);
-    expect(rule.predicate({ ...baseMovie, isFavorite: undefined }, false)).toBe(true);
+    expect(rule.predicate({ ...baseMovie, isFavorite: false }, false)).toBe(true);
+  });
+
+  it('jellyfinIsFavorite — a title with no favourite flag matches neither value', () => {
+    const rule = getRule('jellyfinIsFavorite', 'movie')!;
+    expect(rule.predicate({ ...baseMovie, isFavorite: undefined }, false)).toBe(false);
+    expect(rule.predicate({ ...baseMovie, isFavorite: undefined }, true)).toBe(false);
   });
 
   it('jellyfinIsFavorite — series: matches boolean exactly', () => {

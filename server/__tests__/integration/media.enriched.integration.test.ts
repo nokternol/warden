@@ -251,17 +251,47 @@ describe('Media browse — enriched predicates', () => {
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Requested']);
     });
 
-    it('returns the complement (incl. movies with no enrichment) when watched is false', async () => {
+    it('returns only movies known to be unplayed when watched is false', async () => {
       await seedEnrichment(1, { playCount: 3 });
+      await seedEnrichment(2, { playCount: 0 });
 
       const res = await client.get(
         browsePath('movie', [{ ruleKey: 'watched', value: false }], { pageSize: 100 })
       );
       const data = expectSuccessResponse(res);
       const titles = data.items.map((m: { title: string }) => m.title);
-      expect(titles).not.toContain('Requested');
       expect(titles).toContain('Pending');
-      expect(titles).toContain('NoEnrichment');
+      expect(titles).not.toContain('Requested');
+    });
+
+    it('never counts a movie with no play data as unwatched', async () => {
+      await seedEnrichment(1, { playCount: 3 });
+
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'watched', value: false }], { pageSize: 100 })
+      );
+      const data = expectSuccessResponse(res);
+      expect(data.items.map((m: { title: string }) => m.title)).not.toContain('NoEnrichment');
+    });
+
+    it('says so when no provider has supplied play data, rather than silently matching nothing', async () => {
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'watched', value: true }], { pageSize: 100 })
+      );
+      const data = expectSuccessResponse(res);
+      expect(data.errors).toContainEqual({
+        provider: 'Watched',
+        error: 'No connected provider has supplied this data yet, so the filter matches nothing.',
+      });
+    });
+
+    it('raises no such error once play data has been supplied', async () => {
+      await seedEnrichment(1, { playCount: 3 });
+
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'watched', value: true }], { pageSize: 100 })
+      );
+      expect(expectSuccessResponse(res).errors).toEqual([]);
     });
 
     it('returns 0 watched movies when there is no enrichment data', async () => {

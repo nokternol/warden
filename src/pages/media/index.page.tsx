@@ -482,7 +482,7 @@ function SourceErrors({ errors = [] }: { errors?: { provider: string; error: str
     >
       {errors.map(({ provider, error }) => (
         <p key={provider} className="break-words">
-          Couldn't reach {provider}: {error}
+          {provider}: {error}
         </p>
       ))}
     </div>

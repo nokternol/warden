@@ -10,8 +10,10 @@ import { useProviderSettings } from '@app/hooks/useProviderSettings';
 import { optionsForProvider, useProviderTaskOptions } from '@app/hooks/useProviderTaskOptions';
 import type { ProviderTaskParameter } from '@app/hooks/useProviderTasks';
 import { useProviderTasks } from '@app/hooks/useProviderTasks';
+import { descriptorFor, useProviderTypes } from '@app/hooks/useProviderTypes';
 import { blastRadius } from '@app/lib/blastRadius';
 import { cn } from '@app/lib/utils/cn';
+import type { ProviderType } from '@contract/providers';
 import { Cron } from 'croner';
 import cronstrue from 'cronstrue';
 import { Clock, TriangleAlert, Zap } from 'lucide-react';
@@ -72,7 +74,7 @@ interface BuilderTask {
   destructive: boolean;
   providerId: number;
   providerName: string;
-  providerType: string;
+  providerType: ProviderType;
   parameter?: ProviderTaskParameter;
 }
 
@@ -124,6 +126,7 @@ export default function AutomationBuilder({
   isSubmitting: boolean;
 }) {
   const { providers } = useProviderSettings();
+  const { types } = useProviderTypes();
   const { availability } = useProviderTasks();
 
   // The server owns the task catalogue: each configured actuator instance
@@ -152,7 +155,7 @@ export default function AutomationBuilder({
   const tasksByProvider = useMemo(() => {
     const groups = new Map<
       number,
-      { providerName: string; providerType: string; tasks: BuilderTask[] }
+      { providerName: string; providerType: ProviderType; tasks: BuilderTask[] }
     >();
     for (const t of availableTasks) {
       if (!groups.has(t.providerId)) {
@@ -315,9 +318,9 @@ export default function AutomationBuilder({
                 <div key={providerId} className="rounded border border-border overflow-hidden">
                   <div className="px-3 py-1.5 bg-surface-bg/60 border-b border-divider">
                     <span className="text-xs font-medium text-text-secondary">
-                      {group.providerName}
-                      <span className="ml-1.5 font-normal text-text-muted">
-                        {group.providerType}
+                      {group.providerName}{' '}
+                      <span className="ml-1 font-normal text-text-muted">
+                        {descriptorFor(types, group.providerType)?.label ?? group.providerType}
                       </span>
                     </span>
                   </div>

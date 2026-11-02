@@ -91,6 +91,14 @@ describe('deferred API procedures', () => {
     expect(isRefusedAsDeferred(res)).toBe(true);
   });
 
+  it('answers an API path that names no procedure with a JSON 404, not the web page', async () => {
+    const res = await request(serve(cradle, 'signed-in')).get('/api/no-such-procedure');
+
+    expect(res.status).toBe(404);
+    expect(res.type).toBe('application/json');
+    expect(res.body.error.type).toBe('NOT_FOUND');
+  });
+
   it('never invokes the handler of a deferred procedure', async () => {
     const handlerWork = vi.spyOn(cradle.appSettingsService, 'get');
 

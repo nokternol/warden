@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import {
   MetadataProviderType,
   mediaIdentity,
@@ -6,10 +8,14 @@ import {
 } from '@server/database/schema';
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
+import { getChildLogger } from '@server/kernel/logger';
+import { PlexProvider } from '@server/modules/providers/connections/plexProvider';
 import type { RadarrMovie } from '@server/modules/providers/connections/radarrProvider';
 import type { SonarrSeries } from '@server/modules/providers/connections/sonarrProvider';
 import { IdentityResolutionJob } from '@server/modules/providers/identityResolutionJob';
+import { server } from '@tests/mocks/server';
 import { eq } from 'drizzle-orm';
+import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const testConfig: AppConfig = {
@@ -97,7 +103,7 @@ describe('IdentityResolutionJob', () => {
     const plexProvider = {
       getAllItems: vi
         .fn()
-        .mockResolvedValue([{ ratingKey: 'plex-key-42', guids: [{ id: 'tmdb://100' }] }]),
+        .mockResolvedValue([{ ratingKey: 'plex-key-42', Guid: [{ id: 'tmdb://100' }] }]),
     };
 
     const job = new IdentityResolutionJob({ db, plexProvider });
@@ -167,8 +173,8 @@ describe('IdentityResolutionJob', () => {
 
     const plexProvider = {
       getAllItems: vi.fn().mockResolvedValue([
-        { ratingKey: 'plex-match', guids: [{ id: 'tmdb://100' }] }, // updates 1 row
-        { ratingKey: 'plex-miss', guids: [{ id: 'tmdb://999' }] }, // matches no row
+        { ratingKey: 'plex-match', Guid: [{ id: 'tmdb://100' }] }, // updates 1 row
+        { ratingKey: 'plex-miss', Guid: [{ id: 'tmdb://999' }] }, // matches no row
       ]),
     };
 
@@ -525,7 +531,7 @@ describe('IdentityResolutionJob', () => {
       getAllItems: vi
         .fn()
         .mockResolvedValue([
-          { ratingKey: 'plex-series', type: 'show' as const, guids: [{ id: 'thetvdb://81189' }] },
+          { ratingKey: 'plex-series', type: 'show' as const, Guid: [{ id: 'tvdb://81189' }] },
         ]),
     };
 
@@ -551,7 +557,7 @@ describe('IdentityResolutionJob', () => {
       getAllItems: vi
         .fn()
         .mockResolvedValue([
-          { ratingKey: 'plex-movie', type: 'movie' as const, guids: [{ id: 'tmdb://603' }] },
+          { ratingKey: 'plex-movie', type: 'movie' as const, Guid: [{ id: 'tmdb://603' }] },
         ]),
     };
 
@@ -680,5 +686,83 @@ describe('IdentityResolutionJob', () => {
     expect(identities).toHaveLength(1);
     const items = await db.select().from(mediaItems);
     expect(items).toHaveLength(1);
+  });
+
+  describe("against a real Plex server's responses", () => {
+    const PLEX_URL = 'http://plex.fixture:32400';
+    const fixture = (name: string) =>
+      JSON.parse(
+        readFileSync(path.join(__dirname, '../../../../tests/fixtures/plex', name), 'utf-8')
+      );
+
+    /** Serves the captured responses exactly as the server sent them, Guid only when asked for. */
+    function serveCapturedPlex(): void {
+      const sections = fixture('library-sections.json');
+      server.use(
+        http.get(`${PLEX_URL}/library/sections`, () => HttpResponse.json(sections)),
+        http.get(`${PLEX_URL}/library/sections/:key/all`, ({ params, request }) => {
+          const section = sections.MediaContainer.Directory.find(
+            (d: { key: string }) => d.key === params.key
+          );
+          const withGuids = new URL(request.url).searchParams.get('includeGuids') === '1';
+          return HttpResponse.json(
+            fixture(`section-${section.type}-all${withGuids ? '-includeGuids' : ''}.json`)
+          );
+        })
+      );
+    }
+
+    it('links a Radarr movie to its Plex item by TMDB id, and a Sonarr series by TVDB id', async () => {
+      serveCapturedPlex();
+      const db = getDb();
+      await db.insert(mediaIdentity).values({ kind: 'movie', tmdbId: 584 }); // 2 Fast 2 Furious
+      await db.insert(mediaIdentity).values({ kind: 'series', tvdbId: 396390 }); // 1883
+      const plexProvider = new PlexProvider(
+        { name: 'Plex', url: PLEX_URL, apiKey: 'token', settings: {} },
+        getChildLogger('test')
+      );
+
+      await new IdentityResolutionJob({ db, plexProvider }).runForPlex();
+
+      const movie = await db.select().from(mediaIdentity).where(eq(mediaIdentity.kind, 'movie'));
+      const series = await db.select().from(mediaIdentity).where(eq(mediaIdentity.kind, 'series'));
+      expect(movie[0].plexRatingKey).toBe('408');
+      expect(series[0].plexRatingKey).toBe('45669');
+    });
+
+    it('queues a newly linked title for enrichment, so its Plex data arrives on the next run', async () => {
+      serveCapturedPlex();
+      const db = getDb();
+      await db
+        .insert(mediaIdentity)
+        .values({ kind: 'movie', tmdbId: 584, enrichedAt: 1_700_000_000 });
+      const plexProvider = new PlexProvider(
+        { name: 'Plex', url: PLEX_URL, apiKey: 'token', settings: {} },
+        getChildLogger('test')
+      );
+
+      await new IdentityResolutionJob({ db, plexProvider }).runForPlex();
+
+      const [movie] = await db.select().from(mediaIdentity);
+      expect(movie.enrichedAt).toBeNull();
+    });
+
+    it('leaves a title already linked to the same Plex item untouched', async () => {
+      serveCapturedPlex();
+      const db = getDb();
+      await db
+        .insert(mediaIdentity)
+        .values({ kind: 'movie', tmdbId: 584, plexRatingKey: '408', enrichedAt: 1_700_000_000 });
+      const plexProvider = new PlexProvider(
+        { name: 'Plex', url: PLEX_URL, apiKey: 'token', settings: {} },
+        getChildLogger('test')
+      );
+
+      const changed = await new IdentityResolutionJob({ db, plexProvider }).runForPlex();
+
+      const [movie] = await db.select().from(mediaIdentity);
+      expect(movie.enrichedAt).toBe(1_700_000_000);
+      expect(changed).toBe(0);
+    });
   });
 });

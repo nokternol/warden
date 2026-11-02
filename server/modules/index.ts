@@ -55,5 +55,14 @@ export function createApiRouter(cradle: Cradle) {
     )
   );
 
+  // A path under /api that names no procedure ends here, so it never falls through to the
+  // web app's HTML "Page not found" page.
+  router.use((_req, res) => {
+    res.status(404).json({
+      status: 'error',
+      error: { type: 'NOT_FOUND', message: 'No API procedure at this path' },
+    });
+  });
+
   return router;
 }

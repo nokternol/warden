@@ -32,8 +32,17 @@ export interface ProviderSummary {
   apiKey: '***' | null;
   settings: Record<string, unknown> | null;
   isActive: boolean;
+  /** The last connection test of the saved address and key; null until one has run. */
+  lastTest: ProviderLastTest | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface ProviderLastTest {
+  ok: boolean;
+  at: Date;
+  /** Why the test failed; null when it passed. */
+  error: string | null;
 }
 
 function parseRaw(raw: RawMetadataProvider): MetadataProvider {
@@ -50,10 +59,15 @@ function parseRaw(raw: RawMetadataProvider): MetadataProvider {
   };
 }
 
-function redact(provider: MetadataProvider): ProviderSummary {
+function summarize(raw: RawMetadataProvider): ProviderSummary {
+  const provider = parseRaw(raw);
   return {
     ...provider,
     apiKey: provider.apiKey !== null ? '***' : null,
+    lastTest:
+      raw.lastTestOk === null || raw.lastTestAt === null
+        ? null
+        : { ok: raw.lastTestOk, at: new Date(raw.lastTestAt * 1000), error: raw.lastTestError },
   };
 }
 
@@ -87,7 +101,7 @@ export class ProviderSettingsService {
 
   async list(): Promise<ProviderSummary[]> {
     const rows = await this.db.select().from(metadataProviders);
-    return rows.map((r) => redact(parseRaw(r)));
+    return rows.map((r) => summarize(r));
   }
 
   /** The set of provider types with an active configured instance. */
@@ -154,7 +168,7 @@ export class ProviderSettingsService {
     const [raw] = await this.db.insert(metadataProviders).values(insert).returning();
     this.eventBus?.emit('provider:changed', {});
     log.debug('Provider created', { id: raw.id, type: raw.type });
-    return redact(parseRaw(raw));
+    return summarize(raw);
   }
 
   async update(id: number, patch: Partial<ProviderSettingsDraft>): Promise<ProviderSummary> {
@@ -168,6 +182,11 @@ export class ProviderSettingsService {
     if (patch.name !== undefined) updateValues.name = patch.name;
     if (patch.url !== undefined) updateValues.url = patch.url;
     if (patch.apiKey !== undefined) updateValues.apiKey = patch.apiKey;
+    if (patch.url !== undefined || patch.apiKey !== undefined) {
+      updateValues.lastTestOk = null;
+      updateValues.lastTestAt = null;
+      updateValues.lastTestError = null;
+    }
     if (patch.settings !== undefined)
       updateValues.settings = patch.settings ? JSON.stringify(patch.settings) : null;
     if (patch.isActive !== undefined) updateValues.isActive = patch.isActive;
@@ -184,7 +203,19 @@ export class ProviderSettingsService {
 
     this.eventBus?.emit('provider:changed', {});
     log.debug('Provider updated', { id });
-    return redact(parseRaw(raw));
+    return summarize(raw);
+  }
+
+  /** Records the outcome of a connection test of the provider's saved address and key. */
+  async recordTest(id: number, result: { ok: boolean; error?: string }): Promise<void> {
+    await this.db
+      .update(metadataProviders)
+      .set({
+        lastTestOk: result.ok,
+        lastTestAt: Math.floor(Date.now() / 1000),
+        lastTestError: result.ok ? null : (result.error ?? null),
+      })
+      .where(eq(metadataProviders.id, id));
   }
 
   async delete(id: number): Promise<void> {

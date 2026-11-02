@@ -27,7 +27,8 @@ export interface PlexMediaItem {
   type: string;
   year?: number;
   thumb?: string;
-  guids?: { id: string }[];
+  /** External ids (`tmdb://N`, `tvdb://N`, `imdb://ttN`); listings carry it only with includeGuids=1. */
+  Guid?: { id: string }[];
   viewCount?: number;
   lastViewedAt?: number;
   addedAt?: number;
@@ -96,7 +97,10 @@ export class PlexProvider extends BaseProviderConnection implements MediaActuato
 
   public async getLibraryContents(libraryKey: string): Promise<PlexMediaItem[]> {
     const resp = await this.client
-      .get(`library/sections/${libraryKey}/all`, { headers: this.authHeader })
+      .get(`library/sections/${libraryKey}/all`, {
+        headers: this.authHeader,
+        searchParams: { includeGuids: 1 },
+      })
       .json<{ MediaContainer: { Metadata: PlexMediaItem[] } }>();
     return resp.MediaContainer.Metadata;
   }

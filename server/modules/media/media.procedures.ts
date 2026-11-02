@@ -19,7 +19,9 @@ import {
   type SonarrProvider,
   type SonarrSeries,
   type SonarrTag,
+  isMediaSourceType,
 } from '@server/modules/providers';
+import { EnrichmentQueries } from './enrichment/enrichment.queries';
 import { paginateItems } from './media.pagination';
 import { sortMedia } from './media.sort';
 import { resolutionTier } from './mediaFieldProvider';
@@ -29,7 +31,7 @@ import { resetMediaData } from './mediaReset';
 import type { MediaSource } from './mediaSource';
 import { sourceOwnership } from './mediaSourceFactory';
 import { normalizeRadarrMovie, normalizeSonarrSeries } from './normalizeMedia';
-import type { Filter, NormalizedMovie, NormalizedSeries } from './ruleRegistry';
+import { type Filter, type NormalizedMovie, type NormalizedSeries, getRule } from './ruleRegistry';
 
 const log = getChildLogger('MediaProcedures');
 
@@ -123,15 +125,41 @@ function groupByPrimaryId<T extends { id: number }>(
   });
 }
 
+/** A provider that could not be read; the message is shown as written beside its name. */
 function toMediaError(providerName: string, err: unknown): MediaError {
   return {
     provider: providerName,
-    error: err instanceof Error ? err.message : 'Unknown error',
+    error: `Couldn't be reached: ${err instanceof Error ? err.message : 'Unknown error'}`,
   };
+}
+
+/**
+ * A filter on enrichment-only data (play history, favourites, request status) that no provider
+ * has supplied for this content type matches nothing. Without this, an empty result reads as
+ * "no titles match" when the truth is "no data to match against".
+ */
+async function noDataErrors(
+  filters: Filter[],
+  contentType: 'movie' | 'series',
+  enrichment: EnrichmentQueries | undefined
+): Promise<MediaError[]> {
+  if (!enrichment) return [];
+  const errors: MediaError[] = [];
+  for (const { ruleKey } of filters) {
+    const rule = getRule(ruleKey, contentType);
+    if (!rule?.sourceField || rule.providers.some(isMediaSourceType)) continue;
+    if (await enrichment.hasValues(rule.sourceField, contentType)) continue;
+    errors.push({
+      provider: rule.label,
+      error: 'No connected provider has supplied this data yet, so the filter matches nothing.',
+    });
+  }
+  return errors;
 }
 
 export function createMediaProcedures(cradle: MediaCradle) {
   const { providerSettingsService, mediaQueryEngine } = cradle;
+  const enrichment = cradle.db ? new EnrichmentQueries({ db: cradle.db }) : undefined;
   const factory = cradle.providerFactory ?? new ProviderFactory();
 
   // Caches are owned by this factory invocation — same inputs produce isolated state.
@@ -307,7 +335,7 @@ export function createMediaProcedures(cradle: MediaCradle) {
     return {
       ...paginateItems(grouped, { page: view.page, pageSize: view.pageSize }),
       yearRange,
-      errors,
+      errors: [...errors, ...(await noDataErrors(filters, 'movie', enrichment))],
     };
   }
 
@@ -340,7 +368,7 @@ export function createMediaProcedures(cradle: MediaCradle) {
     return {
       ...paginateItems(grouped, { page: view.page, pageSize: view.pageSize }),
       yearRange,
-      errors,
+      errors: [...errors, ...(await noDataErrors(filters, 'series', enrichment))],
     };
   }
 

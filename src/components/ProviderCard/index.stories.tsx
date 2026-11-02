@@ -13,6 +13,7 @@ const provider: ProviderSummary = {
   apiKey: '***',
   settings: null,
   isActive: true,
+  lastTest: null,
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
 };
@@ -52,6 +53,22 @@ export const Collapsed: Story = () => (
   <div className="max-w-3xl p-6">
     <ProviderCard
       provider={provider}
+      typeDescriptor={radarrType}
+      tasks={tasks}
+      onUpdate={noop}
+      onDelete={() => {}}
+    />
+  </div>
+);
+
+/** After a reload: the last stored test of the saved settings failed. */
+export const LastTestFailed: Story = () => (
+  <div className="max-w-3xl p-6">
+    <ProviderCard
+      provider={{
+        ...provider,
+        lastTest: { ok: false, at: '2024-01-02T00:00:00Z', error: 'Radarr rejected the API key' },
+      }}
       typeDescriptor={radarrType}
       tasks={tasks}
       onUpdate={noop}

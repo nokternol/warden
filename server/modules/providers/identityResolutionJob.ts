@@ -1,4 +1,4 @@
-import { and, eq, isNull, notInArray } from 'drizzle-orm';
+import { and, eq, isNull, ne, notInArray, or } from 'drizzle-orm';
 import { yieldToEventLoop } from '../../kernel/yieldToEventLoop';
 
 const defaultDelay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -10,7 +10,7 @@ import type { SonarrProvider } from './connections/sonarrProvider';
 import { resolveGroup } from './groupResolver';
 
 interface PlexBridgeProvider {
-  getAllItems(): Promise<Array<{ ratingKey: string; type?: string; guids?: { id: string }[] }>>;
+  getAllItems(): Promise<Array<{ ratingKey: string; type?: string; Guid?: { id: string }[] }>>;
 }
 
 interface JellyfinBridgeProvider {
@@ -48,9 +48,9 @@ export class IdentityResolutionJob {
     for (const item of items) {
       await yieldToEventLoop();
       const kind = item.type ? PLEX_KIND[item.type] : undefined;
-      for (const guid of item.guids ?? []) {
+      for (const guid of item.Guid ?? []) {
         const tmdbMatch = guid.id.match(/^tmdb:\/\/(\d+)$/);
-        const tvdbMatch = guid.id.match(/^thetvdb:\/\/(\d+)$/);
+        const tvdbMatch = guid.id.match(/^tvdb:\/\/(\d+)$/);
         if (tmdbMatch) {
           changed += await this.stampIdentity(
             { plexRatingKey: item.ratingKey },
@@ -76,7 +76,9 @@ export class IdentityResolutionJob {
    * Stamp an actuator-addressing id (`plexRatingKey` / `jellyfinItemId`) onto identities
    * matching `column = id`, scoped by `kind` when known (an unscoped match could otherwise
    * cross the movie/tv id namespaces — a TMDB movie id and a TMDB tv id with the same
-   * number are different titles). Returns rows actually changed.
+   * number are different titles). Only rows whose id is new or different are written, and those
+   * have `enrichedAt` cleared so the next enrichment run reads the newly linked server's data
+   * rather than waiting out the staleness window. Returns rows actually changed.
    */
   private async stampIdentity(
     set: { plexRatingKey: string } | { jellyfinItemId: string },
@@ -84,10 +86,20 @@ export class IdentityResolutionJob {
     id: number,
     kind: ContentType | undefined
   ): Promise<number> {
+    const [target, value] =
+      'plexRatingKey' in set
+        ? [mediaIdentity.plexRatingKey, set.plexRatingKey]
+        : [mediaIdentity.jellyfinItemId, set.jellyfinItemId];
     const result = await this.deps.db
       .update(mediaIdentity)
-      .set(set)
-      .where(kind ? and(eq(column, id), eq(mediaIdentity.kind, kind)) : eq(column, id));
+      .set({ ...set, enrichedAt: null })
+      .where(
+        and(
+          eq(column, id),
+          kind ? eq(mediaIdentity.kind, kind) : undefined,
+          or(isNull(target), ne(target, value))
+        )
+      );
     return result.rowsAffected;
   }
 

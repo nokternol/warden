@@ -7,7 +7,7 @@ Express middleware that forms the request pipeline. Every request flows through 
 The order in `server/index.ts` matters. Current pipeline:
 
 ```
-1. helmet          — Security headers
+1. securityHeaders — Helmet headers; Cross-Origin-Opener-Policy only over HTTPS
 2. cors            — CORS handling
 3. express.json()  — Body parsing
 4. requestId       — Assigns req.requestId (must be before logger)

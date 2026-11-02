@@ -12,6 +12,7 @@ const mockProviders: ProviderSummary[] = [
     apiKey: '***',
     settings: null,
     isActive: true,
+    lastTest: null,
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z',
   },
@@ -60,6 +61,7 @@ export const settingsHandlers = [
       apiKey: body.apiKey ? ('***' as const) : null,
       settings: null,
       isActive: body.isActive ?? true,
+      lastTest: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

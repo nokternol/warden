@@ -187,9 +187,11 @@ export const MEDIA_RULES = [
     providers: deriveProviders('playCount'),
     sourceField: 'playCount',
     required: false,
+    // A title with no play data is unknown, not unwatched: it matches neither value, so an
+    // "unwatched" query never selects titles no provider has reported on.
     predicate: (item, value) => {
-      const watched = (item.playCount ?? 0) > 0;
-      return watched === asBool(value);
+      if (item.playCount === undefined) return false;
+      return item.playCount > 0 === asBool(value);
     },
   },
   {
@@ -281,8 +283,8 @@ export const MEDIA_RULES = [
     predicate: (item, value) => item.hasFile === asBool(value),
   },
   {
-    key: 'fileSizeBytes',
-    label: 'File size (bytes)',
+    key: 'fileSizeGb',
+    label: 'File size (GB)',
     group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
@@ -291,7 +293,7 @@ export const MEDIA_RULES = [
     required: false,
     predicate: (item, value) => {
       if (item.fileSizeBytes === undefined) return false;
-      return inRange(item.fileSizeBytes, value);
+      return inRange(item.fileSizeBytes / 1_073_741_824, value);
     },
   },
   {
@@ -404,7 +406,8 @@ export const MEDIA_RULES = [
     providers: deriveProviders('isFavorite'),
     sourceField: 'isFavorite',
     required: false,
-    predicate: (item, value) => Boolean(item.isFavorite) === asBool(value),
+    // No favourite flag from Jellyfin is unknown, not "not a favourite": it matches neither value.
+    predicate: (item, value) => item.isFavorite !== undefined && item.isFavorite === asBool(value),
   },
 
   // ── Movie-only ─────────────────────────────────────────────────────────────

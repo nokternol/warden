@@ -1,0 +1,305 @@
+{
+  "MediaContainer": {
+    "size": 3,
+    "totalSize": 189,
+    "offset": 0,
+    "allowSync": true,
+    "art": "/:/resources/show-fanart.jpg",
+    "identifier": "com.plexapp.plugins.library",
+    "librarySectionID": 2,
+    "librarySectionTitle": "TV shows",
+    "librarySectionUUID": "00000000-0000-0000-0000-000000000000",
+    "mediaTagPrefix": "/system/bundle/media/flags/",
+    "mediaTagVersion": 1786914632,
+    "nocache": true,
+    "thumb": "/:/resources/show.png",
+    "title1": "TV shows",
+    "title2": "All Shows",
+    "viewGroup": "show",
+    "viewMode": 65592,
+    "Metadata": [
+      {
+        "ratingKey": "58054",
+        "key": "/library/metadata/58054/children",
+        "guid": "plex://show/5d9c086be98e47001eb0f156",
+        "slug": "the-13-ghosts-of-scooby-doo",
+        "studio": "Hanna-Barbera Cartoons",
+        "type": "show",
+        "title": "The 13 Ghosts of Scooby-Doo",
+        "titleSort": "13 Ghosts of Scooby-Doo",
+        "contentRating": "gb/U",
+        "summary": "Scooby and Shaggy are tricked by ghosts Bogle and Wierd into opening a chest of demons. With the aide of Daphne, Scrappy, an orphan named Flim Flam and warlock Vincent Van Ghoul, they have to return the 13 demons to the chest.",
+        "index": 1,
+        "audienceRating": 7.9,
+        "viewCount": 13,
+        "lastViewedAt": 1700000000,
+        "year": 1985,
+        "thumb": "/library/metadata/58054/thumb/1792727320",
+        "art": "/library/metadata/58054/art/1792727320",
+        "theme": "/library/metadata/58054/theme/1792727320",
+        "duration": 1320000,
+        "originallyAvailableAt": "1985-09-07",
+        "leafCount": 13,
+        "viewedLeafCount": 13,
+        "childCount": 1,
+        "addedAt": 1753037959,
+        "updatedAt": 1792727320,
+        "audienceRatingImage": "themoviedb://image.rating",
+        "primaryExtraKey": "/library/metadata/58057",
+        "Image": [
+          {
+            "alt": "The 13 Ghosts of Scooby-Doo",
+            "type": "coverPoster",
+            "url": "/library/metadata/58054/thumb/1792727320"
+          },
+          {
+            "alt": "The 13 Ghosts of Scooby-Doo",
+            "type": "background",
+            "url": "/library/metadata/58054/art/1792727320"
+          },
+          {
+            "alt": "The 13 Ghosts of Scooby-Doo",
+            "type": "clearLogo",
+            "url": "/library/metadata/58054/clearLogo/1792727320"
+          },
+          {
+            "alt": "The 13 Ghosts of Scooby-Doo",
+            "type": "backgroundSquare",
+            "url": "/library/metadata/58054/squareArt/1792727320"
+          }
+        ],
+        "UltraBlurColors": {
+          "topLeft": "012f56",
+          "topRight": "411514",
+          "bottomRight": "044786",
+          "bottomLeft": "042355"
+        },
+        "Guid": [
+          {
+            "id": "imdb://tt0088628"
+          },
+          {
+            "id": "tmdb://1069"
+          },
+          {
+            "id": "tvdb://73543"
+          }
+        ],
+        "Genre": [
+          {
+            "tag": "Mystery"
+          },
+          {
+            "tag": "Family"
+          }
+        ],
+        "Country": [
+          {
+            "tag": "United States of America"
+          }
+        ],
+        "Role": [
+          {
+            "tag": "Don Messick"
+          },
+          {
+            "tag": "Casey Kasem"
+          },
+          {
+            "tag": "Heather North"
+          }
+        ]
+      },
+      {
+        "ratingKey": "45669",
+        "key": "/library/metadata/45669/children",
+        "guid": "plex://show/601e5c786760fb002d5aaebd",
+        "slug": "1883",
+        "studio": "101 Studios",
+        "type": "show",
+        "title": "1883",
+        "contentRating": "gb/15",
+        "contentRatingAge": 15,
+        "summary": "The post-Civil war generation of the Dutton family travels to Texas, and joins a wagon train undertaking the arduous journey west to Oregon, before settling in Montana to establish what would eventually become the Yellowstone Ranch.",
+        "index": 1,
+        "audienceRating": 8.3,
+        "viewCount": 10,
+        "lastViewedAt": 1700000000,
+        "year": 2021,
+        "thumb": "/library/metadata/45669/thumb/1792727308",
+        "art": "/library/metadata/45669/art/1792727308",
+        "theme": "/library/metadata/45669/theme/1792727308",
+        "duration": 3600000,
+        "originallyAvailableAt": "2021-12-19",
+        "leafCount": 10,
+        "viewedLeafCount": 10,
+        "childCount": 1,
+        "addedAt": 1740061610,
+        "updatedAt": 1792727308,
+        "audienceRatingImage": "themoviedb://image.rating",
+        "primaryExtraKey": "/library/metadata/45672",
+        "Image": [
+          {
+            "alt": "1883",
+            "type": "coverPoster",
+            "url": "/library/metadata/45669/thumb/1792727308"
+          },
+          {
+            "alt": "1883",
+            "type": "background",
+            "url": "/library/metadata/45669/art/1792727308"
+          },
+          {
+            "alt": "1883",
+            "type": "clearLogo",
+            "url": "/library/metadata/45669/clearLogo/1792727308"
+          },
+          {
+            "alt": "1883",
+            "type": "backgroundSquare",
+            "url": "/library/metadata/45669/squareArt/1792727308"
+          }
+        ],
+        "UltraBlurColors": {
+          "topLeft": "0e0202",
+          "topRight": "110c0b",
+          "bottomRight": "0c0901",
+          "bottomLeft": "1b1710"
+        },
+        "Guid": [
+          {
+            "id": "imdb://tt13991232"
+          },
+          {
+            "id": "tmdb://118357"
+          },
+          {
+            "id": "tvdb://396390"
+          }
+        ],
+        "Genre": [
+          {
+            "tag": "Drama"
+          },
+          {
+            "tag": "Western"
+          }
+        ],
+        "Country": [
+          {
+            "tag": "United States of America"
+          }
+        ],
+        "Collection": [
+          {
+            "tag": "IMDb Top 250"
+          }
+        ],
+        "Role": [
+          {
+            "tag": "Sam Elliott"
+          },
+          {
+            "tag": "Tim McGraw"
+          },
+          {
+            "tag": "Faith Hill"
+          }
+        ]
+      },
+      {
+        "ratingKey": "45653",
+        "key": "/library/metadata/45653/children",
+        "guid": "plex://show/6220cd604a7f45ca0eca9821",
+        "slug": "1923",
+        "studio": "Bosque Ranch Productions",
+        "type": "show",
+        "title": "1923",
+        "contentRating": "gb/18",
+        "contentRatingAge": 15,
+        "summary": "The next installment of the Yellowstone origin story introduces a new generation of the Dutton family and explores the early twentieth century when pandemics, historic drought, the end of Prohibition, and the Great Depression all plague the Mountain West, and the Duttons who call it home.",
+        "index": 1,
+        "audienceRating": 8.3,
+        "viewCount": 15,
+        "lastViewedAt": 1700000000,
+        "year": 2022,
+        "tagline": "Defend or die.",
+        "thumb": "/library/metadata/45653/thumb/1792727307",
+        "art": "/library/metadata/45653/art/1792727307",
+        "theme": "/library/metadata/45653/theme/1792727307",
+        "duration": 3600000,
+        "originallyAvailableAt": "2022-12-18",
+        "leafCount": 15,
+        "viewedLeafCount": 15,
+        "childCount": 2,
+        "addedAt": 1740042100,
+        "updatedAt": 1792727307,
+        "audienceRatingImage": "themoviedb://image.rating",
+        "primaryExtraKey": "/library/metadata/45656",
+        "Image": [
+          {
+            "alt": "1923",
+            "type": "coverPoster",
+            "url": "/library/metadata/45653/thumb/1792727307"
+          },
+          {
+            "alt": "1923",
+            "type": "background",
+            "url": "/library/metadata/45653/art/1792727307"
+          },
+          {
+            "alt": "1923",
+            "type": "clearLogo",
+            "url": "/library/metadata/45653/clearLogo/1792727307"
+          },
+          {
+            "alt": "1923",
+            "type": "backgroundSquare",
+            "url": "/library/metadata/45653/squareArt/1792727307"
+          }
+        ],
+        "UltraBlurColors": {
+          "topLeft": "123241",
+          "topRight": "1a4257",
+          "bottomRight": "1b4259",
+          "bottomLeft": "2c6679"
+        },
+        "Guid": [
+          {
+            "id": "imdb://tt18335752"
+          },
+          {
+            "id": "tmdb://157744"
+          },
+          {
+            "id": "tvdb://416491"
+          }
+        ],
+        "Genre": [
+          {
+            "tag": "Drama"
+          },
+          {
+            "tag": "Western"
+          }
+        ],
+        "Country": [
+          {
+            "tag": "United States of America"
+          }
+        ],
+        "Role": [
+          {
+            "tag": "Helen Mirren"
+          },
+          {
+            "tag": "Harrison Ford"
+          },
+          {
+            "tag": "Brandon Sklenar"
+          }
+        ]
+      }
+    ]
+  }
+}

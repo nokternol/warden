@@ -42,14 +42,17 @@ export function toFilters(
     (contentType === 'movie' ? filterState.movieQualifiers : filterState.seriesQualifiers) ?? {};
   const merged: Record<string, FilterValue | undefined> = { ...filterState.shared, ...scoped };
   const instanceScoped = new Set(rules.filter((r) => r.instanceScoped).map((r) => r.key));
-  return Object.entries(merged)
-    .filter((entry): entry is [string, FilterValue] => entry[1] !== undefined)
-    .map(([ruleKey, value]) => {
-      if (!instanceScoped.has(ruleKey)) return { ruleKey, value };
-      const providerId = qualifiers[ruleKey];
-      const ids = parseIds(String(value));
-      return { ruleKey, value: providerId === undefined ? { ids } : { providerId, ids } };
-    });
+  return (
+    Object.entries(merged)
+      // An empty text value (a cleared title search) selects nothing, so it is not a filter.
+      .filter((entry): entry is [string, FilterValue] => entry[1] !== undefined && entry[1] !== '')
+      .map(([ruleKey, value]) => {
+        if (!instanceScoped.has(ruleKey)) return { ruleKey, value };
+        const providerId = qualifiers[ruleKey];
+        const ids = parseIds(String(value));
+        return { ruleKey, value: providerId === undefined ? { ids } : { providerId, ids } };
+      })
+  );
 }
 
 /**

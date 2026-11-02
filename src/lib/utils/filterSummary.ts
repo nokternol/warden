@@ -70,8 +70,11 @@ export function summarizeFilters(
   rules: MediaRuleDescriptor[] = [],
   lookups: FilterSummaryLookups = { tags: [], qualityProfiles: [], languageProfiles: [] }
 ): string[] {
-  return filters.map(({ ruleKey, value }) => {
-    const rule = rules.find((r) => r.key === ruleKey);
-    return `${rule?.label ?? labelFromKey(ruleKey)}: ${formatValue(rule, value, lookups)}`;
-  });
+  // A filter saved with an empty text value selects nothing, so it gets no chip.
+  return filters
+    .filter(({ value }) => value !== '')
+    .map(({ ruleKey, value }) => {
+      const rule = rules.find((r) => r.key === ruleKey);
+      return `${rule?.label ?? labelFromKey(ruleKey)}: ${formatValue(rule, value, lookups)}`;
+    });
 }

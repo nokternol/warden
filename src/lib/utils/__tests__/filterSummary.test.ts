@@ -68,6 +68,10 @@ describe('summarizeFilters', () => {
     expect(one('genres', 'Drama,Comedy')).toBe('Genres: Drama, Comedy');
   });
 
+  it('shows no chip for a filter saved with an empty text value', () => {
+    expect(summarizeFilters([{ ruleKey: 'title', value: '' }], RULES)).toEqual([]);
+  });
+
   it('words a rule no longer described, rather than showing its key', () => {
     expect(one('lastWatched', 'x')).toBe('Last watched: x');
   });

@@ -271,6 +271,7 @@ describe('Paginated Media API', () => {
       expect(Array.isArray(data.errors)).toBe(true);
       expect(data.errors).toHaveLength(1);
       expect(data.errors[0]).toMatchObject({ provider: 'Radarr' });
+      expect(data.errors[0].error).toMatch(/^Couldn't be reached: /);
     });
 
     it('GET /api/media/series includes errors when Sonarr returns 500', async () => {

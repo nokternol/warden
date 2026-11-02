@@ -78,6 +78,11 @@ export const metadataProviders = sqliteTable(
     apiKey: text('apiKey'),
     settings: text('settings'),
     isActive: integer('isActive', { mode: 'boolean' }).notNull().default(true),
+    // The last connection test of the saved address and key; all null until one runs, and
+    // cleared when the address or key changes, since the result no longer describes them.
+    lastTestOk: integer('lastTestOk', { mode: 'boolean' }),
+    lastTestAt: integer('lastTestAt'),
+    lastTestError: text('lastTestError'),
     createdAt: createdAt('createdAt'),
     updatedAt: updatedAt('updatedAt'),
   },

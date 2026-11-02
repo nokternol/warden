@@ -115,8 +115,8 @@ modelled-only.
 `lastWatchedAt` keyed by `ratingKey`, loses precedence to Tautulli when both are configured. Also
 contributes `plexAddedAt` (Plex's own library-added timestamp, ISO-converted from `addedAt`) —
 single-producer, no precedence entry, gated into `ruleRegistry.ts` as `plexAddedDaysAgo`. Also
-stamped onto `media_identity` groups by the identity job (`runForPlex`) for `plexRatingKey` matching —
-never inserts a group of its own.
+stamped onto `media_identity` groups by the identity job (`runForPlex`) for `plexRatingKey` matching,
+by the `Guid` ids a listing carries with `includeGuids=1` — never inserts a group of its own.
 
 ## Jellyfin
 

@@ -20,10 +20,43 @@ const query: MediaQueryRecord = {
 };
 
 describe('QueryRow', () => {
-  it('surfaces health other than healthy, with the reason', () => {
+  it('surfaces health other than healthy, with the reason', async () => {
     render(<QueryRow query={query} onLoad={vi.fn()} onDelete={vi.fn()} />);
     expect(screen.getByText('Degraded')).toBeInTheDocument();
-    expect(screen.getByText(/TAUTULLI is not configured/i)).toBeInTheDocument();
+    expect(await screen.findByText('Tautulli is not configured.')).toBeInTheDocument();
+  });
+
+  it('names only providers whose filters nothing connected can supply', async () => {
+    const mixed: MediaQueryRecord = {
+      ...query,
+      health: {
+        status: 'degraded',
+        providerStatus: [
+          {
+            providerType: 'RADARR',
+            required: false,
+            configured: true,
+            affectedFilterKeys: ['year'],
+          },
+          {
+            providerType: 'SONARR',
+            required: false,
+            configured: false,
+            affectedFilterKeys: ['year'],
+          },
+          {
+            providerType: 'PLEX',
+            required: false,
+            configured: false,
+            affectedFilterKeys: ['watched'],
+          },
+        ],
+        qualificationIssues: [],
+      },
+    };
+    render(<QueryRow query={mixed} onLoad={vi.fn()} onDelete={vi.fn()} />);
+    expect(await screen.findByText('Plex is not configured.')).toBeInTheDocument();
+    expect(screen.queryByText(/sonarr/i)).not.toBeInTheDocument();
   });
 
   it('a failed delete says so and keeps the confirmation', async () => {

@@ -3,8 +3,10 @@ import Button from '@app/components/Button';
 import { useFilterSummaryLookups } from '@app/hooks/useMediaLookups';
 import type { MediaQueryRecord, QueryHealth } from '@app/hooks/useMediaQueries';
 import { useMediaRules } from '@app/hooks/useMediaRules';
+import { useProviderTypes } from '@app/hooks/useProviderTypes';
 import { canOpenInMedia } from '@app/lib/mediaQueryAdapters';
 import { summarizeFilters } from '@app/lib/utils/filterSummary';
+import type { ProviderTypeDescriptor } from '@contract/providers';
 import { Clapperboard, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -18,11 +20,21 @@ const ISSUE_REASONS = {
   wrong_automation_provider: "names a different provider from its automation's",
 } as const;
 
-function healthReasons(health: QueryHealth): string[] {
+/**
+ * Why a query is not healthy. A missing provider is named only when some filter it supplies has
+ * no connected provider at all: a year filter on movies needs Radarr or Sonarr, not both.
+ */
+function healthReasons(health: QueryHealth, types: ProviderTypeDescriptor[] | undefined): string[] {
+  const supplied = new Set(
+    health.providerStatus.filter((p) => p.configured).flatMap((p) => p.affectedFilterKeys)
+  );
   return [
     ...health.providerStatus
-      .filter((provider) => !provider.configured)
-      .map((provider) => `${provider.providerType} is not configured.`),
+      .filter((p) => !p.configured && p.affectedFilterKeys.some((key) => !supplied.has(key)))
+      .map(
+        (p) =>
+          `${types?.find((t) => t.type === p.providerType)?.label ?? p.providerType} is not configured.`
+      ),
     ...health.qualificationIssues.map(
       (issue) => `The ${issue.filterKey} filter ${ISSUE_REASONS[issue.reason]}.`
     ),
@@ -43,6 +55,7 @@ export default function QueryRow({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const { rules } = useMediaRules();
+  const { types } = useProviderTypes();
   const lookups = useFilterSummaryLookups();
   const parts = summarizeFilters(query.filters, rules, lookups);
   const openable = !rules || canOpenInMedia(query, rules);
@@ -102,7 +115,7 @@ export default function QueryRow({
               Uses a filter that is no longer available, so it can't open in Media.
             </p>
           )}
-          {healthReasons(query.health).map((reason) => (
+          {healthReasons(query.health, types).map((reason) => (
             <p key={reason} className="text-xs text-text-secondary mt-1.5">
               {reason}
             </p>

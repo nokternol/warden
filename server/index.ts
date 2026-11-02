@@ -5,7 +5,6 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
 import session from 'express-session';
-import helmet from 'helmet';
 import next from 'next';
 import { buildContainer, scopePerRequest } from './container';
 import { loadConfig } from './kernel/config';
@@ -16,6 +15,7 @@ import {
   errorHandlerMiddleware,
   requestIdMiddleware,
   requestLoggerMiddleware,
+  securityHeadersMiddleware,
 } from './kernel/middleware';
 import { createApiRouter } from './modules';
 import { DrizzleStore } from './modules/auth';
@@ -64,7 +64,7 @@ async function startServer() {
     }
 
     // Security
-    server.use(helmet({ contentSecurityPolicy: false }));
+    server.use(securityHeadersMiddleware);
     server.use(cors());
 
     // Body parsing

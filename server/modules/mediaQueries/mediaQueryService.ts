@@ -113,16 +113,25 @@ function computeHealth(
   }
 
   const providerStatus: ProviderStatus[] = [];
-  let hasUnavailable = false;
-  let hasDegraded = false;
-
   for (const [providerType, { required, keys }] of providerMap) {
     const configured = activeProviderTypes.has(providerType);
     providerStatus.push({ providerType, required, configured, affectedFilterKeys: keys });
-    if (!configured) {
-      if (required) hasUnavailable = true;
-      else hasDegraded = true;
-    }
+  }
+
+  // A filter is supplied when any one of the providers that can supply it is connected, so a
+  // year filter on movies is satisfied by Radarr without Sonarr or Plex. Only a filter with no
+  // connected provider at all degrades the query, or makes it unavailable when the rule is required.
+  const supplied = new Set(
+    providerStatus.filter((s) => s.configured).flatMap((s) => s.affectedFilterKeys)
+  );
+  let hasUnavailable = false;
+  let hasDegraded = false;
+  for (const { ruleKey } of filters) {
+    const rule = getRule(ruleKey, contentType);
+    if (!rule || supplied.has(ruleKey)) continue;
+    if (!providerStatus.some((s) => s.affectedFilterKeys.includes(ruleKey))) continue;
+    if (rule.required) hasUnavailable = true;
+    else hasDegraded = true;
   }
 
   if (qualificationIssues.length > 0) hasDegraded = true;
