@@ -124,6 +124,17 @@ describe('AutomationBuilder', () => {
     expect(screen.getAllByRole('radio', { name: /unmonitor movie/i })).toHaveLength(2);
   });
 
+  it("heads each instance's tasks with its name and its type's display name, not the type code", async () => {
+    mockApi(
+      [makeProvider({ id: 1, name: 'Home' })],
+      [{ providerId: 1, type: 'RADARR', tasks: [ENABLED_UNMONITOR] }]
+    );
+    renderBuilder();
+    expect(await screen.findByText('Home')).toBeInTheDocument();
+    expect(await screen.findByText('Radarr')).toBeInTheDocument();
+    expect(screen.queryByText('RADARR')).not.toBeInTheDocument();
+  });
+
   it('does not offer tasks for an inactive provider instance', async () => {
     mockApi(
       [makeProvider({ isActive: false })],
