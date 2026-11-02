@@ -57,6 +57,16 @@ describe('toFilters', () => {
     expect(filters).toEqual([{ ruleKey: 'hasFile', value: true }]);
   });
 
+  it('leaves out an empty title search, so a saved query does not carry it', () => {
+    const filters = toFilters(
+      { shared: { title: '' }, movie: { hasFile: true }, series: {} },
+      'movie',
+      rules
+    );
+
+    expect(filters).toEqual([{ ruleKey: 'hasFile', value: true }]);
+  });
+
   it('passes range values through untouched', () => {
     const filters = toFilters(
       state({ shared: { year: { min: 2000, max: 2020 } } }),
