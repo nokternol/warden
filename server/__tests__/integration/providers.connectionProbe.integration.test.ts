@@ -152,6 +152,29 @@ describe('GET /api/providers/test', () => {
       expect(Date.now() - Date.parse(lastTest.at)).toBeLessThan(60_000);
     });
 
+    it('is kept for a provider saved with an API path, tested by its address as the Providers page sends it', async () => {
+      const host = 'http://radarr-saved.local:7878';
+      server.use(
+        http.get(`${host}/api/v3/system/status`, () => HttpResponse.json({ version: '5' }))
+      );
+      const created = await request(authedApp)
+        .post('/api/providers')
+        .send({
+          type: MetadataProviderType.RADARR,
+          name: 'Radarr',
+          url: `${host}/api/v3`,
+          apiKey: 'k',
+        });
+      const id = created.body.data.id as number;
+
+      const res = await request(authedApp)
+        .get('/api/providers/test')
+        .query({ type: MetadataProviderType.RADARR, url: host, id });
+
+      expect(res.body.data.ok).toBe(true);
+      expect(await lastTestOf(id)).toMatchObject({ ok: true });
+    });
+
     it('is kept, with its reason, after a failed test of the saved settings', async () => {
       const url = 'http://seerr-down.local';
       server.use(http.get(`${url}/api/v1/auth/me`, () => new HttpResponse(null, { status: 401 })));
