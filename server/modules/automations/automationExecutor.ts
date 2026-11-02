@@ -332,9 +332,9 @@ export class AutomationExecutor {
   }
 
   /**
-   * A title with no stored value reads as having none: no play history reads as unwatched. Until
-   * enrichment data is known to be complete, a filter on it can select the wrong titles, whether
-   * an include matches a title it should not or an exclude fails to protect one. Fields a source
+   * A title with no stored value is unknown and matches neither value of a filter on it. Until
+   * enrichment data is known to be complete, such a filter can select the wrong titles: an include
+   * misses titles it should act on, and an exclude fails to protect titles it should. Fields a source
    * supplies itself arrive with the catalog, so only enrichment-only rules are checked.
    */
   private async missingEnrichment(

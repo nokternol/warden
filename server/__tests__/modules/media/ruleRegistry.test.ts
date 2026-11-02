@@ -757,7 +757,13 @@ describe('Jellyfin-only predicates', () => {
     const rule = getRule('jellyfinIsFavorite', 'movie')!;
     expect(rule.predicate({ ...baseMovie, isFavorite: true }, true)).toBe(true);
     expect(rule.predicate({ ...baseMovie, isFavorite: true }, false)).toBe(false);
-    expect(rule.predicate({ ...baseMovie, isFavorite: undefined }, false)).toBe(true);
+    expect(rule.predicate({ ...baseMovie, isFavorite: false }, false)).toBe(true);
+  });
+
+  it('jellyfinIsFavorite — a title with no favourite flag matches neither value', () => {
+    const rule = getRule('jellyfinIsFavorite', 'movie')!;
+    expect(rule.predicate({ ...baseMovie, isFavorite: undefined }, false)).toBe(false);
+    expect(rule.predicate({ ...baseMovie, isFavorite: undefined }, true)).toBe(false);
   });
 
   it('jellyfinIsFavorite — series: matches boolean exactly', () => {
