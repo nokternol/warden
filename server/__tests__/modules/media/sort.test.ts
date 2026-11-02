@@ -21,6 +21,21 @@ describe('sortMedia', () => {
     expect(titles(sortMedia(rows, 'title_asc', statusOf))).toEqual(['Alpha', 'Bravo', 'Charlie']);
   });
 
+  it("orders titles by the provider's sort title, so quotes and leading articles do not decide", () => {
+    const real = [
+      { title: '“Wuthering Heights”', sortTitle: 'wuthering heights', hasFile: true },
+      { title: 'The Matrix', sortTitle: 'matrix', hasFile: true },
+      { title: '10 Cloverfield Lane', sortTitle: '10 cloverfield lane', hasFile: true },
+      { title: 'Alien', hasFile: true },
+    ];
+    expect(sortMedia(real, 'title_asc', (r) => r.hasFile).map((r) => r.title)).toEqual([
+      '10 Cloverfield Lane',
+      'Alien',
+      'The Matrix',
+      '“Wuthering Heights”',
+    ]);
+  });
+
   it('reverses on title_desc', () => {
     expect(titles(sortMedia(rows, 'title_desc', statusOf))).toEqual(['Charlie', 'Bravo', 'Alpha']);
   });
