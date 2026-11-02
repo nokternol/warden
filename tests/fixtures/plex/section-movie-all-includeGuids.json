@@ -1,0 +1,433 @@
+{
+  "MediaContainer": {
+    "size": 3,
+    "totalSize": 2293,
+    "offset": 0,
+    "allowSync": true,
+    "art": "/:/resources/movie-fanart.jpg",
+    "identifier": "com.plexapp.plugins.library",
+    "librarySectionID": 1,
+    "librarySectionTitle": "Films",
+    "librarySectionUUID": "00000000-0000-0000-0000-000000000000",
+    "mediaTagPrefix": "/system/bundle/media/flags/",
+    "mediaTagVersion": 1786914632,
+    "thumb": "/:/resources/movie.png",
+    "title1": "Films",
+    "title2": "All Films",
+    "viewGroup": "movie",
+    "viewMode": 65592,
+    "Metadata": [
+      {
+        "ratingKey": "408",
+        "key": "/library/metadata/408",
+        "guid": "plex://movie/5d7768265af944001f1f6977",
+        "slug": "2-fast-2-furious",
+        "studio": "Ardustry Entertainment",
+        "type": "movie",
+        "title": "2 Fast 2 Furious",
+        "contentRating": "gb/12A",
+        "contentRatingAge": 14,
+        "summary": "EX LAPD cop Brian O'Conner (Paul Walker) teams up with his ex-con friend Roman Pearce (Tyrese Gibson) and works with undercover U.S. Customs Service agent Monica Fuentes (Eva Mendes) to bring Miami-based drug lord Carter Verone (Cole Hauser) down.",
+        "audienceRating": 6,
+        "viewCount": 1,
+        "lastViewedAt": 1700000000,
+        "year": 2003,
+        "tagline": "How fast do you like it?",
+        "thumb": "/library/metadata/408/thumb/1786804723",
+        "art": "/library/metadata/408/art/1786804723",
+        "duration": 6461960,
+        "originallyAvailableAt": "2003-06-05",
+        "addedAt": 1660891063,
+        "updatedAt": 1786804723,
+        "audienceRatingImage": "imdb://image.rating",
+        "chapterSource": "media",
+        "loudnessAnalysisVersion": "0.02",
+        "primaryExtraKey": "/library/metadata/412",
+        "Media": [
+          {
+            "id": 78343,
+            "duration": 6461960,
+            "bitrate": 13850,
+            "width": 1920,
+            "height": 818,
+            "aspectRatio": 2.35,
+            "audioChannels": 6,
+            "audioCodec": "ac3",
+            "videoCodec": "h264",
+            "videoResolution": "1080",
+            "container": "mkv",
+            "videoFrameRate": "24p",
+            "videoProfile": "high",
+            "hasVoiceActivity": false,
+            "Part": [
+              {
+                "id": 83110,
+                "key": "/library/parts/83110/1739502262/file.mkv",
+                "duration": 6461960,
+                "file": "/movies/2 Fast 2 Furious (2003)/2 Fast 2 Furious (2003) {tmdb-584} { [Bluray-1080p][AC3 5.1][x264].mkv",
+                "size": 11187323221,
+                "container": "mkv",
+                "indexes": "sd",
+                "videoProfile": "high"
+              }
+            ]
+          }
+        ],
+        "Image": [
+          {
+            "alt": "2 Fast 2 Furious",
+            "type": "coverPoster",
+            "url": "/library/metadata/408/thumb/1786804723"
+          },
+          {
+            "alt": "2 Fast 2 Furious",
+            "type": "background",
+            "url": "/library/metadata/408/art/1786804723"
+          },
+          {
+            "alt": "2 Fast 2 Furious",
+            "type": "clearLogo",
+            "url": "/library/metadata/408/clearLogo/1786804723"
+          },
+          {
+            "alt": "2 Fast 2 Furious",
+            "type": "backgroundSquare",
+            "url": "/library/metadata/408/squareArt/1786804723"
+          }
+        ],
+        "UltraBlurColors": {
+          "topLeft": "162e4f",
+          "topRight": "30618f",
+          "bottomRight": "345e96",
+          "bottomLeft": "1c2c56"
+        },
+        "Guid": [
+          {
+            "id": "imdb://tt0322259"
+          },
+          {
+            "id": "tmdb://584"
+          },
+          {
+            "id": "tvdb://20800"
+          }
+        ],
+        "Genre": [
+          {
+            "tag": "Action"
+          },
+          {
+            "tag": "Crime"
+          }
+        ],
+        "Country": [
+          {
+            "tag": "Germany"
+          },
+          {
+            "tag": "United States of America"
+          }
+        ],
+        "Collection": [
+          {
+            "tag": "The Fast and the Furious Collection"
+          },
+          {
+            "tag": "Fast & Furious"
+          }
+        ],
+        "Director": [
+          {
+            "tag": "John Singleton"
+          }
+        ],
+        "Writer": [
+          {
+            "tag": "Michael Brandt"
+          },
+          {
+            "tag": "Gary Scott Thompson"
+          }
+        ],
+        "Role": [
+          {
+            "tag": "Paul Walker"
+          },
+          {
+            "tag": "Tyrese Gibson"
+          },
+          {
+            "tag": "Eva Mendes"
+          }
+        ]
+      },
+      {
+        "ratingKey": "41086",
+        "key": "/library/metadata/41086",
+        "guid": "plex://movie/5d7769a023d5a3001f4fa465",
+        "slug": "2-guns",
+        "studio": "Universal Pictures",
+        "type": "movie",
+        "title": "2 Guns",
+        "contentRating": "gb/15",
+        "contentRatingAge": 17,
+        "summary": "A DEA agent and an undercover Naval Intelligence officer who have been tasked with investigating one another find they have been set up by the mob -- the very organization the two men believe they have been stealing money from.",
+        "audienceRating": 6.7,
+        "year": 2013,
+        "tagline": "Never rob a bank across from a diner with the best donuts in three counties.",
+        "thumb": "/library/metadata/41086/thumb/1789443308",
+        "art": "/library/metadata/41086/art/1789443308",
+        "duration": 6555360,
+        "originallyAvailableAt": "2013-08-01",
+        "addedAt": 1737543425,
+        "updatedAt": 1789443308,
+        "audienceRatingImage": "imdb://image.rating",
+        "chapterSource": "media",
+        "primaryExtraKey": "/library/metadata/41087",
+        "Media": [
+          {
+            "id": 70098,
+            "duration": 6555360,
+            "bitrate": 37222,
+            "width": 1920,
+            "height": 1080,
+            "aspectRatio": 1.78,
+            "audioChannels": 6,
+            "audioCodec": "dca-ma",
+            "videoCodec": "h264",
+            "videoResolution": "1080",
+            "container": "mkv",
+            "videoFrameRate": "24p",
+            "audioProfile": "ma",
+            "videoProfile": "high",
+            "hasVoiceActivity": false,
+            "Part": [
+              {
+                "id": 73918,
+                "key": "/library/parts/73918/1737543303/file.mkv",
+                "duration": 6555360,
+                "file": "/movies/2 Guns (2013)/2 Guns (2013) {tmdb-136400} { [Remux-1080p][DTS-HD MA 5.1][AVC]-EPSiLON.mkv",
+                "size": 30500592315,
+                "audioProfile": "ma",
+                "container": "mkv",
+                "indexes": "sd",
+                "videoProfile": "high"
+              }
+            ]
+          }
+        ],
+        "Image": [
+          {
+            "alt": "2 Guns",
+            "type": "coverPoster",
+            "url": "/library/metadata/41086/thumb/1789443308"
+          },
+          {
+            "alt": "2 Guns",
+            "type": "background",
+            "url": "/library/metadata/41086/art/1789443308"
+          },
+          {
+            "alt": "2 Guns",
+            "type": "clearLogo",
+            "url": "/library/metadata/41086/clearLogo/1789443308"
+          },
+          {
+            "alt": "2 Guns",
+            "type": "backgroundSquare",
+            "url": "/library/metadata/41086/squareArt/1789443308"
+          }
+        ],
+        "UltraBlurColors": {
+          "topLeft": "452406",
+          "topRight": "894b14",
+          "bottomRight": "5b3f10",
+          "bottomLeft": "7d5412"
+        },
+        "Guid": [
+          {
+            "id": "imdb://tt1272878"
+          },
+          {
+            "id": "tmdb://136400"
+          },
+          {
+            "id": "tvdb://1783"
+          }
+        ],
+        "Genre": [
+          {
+            "tag": "Action"
+          },
+          {
+            "tag": "Comedy"
+          }
+        ],
+        "Country": [
+          {
+            "tag": "United States of America"
+          }
+        ],
+        "Director": [
+          {
+            "tag": "Baltasar Kormákur"
+          }
+        ],
+        "Writer": [
+          {
+            "tag": "Blake Masters"
+          },
+          {
+            "tag": "Steven Grant"
+          }
+        ],
+        "Role": [
+          {
+            "tag": "Denzel Washington"
+          },
+          {
+            "tag": "Mark Wahlberg"
+          },
+          {
+            "tag": "Paula Patton"
+          }
+        ]
+      },
+      {
+        "ratingKey": "47699",
+        "key": "/library/metadata/47699",
+        "guid": "plex://movie/5d776a15ad5437001f771858",
+        "slug": "3-days-to-kill",
+        "studio": "Wonderland Sound and Vision",
+        "type": "movie",
+        "title": "3 Days to Kill",
+        "contentRating": "gb/12",
+        "contentRatingAge": 15,
+        "summary": "A dangerous international spy is determined to give up his high stakes life to finally build a closer relationship with his estranged wife and daughter. But first, he must complete one last mission - even if it means juggling the two toughest assignments yet: hunting down the world's most ruthless terrorist and looking after his teenage daughter for the first time in ten years, while his wife is out of town.",
+        "audienceRating": 6.2,
+        "year": 2014,
+        "tagline": "The question is... kill or die?",
+        "thumb": "/library/metadata/47699/thumb/1789443327",
+        "art": "/library/metadata/47699/art/1789443327",
+        "duration": 7338987,
+        "originallyAvailableAt": "2014-02-19",
+        "addedAt": 1740856036,
+        "updatedAt": 1789443327,
+        "audienceRatingImage": "imdb://image.rating",
+        "chapterSource": "media",
+        "primaryExtraKey": "/library/metadata/47700",
+        "Media": [
+          {
+            "id": 83831,
+            "duration": 7338987,
+            "bitrate": 43035,
+            "width": 1920,
+            "height": 1080,
+            "aspectRatio": 1.78,
+            "audioChannels": 6,
+            "audioCodec": "dca-ma",
+            "videoCodec": "h264",
+            "videoResolution": "1080",
+            "container": "mkv",
+            "videoFrameRate": "24p",
+            "audioProfile": "ma",
+            "videoProfile": "high",
+            "hasVoiceActivity": false,
+            "Part": [
+              {
+                "id": 88673,
+                "key": "/library/parts/88673/1740855598/file.mkv",
+                "duration": 7338987,
+                "file": "/movies/3 Days to Kill (2014)/3 Days to Kill (2014) {tmdb-192102} {Extended Cut} [Remux-1080p][DTS-HD MA 5.1][h264]-Talian.mkv",
+                "size": 39479226856,
+                "audioProfile": "ma",
+                "container": "mkv",
+                "indexes": "sd",
+                "videoProfile": "high"
+              }
+            ]
+          }
+        ],
+        "Image": [
+          {
+            "alt": "3 Days to Kill",
+            "type": "coverPoster",
+            "url": "/library/metadata/47699/thumb/1789443327"
+          },
+          {
+            "alt": "3 Days to Kill",
+            "type": "background",
+            "url": "/library/metadata/47699/art/1789443327"
+          },
+          {
+            "alt": "3 Days to Kill",
+            "type": "clearLogo",
+            "url": "/library/metadata/47699/clearLogo/1789443327"
+          },
+          {
+            "alt": "3 Days to Kill",
+            "type": "backgroundSquare",
+            "url": "/library/metadata/47699/squareArt/1789443327"
+          }
+        ],
+        "UltraBlurColors": {
+          "topLeft": "2a3029",
+          "topRight": "181211",
+          "bottomRight": "3a121e",
+          "bottomLeft": "1f4532"
+        },
+        "Guid": [
+          {
+            "id": "imdb://tt2172934"
+          },
+          {
+            "id": "tmdb://192102"
+          },
+          {
+            "id": "tvdb://1260"
+          }
+        ],
+        "Genre": [
+          {
+            "tag": "Thriller"
+          },
+          {
+            "tag": "Action"
+          }
+        ],
+        "Country": [
+          {
+            "tag": "France"
+          },
+          {
+            "tag": "United States of America"
+          }
+        ],
+        "Director": [
+          {
+            "tag": "McG"
+          }
+        ],
+        "Writer": [
+          {
+            "tag": "Adi Hasak"
+          },
+          {
+            "tag": "Luc Besson"
+          }
+        ],
+        "Role": [
+          {
+            "tag": "Kevin Costner"
+          },
+          {
+            "tag": "Amber Heard"
+          },
+          {
+            "tag": "Hailee Steinfeld"
+          }
+        ]
+      }
+    ]
+  }
+}

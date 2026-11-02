@@ -147,7 +147,7 @@ describe('IdentityJobFactory', () => {
       ),
       http.get(`${PLEX_URL}/library/sections/1/all`, () =>
         HttpResponse.json({
-          MediaContainer: { Metadata: [{ ratingKey: 'rk-1', guids: [{ id: 'tmdb://603' }] }] },
+          MediaContainer: { Metadata: [{ ratingKey: 'rk-1', Guid: [{ id: 'tmdb://603' }] }] },
         })
       )
     );
