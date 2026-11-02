@@ -274,6 +274,26 @@ describe('Media browse — enriched predicates', () => {
       expect(data.items.map((m: { title: string }) => m.title)).not.toContain('NoEnrichment');
     });
 
+    it('says so when no provider has supplied play data, rather than silently matching nothing', async () => {
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'watched', value: true }], { pageSize: 100 })
+      );
+      const data = expectSuccessResponse(res);
+      expect(data.errors).toContainEqual({
+        provider: 'Watched',
+        error: 'No connected provider has supplied this data yet, so the filter matches nothing.',
+      });
+    });
+
+    it('raises no such error once play data has been supplied', async () => {
+      await seedEnrichment(1, { playCount: 3 });
+
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'watched', value: true }], { pageSize: 100 })
+      );
+      expect(expectSuccessResponse(res).errors).toEqual([]);
+    });
+
     it('returns 0 watched movies when there is no enrichment data', async () => {
       const res = await client.get(
         browsePath('movie', [{ ruleKey: 'watched', value: true }], { pageSize: 100 })
