@@ -102,6 +102,17 @@ function playHistoryToEnrichmentFields(
   };
 }
 
+/** Tautulli's `watched_status` for a view that passed its watched threshold (like Plex's). */
+const TAUTULLI_FULLY_WATCHED = 1;
+
+/**
+ * A view that counts toward play count and last watched: fully watched, and stored in history.
+ * A row with no history id (`row_id: null`) is not a stored view, such as a stream still playing.
+ */
+function isCompletedView(item: TautulliHistoryItem): boolean {
+  return item.watched_status === TAUTULLI_FULLY_WATCHED && item.row_id !== null;
+}
+
 export const tautulliFieldProvider: MediaFieldProvider<
   TautulliHistoryItem[],
   PlayHistoryFields,
@@ -110,6 +121,7 @@ export const tautulliFieldProvider: MediaFieldProvider<
   visit: (history) => {
     const byKey = new Map<string, PlayHistoryFields>();
     for (const item of history) {
+      if (!isCompletedView(item)) continue;
       // A play of an episode is a play of its show, which is what a series is matched by.
       const key =
         item.media_type === 'episode' && item.grandparent_rating_key
@@ -118,9 +130,9 @@ export const tautulliFieldProvider: MediaFieldProvider<
       const existing = byKey.get(key);
       const playCount = (existing?.playCount ?? 0) + 1;
       const lastPlayedUnix =
-        item.played_at !== undefined &&
-        (existing?.lastPlayedUnix === undefined || item.played_at > existing.lastPlayedUnix)
-          ? item.played_at
+        item.stopped !== undefined &&
+        (existing?.lastPlayedUnix === undefined || item.stopped > existing.lastPlayedUnix)
+          ? item.stopped
           : existing?.lastPlayedUnix;
       byKey.set(key, { playCount, lastPlayedUnix });
     }

@@ -179,7 +179,7 @@ describe('tautulliEnricher', () => {
         watched_status: 1,
         duration: 1,
         play_duration: 1,
-        played_at: 1700000000,
+        stopped: 1700000000,
       },
     ]);
     const item: NormalizedMovie = { _sourceIds: { plex: 'plex-1' }, title: 'The Matrix' };

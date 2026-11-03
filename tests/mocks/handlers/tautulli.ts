@@ -30,22 +30,49 @@ export const tautulliHandlers = [
       });
     }
 
+    // Shapes as a live Tautulli v2 server sends them: keys are numbers, the play's times are
+    // `date`/`started`/`stopped` in Unix seconds, and a grouped row merges several sessions.
     if (cmd === 'get_history') {
       return HttpResponse.json({
         response: {
           result: 'success',
           data: {
+            recordsFiltered: 2,
+            recordsTotal: 2,
             data: [
               {
-                rating_key: '123',
+                row_id: 41,
+                group_count: 2,
+                group_ids: '40,41',
+                rating_key: 123,
+                grandparent_rating_key: '',
+                media_type: 'movie',
                 title: 'The Matrix',
                 user: 'testuser',
                 watched_status: 1,
                 duration: 7380,
                 play_duration: 7380,
+                date: 1700000000,
+                started: 1700000000,
+                stopped: 1700007380,
+              },
+              {
+                row_id: 42,
+                group_count: 1,
+                group_ids: '42',
+                rating_key: 456,
+                grandparent_rating_key: 789,
+                media_type: 'episode',
+                title: 'Pilot',
+                user: 'testuser',
+                watched_status: 0.5,
+                duration: 1200,
+                play_duration: 600,
+                date: 1700100000,
+                started: 1700100000,
+                stopped: 1700100600,
               },
             ],
-            total_count: 1,
           },
         },
       });

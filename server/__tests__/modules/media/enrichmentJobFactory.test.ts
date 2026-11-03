@@ -62,7 +62,7 @@ describe('EnrichmentJobFactory', () => {
         HttpResponse.json({
           response: {
             result: 'success',
-            data: { data: [{ rating_key: '1', played_at: 1000 }], total_count: 1 },
+            data: { data: [{ row_id: 1, rating_key: 1, watched_status: 1, stopped: 1000 }] },
           },
         })
       )

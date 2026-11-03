@@ -89,6 +89,11 @@ would then also carry. `isFavorite` has no Plex analog — Jellyfin-only, no pre
 time), so the checked transform (`string` → `{ tmdbStatus }`) stands alone without the `visit`/join
 machinery.
 
+`tautulliFieldProvider.visit` decides which Tautulli history rows are views before aggregating:
+only a fully watched row (`watched_status === 1`) with a stored id counts, and its `stopped` time
+is the last-played timestamp — so a play count from Tautulli means completed viewings, not opens
+([`mediaFieldProvider.ts`](ref:path:server/modules/media/mediaFieldProvider.ts)).
+
 `radarrMediaSource`/`sonarrMediaSource`
 ([`sourceAdapters.ts`](ref:path:server/modules/media/sourceAdapters.ts)) and the five
 `MediaEnricher` adapters

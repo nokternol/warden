@@ -32,7 +32,7 @@ describe('sonarrTagsFieldSource', () => {
   });
 });
 
-function history(rating_key: string, played_at?: number): TautulliHistoryItem {
+function history(rating_key: string, stopped?: number): TautulliHistoryItem {
   return {
     rating_key,
     title: 'T',
@@ -40,7 +40,7 @@ function history(rating_key: string, played_at?: number): TautulliHistoryItem {
     duration: 3600,
     play_duration: 3600,
     user: 'u',
-    ...(played_at !== undefined ? { played_at } : {}),
+    ...(stopped !== undefined ? { stopped } : {}),
   } as TautulliHistoryItem;
 }
 
@@ -54,6 +54,28 @@ describe('tautulliFieldProvider.visit', () => {
 
     expect(result.get('abc123')?.playCount).toBe(2);
     expect(result.get('other')?.playCount).toBe(1);
+  });
+
+  it('counts only views Tautulli marks fully watched, as Plex would', () => {
+    const result = tautulliFieldProvider.visit([
+      history('abc123', 1000),
+      { ...history('abc123', 2000), watched_status: 0.75 },
+      { ...history('partial', 3000), watched_status: 0.5 },
+      { ...history('started', 4000), watched_status: 0 },
+    ]);
+
+    expect(result.get('abc123')?.playCount).toBe(1);
+    expect(result.has('partial')).toBe(false);
+    expect(result.has('started')).toBe(false);
+  });
+
+  it('does not count a row with no history id, such as a stream still playing', () => {
+    const result = tautulliFieldProvider.visit([
+      { ...history('abc123', 1000), row_id: 7 },
+      { ...history('abc123', 2000), row_id: null },
+    ]);
+
+    expect(result.get('abc123')).toEqual({ playCount: 1, lastPlayedUnix: 1000 });
   });
 });
 
@@ -459,9 +481,21 @@ describe('jellyfinFieldProvider.toEnrichmentFields', () => {
 
   it('counts a play of an episode as a play of its show, which a series is matched by', () => {
     const byKey = tautulliFieldProvider.visit([
-      { rating_key: 'ep1', grandparent_rating_key: 'show', media_type: 'episode', played_at: 5 },
-      { rating_key: 'ep2', grandparent_rating_key: 'show', media_type: 'episode', played_at: 9 },
-      { rating_key: 'film', media_type: 'movie', played_at: 3 },
+      {
+        rating_key: 'ep1',
+        grandparent_rating_key: 'show',
+        media_type: 'episode',
+        watched_status: 1,
+        stopped: 5,
+      },
+      {
+        rating_key: 'ep2',
+        grandparent_rating_key: 'show',
+        media_type: 'episode',
+        watched_status: 1,
+        stopped: 9,
+      },
+      { rating_key: 'film', media_type: 'movie', watched_status: 1, stopped: 3 },
     ] as never);
     expect(byKey.get('show')).toEqual({ playCount: 2, lastPlayedUnix: 9 });
     expect(byKey.get('film')?.playCount).toBe(1);
