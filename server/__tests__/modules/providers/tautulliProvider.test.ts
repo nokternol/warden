@@ -37,9 +37,17 @@ describe('TautulliProvider', () => {
 
   it('fetches and parses watch history correctly', async () => {
     const history = await provider.getHistory();
-    expect(history).toHaveLength(1);
+    expect(history).toHaveLength(2);
     expect(history[0].title).toBe('The Matrix');
     expect(history[0].watched_status).toBe(1);
+  });
+
+  it('returns rating keys as text, matching how Plex keys are stored', async () => {
+    const history = await provider.getHistory();
+    expect(history.map((h) => [h.rating_key, h.grandparent_rating_key])).toEqual([
+      ['123', undefined],
+      ['456', '789'],
+    ]);
   });
 });
 
@@ -105,6 +113,42 @@ describe('TautulliProvider — actuator tasks', () => {
     await task('deleteWatchHistory').run(['101']);
 
     expect(deleteCalls).toEqual(['1,2']);
+  });
+
+  it('deleteWatchHistory deletes every session of a viewing Tautulli merged into one row', async () => {
+    const deleteCalls: Array<string | null> = [];
+    server.use(
+      http.get(`${TAUTULLI_URL}/api/v2`, ({ request }) => {
+        const url = new URL(request.url);
+        if (url.searchParams.get('cmd') === 'delete_history') {
+          deleteCalls.push(url.searchParams.get('row_ids'));
+          return HttpResponse.json({ response: { result: 'success', data: null } });
+        }
+        // Tautulli merges a paused-and-resumed viewing into one row unless asked not to.
+        const ungrouped = url.searchParams.get('grouping') === '0';
+        const rows =
+          url.searchParams.get('rating_key') === '101'
+            ? ungrouped
+              ? [{ row_id: 1 }, { row_id: 2 }]
+              : [{ row_id: 2, group_count: 2, group_ids: '1,2' }]
+            : [];
+        return HttpResponse.json({ response: { result: 'success', data: { data: rows } } });
+      })
+    );
+
+    await task('deleteWatchHistory').run(['101']);
+
+    expect(deleteCalls).toEqual(['1,2']);
+  });
+
+  it('deleteWatchHistory skips a row with no history id, such as a stream still playing', async () => {
+    const deleteCalls = stubHistoryApi({
+      'rating:101': [{ row_id: 1 }, { row_id: null as never }],
+    });
+
+    await task('deleteWatchHistory').run(['101']);
+
+    expect(deleteCalls).toEqual(['1']);
   });
 
   it('deleteWatchHistory issues no delete when nothing matched', async () => {

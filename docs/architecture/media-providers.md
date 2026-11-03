@@ -80,9 +80,16 @@ not-yet-built `changeLanguageProfile` task.
 endpoint).
 
 **What the app can pull today** ([`connections/tautulliProvider.ts`](ref:path:server/modules/providers/connections/tautulliProvider.ts)):
-`getLibraryStats()`, `getHomeStats()`, `getHistory()`, `searchHistory(title)`. Actuator tasks
-(`deleteWatchHistory`, `sendNotification`, `terminateStream`) are all modelled-only — declared, not
-implemented against Tautulli's API.
+`getLibraryStats()`, `getHomeStats()`, `getHistory()` (every row, paged 1000 at a time),
+`searchHistory(title)`. History rows leave the provider with `rating_key`/`grandparent_rating_key`
+as text: Tautulli sends them as numbers, and every other Plex key in Warden is text, so a numeric
+key would never match a Plex item.
+
+**Actuator task:** `deleteWatchHistory` only. It looks each Plex key up as `rating_key` and
+`grandparent_rating_key` with `grouping: 0`, because by default Tautulli merges the sessions of
+one viewing (paused, resumed later) into one row that carries a single id; deleting those rows
+would leave the other sessions behind. Rows with `row_id: null` (not yet stored, such as a stream
+still playing) are skipped.
 
 **Wired into the media-item pipeline?** Yes — `tautulliEnricher`
 ([`enrichment/enricherAdapters.ts`](ref:path:server/modules/media/enrichment/enricherAdapters.ts)) calls
@@ -91,6 +98,14 @@ implemented against Tautulli's API.
 see [`docs/architecture/media-field-provider-role.md`](ref:path:docs/architecture/media-field-provider-role.md))
 into `playCount`/`lastWatchedAt` keyed by `plexRatingKey`, and wins precedence over Plex for both
 fields in `contestedFieldPrecedence`. Gated into `ruleRegistry.ts` (`watched`, `lastWatchedDaysAgo`).
+
+**What counts as a view.** History is read grouped (Tautulli's default), so one row is one viewing
+however many sessions it took. Only rows with `watched_status === 1` count — the viewing passed
+Tautulli's watched threshold (its setting, default 85%; Plex's own default is 90%), the level at
+which Plex would mark it watched. Partial plays (`0`, `0.25`, `0.5`, `0.75`) and rows with no id are
+ignored. `lastWatchedAt` is the `stopped` time (Unix seconds) of the latest counted viewing; Tautulli
+also sends `date`/`started` (when it began), which are not used. An episode's views count toward
+its show (`grandparent_rating_key`), which is what a series is matched by.
 
 ## Plex
 
