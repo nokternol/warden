@@ -220,6 +220,7 @@ export class ProviderSettingsService {
 
   async delete(id: number): Promise<void> {
     await this.db.delete(metadataProviders).where(eq(metadataProviders.id, id));
+    this.eventBus?.emit('provider:changed', {});
     log.debug('Provider deleted', { id });
   }
 
