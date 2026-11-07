@@ -3,16 +3,17 @@ import Button from '@app/components/Button';
 import ConnectionTestIcon from '@app/components/ConnectionTestIcon';
 import { type RowTableColumn, rowTableStyles as table } from '@app/components/RowTable';
 import StatusDot from '@app/components/StatusDot';
-import { useAutomationPreview } from '@app/hooks/useAutomationPreview';
+import { useAutomationReadiness } from '@app/hooks/useAutomationReadiness';
 import { useLatestRun } from '@app/hooks/useAutomationRuns';
 import type { AutomationDto } from '@app/hooks/useAutomations';
 import { tasksForProvider, useProviderTasks } from '@app/hooks/useProviderTasks';
-import { blastRadius } from '@app/lib/blastRadius';
 import { RUN_STATUS } from '@app/lib/runStatus';
 import { cn } from '@app/lib/utils/cn';
 import { relativeTime, safeHumanSchedule } from '@app/lib/utils/time';
 import { Power, PowerOff, Trash2, Zap } from 'lucide-react';
 import { useState } from 'react';
+import ReadinessBlocks from './ReadinessBlocks';
+import RunCheck from './RunCheck';
 
 const RUN_FEEDBACK_DISMISS_MS = 2000;
 
@@ -75,64 +76,6 @@ function LastRun({ automation }: { automation: AutomationDto }) {
   );
 }
 
-/** Stops a destructive Run Now until the number it will affect is known and accepted. */
-function RunConfirmation({
-  automation,
-  taskLabel,
-  onConfirm,
-  onCancel,
-}: {
-  automation: AutomationDto;
-  taskLabel: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  const preview = useAutomationPreview(
-    automation.provider
-      ? {
-          providerId: automation.provider.id,
-          taskId: automation.taskId,
-          queries: automation.queries.map(({ queryId, role }) => ({ queryId, role })),
-        }
-      : null
-  );
-  const radius = blastRadius(preview);
-
-  return (
-    <div className="mt-3 lg:col-span-full rounded border border-warning/40 bg-warning/10 px-3 py-2.5 flex flex-wrap items-center justify-between gap-2">
-      <p className="text-sm text-text-primary">
-        {radius.state === 'counted' ? `${taskLabel} ${radius.phrase}.` : radius.phrase}
-      </p>
-      <div className="flex gap-2">
-        {radius.state === 'failed' && (
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              void preview.mutate();
-            }}
-          >
-            Retry count
-          </Button>
-        )}
-        <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button
-          type="button"
-          variant="danger"
-          size="sm"
-          disabled={radius.state !== 'counted'}
-          onClick={onConfirm}
-        >
-          Run now
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 /**
  * One automation: what it does, when, how its last run went and what can be done to it. System
  * automations can only be run on demand, so they omit `onToggle` and `onDelete`.
@@ -142,11 +85,15 @@ function Root({
   onToggle,
   onDelete,
   onRun,
+  onSignOff,
 }: {
   automation: AutomationDto;
   onToggle?: () => unknown;
   onDelete?: () => unknown;
-  onRun?: () => Promise<void>;
+  /** Starts a Run Now, proceeding past the findings awaiting sign-off it names. */
+  onRun?: (consentedFindings?: string[]) => Promise<void>;
+  /** Accepts a finding awaiting sign-off as known risk for this automation. */
+  onSignOff?: (findingId: string) => Promise<void>;
 }) {
   const [confirming, setConfirming] = useState<'delete' | 'run' | null>(null);
   const [runStatus, setRunStatus] = useState<RunStatus>('idle');
@@ -164,15 +111,21 @@ function Root({
   // A task the catalogue no longer describes could still be destructive, so it confirms too.
   const needsRunConfirmation = isUserAutomation && (task?.destructive ?? true);
   const taskLabel = task?.label ?? 'Task no longer offered';
+  const readiness = useAutomationReadiness(
+    isUserAutomation && automation.provider ? automation.id : null
+  );
+  // Run Now asks first unless the check has answered that it simply runs.
+  const needsRunCheck =
+    needsRunConfirmation || (isUserAutomation && readiness.data?.runNow !== 'runs');
   const extraQueries = automation.queries.length - 1;
 
-  const run = async () => {
+  const run = async (consentedFindings?: string[]) => {
     if (!onRun || runStatus === 'loading') return;
     setConfirming(null);
     setRunStatus('loading');
     setActionError(null);
     try {
-      await onRun();
+      await onRun(consentedFindings);
       setRunStatus('pass');
       setTimeout(() => setRunStatus('idle'), RUN_FEEDBACK_DISMISS_MS);
     } catch (err) {
@@ -254,7 +207,7 @@ function Root({
               <button
                 type="button"
                 onClick={() => {
-                  if (needsRunConfirmation) setConfirming('run');
+                  if (needsRunCheck) setConfirming('run');
                   else void run();
                 }}
                 disabled={runStatus === 'loading' || !tasksKnown}
@@ -308,17 +261,37 @@ function Root({
         </td>
       </tr>
 
-      {(confirming || actionError) && (
+      {(confirming || actionError || readiness.data) && (
         <tr className={table.detailRow}>
           <td colSpan={AUTOMATION_COLUMNS.length} className={table.detailCell}>
+            {readiness.data && (
+              <ReadinessBlocks
+                readiness={readiness.data}
+                onSignOff={
+                  onSignOff &&
+                  ((findingId) => {
+                    void act(async () => {
+                      await onSignOff(findingId);
+                      await readiness.mutate();
+                    }, "Couldn't sign it off.");
+                  })
+                }
+              />
+            )}
+
             {confirming === 'run' && (
-              <RunConfirmation
-                automation={automation}
+              <RunCheck
+                readiness={readiness.data}
+                failed={Boolean(readiness.error)}
                 taskLabel={taskLabel}
-                onConfirm={() => {
-                  void run();
+                destructive={needsRunConfirmation}
+                onConfirm={(consentedFindings) => {
+                  void run(consentedFindings).then(() => readiness.mutate());
                 }}
                 onCancel={() => setConfirming(null)}
+                onRetry={() => {
+                  void readiness.mutate();
+                }}
               />
             )}
 

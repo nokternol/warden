@@ -34,9 +34,9 @@ provided it has a live producer of an offered type).
 |---|---|
 | **Sign-in** | Plex sign-in by the owner only (the first sign-in claims the instance), sign-out, and a session that survives a container restart. |
 | **Providers** | Add, edit, test and delete a provider of an offered type. Radarr/Sonarr allow multiple instances. Enable tasks per instance. |
-| **Media** | Browse movies and series from configured sources. Filter, filter by title, sort and paginate. |
-| **Queries** | Save a filter set as a query, list, preview and delete. |
-| **Automations** | Create from one or more include/exclude queries, a task (with its select parameter, if any) and a schedule. List, Run Now, Disable/Enable and Delete. A destructive task states its blast radius before saving. First-run guidance when setup is incomplete. An automation that cannot run as configured is skipped, not run. |
+| **Media** | Browse movies and series from configured sources. Filter, filter by title, sort and paginate. A filter that can't be trusted shows as a warning beside the results, apart from any provider that could not be read. Results reflect Warden's own changes (a run, a provider added or removed) without waiting for the cache to expire. |
+| **Queries** | Save a filter set as a query, list, preview and delete. The list marks a query **Broken** or **Check data** with each reason and what fixes it. A query an automation uses can't be deleted, and a query on a rule no offered provider produces can't be saved. |
+| **Automations** | Create from one or more include/exclude queries, a task (with its select parameter, if any) and a schedule. List, Run Now, Disable/Enable and Delete. A destructive task states its blast radius before saving. First-run guidance when setup is incomplete. An automation whose filters can't be trusted is skipped, not run, and its row lists what blocks it and what fixes it. A filter whose field holds no data at all can be accepted per automation, after which its schedule runs. Run Now checks first: it asks before running past a filter not yet accepted (for that run only), says when the run will be skipped, and states how many items a destructive task will affect. |
 | **Runs** | History of runs with status (succeeded, failed, or skipped as invalid with its reason), count, error and the items each run targeted, including items since removed from their source. |
 | **System** | System automations (identity resolution, enrichment) listed with Run Now, health status, and media data reset. |
 | **Delivery** | `docker compose up` with a persistent volume, a health check, graceful stop, migrations on boot, and an image published by CI. |
@@ -51,8 +51,8 @@ code. Every path to them is blocked by the scope declaration.
 | Surface | Why it's deferred |
 |---|---|
 | Dashboard page | Automations plus first-run guidance is the MVP landing page (decision 3). |
-| Ratings page, media-page ratings panel, `/api/providers/ratings` | Ratings currently have two mechanisms (F10). Unifying them is `docs/intent/media-ratings-provider.md`'s work. |
-| Search page, `/api/search/metadata` | A second way to find a title beside the title filter (F11). Its role is decided when un-deferred. |
+| Ratings page, media-page ratings panel, `/api/providers/ratings` | Ratings have two mechanisms (F10). C6 settles them to one before the MVP closes; the surface stays blocked unless C6's decision un-defers it. |
+| Search page, `/api/search/metadata` | A second way to find a title beside the title filter (F11). C7 decides its role and settles title lookup to one mechanism before the MVP closes; the surface stays blocked unless C7's decision un-defers it. |
 | `/api/providers/metadata` | No MVP consumer. |
 | `/api/app-settings` (the `appSettings` module, `settingsAwarePrecedence.ts`) | No UI and no consumer yet. It is the input to the post-MVP precedence work. |
 | Provider type TVMAZE | Not buildable through `ProviderFactory` yet (its API key is lost), so offering it is a reachable broken path (L1). |
@@ -272,7 +272,10 @@ flowchart LR
   E1[E1 image correct + compose] --> E3[E3 CI smoke + publish]
   A2 --> E3
   C3 & C4 & C5 & D1 & D2 & D3 & D4 & F1 --> F2[F2 impeccable pass]
-  F2 & E3 --> G1[G1 acceptance + docs closure]
+  B6 --> B7[B7 rule key and content type in the schema]
+  C5 --> C6[C6 one ratings mechanism]
+  C5 --> C7[C7 one title lookup]
+  F2 & E3 & B7 & C6 & C7 --> G1[G1 acceptance + docs closure]
 ```
 
 C0 goes first because S1, A1 and C5 all enforce through the contract. After it, tracks
@@ -428,6 +431,26 @@ names, so nothing is renamed twice.
   included and excluded `queries` (`AutomationQuery { queryId, role, sortOrder }`, table
   `automation_queries` via migration 0028; `sortOrder` stays because it orders the list). A query spec
   holds `clauses` (`MediaQueryClause`), and a rule lists its `providers`.
+
+**B7 · Rule key and content type in the schema** (after B6; must merge before G1)
+- **Model:** Sonnet 5.5 (a column rename; typecheck proves completeness).
+- **Why:** two stored names survived B6 and B2 because renaming them needs a migration, and the
+  fracture ledger holds them open as *"Rule key and content type — two names kept"*. The column
+  `media_query_filter_values.filterKey` holds a rule key, and `media_identity.kind` holds a content
+  type. Definition of done item 3 (one name per concept across code) is not met while they remain.
+- **Behaviours:**
+  - A saved query's filters read back unchanged after the migration, with every rule key intact.
+  - Every grouped title keeps its content type after the migration, and a movie and a series with the
+    same external id stay separate titles.
+  - Identity resolution, browse, saved queries and automation runs behave as before the migration.
+- **Expected end state:** one migration renames `media_query_filter_values.filterKey` to `ruleKey`
+  and `media_identity.kind` to `contentType` (SQLite `ALTER TABLE … RENAME COLUMN`, which keeps
+  indexes and data). The drizzle schema and every reader follow; no translation layer maps an old name
+  to a new one.
+- **Deletes:** the column names `filterKey` and `media_identity.kind` from the schema and code.
+  Migrations already applied keep their original text.
+- **Docs:** the ledger entry moves to Healed; `VOCABULARY.md` and the EAV/identity architecture docs
+  name the new columns.
 
 ### Track C — One mechanism per job
 
@@ -614,6 +637,60 @@ names, so nothing is renamed twice.
   Their labels, defaults, API paths and filter data move to the server catalogue and its
   projection, so nothing is lost.
 
+**C6 · One ratings mechanism** (after C5; decision 12; must merge before G1)
+- **Model:** Opus 5.5 (a design decision, then the heal it implies).
+- **Why:** F10. Rating filters (`imdbRating`, `communityRating`) run through enrichment, while
+  `/api/providers/ratings` (`ratingsAggregation.ts`) is a separate, title-keyed, on-demand aggregation
+  feeding the Ratings page and the Media page's ratings panel. The fracture ledger holds this open as
+  *"Ratings — two mechanisms, one blocked"*. Blocking the second mechanism (S1) hid it but did not
+  make it one mechanism, so Definition of done item 3 is not met.
+- **Starts with decision 12**, taken by the owner before the first RED, because it decides what the
+  slice builds. The options and their constraints are in the Decisions table. Whatever is chosen:
+  - Exactly one mechanism produces a title's ratings, and every consumer that remains (rating
+    filters, and the Ratings page and panel if kept) reads it.
+  - Decision 7 holds: a surface left deferred stays compiled, typechecked, tested and blocked by
+    `contract/scope.ts`; it is not deleted unless decision 12 retires it as a feature.
+- **Defects this slice repairs**, whichever option is chosen (an option that retires the code
+  repairs them by deleting it; one that keeps it fixes them). This slice is their only owner:
+  - The `ratings` procedure (`server/modules/providers/providers.procedures.ts`) builds its TMDB, OMDB
+    and TVmaze connections with `new` instead of through `ProviderFactory`, and passes literal URLs
+    that repeat the provider catalogue's `defaultUrl`; the OMDb literal is `https://` while the
+    catalogue (`providerCatalogue.ts`) says `http://`. Read cold, the fully built handler looks live
+    beneath its deferral.
+  - `formatRating` and `getSummaryText` in `server/modules/providers/ratingsAggregation.ts` have no
+    callers.
+  - `ratingsAggregation.ts` logs with `console.warn` where every other server file uses the module
+    logger.
+- **Behaviours:** written into this section once decision 12 is taken, in the slice's own PR.
+- **Done when:** the ledger entry moves to Healed, `contract/scope.ts`'s ratings entries say why
+  they remain (or are removed), and Post-MVP no longer lists ratings as an unresolved duplicate.
+
+**C7 · One title lookup** (after C5; decision 13; must merge before G1)
+- **Model:** Opus 5.5 (a design decision, then the heal it implies).
+- **Why:** F11. The title filter finds a title in Warden's own catalog; the Search page
+  (`/api/search/metadata`) searches providers' metadata for a title. The fracture ledger holds this
+  open as *"Title lookup — two mechanisms, one blocked"*. Blocking Search (S1) hid it without
+  deciding whether the two do one job or two.
+- **Starts with decision 13**, taken by the owner before the first RED. The options and their
+  constraints are in the Decisions table. Whatever is chosen:
+  - Each remaining way to look up a title does a job no other does, and its name says which (so two
+    things that both "search" do not remain unless they are distinct jobs, named apart).
+  - Decision 7 holds for a surface left deferred.
+- **Defects this slice repairs**, whichever option is chosen (an option that retires the code
+  repairs them by deleting it; one that keeps it fixes them). This slice is their only owner:
+  - `searchProvider` (`server/modules/media/media.search.procedures.ts`) is its own switch from
+    provider type to connection class, building six connection classes with `new` inside the `media`
+    module instead of through `ProviderFactory`. It is one of the reasons `providers/index.ts` exports
+    connection classes to other modules "until Phase 4"; once it is gone, that comment stops naming
+    the search handler.
+  - Plex and Jellyfin search download every library's full contents on each submit to match a
+    substring.
+  - The Search page (`src/pages/search/index.page.tsx`) hard-codes status colours instead of the
+    theme's status components, and renders each result as a raw `JSON.stringify` dump.
+- **Behaviours:** written into this section once decision 13 is taken, in the slice's own PR.
+- **Done when:** the ledger entry moves to Healed, `contract/scope.ts`'s search entries say why they
+  remain (or are removed), and Post-MVP no longer lists search as an unresolved duplicate.
+
 ### Track D — Finish the in-scope features
 
 **D1 · Destructive tasks state their blast radius** (after C0; story first)
@@ -738,8 +815,21 @@ names, so nothing is renamed twice.
   `success | error`, so the Dashboard and Automations page are unchanged. `AutomationRunSchema.status`
   gains `skipped`. `automation_runs.status` is an unconstrained text column, so no migration was
   needed. On the Runs page a skipped run shows an *Invalid* warning badge and its full reason.
-- **Out of MVP:** showing invalidity outside the Runs page (an Automations page badge, the reason,
-  a link to fix the query). See [Post-MVP](#post-mvp-parked-in-order).
+- **Current state:** the guard above was replaced by filter readiness
+  (`docs/architecture/filter-readiness.md`), which every screen and the executor read. Where it
+  differs from this slice's behaviours and as-built notes, it is the current fact:
+  - The check is the queries' readiness findings plus the automation's own provider being active.
+    `getHealthForAutomation`, the `required` flag and the `degraded`/`unavailable` health statuses are
+    gone. A filter whose rule no active provider can supply blocks the run (there is no "optional
+    provider" that lets it through). A Plex, Jellyfin or Tautulli automation whose filter names an
+    active source instance of the right content type runs.
+  - A filter whose field holds no value for any title can be signed off per automation
+    (`automation_blocks`); once signed off it no longer blocks the schedule.
+  - Run Now checks first (`automations.readiness`) and runs past a finding awaiting sign-off only when
+    the user chose to proceed for that run; otherwise it records the skip. A scheduled skip is
+    recorded once while its reason is unchanged, and every Run Now records its own outcome.
+  - The Automations page shows each automation's blocks with what clears them, so invalidity is no
+    longer shown on the Runs page only.
 
 ### Track E — Containerised delivery
 
@@ -824,7 +914,8 @@ names, so nothing is renamed twice.
 
 **G1 · MVP acceptance and docs closure**
 - **Model:** Opus 5.5 (end-to-end acceptance and docs closure).
-- **Prerequisite:** the NAS runs Seerr in place of Overseerr (decision 9a).
+- **Prerequisites:** the NAS runs Seerr in place of Overseerr (decision 9a). B7, C6 and C7 have
+  merged, so no fracture-ledger entry this plan opened is still Open; G1 does not start otherwise.
 - Against the **published image** on the NAS stack, with `playwright-cli`:
   1. Every [In-scope](#in-scope) feature row.
   2. Every offered provider type: add, test, edit, delete.
@@ -832,6 +923,13 @@ names, so nothing is renamed twice.
   4. The [Destination scenario](#destination-scenario), and a second Plex account being refused.
   5. No out-of-scope route or page is reachable on the running image (the contract and S1's
      navigation list are the expected surface).
+  6. Filter readiness against the real providers: with Seerr connected and no requests made, a query
+     on a Seerr filter shows **Check data**; an automation using it is blocked on schedule until its
+     problem is accepted on the Automations page; Run Now asks before running past it and runs with
+     consent. A destructive automation's Run Now states its item count. Deleting a query an
+     automation uses is refused with the reason.
+  7. After an automation run changes titles, and after a provider is added, the Media page shows the
+     change on its next load without waiting for the cache to expire.
 - Docs: move every fracture-ledger entry this plan opened to Healed. Update `VOCABULARY.md` and the
   core model. Re-sequence the provider e2e implementation map under Post-MVP. Then run
   `graphify update .` and `link_doc_to_code.py --apply` for touched architecture docs.
@@ -853,6 +951,8 @@ names, so nothing is renamed twice.
 | 9a | Overseerr vs Seerr | **Decided: one provider type, Seerr** (D3). Development continues against the NAS's current Overseerr, since the APIs match. The NAS upgrades to Seerr before G1, so acceptance verifies the offered type against the real target; the Seerr spec flagged its live compatibility as unverified. D3 built the single `SEERR` type, tested against mocks of both server kinds. |
 | 10 | Offered tasks | **Decided: all 32 offered**, each run once in G1 against a sacrificial item, so destructive ones are proven on throwaway media. The offered types declare 32 tasks, all wired, with parameterized ones backed by options routes. (D) marks destructive. **Radarr:** unmonitorMovie, triggerSearch, deleteMovieWithFiles (D), deleteMovieKeepFiles (D), refreshMovie, rescanMovie, renameMovies, refreshCollection, changeQualityProfile, addTag, removeTag. **Sonarr:** unmonitorSeries, triggerSearch, deleteSeriesWithFiles (D), deleteSeriesKeepFiles (D), refreshSeries, rescanSeries, renameSeries, changeQualityProfile, addTag, removeTag. **Plex:** deleteFromLibrary (D), refreshMetadata, markPlayed, markUnplayed. **Jellyfin:** deleteItem (D), refreshMetadata, markPlayed, markUnplayed, addToCollection, removeFromCollection. **Tautulli:** deleteWatchHistory (D). **Seerr:** none (enrichment only). |
 | 11 | Client/server contract mechanism | **Decided: oRPC contract-first** (C0). On the wire it stays plain HTTP/JSON at the same `/api/...` URLs via oRPC's OpenAPI handler; client and server ship in one image, so there is no client/server version skew to manage. Checked on npm 2026-10-03: oRPC 1.15.4 (released 2026-10-01, schema-agnostic, Zod 4 compatible); ts-rest 3.52.1 (last release 2025-06, peer `zod ^3`, incompatible with this repo's Zod 4.3); Zodios 10.9.6 (last release 2023-08, peer `zod ^3`, axios-based, unmaintained). The alternative is tightening the current bridge by hand (add method/path to the shared schemas, write our own typed client), which builds a homegrown second version of what oRPC already is. |
+| 12 | One ratings mechanism (C6) | **Open; the owner decides at the start of C6.** (a) The Ratings page and panel read rating values from enrichment, and `ratingsAggregation.ts` is retired as a mechanism; the surface stays deferred. (b) Ratings move to their own persisted, identity-keyed store (the `docs/intent/media-ratings-provider.md` shape), and rating filters read it. Larger, and that intent doc says its design is undecided. (c) The Ratings page and panel are retired as features (an explicit exception to decision 7) and rating filters stay on enrichment. |
+| 13 | One title lookup (C7) | **Open; the owner decides at the start of C7.** (a) Search is a distinct job, finding titles a provider knows that are not in the library, and is named for that job so it no longer reads as a second title filter; it stays deferred. (b) Search runs over the title filter's mechanism, so one lookup serves both. (c) Search is retired as a feature (an explicit exception to decision 7). |
 
 ## Post-MVP (parked, in order)
 
@@ -864,9 +964,9 @@ names, so nothing is renamed twice.
 3. Maintenance of soft-deleted `media_item` rows (retention or purge policy).
 4. Any provider type not offered in the MVP. After C2 and C5, adding one
    is a server-only change.
-5. Un-deferring each deferred surface, resolving its duplicate mechanism first (ratings vs rating
-   filters, search vs title filter).
-6. Invalid automations surfaced as issues to solve: an Automations page badge with the reason and
-   a link to fix the offending query, beyond the skipped run D4 records on the Runs page.
+5. Un-deferring each deferred surface. The duplicate mechanisms behind ratings and search are
+   settled inside the MVP (C6, C7), so un-deferring builds on what those slices decided.
+6. A link from an automation's blocking problem to the query that needs fixing. The Automations page
+   already lists each block with its reason and what clears it.
 7. `docs/intent/`: automation archive, realtime run state, ratings provider, inter-provider
    dependency, editions, per-consumer watchlist.

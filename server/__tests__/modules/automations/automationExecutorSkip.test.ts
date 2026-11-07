@@ -4,17 +4,24 @@
  *
  * Run: vitest run --project server
  */
-import { MetadataProviderType, automationRunItems, automationRuns } from '@server/database/schema';
+import {
+  MetadataProviderType,
+  automationRunItems,
+  automationRuns,
+  mediaQueryFilterValues,
+} from '@server/database/schema';
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { DomainEventBus, type DomainEvents } from '@server/kernel/eventBus';
 import logger from '@server/kernel/logger';
+import { AutomationBlockService } from '@server/modules/automations/automationBlockService';
 import { AutomationExecutor, excessiveReach } from '@server/modules/automations/automationExecutor';
 import { AutomationRunService } from '@server/modules/automations/automationRunService';
 import { AutomationService } from '@server/modules/automations/automationService';
 import type { Filter } from '@server/modules/media/ruleRegistry';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
+import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRadarrMovie } from '../../../../tests/factories';
@@ -48,12 +55,14 @@ describe('AutomationExecutor — invalid automations', () => {
     const db = getDb();
     automationService = new AutomationService({ db });
     providerSettingsService = new ProviderSettingsService({ db });
-    mediaQueryService = new MediaQueryService({ db });
+    mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
     executor = new AutomationExecutor({
       automationService,
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
       mediaQueryService,
+      automationBlockService: new AutomationBlockService({ db: getDb() }),
+      filterReadiness: filterReadinessOver(getDb()),
       db,
     });
     unmonitorCalls = 0;
@@ -112,7 +121,7 @@ describe('AutomationExecutor — invalid automations', () => {
     expect(runs).toHaveLength(1);
     expect(runs[0].status).toBe('skipped');
     expect(runs[0].error).toBe(
-      `Tags filter names Radarr instance ${removed.id}, which is not an active provider`
+      `Tags filter names Provider instance ${removed.id}, which is not an active provider`
     );
     expect(unmonitorCalls).toBe(0);
   });
@@ -143,7 +152,7 @@ describe('AutomationExecutor — invalid automations', () => {
       'Automation skipped as invalid',
       expect.objectContaining({
         automationId: automation.id,
-        reason: `Tags filter names Radarr instance ${removed.id}, which is not an active provider`,
+        reason: `Tags filter names Provider instance ${removed.id}, which is not an active provider`,
       })
     );
   });
@@ -173,33 +182,8 @@ describe('AutomationExecutor — invalid automations', () => {
     const [run] = await getDb().select().from(automationRuns);
     expect(run.status).toBe('skipped');
     expect(run.error).toBe(
-      `Radarr instance ${own.id}, this automation's provider, is not an active provider`
+      `Radarr instance ${own.id}, this automation's provider, is not an active provider; There is no movie library: no Radarr provider is active`
     );
-    expect(unmonitorCalls).toBe(0);
-  });
-
-  // No rule is `required` yet, so no real filter can make a query unavailable.
-  it('skips an automation whose query needs a provider type that is not configured', async () => {
-    const own = await seedRadarr('Own Radarr');
-    const automation = await seedAutomationOver(own.id, [{ ruleKey: 'watched', value: true }]);
-    vi.spyOn(mediaQueryService, 'getHealthForAutomation').mockResolvedValue({
-      status: 'unavailable',
-      providerStatus: [
-        {
-          providerType: MetadataProviderType.TAUTULLI,
-          required: true,
-          configured: false,
-          affectedFilterKeys: ['watched'],
-        },
-      ],
-      qualificationIssues: [],
-    });
-
-    await executor.execute(automation.id);
-
-    const [run] = await getDb().select().from(automationRuns);
-    expect(run.status).toBe('skipped');
-    expect(run.error).toBe('Watched filter needs a Tautulli provider, which is not configured');
     expect(unmonitorCalls).toBe(0);
   });
 
@@ -226,6 +210,8 @@ describe('AutomationExecutor — invalid automations', () => {
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
       mediaQueryService,
+      automationBlockService: new AutomationBlockService({ db: getDb() }),
+      filterReadiness: filterReadinessOver(getDb()),
       eventBus: bus,
     });
     const own = await seedRadarr('Own Radarr');
@@ -248,40 +234,17 @@ describe('AutomationExecutor — invalid automations', () => {
   it('names the raw filter key when no rule is registered for it', async () => {
     const own = await seedRadarr('Own Radarr');
     const automation = await seedAutomationOver(own.id, []);
-    vi.spyOn(mediaQueryService, 'getHealthForAutomation').mockResolvedValue({
-      status: 'degraded',
-      providerStatus: [],
-      qualificationIssues: [{ filterKey: 'retiredRule', providerId: 99, reason: 'not_active' }],
-    });
+    const [{ queryId }] = automation.queries ?? [];
+    // Written past `create`'s validation, as a rule removed from the registry leaves it.
+    await getDb()
+      .insert(mediaQueryFilterValues)
+      .values({ mediaQueryId: queryId, filterKey: 'retiredRule', value: 'x' });
 
     await executor.execute(automation.id);
 
     const [run] = await getDb().select().from(automationRuns);
-    expect(run.error).toBe(
-      'retiredRule filter names Provider instance 99, which is not an active provider'
-    );
-  });
-
-  it('names the raw filter key when a missing provider affects an unregistered rule', async () => {
-    const own = await seedRadarr('Own Radarr');
-    const automation = await seedAutomationOver(own.id, []);
-    vi.spyOn(mediaQueryService, 'getHealthForAutomation').mockResolvedValue({
-      status: 'unavailable',
-      providerStatus: [
-        {
-          providerType: MetadataProviderType.TAUTULLI,
-          required: true,
-          configured: false,
-          affectedFilterKeys: ['retiredRule'],
-        },
-      ],
-      qualificationIssues: [],
-    });
-
-    await executor.execute(automation.id);
-
-    const [run] = await getDb().select().from(automationRuns);
-    expect(run.error).toBe('retiredRule filter needs a Tautulli provider, which is not configured');
+    expect(run.status).toBe('skipped');
+    expect(run.error).toBe('A filter names a rule that no longer exists: retiredRule');
   });
 
   describe('hardening', () => {
@@ -320,7 +283,7 @@ describe('AutomationExecutor — invalid automations', () => {
 
       const [run] = await getDb().select().from(automationRuns);
       expect(run.status).toBe('skipped');
-      expect(run.error).toMatch(/no connected provider/);
+      expect(run.error).toMatch(/needs a .* provider, and none is active/);
     });
 
     it('will not exclude on play history that has not been loaded, since nothing would be protected', async () => {
@@ -489,6 +452,35 @@ describe('AutomationExecutor — invalid automations', () => {
       expect(excessiveReach({ task, matchedCount: 80, poolSize: 80 })).toMatch(/80 of 80/);
       expect(excessiveReach({ task, matchedCount: 40, poolSize: 80 })).toBeUndefined();
       expect(excessiveReach({ task, matchedCount: 10, poolSize: 10 })).toBeUndefined();
+    });
+
+    it('loads each query it targets once per run', async () => {
+      const radarr = await seedRadarr('Radarr');
+      const include = await mediaQueryService.create({
+        name: 'All',
+        contentType: 'movie',
+        filters: [],
+      });
+      const exclude = await mediaQueryService.create({
+        name: 'Tagged',
+        contentType: 'movie',
+        filters: [tagsOf(radarr.id)],
+      });
+      const automation = await automationService.create({
+        name: 'Nightly',
+        queries: [
+          { queryId: include.id, role: 'include' },
+          { queryId: exclude.id, role: 'exclude' },
+        ],
+        providerId: radarr.id,
+        taskId: 'unmonitorMovie',
+        schedule: '0 2 * * *',
+      });
+      const getById = vi.spyOn(mediaQueryService, 'getById');
+
+      await executor.execute(automation.id);
+
+      expect(getById.mock.calls.map(([id]) => id).sort()).toEqual([include.id, exclude.id].sort());
     });
 
     it('reports an automation as running only while it is', async () => {

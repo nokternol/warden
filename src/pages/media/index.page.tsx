@@ -4,6 +4,7 @@ import EmptyState from '@app/components/EmptyState';
 import MediaCard from '@app/components/MediaCard';
 import { MediaFilterBar } from '@app/components/MediaFilterBar';
 import RatingsPanel from '@app/components/RatingsPanel';
+import ReadinessNotice from '@app/components/ReadinessNotice';
 import { SaveQueryDialog } from '@app/components/SaveQueryDialog';
 import SidebarNav from '@app/components/SidebarNav';
 import { Tabs } from '@app/components/Tabs';
@@ -34,6 +35,7 @@ import { cn } from '@app/lib/utils/cn';
 import { guardPage } from '@app/lib/utils/guardPage';
 import type { MediaRuleDescriptor } from '@contract/media';
 import type { ProviderType } from '@contract/providers';
+import type { ReadinessFinding } from '@contract/readiness';
 import type { ContentType } from '@contract/schemas';
 import { isOfferedSection, scope } from '@contract/scope';
 import {
@@ -423,6 +425,8 @@ export interface MediaSlice<T> {
   refresh?: () => unknown;
   /** Sources that failed while the browse itself succeeded. */
   sourceErrors?: { provider: string; error: string }[];
+  /** Why the filters may not select what they describe, from filter readiness. */
+  findings?: ReadinessFinding[];
 }
 
 interface Lookups {
@@ -562,6 +566,7 @@ export function MediaContent({
         >
           <h2 className="sr-only">Movies</h2>
           <SourceErrors errors={movies.sourceErrors} />
+          <ReadinessNotice findings={movies.findings ?? []} />
           <VirtualMediaGrid
             items={movies.items}
             isLoading={movies.isLoading}
@@ -633,6 +638,7 @@ export function MediaContent({
         >
           <h2 className="sr-only">Series</h2>
           <SourceErrors errors={series.sourceErrors} />
+          <ReadinessNotice findings={series.findings ?? []} />
           <VirtualMediaGrid
             items={series.items}
             isLoading={series.isLoading}

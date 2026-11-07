@@ -14,6 +14,7 @@ import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryServic
 import { ProviderSettingsService } from '@server/modules/providers';
 import { createMockConfig, createRadarrMovie } from '@tests/factories';
 import { createApiClient, expectErrorResponse, expectSuccessResponse } from '@tests/helpers/api';
+import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import { http, HttpResponse } from 'msw';
@@ -50,7 +51,10 @@ describe('POST /api/automations/preview', () => {
     });
     radarrId = radarr.id;
 
-    const hasFileQuery = await new MediaQueryService({ db }).create({
+    const hasFileQuery = await new MediaQueryService({
+      db,
+      filterReadiness: filterReadinessOver(db),
+    }).create({
       name: 'On disk',
       contentType: 'movie',
       filters: [{ ruleKey: 'hasFile', value: true }],

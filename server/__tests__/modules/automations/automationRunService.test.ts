@@ -18,6 +18,7 @@ import type { NormalizedMovie } from '@server/modules/media';
 import { resetMediaData } from '@server/modules/media/mediaReset';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
+import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const testConfig: AppConfig = {
@@ -41,7 +42,7 @@ const testConfig: AppConfig = {
 async function seedFixtures() {
   const db = getDb();
   const providerService = new ProviderSettingsService({ db });
-  const mediaQueryService = new MediaQueryService({ db });
+  const mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
   const automationService = new AutomationService({ db });
 
   const provider = await providerService.create({
@@ -182,7 +183,10 @@ describe('AutomationRunService', () => {
     it('filters runs by automationId', async () => {
       const db = getDb();
       const providerService = new ProviderSettingsService({ db });
-      const mediaQueryService = new MediaQueryService({ db });
+      const mediaQueryService = new MediaQueryService({
+        db,
+        filterReadiness: filterReadinessOver(db),
+      });
       const automationService = new AutomationService({ db });
 
       const provider = await providerService.create({

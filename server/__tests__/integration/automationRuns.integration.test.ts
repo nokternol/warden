@@ -20,6 +20,7 @@ import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryServic
 import { ProviderSettingsService } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient } from '@tests/helpers/api';
+import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import express, { type Express } from 'express';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -48,7 +49,10 @@ describe('GET /api/automations/runs', () => {
 
     // Seed fixtures
     const providerService = new ProviderSettingsService({ db });
-    const mediaQueryService = new MediaQueryService({ db });
+    const mediaQueryService = new MediaQueryService({
+      db,
+      filterReadiness: filterReadinessOver(db),
+    });
     const automationService = new AutomationService({ db });
 
     const provider = await providerService.create({

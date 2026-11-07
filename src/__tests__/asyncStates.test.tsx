@@ -130,6 +130,8 @@ describe('a source that failed during a successful browse', () => {
         pageSize: 48,
         yearRange: { min: null, max: null },
         errors: [{ provider: 'Radarr Main', error: 'Timed out' }],
+        findings: [],
+        mediaPage: 'clear' as const,
       }))
     );
     page(<MediaPage />);

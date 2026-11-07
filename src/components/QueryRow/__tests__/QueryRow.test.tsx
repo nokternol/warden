@@ -13,7 +13,10 @@ const mockQuery: MediaQueryRecord = {
   name: 'Stale Movies',
   contentType: 'movie',
   filters: [{ ruleKey: 'year', value: { max: 2020 } }],
-  health: { status: 'healthy', providerStatus: [], qualificationIssues: [] },
+  health: {
+    findings: [],
+    queryList: 'clear',
+  },
   createdAt: '2024-01-15T00:00:00Z',
 };
 

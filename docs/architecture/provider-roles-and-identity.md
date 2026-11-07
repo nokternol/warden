@@ -237,14 +237,16 @@ object as JSON in `media_query_filter_values.value` (migration `0029` folded the
 column into it). The gate lives once, in `matchItems`'s predicate loop
 ([`server/modules/media/mediaQueryEngine.ts`](ref:path:server/modules/media/mediaQueryEngine.ts)): a
 value that names a `providerId` only matches items whose `_sourceIds.providerId` equals it — it never
-pass-throughs to a different instance's coincidentally-matching id. `computeHealth`
-(`mediaQueryService.ts`) surfaces two misconfiguration cases as `QueryHealth` degradations rather than
-silent mismatches: a value that names a `providerId` that is not an active instance, and — on the
-automation surface — one that names a provider other than the automation's own bound instance
-(which the gate above would otherwise make match nothing with no visible signal). Deleting a
-provider leaves the `providerId` in any filter value that names it, so the filter matches nothing
-and its query reports `not_active`; it never widens to another instance's ids, which name different
-tags and profiles.
+pass-throughs to a different instance's coincidentally-matching id. Filter readiness
+([`server/modules/media/filterReadiness.ts`](ref:path:server/modules/media/filterReadiness.ts)) surfaces
+the misconfigurations rather than leaving silent mismatches: `inactive-instance` for a value naming an
+instance that is not an active source of the content type (inactive, deleted, or of the wrong type),
+for every actuator; and `other-instance` when the automation's provider is itself a source and the
+value names a different source instance, which the gate above would make match nothing in that
+automation's own catalog. A non-source actuator acts on the pooled catalogs of every source, so a value
+naming any active source instance is valid for it. Deleting a provider leaves the `providerId` in any
+filter value that names it, so the filter matches nothing and its query reports `inactive-instance`; it
+never widens to another instance's ids, which name different tags and profiles.
 
 The client mirrors this: when a rule's owning content type has more than one active instance
 (`useMediaSources()`), `MediaFilterBar` gives `MultiSelectFilter` each option's instance as its group,

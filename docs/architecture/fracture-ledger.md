@@ -526,6 +526,24 @@ Earlier entries in this ledger use the names that were current when they healed 
   old data back. The `affects` rule is written at the descriptor and enforced by a test that pins every
   task leaving it off. The expiry is kept, documented as the route for changes the bus can't see.
 
+### Filter readiness — four sources for one answer (recorded and healed 2026-11-07)
+
+- **Fracture:** four places answered "what is wrong with these filters?", each with its own rules and
+  wording: saved-query health, the Media page's no-data warning, the executor's pre-run check and the
+  query list's client-side reasons. The rule `required` flag, false on every rule, implied an
+  `unavailable` status, a badge and an executor branch that could never appear.
+- **How it misled:** a query showed healthy while the Media page warned about it; an automation was
+  skipped because a filter's "data has not finished loading", a reason no other screen showed, and kept
+  being skipped for a legitimately empty field with no way to accept it. The Media page's warning
+  travelled as a provider failure named after a rule. A Plex automation was refused whenever a filter
+  named a Radarr instance, though the engine matched it. A query on a rule only a deferred provider
+  produces could be saved, and deleting a query an automation excluded widened what it acted on.
+- **Healed by:** one readiness module in `media` reads the facts once per request, raises every finding
+  with one wording, and answers each consumer; the query list, the Media page, the executor and the
+  automation row read those answers and keep no rules. Findings a user can accept are stored as
+  sign-offs per automation. The `required` flag and the old health fields are gone, deferred rules
+  cannot be saved, and a query an automation uses cannot be deleted.
+
 ## Open
 
 ### Ratings — two mechanisms, one blocked (recorded 2026-11-01, MVP slice B4)
@@ -533,18 +551,21 @@ Earlier entries in this ledger use the names that were current when they healed 
 - **Fracture:** rating filters run through enrichment, while `/api/providers/ratings` is a separate
   aggregation feeding its own page and panel.
 - **Status:** the second mechanism is deferred in `contract/scope.ts`, so it is unreachable but present.
-  Unifying them comes before un-deferring it, per the post-MVP list in `docs/in_progress/mvp/plan.md`.
+  The MVP slice "One ratings mechanism" in `docs/in_progress/mvp/plan.md` settles them to one, and the
+  MVP does not close until it merges.
 
 ### Rule key and content type — two names kept (recorded 2026-11-01)
 
-- **Fracture:** the wire fields `QualificationIssue.filterKey` and `ProviderStatus.affectedFilterKeys` and
-  the column `media_query_filter_values.filterKey` hold rule keys. `media_identity.kind` holds a content
-  type.
-- **Status:** left in place for the MVP, since no user sees them and one needs a migration.
+- **Fracture:** the column `media_query_filter_values.filterKey` holds a rule key. `media_identity.kind`
+  holds a content type.
+- **Status:** no user sees them, and renaming either needs a migration. The MVP slice "Rule key and
+  content type in the schema" in `docs/in_progress/mvp/plan.md` renames both, and the MVP does not
+  close until it merges.
 
 ### Title lookup — two mechanisms, one blocked (recorded 2026-11-01, MVP slice B4)
 
 - **Fracture:** the title filter and the Search page's cross-provider metadata search both look up a
   title.
-- **Status:** Search is deferred in `contract/scope.ts`, so it is unreachable but present. Unifying them
-  comes before un-deferring it, per the post-MVP list in `docs/in_progress/mvp/plan.md`.
+- **Status:** Search is deferred in `contract/scope.ts`, so it is unreachable but present. The MVP slice
+  "One title lookup" in `docs/in_progress/mvp/plan.md` decides whether they do one job or two and
+  settles it, and the MVP does not close until it merges.

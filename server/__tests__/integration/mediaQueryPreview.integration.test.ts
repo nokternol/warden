@@ -10,6 +10,7 @@ import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryServic
 import { createMockConfig } from '@tests/factories';
 import { createRadarrMovie } from '@tests/factories';
 import { createApiClient, expectErrorResponse, expectSuccessResponse } from '@tests/helpers/api';
+import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import { http, HttpResponse } from 'msw';
@@ -38,7 +39,7 @@ describe('GET /api/media-queries/:id/preview', () => {
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
 
-    mediaQueryService = new MediaQueryService({ db });
+    mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
     const query = await mediaQueryService.create({
       name: 'Preview Query',
       contentType: 'movie',

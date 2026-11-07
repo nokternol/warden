@@ -6,6 +6,7 @@ import { ForbiddenError, ValidationError } from '@server/kernel/errors';
 import { AutomationService } from '@server/modules/automations/automationService';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
+import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const ISO_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
@@ -51,7 +52,7 @@ describe('AutomationService', () => {
     const db = getDb();
     automationService = new AutomationService({ db });
     providerSettingsService = new ProviderSettingsService({ db });
-    mediaQueryService = new MediaQueryService({ db });
+    mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
   });
 
   afterEach(async () => {

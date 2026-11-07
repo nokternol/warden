@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { base } from './base';
+import { ReadinessFindingSchema } from './readiness';
 import {
   AutomationRunSchema,
   AutomationSchema,
@@ -68,6 +69,25 @@ const AutomationPreviewSchema = z.object({
 
 export type AutomationPreview = z.infer<typeof AutomationPreviewSchema>;
 
+const AutomationReadinessSchema = z.object({
+  schedule: z.enum(['runs', 'blocked']),
+  /** `asks` while a finding awaits sign-off: Run Now proceeds only past findings it names. */
+  runNow: z.enum(['runs', 'asks', 'stops']),
+  blocks: z.object({
+    needsFix: z.array(ReadinessFindingSchema),
+    awaitingSignOff: z.array(ReadinessFindingSchema),
+    signedOff: z.array(ReadinessFindingSchema),
+  }),
+  /** Reasons that belong to the automation rather than its filters, such as its provider. */
+  problems: z.array(z.string()),
+  /** How many items a run would hand the task now; null when the count failed. */
+  count: z.number().int().nonnegative().nullable(),
+  countError: z.string().optional(),
+  contentType: ContentTypeSchema,
+});
+
+export type AutomationReadiness = z.infer<typeof AutomationReadinessSchema>;
+
 export const automations = {
   list: base
     .route({ method: 'GET', path: '/api/automations' })
@@ -99,10 +119,32 @@ export const automations = {
     .input(AutomationPreviewInputSchema)
     .output(AutomationPreviewSchema),
 
-  /** Starts a run in the background; answers 202 once the automation is known to exist. */
+  /**
+   * Starts a Run Now in the background; answers 202 once the automation is known to exist.
+   * `consentedFindings` names the findings awaiting sign-off the user chose to proceed past for
+   * this run only; one not named stops the run.
+   */
   run: base
     .route({ method: 'POST', path: '/api/automations/{id}/run', successStatus: 202 })
+    .input(z.object({ id: IdSchema, consentedFindings: z.array(z.string()).optional() }))
+    .output(z.null()),
+
+  /**
+   * What a Run Now of the automation would do and why: its filter findings split into those
+   * needing a fix, awaiting sign-off and signed off, plus how many items it would act on.
+   */
+  readiness: base
+    .route({ method: 'GET', path: '/api/automations/{id}/readiness' })
     .input(z.object({ id: IdSchema }))
+    .output(AutomationReadinessSchema),
+
+  /**
+   * Accepts a finding awaiting sign-off as known risk for this automation, so its schedule can
+   * run. Answers 409 when the latest check no longer found it, or it is already signed off.
+   */
+  signOff: base
+    .route({ method: 'POST', path: '/api/automations/{id}/sign-offs' })
+    .input(z.object({ id: IdSchema, findingId: z.string().min(1) }))
     .output(z.null()),
 
   /** Run history, newest first; `limit` is capped at 100. */

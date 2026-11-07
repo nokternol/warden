@@ -1,8 +1,10 @@
 import { type AwilixContainer, type NameAndRegistrationPair, asClass } from 'awilix';
+import { AutomationBlockService } from './automationBlockService';
 import { AutomationExecutor } from './automationExecutor';
 import { AutomationRunService } from './automationRunService';
 import { AutomationScheduler } from './automationScheduler';
 import { AutomationService } from './automationService';
+import { RunHistoryEnrichmentOutcome } from './enrichmentOutcome';
 
 /**
  * What the automations module contributes to the app container. The app
@@ -13,8 +15,11 @@ import { AutomationService } from './automationService';
 export interface AutomationsCradle {
   automationService: AutomationService;
   automationRunService: AutomationRunService;
+  automationBlockService: AutomationBlockService;
   automationExecutor: AutomationExecutor;
   automationScheduler: AutomationScheduler;
+  /** `media`'s filter readiness reads the enrichment outcome through this. */
+  enrichmentOutcomeSource: RunHistoryEnrichmentOutcome;
 }
 
 /**
@@ -28,8 +33,10 @@ export function registerAutomationsDependencies<TCradle extends AutomationsCradl
   const registrations: NameAndRegistrationPair<AutomationsCradle> = {
     automationService: asClass(AutomationService).singleton(),
     automationRunService: asClass(AutomationRunService).singleton(),
+    automationBlockService: asClass(AutomationBlockService).singleton(),
     automationExecutor: asClass(AutomationExecutor).singleton(),
     automationScheduler: asClass(AutomationScheduler).singleton(),
+    enrichmentOutcomeSource: asClass(RunHistoryEnrichmentOutcome).singleton(),
   };
   // TCradle extends AutomationsCradle, so the slice's keys and resolver types
   // are a subset of the app pair type.

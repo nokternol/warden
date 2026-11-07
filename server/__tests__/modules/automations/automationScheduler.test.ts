@@ -3,6 +3,7 @@
  *
  * Run: vitest run --project server
  */
+import type { RunTrigger } from '@server/modules/automations/automationExecutor';
 import { AutomationScheduler } from '@server/modules/automations/automationScheduler';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -31,7 +32,7 @@ describe('AutomationScheduler', () => {
 
   describe('tick behaviour', () => {
     let scheduler: AutomationScheduler;
-    const mockExecutor = { execute: vi.fn<(id: number) => Promise<void>>() };
+    const mockExecutor = { execute: vi.fn<(id: number, run: RunTrigger) => Promise<void>>() };
 
     beforeEach(() => {
       mockExecutor.execute.mockResolvedValue(undefined);
@@ -43,10 +44,10 @@ describe('AutomationScheduler', () => {
       vi.clearAllMocks();
     });
 
-    it('calls executor.execute with the automation id on each tick', async () => {
+    it('calls executor.execute with the automation id on each tick, as a scheduled run', async () => {
       scheduler.schedule({ id: 7, name: 'Nightly', schedule: '* * * * *' });
       await scheduler.trigger(7);
-      expect(mockExecutor.execute).toHaveBeenCalledWith(7);
+      expect(mockExecutor.execute).toHaveBeenCalledWith(7, { trigger: 'schedule' });
     });
 
     it('does not call executor.execute for unregistered ids', async () => {

@@ -1,5 +1,6 @@
-import type { AutomationPreview } from '@contract/automations';
-import type { AutomationRunStatus, ContentType } from '@contract/schemas';
+import type { AutomationPreview, AutomationReadiness } from '@contract/automations';
+import type { ReadinessFinding } from '@contract/readiness';
+import type { AutomationRunStatus } from '@contract/schemas';
 import type { MetadataProvider } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
 import { ValidationError } from '../../kernel/errors';
@@ -8,12 +9,13 @@ import { getChildLogger } from '../../kernel/logger';
 import {
   EnrichmentQueries,
   MediaQueryEngine,
-  getRule,
+  automationAnswer,
+  findingsFor,
   mediaSourceFor,
   resolveActuatorTargets,
 } from '../media';
-import type { EnrichmentFields, MediaSource, MediaSourceFactory } from '../media';
-import type { MediaQueryService, QueryHealth } from '../mediaQueries';
+import type { FilterReadiness, MediaSource, MediaSourceFactory } from '../media';
+import type { MediaQueryRecord, MediaQueryService } from '../mediaQueries';
 import {
   type ActuatorTask,
   type IProviderFactory,
@@ -25,6 +27,7 @@ import {
   isMediaSourceType,
   readEnabledTaskIds,
 } from '../providers';
+import type { AutomationBlockService } from './automationBlockService';
 import type { AutomationRunService, RunTargets } from './automationRunService';
 import type { AutomationQueryDto, AutomationService } from './automationService';
 
@@ -39,6 +42,8 @@ interface ExecutorDeps {
   automationRunService: AutomationRunService;
   providerSettingsService: ProviderSettingsService;
   mediaQueryService: MediaQueryService;
+  filterReadiness: Pick<FilterReadiness, 'readFacts'>;
+  automationBlockService: Pick<AutomationBlockService, 'reconcile'>;
   providerFactory?: IProviderFactory;
   mediaQueryEngine?: MediaQueryEngine;
   enrichmentQueries?: EnrichmentQueries;
@@ -49,8 +54,19 @@ interface ExecutorDeps {
   eventBus?: DomainEventBus;
 }
 
+/**
+ * What started a run. A scheduled tick runs only once every finding is fixed or signed off. A Run
+ * Now also runs past the findings awaiting sign-off that the user chose to proceed past.
+ */
+export type RunTrigger =
+  | { trigger: 'schedule' }
+  | { trigger: 'runNow'; consentedFindings?: readonly string[] };
+
 /** One query an automation targets with, by id and role. */
 type TargetingQuery = Pick<AutomationQueryDto, 'queryId' | 'role'>;
+
+/** A targeting query with its saved record, loaded once for everything a run decides. */
+type LoadedQuery = TargetingQuery & { record: MediaQueryRecord };
 
 /** What a user run acts on: the task, its target items, and their actuator ids. */
 interface RunPlan {
@@ -61,8 +77,6 @@ interface RunPlan {
   poolSize: number;
   matchedCount: number;
 }
-
-const ENRICHMENT_TASK_ID = 'system:enrichment';
 
 /** Below this many targets a destructive run is small enough to be its own limit. */
 const REACH_CHECK_MIN_ITEMS = 20;
@@ -105,35 +119,6 @@ function instanceName(type: string | undefined, providerId: number): string {
   return `${type ? providerTypeName(type) : 'Provider'} instance ${providerId}`;
 }
 
-/** A filter's rule label, or its raw key when no rule is registered for it. */
-function filterLabel(filterKey: string, contentType: ContentType): string {
-  return getRule(filterKey, contentType)?.label ?? filterKey;
-}
-
-type ProviderStatus = QueryHealth['providerStatus'][number];
-type QualificationIssue = QueryHealth['qualificationIssues'][number];
-
-/** One line saying which rule needs a provider type that is not configured. */
-function describeMissingProvider(
-  { providerType, affectedFilterKeys }: ProviderStatus,
-  contentType: ContentType
-): string {
-  return `${filterLabel(affectedFilterKeys[0], contentType)} filter needs a ${providerTypeName(providerType)} provider, which is not configured`;
-}
-
-/** One line saying why a filter's instance qualification keeps the automation from running. */
-function describeQualificationIssue(
-  { filterKey, providerId, reason }: QualificationIssue,
-  contentType: ContentType,
-  automationProvider: MetadataProvider
-): string {
-  const rule = getRule(filterKey, contentType);
-  const filter = `${filterLabel(filterKey, contentType)} filter names ${instanceName(rule?.providers[0], providerId)}`;
-  return reason === 'not_active'
-    ? `${filter}, which is not an active provider`
-    : `${filter}, which is not this automation's provider (${instanceName(automationProvider.type, automationProvider.id)})`;
-}
-
 // ─── Executor ─────────────────────────────────────────────────────────────────
 
 export class AutomationExecutor {
@@ -143,7 +128,8 @@ export class AutomationExecutor {
   private readonly mediaQueryService: MediaQueryService;
   private readonly providerFactory: IProviderFactory;
   private readonly mediaQueryEngine: MediaQueryEngine;
-  private readonly enrichmentQueries?: EnrichmentQueries;
+  private readonly filterReadiness: Pick<FilterReadiness, 'readFacts'>;
+  private readonly automationBlockService: Pick<AutomationBlockService, 'reconcile'>;
   private readonly mediaSourceFactory?: Pick<MediaSourceFactory, 'sourcesFor'>;
   private readonly db?: DrizzleDb;
   private readonly systemTaskRunner?: SystemTaskRunnerLike;
@@ -165,14 +151,18 @@ export class AutomationExecutor {
         db: deps.db,
         enrichmentQueries: enrichmentQueries,
       });
-    this.enrichmentQueries = enrichmentQueries;
+    this.filterReadiness = deps.filterReadiness;
+    this.automationBlockService = deps.automationBlockService;
     this.mediaSourceFactory = deps.mediaSourceFactory;
     this.db = deps.db;
     this.systemTaskRunner = deps.systemTaskRunner;
     this.eventBus = deps.eventBus;
   }
 
-  async execute(automationId: number): Promise<void> {
+  async execute(
+    automationId: number,
+    started: RunTrigger = { trigger: 'schedule' }
+  ): Promise<void> {
     if (this.inFlight.has(automationId)) return;
     this.inFlight.add(automationId);
 
@@ -229,12 +219,26 @@ export class AutomationExecutor {
         const providerSettings = await this.providerSettingsService.findById(
           automation.provider!.id
         );
-        const problems = await this.blockingProblems(providerSettings, current.queries ?? []);
+        const queries = await this.loadQueries(current.queries ?? []);
+        const problems = await this.blockingProblems(
+          automationId,
+          providerSettings,
+          queries,
+          started
+        );
         if (problems.length > 0) {
-          await this.recordSkip(automationId, taskId, problems.join('; '));
+          const reason = problems.join('; ');
+          // A blocked schedule keeps ticking to re-check; one skip says why until that changes.
+          // A Run Now always records its outcome, so the user pressing it sees one.
+          if (
+            started.trigger === 'runNow' ||
+            !(await this.lastRunSkippedFor(automationId, reason))
+          ) {
+            await this.recordSkip(automationId, taskId, reason);
+          }
           return;
         }
-        const plan = await this.planRun(current.taskId, providerSettings, current.queries ?? []);
+        const plan = await this.planRun(current.taskId, providerSettings, queries);
         targets = plan.targets;
         itemCount = targets.items.length;
         const excess = excessiveReach(plan);
@@ -304,74 +308,103 @@ export class AutomationExecutor {
     });
   }
 
-  /** Why a user automation cannot run, one line per problem; empty when it can. */
-  private async blockingProblems(
-    automationProvider: MetadataProvider,
-    automationQueries: TargetingQuery[]
-  ): Promise<string[]> {
-    const automationProviderId = automationProvider.id;
-    const problems: string[] = [];
-    if (!automationProvider.isActive) {
-      problems.push(
-        `${instanceName(automationProvider.type, automationProviderId)}, this automation's provider, is not an active provider`
-      );
-    }
-    for (const { queryId } of automationQueries) {
-      const { contentType } = await this.mediaQueryService.getById(queryId);
-      const health = await this.mediaQueryService.getHealthForAutomation(
-        queryId,
-        automationProviderId
-      );
-      for (const status of health.providerStatus) {
-        if (status.required && !status.configured) {
-          problems.push(describeMissingProvider(status, contentType));
-        }
-      }
-      for (const issue of health.qualificationIssues) {
-        problems.push(describeQualificationIssue(issue, contentType, automationProvider));
-      }
-      problems.push(...(await this.missingEnrichment(queryId, contentType, health.providerStatus)));
-    }
-    return problems;
+  private async lastRunSkippedFor(automationId: number, reason: string): Promise<boolean> {
+    const [latest] = await this.automationRunService.listRuns({ automationId, limit: 1 });
+    return latest?.status === 'skipped' && latest.error === reason;
+  }
+
+  private loadQueries(automationQueries: TargetingQuery[]): Promise<LoadedQuery[]> {
+    return Promise.all(
+      automationQueries.map(async (query) => ({
+        ...query,
+        record: await this.mediaQueryService.getById(query.queryId),
+      }))
+    );
   }
 
   /**
-   * A title with no stored value is unknown and matches neither value of a filter on it. Until
-   * enrichment data is known to be complete, such a filter can select the wrong titles: an include
-   * misses titles it should act on, and an exclude fails to protect titles it should. Fields a source
-   * supplies itself arrive with the catalog, so only enrichment-only rules are checked.
+   * Why a user automation cannot run on this trigger, one line per problem; empty when it can.
    */
-  private async missingEnrichment(
-    queryId: number,
-    contentType: ContentType,
-    providerStatus: ProviderStatus[]
+  private async blockingProblems(
+    automationId: number,
+    automationProvider: MetadataProvider,
+    automationQueries: LoadedQuery[],
+    started: RunTrigger
   ): Promise<string[]> {
-    if (!this.enrichmentQueries) return [];
-    const { filters } = await this.mediaQueryService.getById(queryId);
-    const problems: string[] = [];
-    for (const { ruleKey } of filters) {
-      const rule = getRule(ruleKey, contentType);
-      if (!rule?.sourceField || rule.providers.some(isMediaSourceType)) continue;
-      const producers = providerStatus.filter((s) => s.affectedFilterKeys.includes(ruleKey));
-      // A required provider's absence is already reported by the health check.
-      if (producers.some((s) => s.required && !s.configured)) continue;
-      if (!producers.some((s) => s.configured)) {
-        problems.push(`${rule.label} filter has no connected provider to supply its data`);
-      } else if (!(await this.enrichmentIsComplete(rule.sourceField, contentType))) {
-        problems.push(`${rule.label} filter's data has not finished loading`);
-      }
-    }
-    return problems;
+    const { findings, signedOff, problems } = await this.judge(
+      automationId,
+      automationProvider,
+      automationQueries
+    );
+    const consented = new Set(started.trigger === 'runNow' ? started.consentedFindings : []);
+    const answer = automationAnswer(findings, signedOff, consented);
+    const verdict = started.trigger === 'schedule' ? answer.schedule : answer.runNow;
+    if (problems.length === 0 && verdict === 'runs') return [];
+    const awaiting = answer.blocks.awaitingSignOff.filter((f) => !consented.has(f.id));
+    return [...problems, ...[...answer.blocks.needsFix, ...awaiting].map((f) => f.message)];
   }
 
-  /** The latest enrichment run finished cleanly, and this content type has values for the field. */
-  private async enrichmentIsComplete(
-    field: keyof EnrichmentFields,
-    contentType: ContentType
-  ): Promise<boolean> {
-    const latest = await this.automationRunService.latestStatusOfTask(ENRICHMENT_TASK_ID);
-    if (latest !== 'success') return false;
-    return (await this.enrichmentQueries?.hasValues(field, contentType)) ?? false;
+  /**
+   * The automation's own problems, its filter findings and which are signed off. Keeps its stored
+   * blocks in step with the findings on the way.
+   */
+  private async judge(
+    automationId: number,
+    automationProvider: MetadataProvider,
+    automationQueries: LoadedQuery[]
+  ): Promise<{ findings: ReadinessFinding[]; signedOff: Set<string>; problems: string[] }> {
+    const problems: string[] = [];
+    if (!automationProvider.isActive) {
+      problems.push(
+        `${instanceName(automationProvider.type, automationProvider.id)}, this automation's provider, is not an active provider`
+      );
+    }
+    const facts = await this.filterReadiness.readFacts();
+    const findings = automationQueries.flatMap(({ queryId, record }) =>
+      findingsFor(
+        facts,
+        { queryId, contentType: record.contentType, filters: record.filters },
+        { id: automationProvider.id, type: automationProvider.type }
+      )
+    );
+    // Before any sign-off is known, every finding a user could accept awaits sign-off.
+    const signOffable = automationAnswer(findings, new Set()).blocks.awaitingSignOff;
+    const signedOff = await this.automationBlockService.reconcile(automationId, signOffable);
+    return { findings, signedOff, problems };
+  }
+
+  /**
+   * What a Run Now of this automation would do, and why, before anything runs. The findings are
+   * answered even when counting the targets fails, so a broken source cannot hide them.
+   */
+  async readiness(automationId: number): Promise<AutomationReadiness> {
+    const automation = await this.automationService.getById(automationId);
+    if (!automation.provider) {
+      throw new Error(`Automation ${automationId} has no provider`);
+    }
+    const providerSettings = await this.providerSettingsService.findById(automation.provider.id);
+    const queries = await this.loadQueries(automation.queries ?? []);
+    const { findings, signedOff, problems } = await this.judge(
+      automationId,
+      providerSettings,
+      queries
+    );
+    const answer = automationAnswer(findings, signedOff);
+    const counted = await this.planRun(automation.taskId, providerSettings, queries).then(
+      (plan) => ({ count: plan.actuatorIds.length }),
+      (err: unknown) => ({
+        count: null,
+        countError: err instanceof Error ? err.message : 'Unknown error',
+      })
+    );
+    return {
+      schedule: problems.length > 0 ? 'blocked' : answer.schedule,
+      runNow: problems.length > 0 ? 'stops' : answer.runNow,
+      blocks: answer.blocks,
+      problems,
+      contentType: queries[0]?.record.contentType ?? 'movie',
+      ...counted,
+    };
   }
 
   /**
@@ -384,7 +417,11 @@ export class AutomationExecutor {
     queries: TargetingQuery[];
   }): Promise<AutomationPreview> {
     const providerSettings = await this.providerSettingsService.findById(draft.providerId);
-    const plan = await this.planRun(draft.taskId, providerSettings, draft.queries);
+    const plan = await this.planRun(
+      draft.taskId,
+      providerSettings,
+      await this.loadQueries(draft.queries)
+    );
     return { count: plan.actuatorIds.length, contentType: plan.targets.contentType };
   }
 
@@ -396,17 +433,12 @@ export class AutomationExecutor {
   private async planRun(
     taskId: string,
     providerSettings: MetadataProvider,
-    automationQueries: TargetingQuery[]
+    automationQueries: LoadedQuery[]
   ): Promise<RunPlan> {
-    const queryDtos = await Promise.all(
-      automationQueries.map((automationQuery) =>
-        this.mediaQueryService.getById(automationQuery.queryId)
-      )
-    );
-    const contentType = queryDtos[0].contentType;
-    const querySpecs = automationQueries.map((automationQuery, i) => ({
-      filters: queryDtos[i].filters,
-      role: automationQuery.role,
+    const contentType = automationQueries[0].record.contentType;
+    const querySpecs = automationQueries.map(({ record, role }) => ({
+      filters: record.filters,
+      role,
     }));
 
     const provider = this.providerFactory.create(providerSettings, log);

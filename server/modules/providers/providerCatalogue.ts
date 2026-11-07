@@ -80,3 +80,8 @@ export function describeProviderTypes(): ProviderTypeDescriptor[] {
     ([type, entry]) => ({ type, ...entry })
   );
 }
+
+/** How a provider type is named to the user: "Radarr", "TMDB". */
+export function providerTypeLabel(type: MetadataProviderType): string {
+  return PROVIDER_CATALOGUE[type].label;
+}

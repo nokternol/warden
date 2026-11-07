@@ -10,6 +10,7 @@ import { AutomationService } from '@server/modules/automations/automationService
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
+import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import express, { type Express } from 'express';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -56,7 +57,10 @@ describe('serveApi — the contract served over HTTP', () => {
       apiKey: 'test-key',
       settings: { enabledTasks: ['unmonitorMovie'] },
     });
-    const query = await new MediaQueryService({ db }).create({
+    const query = await new MediaQueryService({
+      db,
+      filterReadiness: filterReadinessOver(db),
+    }).create({
       name: 'Movies',
       contentType: 'movie',
       filters: [],

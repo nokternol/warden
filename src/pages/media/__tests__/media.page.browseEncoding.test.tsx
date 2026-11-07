@@ -37,6 +37,8 @@ const EMPTY_PAGE = {
   pageSize: 48,
   yearRange: { min: null, max: null },
   errors: [],
+  findings: [],
+  mediaPage: 'clear' as const,
 };
 
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -61,7 +63,10 @@ describe('MediaPage browse encoding', () => {
           name: body.name,
           contentType: 'movie' as const,
           filters: body.filters,
-          health: { status: 'healthy' as const, providerStatus: [], qualificationIssues: [] },
+          health: {
+            findings: [],
+            queryList: 'clear' as const,
+          },
           createdAt: new Date().toISOString(),
         };
       })

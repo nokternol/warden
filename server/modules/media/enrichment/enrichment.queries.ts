@@ -16,16 +16,21 @@ interface Deps {
 export class EnrichmentQueries {
   constructor(private deps: Deps) {}
 
-  /** Whether any title of this content type holds a value for this field. */
-  async hasValues(field: keyof EnrichmentFields, contentType: ContentType): Promise<boolean> {
-    const [row] = await this.deps.db
-      .select({ id: mediaEnrichment.fieldId })
+  /** The fields at least one title of each content type holds a value for, in one query. */
+  async fieldsWithValues(): Promise<Record<ContentType, Set<keyof EnrichmentFields>>> {
+    const rows = await this.deps.db
+      .selectDistinct({ kind: mediaIdentity.kind, key: enrichmentField.key })
       .from(mediaEnrichment)
       .innerJoin(enrichmentField, eq(enrichmentField.id, mediaEnrichment.fieldId))
-      .innerJoin(mediaIdentity, eq(mediaIdentity.id, mediaEnrichment.mediaIdentityId))
-      .where(and(eq(enrichmentField.key, field), eq(mediaIdentity.kind, contentType)))
-      .limit(1);
-    return row !== undefined;
+      .innerJoin(mediaIdentity, eq(mediaIdentity.id, mediaEnrichment.mediaIdentityId));
+    const fields: Record<ContentType, Set<keyof EnrichmentFields>> = {
+      movie: new Set(),
+      series: new Set(),
+    };
+    for (const { kind, key } of rows) {
+      fields[kind as ContentType]?.add(key as keyof EnrichmentFields);
+    }
+    return fields;
   }
 
   async getByIdentityIds(ids: number[]): Promise<Map<number, Partial<EnrichmentFields>>> {

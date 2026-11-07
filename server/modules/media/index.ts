@@ -67,6 +67,20 @@ export type {
 } from './ruleRegistry';
 export { MEDIA_RULES, getRule, toDescriptor } from './ruleRegistry';
 
+// Filter readiness — the one place a filter list's findings are raised, worded and given a
+// consequence. Facts are read once per request; the judging and answers are pure.
+export { automationAnswer, filterAnswer, findingsFor } from './filterReadiness';
+export type {
+  AutomationAnswer,
+  AutomationBlocks,
+  AutomationProvider,
+  EnrichmentOutcomeSource,
+  FilterAnswer,
+  FilterList,
+  FilterReadiness,
+  ReadinessFacts,
+} from './filterReadiness';
+
 // The query engine — matches a MediaSource against a MediaQuerySpec.
 export { MediaQueryEngine, matchItems } from './mediaQueryEngine';
 export type { MediaQuery, MediaQueryClause, MediaQuerySpec } from './mediaQueryEngine';

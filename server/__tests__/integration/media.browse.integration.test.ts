@@ -15,6 +15,7 @@ import {
   expectErrorResponse,
   expectSuccessResponse,
 } from '@tests/helpers/api';
+import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import { http, HttpResponse } from 'msw';
@@ -85,7 +86,7 @@ describe('Browse speaks the save encoding', () => {
     const config = loadConfig();
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
-    mediaQueryService = new MediaQueryService({ db });
+    mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
 
     ({ id: radarrId } = await container.cradle.providerSettingsService.create({
       type: MetadataProviderType.RADARR,

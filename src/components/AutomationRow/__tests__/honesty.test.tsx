@@ -1,6 +1,7 @@
 import type { AutomationDto } from '@app/hooks/useAutomations';
+import type { AutomationReadiness } from '@contract/automations';
 import { contract } from '@contract/index';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { mockProcedure, mockProcedureFailure } from '@tests/mocks/contract';
 import { server } from '@tests/mocks/server';
@@ -30,6 +31,16 @@ const task = (destructive: boolean) => ({
   enabled: true,
 });
 
+const readiness = (over: Partial<AutomationReadiness>): AutomationReadiness => ({
+  schedule: 'runs',
+  runNow: 'runs',
+  blocks: { needsFix: [], awaitingSignOff: [], signedOff: [] },
+  problems: [],
+  count: 214,
+  contentType: 'movie',
+  ...over,
+});
+
 function renderRow(props: Partial<React.ComponentProps<typeof AutomationRow>> = {}) {
   return render(
     <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0, dedupingInterval: 0 }}>
@@ -44,10 +55,7 @@ beforeEach(() => {
       { providerId: 1, type: 'RADARR', tasks: [task(false)] },
     ]),
     mockProcedure(contract.automations.runs, () => ({ data: [], total: 0 })),
-    mockProcedure(contract.automations.preview, () => ({
-      count: 214,
-      contentType: 'movie' as const,
-    }))
+    mockProcedure(contract.automations.readiness, () => readiness({}))
   );
 });
 
@@ -155,9 +163,13 @@ describe('Run Now on a destructive task', () => {
     expect(onRun).toHaveBeenCalledTimes(1);
   });
 
-  it('blocks on a failed count', async () => {
+  it('says a failed count without stopping the run being started', async () => {
     destructive();
-    server.use(mockProcedureFailure(contract.automations.preview, 500));
+    server.use(
+      mockProcedure(contract.automations.readiness, () =>
+        readiness({ count: null, countError: 'Radarr could not be reached' })
+      )
+    );
     const user = userEvent.setup();
     const onRun = vi.fn();
     renderRow({ onRun });
@@ -165,7 +177,7 @@ describe('Run Now on a destructive task', () => {
     await user.click(await runButton());
 
     expect(await screen.findByText(/couldn.t count/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Run now' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Run now' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Retry count' })).toBeInTheDocument();
   });
 
@@ -176,6 +188,49 @@ describe('Run Now on a destructive task', () => {
     await screen.findByText('Delete movie + files');
     await user.click(await runButton());
     expect(onRun).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('a filter with no data', () => {
+  const awaiting = {
+    id: 'no-data:1:seerrRequestStatus:4',
+    kind: 'no-data' as const,
+    providerIds: [4],
+    message: 'Seerr request status filter has no data: no movie holds a value for it',
+    clears: 'Clears when a title gets a value.',
+  };
+  beforeEach(() => {
+    server.use(
+      mockProcedure(contract.automations.readiness, () =>
+        readiness({
+          schedule: 'blocked',
+          runNow: 'asks',
+          blocks: { needsFix: [], awaitingSignOff: [awaiting], signedOff: [] },
+        })
+      )
+    );
+  });
+
+  it('asks before a Run Now, and proceeds with consent to that finding', async () => {
+    const user = userEvent.setup();
+    const onRun = vi.fn().mockResolvedValue(undefined);
+    renderRow({ onRun });
+    const button = screen.getByRole('button', { name: 'Run Archive old movies now' });
+    await screen.findByRole('region', { name: 'Awaiting sign-off' });
+    await user.click(button);
+
+    expect(onRun).not.toHaveBeenCalled();
+    await user.click(await screen.findByRole('button', { name: 'Proceed' }));
+    expect(onRun).toHaveBeenCalledWith([awaiting.id]);
+  });
+
+  it('lists the finding under the row, and Accept signs it off', async () => {
+    const user = userEvent.setup();
+    const onSignOff = vi.fn().mockResolvedValue(undefined);
+    renderRow({ onSignOff });
+    const region = await screen.findByRole('region', { name: 'Awaiting sign-off' });
+    await user.click(within(region).getByRole('button', { name: 'Accept' }));
+    expect(onSignOff).toHaveBeenCalledWith(awaiting.id);
   });
 });
 

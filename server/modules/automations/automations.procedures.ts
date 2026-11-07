@@ -1,6 +1,7 @@
 import { api } from '@server/kernel/api';
 import { ConflictError } from '@server/kernel/errors';
 import { getChildLogger } from '@server/kernel/logger';
+import type { AutomationBlockService } from './automationBlockService';
 import type { AutomationExecutor } from './automationExecutor';
 import type { AutomationRunService } from './automationRunService';
 import type { AutomationScheduler } from './automationScheduler';
@@ -13,11 +14,17 @@ interface Cradle {
   automationRunService: AutomationRunService;
   automationScheduler: AutomationScheduler;
   automationExecutor: AutomationExecutor;
+  automationBlockService: AutomationBlockService;
 }
 
 export function createAutomationProcedures(cradle: Cradle) {
-  const { automationService, automationRunService, automationScheduler, automationExecutor } =
-    cradle;
+  const {
+    automationService,
+    automationRunService,
+    automationScheduler,
+    automationExecutor,
+    automationBlockService,
+  } = cradle;
 
   return api.automations.router({
     list: api.automations.list.handler(async ({ input }) =>
@@ -63,9 +70,19 @@ export function createAutomationProcedures(cradle: Cradle) {
       if (automationExecutor.isRunning(input.id)) {
         throw new ConflictError('This automation is already running.');
       }
-      void automationExecutor.execute(input.id).catch((err) => {
+      const started = { trigger: 'runNow' as const, consentedFindings: input.consentedFindings };
+      void automationExecutor.execute(input.id, started).catch((err) => {
         log.error('Background automation run failed', { automationId: input.id, err });
       });
+      return null;
+    }),
+
+    readiness: api.automations.readiness.handler(async ({ input }) =>
+      automationExecutor.readiness(input.id)
+    ),
+
+    signOff: api.automations.signOff.handler(async ({ input }) => {
+      await automationBlockService.signOff(input.id, input.findingId);
       return null;
     }),
 
