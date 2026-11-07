@@ -24,6 +24,7 @@ import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { ConflictError, ValidationError } from '@server/kernel/errors';
 import { DomainEventBus } from '@server/kernel/eventBus';
 import { getChildLogger } from '@server/kernel/logger';
+import { AutomationBlockService } from '@server/modules/automations/automationBlockService';
 import { AutomationExecutor } from '@server/modules/automations/automationExecutor';
 import { AutomationRunService } from '@server/modules/automations/automationRunService';
 import { AutomationService } from '@server/modules/automations/automationService';
@@ -77,6 +78,7 @@ describe('filter readiness, as automations see it', () => {
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
       mediaQueryService,
+      automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),
       db,
     });
@@ -390,6 +392,7 @@ describe('a non-source actuator whose query names a source instance', () => {
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
       mediaQueryService,
+      automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(db),
       providerFactory: { create: () => plexInstance },
       mediaSourceFactory: {

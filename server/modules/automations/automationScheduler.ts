@@ -1,10 +1,11 @@
 import { Cron } from 'croner';
 import { getChildLogger } from '../../kernel/logger';
+import type { RunTrigger } from './automationExecutor';
 
 const log = getChildLogger('AutomationScheduler');
 
 interface Executor {
-  execute(automationId: number): Promise<void>;
+  execute(automationId: number, run: RunTrigger): Promise<void>;
 }
 
 interface SchedulerDeps {
@@ -26,7 +27,7 @@ export class AutomationScheduler {
     this.unschedule(automation.id);
     try {
       const job = new Cron(automation.schedule, { protect: true }, () => {
-        this.executor.execute(automation.id).catch((err) => {
+        this.executor.execute(automation.id, { trigger: 'schedule' }).catch((err) => {
           log.error('Automation execution error', { id: automation.id, err });
         });
       });

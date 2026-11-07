@@ -14,6 +14,7 @@ import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { DomainEventBus, type DomainEvents } from '@server/kernel/eventBus';
 import logger from '@server/kernel/logger';
+import { AutomationBlockService } from '@server/modules/automations/automationBlockService';
 import { AutomationExecutor, excessiveReach } from '@server/modules/automations/automationExecutor';
 import { AutomationRunService } from '@server/modules/automations/automationRunService';
 import { AutomationService } from '@server/modules/automations/automationService';
@@ -60,6 +61,7 @@ describe('AutomationExecutor — invalid automations', () => {
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
       mediaQueryService,
+      automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),
       db,
     });
@@ -208,6 +210,7 @@ describe('AutomationExecutor — invalid automations', () => {
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
       mediaQueryService,
+      automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),
       eventBus: bus,
     });

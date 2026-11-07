@@ -26,6 +26,7 @@ import {
   isMediaSourceType,
   readEnabledTaskIds,
 } from '../providers';
+import type { AutomationBlockService } from './automationBlockService';
 import type { AutomationRunService, RunTargets } from './automationRunService';
 import type { AutomationQueryDto, AutomationService } from './automationService';
 
@@ -41,6 +42,7 @@ interface ExecutorDeps {
   providerSettingsService: ProviderSettingsService;
   mediaQueryService: MediaQueryService;
   filterReadiness: Pick<FilterReadiness, 'readFacts'>;
+  automationBlockService: Pick<AutomationBlockService, 'reconcile'>;
   providerFactory?: IProviderFactory;
   mediaQueryEngine?: MediaQueryEngine;
   enrichmentQueries?: EnrichmentQueries;
@@ -50,6 +52,14 @@ interface ExecutorDeps {
   systemTaskRunner?: SystemTaskRunnerLike;
   eventBus?: DomainEventBus;
 }
+
+/**
+ * What started a run. A scheduled tick runs only once every finding is fixed or signed off. A Run
+ * Now also runs past the findings awaiting sign-off that the user chose to proceed past.
+ */
+export type RunTrigger =
+  | { trigger: 'schedule' }
+  | { trigger: 'runNow'; consentedFindings?: readonly string[] };
 
 /** One query an automation targets with, by id and role. */
 type TargetingQuery = Pick<AutomationQueryDto, 'queryId' | 'role'>;
@@ -118,6 +128,7 @@ export class AutomationExecutor {
   private readonly providerFactory: IProviderFactory;
   private readonly mediaQueryEngine: MediaQueryEngine;
   private readonly filterReadiness: Pick<FilterReadiness, 'readFacts'>;
+  private readonly automationBlockService: Pick<AutomationBlockService, 'reconcile'>;
   private readonly mediaSourceFactory?: Pick<MediaSourceFactory, 'sourcesFor'>;
   private readonly db?: DrizzleDb;
   private readonly systemTaskRunner?: SystemTaskRunnerLike;
@@ -140,13 +151,17 @@ export class AutomationExecutor {
         enrichmentQueries: enrichmentQueries,
       });
     this.filterReadiness = deps.filterReadiness;
+    this.automationBlockService = deps.automationBlockService;
     this.mediaSourceFactory = deps.mediaSourceFactory;
     this.db = deps.db;
     this.systemTaskRunner = deps.systemTaskRunner;
     this.eventBus = deps.eventBus;
   }
 
-  async execute(automationId: number): Promise<void> {
+  async execute(
+    automationId: number,
+    started: RunTrigger = { trigger: 'schedule' }
+  ): Promise<void> {
     if (this.inFlight.has(automationId)) return;
     this.inFlight.add(automationId);
 
@@ -204,9 +219,22 @@ export class AutomationExecutor {
           automation.provider!.id
         );
         const queries = await this.loadQueries(current.queries ?? []);
-        const problems = await this.blockingProblems(providerSettings, queries);
+        const problems = await this.blockingProblems(
+          automationId,
+          providerSettings,
+          queries,
+          started
+        );
         if (problems.length > 0) {
-          await this.recordSkip(automationId, taskId, problems.join('; '));
+          const reason = problems.join('; ');
+          // A blocked schedule keeps ticking to re-check; one skip says why until that changes.
+          // A Run Now always records its outcome, so the user pressing it sees one.
+          if (
+            started.trigger === 'runNow' ||
+            !(await this.lastRunSkippedFor(automationId, reason))
+          ) {
+            await this.recordSkip(automationId, taskId, reason);
+          }
           return;
         }
         const plan = await this.planRun(current.taskId, providerSettings, queries);
@@ -279,6 +307,11 @@ export class AutomationExecutor {
     });
   }
 
+  private async lastRunSkippedFor(automationId: number, reason: string): Promise<boolean> {
+    const [latest] = await this.automationRunService.listRuns({ automationId, limit: 1 });
+    return latest?.status === 'skipped' && latest.error === reason;
+  }
+
   private loadQueries(automationQueries: TargetingQuery[]): Promise<LoadedQuery[]> {
     return Promise.all(
       automationQueries.map(async (query) => ({
@@ -288,10 +321,15 @@ export class AutomationExecutor {
     );
   }
 
-  /** Why a user automation cannot run, one line per problem; empty when it can. */
+  /**
+   * Why a user automation cannot run on this trigger, one line per problem; empty when it can.
+   * Keeps the automation's stored blocks in step with the findings on the way.
+   */
   private async blockingProblems(
+    automationId: number,
     automationProvider: MetadataProvider,
-    automationQueries: LoadedQuery[]
+    automationQueries: LoadedQuery[],
+    run: RunTrigger
   ): Promise<string[]> {
     const problems: string[] = [];
     if (!automationProvider.isActive) {
@@ -307,8 +345,16 @@ export class AutomationExecutor {
         { id: automationProvider.id, type: automationProvider.type }
       )
     );
-    const { blocks } = automationAnswer(findings, new Set());
-    problems.push(...[...blocks.needsFix, ...blocks.awaitingSignOff].map((f) => f.message));
+    // Before any sign-off is known, every finding a user could accept awaits sign-off.
+    const signOffable = automationAnswer(findings, new Set()).blocks.awaitingSignOff;
+    const signedOff = await this.automationBlockService.reconcile(automationId, signOffable);
+    const consented = new Set(run.trigger === 'runNow' ? run.consentedFindings : []);
+    const answer = automationAnswer(findings, signedOff, consented);
+    const proceeds = run.trigger === 'schedule' ? answer.schedule : answer.runNow;
+    if (proceeds !== 'runs') {
+      const awaiting = answer.blocks.awaitingSignOff.filter((f) => !consented.has(f.id));
+      problems.push(...[...answer.blocks.needsFix, ...awaiting].map((f) => f.message));
+    }
     return problems;
   }
 

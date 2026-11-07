@@ -17,11 +17,12 @@ import { createMockConfig } from '@tests/factories';
 import { createApiClient } from '@tests/helpers/api';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import express, { type Express } from 'express';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 describe('POST /api/automations/:id/run — Phase 3', () => {
   let client: ReturnType<typeof createApiClient>;
   let systemAutomationId: number;
+  let container: ReturnType<typeof buildContainer>;
 
   async function runsFor(automationId: number): Promise<unknown[]> {
     const res = await client.get(`/api/automations/runs?automationId=${automationId}`);
@@ -41,7 +42,7 @@ describe('POST /api/automations/:id/run — Phase 3', () => {
 
     const config = loadConfig();
     const db = await initializeDatabase(config);
-    const container = buildContainer({ config, db });
+    container = buildContainer({ config, db });
 
     // A system automation with an unrecognised task fails fast and deterministically —
     // it records a run without depending on any external provider HTTP.
@@ -73,6 +74,23 @@ describe('POST /api/automations/:id/run — Phase 3', () => {
 
     expect(res.status).toBe(202);
     await expect.poll(async () => (await runsFor(systemAutomationId)).length).toBeGreaterThan(0);
+  });
+
+  it('starts a Run Now carrying the findings the user chose to proceed past', async () => {
+    const execute = vi
+      .spyOn(container.cradle.automationExecutor, 'execute')
+      .mockResolvedValue(undefined);
+
+    const res = await client
+      .post(`/api/automations/${systemAutomationId}/run`)
+      .send({ consentedFindings: ['no-data:1:seerrRequestStatus:4'] });
+
+    expect(res.status).toBe(202);
+    expect(execute).toHaveBeenCalledWith(systemAutomationId, {
+      trigger: 'runNow',
+      consentedFindings: ['no-data:1:seerrRequestStatus:4'],
+    });
+    execute.mockRestore();
   });
 
   it('returns 404 for an unknown automation id', async () => {

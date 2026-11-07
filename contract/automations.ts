@@ -99,10 +99,14 @@ export const automations = {
     .input(AutomationPreviewInputSchema)
     .output(AutomationPreviewSchema),
 
-  /** Starts a run in the background; answers 202 once the automation is known to exist. */
+  /**
+   * Starts a Run Now in the background; answers 202 once the automation is known to exist.
+   * `consentedFindings` names the findings awaiting sign-off the user chose to proceed past for
+   * this run only; one not named stops the run.
+   */
   run: base
     .route({ method: 'POST', path: '/api/automations/{id}/run', successStatus: 202 })
-    .input(z.object({ id: IdSchema }))
+    .input(z.object({ id: IdSchema, consentedFindings: z.array(z.string()).optional() }))
     .output(z.null()),
 
   /** Run history, newest first; `limit` is capped at 100. */

@@ -63,7 +63,8 @@ export function createAutomationProcedures(cradle: Cradle) {
       if (automationExecutor.isRunning(input.id)) {
         throw new ConflictError('This automation is already running.');
       }
-      void automationExecutor.execute(input.id).catch((err) => {
+      const started = { trigger: 'runNow' as const, consentedFindings: input.consentedFindings };
+      void automationExecutor.execute(input.id, started).catch((err) => {
         log.error('Background automation run failed', { automationId: input.id, err });
       });
       return null;

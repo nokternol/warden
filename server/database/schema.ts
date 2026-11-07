@@ -238,6 +238,29 @@ export const automationRuns = sqliteTable(
   (table) => [index('IDX_automation_runs_automationId').on(table.automationId)]
 );
 
+// ---------------------------------------------------------------------------
+// automationBlocks — filter findings a user can sign off, per automation
+// ---------------------------------------------------------------------------
+export const automationBlocks = sqliteTable(
+  'automation_blocks',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    automationId: integer('automationId')
+      .notNull()
+      .references(() => automations.id, { onDelete: 'cascade' }),
+    findingId: text('findingId').notNull(),
+    queryId: integer('queryId'),
+    ruleKey: text('ruleKey'),
+    kind: text('kind').notNull(),
+    providerIds: text('providerIds').notNull(), // JSON number[]
+    firstSeenAt: createdAt('firstSeenAt'),
+    signedOffAt: integer('signedOffAt'), // unix seconds; null until a user signs it off
+  },
+  (table) => [uniqueIndex('ux_automation_blocks_finding').on(table.automationId, table.findingId)]
+);
+
+export type AutomationBlockRow = typeof automationBlocks.$inferSelect;
+
 export type AutomationRun = typeof automationRuns.$inferSelect;
 export type NewAutomationRun = typeof automationRuns.$inferInsert;
 

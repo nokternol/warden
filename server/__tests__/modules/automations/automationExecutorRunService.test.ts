@@ -9,6 +9,7 @@ import { MetadataProviderType, mediaIdentity, mediaItems } from '@server/databas
  */
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
+import { AutomationBlockService } from '@server/modules/automations/automationBlockService';
 import { AutomationExecutor } from '@server/modules/automations/automationExecutor';
 import { AutomationRunService } from '@server/modules/automations/automationRunService';
 import { AutomationService } from '@server/modules/automations/automationService';
@@ -56,6 +57,7 @@ describe('AutomationExecutor writes to automation_runs', () => {
       automationRunService,
       providerSettingsService,
       mediaQueryService,
+      automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),
     });
   });

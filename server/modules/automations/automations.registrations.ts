@@ -1,4 +1,5 @@
 import { type AwilixContainer, type NameAndRegistrationPair, asClass } from 'awilix';
+import { AutomationBlockService } from './automationBlockService';
 import { AutomationExecutor } from './automationExecutor';
 import { AutomationRunService } from './automationRunService';
 import { AutomationScheduler } from './automationScheduler';
@@ -14,6 +15,7 @@ import { RunHistoryEnrichmentOutcome } from './enrichmentOutcome';
 export interface AutomationsCradle {
   automationService: AutomationService;
   automationRunService: AutomationRunService;
+  automationBlockService: AutomationBlockService;
   automationExecutor: AutomationExecutor;
   automationScheduler: AutomationScheduler;
   /** `media`'s filter readiness reads the enrichment outcome through this. */
@@ -31,6 +33,7 @@ export function registerAutomationsDependencies<TCradle extends AutomationsCradl
   const registrations: NameAndRegistrationPair<AutomationsCradle> = {
     automationService: asClass(AutomationService).singleton(),
     automationRunService: asClass(AutomationRunService).singleton(),
+    automationBlockService: asClass(AutomationBlockService).singleton(),
     automationExecutor: asClass(AutomationExecutor).singleton(),
     automationScheduler: asClass(AutomationScheduler).singleton(),
     enrichmentOutcomeSource: asClass(RunHistoryEnrichmentOutcome).singleton(),
