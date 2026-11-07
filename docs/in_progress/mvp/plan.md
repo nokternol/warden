@@ -34,9 +34,9 @@ provided it has a live producer of an offered type).
 |---|---|
 | **Sign-in** | Plex sign-in by the owner only (the first sign-in claims the instance), sign-out, and a session that survives a container restart. |
 | **Providers** | Add, edit, test and delete a provider of an offered type. Radarr/Sonarr allow multiple instances. Enable tasks per instance. |
-| **Media** | Browse movies and series from configured sources. Filter, filter by title, sort and paginate. |
-| **Queries** | Save a filter set as a query, list, preview and delete. |
-| **Automations** | Create from one or more include/exclude queries, a task (with its select parameter, if any) and a schedule. List, Run Now, Disable/Enable and Delete. A destructive task states its blast radius before saving. First-run guidance when setup is incomplete. An automation that cannot run as configured is skipped, not run. |
+| **Media** | Browse movies and series from configured sources. Filter, filter by title, sort and paginate. A filter that can't be trusted shows as a warning beside the results, apart from any provider that could not be read. Results reflect Warden's own changes (a run, a provider added or removed) without waiting for the cache to expire. |
+| **Queries** | Save a filter set as a query, list, preview and delete. The list marks a query **Broken** or **Check data** with each reason and what fixes it. A query an automation uses can't be deleted, and a query on a rule no offered provider produces can't be saved. |
+| **Automations** | Create from one or more include/exclude queries, a task (with its select parameter, if any) and a schedule. List, Run Now, Disable/Enable and Delete. A destructive task states its blast radius before saving. First-run guidance when setup is incomplete. An automation whose filters can't be trusted is skipped, not run, and its row lists what blocks it and what fixes it. A filter whose field holds no data at all can be accepted per automation, after which its schedule runs. Run Now checks first: it asks before running past a filter not yet accepted (for that run only), says when the run will be skipped, and states how many items a destructive task will affect. |
 | **Runs** | History of runs with status (succeeded, failed, or skipped as invalid with its reason), count, error and the items each run targeted, including items since removed from their source. |
 | **System** | System automations (identity resolution, enrichment) listed with Run Now, health status, and media data reset. |
 | **Delivery** | `docker compose up` with a persistent volume, a health check, graceful stop, migrations on boot, and an image published by CI. |
@@ -738,8 +738,21 @@ names, so nothing is renamed twice.
   `success | error`, so the Dashboard and Automations page are unchanged. `AutomationRunSchema.status`
   gains `skipped`. `automation_runs.status` is an unconstrained text column, so no migration was
   needed. On the Runs page a skipped run shows an *Invalid* warning badge and its full reason.
-- **Out of MVP:** showing invalidity outside the Runs page (an Automations page badge, the reason,
-  a link to fix the query). See [Post-MVP](#post-mvp-parked-in-order).
+- **Current state:** the guard above was replaced by filter readiness
+  (`docs/architecture/filter-readiness.md`), which every screen and the executor read. Where it
+  differs from this slice's behaviours and as-built notes, it is the current fact:
+  - The check is the queries' readiness findings plus the automation's own provider being active.
+    `getHealthForAutomation`, the `required` flag and the `degraded`/`unavailable` health statuses are
+    gone. A filter whose rule no active provider can supply blocks the run (there is no "optional
+    provider" that lets it through). A Plex, Jellyfin or Tautulli automation whose filter names an
+    active source instance of the right content type runs.
+  - A filter whose field holds no value for any title can be signed off per automation
+    (`automation_blocks`); once signed off it no longer blocks the schedule.
+  - Run Now checks first (`automations.readiness`) and runs past a finding awaiting sign-off only when
+    the user chose to proceed for that run; otherwise it records the skip. A scheduled skip is
+    recorded once while its reason is unchanged, and every Run Now records its own outcome.
+  - The Automations page shows each automation's blocks with what clears them, so invalidity is no
+    longer shown on the Runs page only.
 
 ### Track E — Containerised delivery
 
@@ -832,6 +845,13 @@ names, so nothing is renamed twice.
   4. The [Destination scenario](#destination-scenario), and a second Plex account being refused.
   5. No out-of-scope route or page is reachable on the running image (the contract and S1's
      navigation list are the expected surface).
+  6. Filter readiness against the real providers: with Seerr connected and no requests made, a query
+     on a Seerr filter shows **Check data**; an automation using it is blocked on schedule until its
+     problem is accepted on the Automations page; Run Now asks before running past it and runs with
+     consent. A destructive automation's Run Now states its item count. Deleting a query an
+     automation uses is refused with the reason.
+  7. After an automation run changes titles, and after a provider is added, the Media page shows the
+     change on its next load without waiting for the cache to expire.
 - Docs: move every fracture-ledger entry this plan opened to Healed. Update `VOCABULARY.md` and the
   core model. Re-sequence the provider e2e implementation map under Post-MVP. Then run
   `graphify update .` and `link_doc_to_code.py --apply` for touched architecture docs.
@@ -866,7 +886,7 @@ names, so nothing is renamed twice.
    is a server-only change.
 5. Un-deferring each deferred surface, resolving its duplicate mechanism first (ratings vs rating
    filters, search vs title filter).
-6. Invalid automations surfaced as issues to solve: an Automations page badge with the reason and
-   a link to fix the offending query, beyond the skipped run D4 records on the Runs page.
+6. A link from an automation's blocking problem to the query that needs fixing. The Automations page
+   already lists each block with its reason and what clears it.
 7. `docs/intent/`: automation archive, realtime run state, ratings provider, inter-provider
    dependency, editions, per-consumer watchlist.
