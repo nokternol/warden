@@ -676,6 +676,11 @@ names, so nothing is renamed twice.
   - Each remaining way to look up a title does a job no other does, and its name says which (so two
     things that both "search" do not remain unless they are distinct jobs, named apart).
   - Decision 7 holds for a surface left deferred.
+  - A lookup that is given only a title string still searches by that string, and de-duplicates its
+    results by the provider's own id (the TMDB id for movies, the TVDB id for series) before showing
+    them, so one title held by several providers or instances appears once. Title strings select;
+    ids decide what is a duplicate. Support for several editions of one title
+    (`docs/intent/media-edition-model.md`) will extend this rule later.
 - **Defects this slice repairs**, whichever option is chosen (an option that retires the code
   repairs them by deleting it; one that keeps it fixes them). This slice is their only owner:
   - `searchProvider` (`server/modules/media/media.search.procedures.ts`) is its own switch from
