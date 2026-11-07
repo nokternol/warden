@@ -55,7 +55,7 @@ export const scope: Scope = {
     ],
     tasks: [],
     procedures: [
-      // Ratings have two mechanisms; unifying them is post-MVP work.
+      // Ratings have two mechanisms; blocked while they are not one.
       '/api/providers/ratings',
       // No MVP consumer.
       '/api/providers/metadata',
@@ -69,11 +69,11 @@ export const scope: Scope = {
       '/dashboard',
       // A second way to find a title beside the title filter.
       '/search',
-      // Ratings have two mechanisms; unifying them is post-MVP work.
+      // Ratings have two mechanisms; blocked while they are not one.
       '/ratings',
     ],
     sections: [
-      // Ratings have two mechanisms; unifying them is post-MVP work.
+      // Ratings have two mechanisms; blocked while they are not one.
       'mediaRatingsPanel',
     ],
   },

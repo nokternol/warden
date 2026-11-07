@@ -551,17 +551,21 @@ Earlier entries in this ledger use the names that were current when they healed 
 - **Fracture:** rating filters run through enrichment, while `/api/providers/ratings` is a separate
   aggregation feeding its own page and panel.
 - **Status:** the second mechanism is deferred in `contract/scope.ts`, so it is unreachable but present.
-  Unifying them comes before un-deferring it, per the post-MVP list in `docs/in_progress/mvp/plan.md`.
+  The MVP slice "One ratings mechanism" in `docs/in_progress/mvp/plan.md` settles them to one, and the
+  MVP does not close until it merges.
 
 ### Rule key and content type — two names kept (recorded 2026-11-01)
 
 - **Fracture:** the column `media_query_filter_values.filterKey` holds a rule key. `media_identity.kind`
   holds a content type.
-- **Status:** left in place for the MVP, since no user sees them and renaming either needs a migration.
+- **Status:** no user sees them, and renaming either needs a migration. The MVP slice "Rule key and
+  content type in the schema" in `docs/in_progress/mvp/plan.md` renames both, and the MVP does not
+  close until it merges.
 
 ### Title lookup — two mechanisms, one blocked (recorded 2026-11-01, MVP slice B4)
 
 - **Fracture:** the title filter and the Search page's cross-provider metadata search both look up a
   title.
-- **Status:** Search is deferred in `contract/scope.ts`, so it is unreachable but present. Unifying them
-  comes before un-deferring it, per the post-MVP list in `docs/in_progress/mvp/plan.md`.
+- **Status:** Search is deferred in `contract/scope.ts`, so it is unreachable but present. The MVP slice
+  "One title lookup" in `docs/in_progress/mvp/plan.md` decides whether they do one job or two and
+  settles it, and the MVP does not close until it merges.
