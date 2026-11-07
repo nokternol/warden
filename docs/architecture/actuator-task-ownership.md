@@ -123,7 +123,9 @@ instance can actually do.
 `provider.tasks().find(t => t.id === taskId)`, enforces enablement via
 `readEnabledTaskIds(providerSettings.settings)`, evaluates the query, and calls
 `task.run(ids, automation.taskParameter)` — the runner already bound to the instance. `task.affects`
-drives the `media:changed` event. `SYSTEM_TASKS` (`system:enrichment`, `system:identity-resolution`) are
+drives the `media:changed` event, sent once the task has acted whether or not it then succeeds. When a task
+declares it is a written rule at `ActuatorTaskDescriptor.affects` ([`roles.ts`](ref:path:server/modules/providers/roles.ts)), and
+[`actuatorTaskAffects.test.ts`](ref:path:server/__tests__/modules/providers/actuatorTaskAffects.test.ts) pins every task that leaves it off. `SYSTEM_TASKS` (`system:enrichment`, `system:identity-resolution`) are
 separate: internal jobs run via `SystemTaskRunner`, not actuator tasks, and absent from the discovery
 surface.
 

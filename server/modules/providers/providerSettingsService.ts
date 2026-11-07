@@ -80,6 +80,11 @@ function summarize(raw: RawMetadataProvider): ProviderSummary {
  */
 export type PrecedenceCoverageValidator = (activeTypes: Set<MetadataProviderType>) => void;
 
+/**
+ * Stored provider configuration. Every mutation that can change which providers are
+ * active or what they serve sends `provider:changed`, which clears the caches built from
+ * provider data; a new such mutation sends it too.
+ */
 export class ProviderSettingsService {
   private readonly db: DrizzleDb;
   private readonly eventBus?: DomainEventBus;
@@ -220,6 +225,7 @@ export class ProviderSettingsService {
 
   async delete(id: number): Promise<void> {
     await this.db.delete(metadataProviders).where(eq(metadataProviders.id, id));
+    this.eventBus?.emit('provider:changed', {});
     log.debug('Provider deleted', { id });
   }
 

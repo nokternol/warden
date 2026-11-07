@@ -2,6 +2,7 @@ import { MetadataProviderType } from '@server/database/schema';
 import { api } from '@server/kernel/api';
 import { MediaCache } from '@server/kernel/cache';
 import type { DrizzleDb } from '@server/kernel/db';
+import type { DomainEventBus } from '@server/kernel/eventBus';
 import { getChildLogger } from '@server/kernel/logger';
 import {
   type IProviderFactory,
@@ -35,6 +36,9 @@ import { type Filter, type NormalizedMovie, type NormalizedSeries, getRule } fro
 
 const log = getChildLogger('MediaProcedures');
 
+/** The bus events on which the media procedures clear every cache they own. */
+const CLEARED_ON = ['media:changed', 'provider:changed'] as const;
+
 // ─── Handler-local helpers ────────────────────────────────────────────────────
 
 function computeYearRange(items: Array<{ year?: number }>): {
@@ -54,6 +58,7 @@ interface MediaCradle {
   providerSettingsService: ProviderSettingsService;
   providerFactory?: IProviderFactory;
   mediaQueryEngine: MediaQueryEngine;
+  eventBus: DomainEventBus;
   db?: DrizzleDb;
 }
 
@@ -372,25 +377,49 @@ export function createMediaProcedures(cradle: MediaCradle) {
     };
   }
 
-  function invalidateMediaCaches(): void {
-    moviesCache.invalidate('movies');
-    seriesCache.invalidate('series');
-    tagsCache.invalidate('tags');
-    qualityProfilesCache.invalidate('qualityProfiles');
-    languageProfilesCache.invalidate('languageProfiles');
-    genresCache.invalidate('genres');
-    networksCache.invalidate('networks');
-    studioCache.invalidate('studio');
-    releaseGroupsCache.invalidate('releaseGroups');
-    collectionNamesCache.invalidate('collectionNames');
-    fileContainerCache.invalidate('fileContainer');
-    videoCodecCache.invalidate('videoCodec');
-    audioCodecCache.invalidate('audioCodec');
-    fileResolutionCache.invalidate('fileResolution');
-    labelsCache.invalidate('labels');
-    plexItemsCache.invalidate('plexItems');
-    jellyfinItemsCache.invalidate('jellyfinItems');
+  /**
+   * Every cache this instance owns. A cache added here must go in this array, which the
+   * handler below clears. What clears them:
+   * - `media:changed`: upstream library data changed by Warden (an automation task that
+   *   declares `affects: 'media'` and has acted, or a system data job with changes).
+   * - `provider:changed`: a provider was created, updated or deleted, so its library joined,
+   *   changed or left.
+   * - The 60s expiry: changes Warden can't see, such as edits in Radarr's own UI, upstream
+   *   background commands finishing, or an upstream service recovering by itself.
+   * A failed provider fetch is cached as a partial or empty result (an error entry, or an
+   * empty list) until the expiry or a provider edit, so requests during an outage don't each
+   * wait on the dead upstream (`media.cache.failuresCached.integration.test.ts`).
+   */
+  const caches: Array<{ clear(): void }> = [
+    moviesCache,
+    seriesCache,
+    tagsCache,
+    qualityProfilesCache,
+    languageProfilesCache,
+    genresCache,
+    networksCache,
+    studioCache,
+    releaseGroupsCache,
+    collectionNamesCache,
+    fileContainerCache,
+    videoCodecCache,
+    audioCodecCache,
+    fileResolutionCache,
+    labelsCache,
+    plexItemsCache,
+    jellyfinItemsCache,
+  ];
+
+  /** Bus listener: catches its own errors, since a throw would re-enter the event's sender. */
+  function clearCaches(): void {
+    try {
+      for (const cache of caches) cache.clear();
+    } catch (err) {
+      log.error('Clearing the media caches failed', { err });
+    }
   }
+
+  for (const event of CLEARED_ON) cradle.eventBus.on(event, clearCaches);
 
   const procedures = {
     browse: {
@@ -631,5 +660,10 @@ export function createMediaProcedures(cradle: MediaCradle) {
     }),
   };
 
-  return { procedures, invalidateMediaCaches };
+  /** Unsubscribes this instance's cache clearing from the bus; for instances built per test. */
+  function dispose(): void {
+    for (const event of CLEARED_ON) cradle.eventBus.off(event, clearCaches);
+  }
+
+  return { procedures, dispose };
 }

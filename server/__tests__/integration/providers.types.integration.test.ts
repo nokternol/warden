@@ -37,7 +37,7 @@ describe('GET /api/providers/types', () => {
       req.user = { id: 1 } as unknown as NonNullable<typeof req.user>;
       next();
     });
-    app.use(serveApi({ providers: createProvidersProcedures(container.cradle, () => {}) }));
+    app.use(serveApi({ providers: createProvidersProcedures(container.cradle) }));
     app.use(errorHandlerMiddleware);
     client = createApiClient(app);
   });

@@ -15,7 +15,7 @@ import { createMockConfig } from '@tests/factories';
 import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import { http, HttpResponse } from 'msw';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { server } from '../../../tests/mocks/server';
 
 // --------------------------------------------------------------------------
@@ -65,6 +65,17 @@ function makeRadarrMovie(title: string, id = 1) {
 describe('MediaHandler cache lifecycle', () => {
   let cradle: ReturnType<typeof buildContainer>['cradle'];
 
+  // Each build subscribes to the shared bus; dispose them so listeners don't pile up across tests.
+  const builtMedia: Array<{ dispose(): void }> = [];
+  function buildMedia() {
+    const media = createMediaProcedures(cradle);
+    builtMedia.push(media);
+    return media;
+  }
+  afterEach(() => {
+    for (const media of builtMedia.splice(0)) media.dispose();
+  });
+
   beforeAll(async () => {
     const mockConfig = createMockConfig({ DB_PATH: ':memory:', DB_LOGGING: false });
     for (const [key, value] of Object.entries(mockConfig)) {
@@ -104,7 +115,7 @@ describe('MediaHandler cache lifecycle', () => {
       })
     );
 
-    const routes = serveApi({ media: createMediaProcedures(cradle).procedures });
+    const routes = serveApi({ media: buildMedia().procedures });
     const client = createApiClient(buildAuthedApp(routes));
 
     const [res1, res2] = await Promise.all([
@@ -129,8 +140,8 @@ describe('MediaHandler cache lifecycle', () => {
       })
     );
 
-    const routesA = serveApi({ media: createMediaProcedures(cradle).procedures });
-    const routesB = serveApi({ media: createMediaProcedures(cradle).procedures });
+    const routesA = serveApi({ media: buildMedia().procedures });
+    const routesB = serveApi({ media: buildMedia().procedures });
     const clientA = createApiClient(buildAuthedApp(routesA));
     const clientB = createApiClient(buildAuthedApp(routesB));
 
@@ -142,5 +153,42 @@ describe('MediaHandler cache lifecycle', () => {
     const resB = await clientB.get(browsePath('movie'));
     expect(expectSuccessResponse(resB).items[0].title).toBe('Inception');
     expect(radarrCallCount).toBe(2);
+  });
+
+  it('media:changed on the bus makes the next browse refetch from Radarr', async () => {
+    let radarrCallCount = 0;
+    server.use(
+      http.get('http://localhost:7878/api/v3/movie', () => {
+        radarrCallCount++;
+        return HttpResponse.json([makeRadarrMovie('Inception')]);
+      })
+    );
+    const routes = serveApi({ media: buildMedia().procedures });
+    const client = createApiClient(buildAuthedApp(routes));
+
+    await client.get(browsePath('movie'));
+    cradle.eventBus.emit('media:changed', {});
+    await client.get(browsePath('movie'));
+
+    expect(radarrCallCount).toBe(2);
+  });
+
+  it("after dispose(), media:changed no longer clears that instance's caches", async () => {
+    let radarrCallCount = 0;
+    server.use(
+      http.get('http://localhost:7878/api/v3/movie', () => {
+        radarrCallCount++;
+        return HttpResponse.json([makeRadarrMovie('Inception')]);
+      })
+    );
+    const media = buildMedia();
+    const client = createApiClient(buildAuthedApp(serveApi({ media: media.procedures })));
+
+    await client.get(browsePath('movie'));
+    media.dispose();
+    cradle.eventBus.emit('media:changed', {});
+    await client.get(browsePath('movie'));
+
+    expect(radarrCallCount).toBe(1);
   });
 });

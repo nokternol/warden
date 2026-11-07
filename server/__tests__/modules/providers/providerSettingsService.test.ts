@@ -11,6 +11,7 @@ import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { ValidationError } from '@server/kernel/errors';
 import { DomainEventBus } from '@server/kernel/eventBus';
+import { ActiveFieldSetCache } from '@server/modules/media/activeFieldSet';
 import { ProviderSettingsService } from '@server/modules/providers/providerSettingsService';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -377,7 +378,7 @@ describe('ProviderSettingsService', () => {
   });
 
   // -------------------------------------------------------------------------
-  // provider:changed event — emitted on create/update for cross-module cache
+  // provider:changed event — emitted on create/update/delete for cross-module cache
   // invalidation (e.g. media's active-field-set cache), without providers
   // importing anything from media.
   // -------------------------------------------------------------------------
@@ -411,6 +412,25 @@ describe('ProviderSettingsService', () => {
     await withBus.update(created.id, { name: 'Renamed' });
 
     expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('deleting the only active Plex removes its fields from the active field set', async () => {
+    const events = new DomainEventBus();
+    const withBus = new ProviderSettingsService({ db: getDb(), eventBus: events });
+    const fieldSet = new ActiveFieldSetCache({
+      providerSettingsService: withBus,
+      eventBus: events,
+    });
+    const plex = await withBus.create({
+      type: MetadataProviderType.PLEX,
+      name: 'Plex',
+      url: 'http://localhost:32400',
+    });
+    expect((await fieldSet.get()).has('plexAddedAt')).toBe(true);
+
+    await withBus.delete(plex.id);
+
+    expect((await fieldSet.get()).has('plexAddedAt')).toBe(false);
   });
 
   // -------------------------------------------------------------------------

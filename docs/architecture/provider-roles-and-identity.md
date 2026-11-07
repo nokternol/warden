@@ -103,8 +103,10 @@ loop every active instance per type — never collapsed to one:
   namespaces. It reads the ids from each library item's `Guid` list (`tmdb://N`, `tvdb://N`), which Plex
   includes in a listing only when the request asks with `includeGuids=1`. A stamp writes only a new or
   changed id and clears that group's `enrichedAt`, so the next enrichment run reads the linked server
-  instead of waiting out the staleness window. [`tests/fixtures/plex/`](ref:path:tests/fixtures/plex/library-sections.json)
-  holds a real server's responses, captured by `scripts/capture-plex-fixture.sh`, that the job is tested against.
+  instead of waiting out the staleness window. `tests/fixtures/plex/` holds a real server's responses,
+  captured by `scripts/capture-plex-fixture.sh`, that
+  [`identityResolutionJob.test.ts`](ref:path:server/__tests__/modules/providers/identityResolutionJob.test.ts)
+  tests the job against.
 
 ## Soft-deleted copies and run history
 

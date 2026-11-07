@@ -90,36 +90,42 @@ export interface ActiveTypesSource {
 /**
  * Caches `activeFieldSet`'s union so `ruleRegistry`/`gatedDescriptors` don't
  * recompute it (and re-query every provider's active state) per request.
- * Invalidates on `provider:changed` — the same event `ProviderSettingsService`
- * emits from `create`/`update`, kept decoupled via the kernel event bus so
- * `providers` never imports from `media`.
+ * Invalidates on `provider:changed`, which `ProviderSettingsService` sends from
+ * create, update and delete, kept decoupled via the kernel event bus so
+ * `providers` never imports from `media`. It has no expiry, so a read in flight
+ * when the event fires returns its result without caching it: the old set can
+ * never be written back.
  */
 export class ActiveFieldSetCache {
   private readonly source: ActiveTypesSource;
   private cached: Set<keyof EnrichmentFields> | null = null;
   private cachedActiveTypes: Set<MetadataProviderType> | null = null;
+  private generation = 0;
 
   constructor(deps: { providerSettingsService: ActiveTypesSource; eventBus?: DomainEventBus }) {
     this.source = deps.providerSettingsService;
     deps.eventBus?.on('provider:changed', () => {
+      this.generation++;
       this.cached = null;
       this.cachedActiveTypes = null;
     });
   }
 
   async get(): Promise<Set<keyof EnrichmentFields>> {
-    if (this.cached === null) {
-      this.cached = activeFieldSet(await this.getActiveTypes());
-    }
-    return this.cached;
+    if (this.cached !== null) return this.cached;
+    const generation = this.generation;
+    const fields = activeFieldSet(await this.getActiveTypes());
+    if (this.generation === generation) this.cached = fields;
+    return fields;
   }
 
   /** The underlying active provider-type set, cached alongside `get()`'s field set —
    *  sharing one fetch when a caller needs both. */
   async getActiveTypes(): Promise<Set<MetadataProviderType>> {
-    if (this.cachedActiveTypes === null) {
-      this.cachedActiveTypes = await this.source.activeTypes();
-    }
-    return this.cachedActiveTypes;
+    if (this.cachedActiveTypes !== null) return this.cachedActiveTypes;
+    const generation = this.generation;
+    const types = await this.source.activeTypes();
+    if (this.generation === generation) this.cachedActiveTypes = types;
+    return types;
   }
 }

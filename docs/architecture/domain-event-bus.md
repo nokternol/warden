@@ -33,7 +33,8 @@ single `recordResult` emit site.
 
 | Event | Payload | Emitted |
 |---|---|---|
-| `media:changed` | *(none)* | after a successful run **iff** the producing task declares `affects: 'media'` **and** `itemCount > 0` |
+| `media:changed` | *(none)* | once an actuator task declaring `affects: 'media'` has acted on at least one item, **whether or not the run then succeeds**; and after a system data job declaring `affects: 'media'` reports `itemCount > 0` |
+| `provider:changed` | *(none)* | after every [`ProviderSettingsService`](ref:path:server/modules/providers/providerSettingsService.ts) create, update and delete (not `recordTest`, which changes only a provider's test status) |
 
 The event name is **derived from the declared scope**: a task declaring `affects: 'media'` emits
 `` `${affects}:changed` `` = `media:changed`. A future scope (e.g. `library`) declares
@@ -55,16 +56,19 @@ kind, not on which provider produced the event.
 Scope lives **with the task definition**, so the executor never hard-codes which tasks touch the cache:
 
 - **Actuator tasks** carry `affects` on the `ActuatorTaskDescriptor` the `MediaActuator` role declares
-  ([`server/modules/providers/roles.ts`](ref:path:server/modules/providers/roles.ts), returned by each provider's `tasks()`). Several tasks declare
-  `affects: 'media'` (`unmonitorMovie`, `deleteMovieWithFiles`, `deleteMovieKeepFiles`,
-  `changeQualityProfile`, and their Sonarr equivalents); `triggerSearch` declares nothing (its async *arr
-  search flips `hasFile` out-of-band, so it does not synchronously change the displayed library).
+  ([`server/modules/providers/roles.ts`](ref:path:server/modules/providers/roles.ts), returned by each provider's `tasks()`), by the rule in
+  [Cache invalidation conventions](#cache-invalidation-conventions).
 - **System data jobs** declare scope in `SYSTEM_TASKS` ([`automationExecutor.ts`](ref:path:server/modules/automations/automationExecutor.ts)): `system:enrichment`,
-  `system:identity-resolution` declare `affects: 'media'`.
+  `system:identity-resolution` declare `affects: 'media'`. They write enrichment and identity data,
+  which no cache holds yet, so today their event clears caches that don't depend on them; the
+  declaration is for the planned enrichment cache.
 
 The gate and emit are unified in one private helper, [`AutomationExecutor`](ref:label:AutomationExecutor)`.emitDataChange(affects,
 itemCount)`: it emits `` `${affects}:changed` `` only when `affects` is set and `itemCount > 0`.
-The same helper serves both user tasks and system data jobs.
+The same helper serves both user tasks and system data jobs. For an actuator task it runs in a
+`finally` around `task.run`, with `itemCount` the planned target count: a task that fails partway
+(Radarr erroring on the 6th of 10 titles) has still changed upstream data, and a failure while
+recording the result can't suppress the event.
 
 ## The gate contract
 
@@ -79,9 +83,71 @@ Emit `media:changed` **iff** the task declares a media scope **and** `itemCount 
 
 ## Producers & consumers
 
-- **Producer:** `AutomationExecutor.execute()`. Any future writer of media-relevant data (a
-  Tautulli/Plex webhook, a manual re-enrich, a backfill) should emit `media:changed` directly —
-  decoupled from run lifecycle so non-run writers invalidate caches too.
-- **Consumers:** none yet. `EventEmitter.emit` is synchronous and re-throws a listener's exception into
-  the caller, so the bus does not yet isolate a throwing consumer from the producer — real hardening work
-  before any consumer attaches, not yet built.
+- **Producers:** `AutomationExecutor.execute()` sends `media:changed`; `ProviderSettingsService`
+  sends `provider:changed`. Any future writer of media-relevant data (a Tautulli/Plex webhook, a
+  manual re-enrich, a backfill) sends `media:changed` directly — decoupled from run lifecycle so
+  non-run writers invalidate caches too.
+- **Consumers:**
+  - The media procedures ([`media.procedures.ts`](ref:path:server/modules/media/media.procedures.ts)) clear every cache they own on both
+    `media:changed` and `provider:changed`. `createMediaProcedures` returns `dispose()`, which
+    unsubscribes; the composition root builds them once, tests that build them repeatedly dispose.
+  - [`ActiveFieldSetCache`](ref:path:server/modules/media/activeFieldSet.ts) drops its cached field set on `provider:changed`.
+
+`EventEmitter.emit` is synchronous and re-throws a listener's exception into the sender. The bus
+doesn't isolate listeners from each other or from the sender; each in-process listener catches its
+own errors instead. Bus-level isolation becomes worth building when per-connection SSE consumers
+attach.
+
+## Cache invalidation conventions
+
+The event bus is the only route by which Warden's own changes clear a cache. The 60s expiry
+([`MediaCache`](ref:path:server/kernel/cache.ts)) stays for changes the bus can't see.
+
+### What clears the media caches
+
+| Route | Fires when | Covers |
+|---|---|---|
+| `media:changed` | An actuator task declaring `affects: 'media'` has acted on at least one item, whether the run then succeeds or fails. Also a system data job that reports changes. | Upstream library data changed by Warden |
+| `provider:changed` | `ProviderSettingsService` create, update or delete | A provider's library joining, changing or leaving |
+| 60s expiry | Always | Changes Warden can't see: edits made in Radarr's own UI, upstream background commands finishing, an upstream service recovering by itself |
+
+The media procedures' caches clear on both events. `ActiveFieldSetCache`, which has no expiry, clears
+on `provider:changed`. Both caches guard against an in-flight fetch: a fetch that started before an
+invalidation still answers its own callers but never writes its result back, so the old data can't
+reappear (`MediaCache.invalidate` bumps a per-key generation; `ActiveFieldSetCache` keeps one counter).
+
+A failed provider fetch is cached as a partial or empty result until the expiry or a provider edit,
+so requests during an outage don't each wait on the dead upstream's timeout
+([`media.cache.failuresCached.integration.test.ts`](ref:path:server/__tests__/integration/media.cache.failuresCached.integration.test.ts)).
+
+### When a task declares `affects`
+
+- **Declare `affects: 'media'`** when, by the time `run` returns, the task has changed library data in
+  the upstream service: which titles exist, monitored state, files, quality profile, tags, play
+  state, collection membership, metadata — anything a media cache holds or browse and the filters show.
+- **Leave it off** only when the task changes no library data by the time `run` returns, such as a
+  task that starts an upstream background command (search, refresh, rescan) whose effect lands later.
+  An event at return would clear the caches before the change exists, so the expiry covers it. This
+  is why `triggerSearch` declares nothing: the *arr search flips `hasFile` out-of-band.
+- **If unsure, declare it.** Over-eviction costs one refetch; under-eviction leaves the page stale.
+
+[`actuatorTaskAffects.test.ts`](ref:path:server/__tests__/modules/providers/actuatorTaskAffects.test.ts) builds every provider and pins the exact set of tasks
+that leave `affects` off, so a new task fails it until someone applies the rule.
+
+### When something sends `provider:changed`
+
+Every provider-settings mutation that can change which providers are active or what they serve.
+
+### Listener rules
+
+- **Catch your own errors.** A throw re-enters the sender: it would record a run twice, or fail a
+  provider save after the row was written.
+- **Subscribe once if long-lived; `off` if built per request or per test.** A listener per request
+  leaks, and Node warns past ten listeners on one event.
+- **Delivery is synchronous.** A listener runs before `emit` returns, so a provider save has cleared
+  the caches before it responds ([`eventBus.test.ts`](ref:path:server/__tests__/kernel/eventBus.test.ts)).
+
+### Adding a cache
+
+Put it where its owner's handler clears it (for the media procedures, the cache array), and say in a
+comment which route covers each kind of change it holds.

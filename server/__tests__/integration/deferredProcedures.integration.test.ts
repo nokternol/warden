@@ -41,6 +41,20 @@ function isRefusedAsDeferred(res: request.Response) {
 
 type Cradle = ReturnType<typeof buildContainer>['cradle'];
 
+/**
+ * One API router per container: building the router subscribes the media caches to the
+ * container's event bus, so a router per request would pile listeners onto one bus.
+ */
+const routers = new WeakMap<Cradle, ReturnType<typeof createApiRouter>>();
+function routerFor(cradle: Cradle) {
+  let router = routers.get(cradle);
+  if (!router) {
+    router = createApiRouter(cradle);
+    routers.set(cradle, router);
+  }
+  return router;
+}
+
 /** An app serving the real API router, with or without a signed-in caller. */
 function serve(cradle: Cradle, caller: 'signed-in' | 'signed-out' = 'signed-out'): Express {
   const app = express();
@@ -52,7 +66,7 @@ function serve(cradle: Cradle, caller: 'signed-in' | 'signed-out' = 'signed-out'
       next();
     });
   }
-  app.use('/api', createApiRouter(cradle));
+  app.use('/api', routerFor(cradle));
   return app;
 }
 

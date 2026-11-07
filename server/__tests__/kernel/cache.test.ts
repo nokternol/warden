@@ -118,3 +118,85 @@ describe('MediaCache', () => {
     expect(cache.get('series')).toEqual(['s1']);
   });
 });
+
+/** A promise whose settlement the test controls. */
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (err: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+describe('MediaCache invalidation during an in-flight fetch', () => {
+  let cache: MediaCache<string[]>;
+
+  beforeEach(() => {
+    cache = new MediaCache<string[]>(1000);
+  });
+
+  it('does not store the stale result, and the next getOrFetch refetches', async () => {
+    const stale = deferred<string[]>();
+    const first = cache.getOrFetch('movies', () => stale.promise);
+
+    cache.invalidate('movies');
+    stale.resolve(['old']);
+    await first;
+
+    expect(cache.get('movies')).toBeNull();
+    const fresh = vi.fn<() => Promise<string[]>>().mockResolvedValue(['new']);
+    expect(await cache.getOrFetch('movies', fresh)).toEqual(['new']);
+    expect(fresh).toHaveBeenCalledOnce();
+  });
+
+  it('a settling stale fetch does not drop the fetch that replaced it', async () => {
+    const fetchA = deferred<string[]>();
+    const fetchB = deferred<string[]>();
+    const a = cache.getOrFetch('movies', () => fetchA.promise);
+    cache.invalidate('movies');
+    const b = cache.getOrFetch('movies', () => fetchB.promise);
+
+    fetchA.resolve(['old']);
+    await a;
+
+    const third = vi.fn<() => Promise<string[]>>().mockResolvedValue(['third']);
+    const c = cache.getOrFetch('movies', third);
+    fetchB.resolve(['new']);
+    expect(await c).toEqual(['new']);
+    expect(await b).toEqual(['new']);
+    expect(third).not.toHaveBeenCalled();
+  });
+
+  it('a stale fetch that rejects does not drop the fetch that replaced it', async () => {
+    const fetchA = deferred<string[]>();
+    const fetchB = deferred<string[]>();
+    const a = cache.getOrFetch('movies', () => fetchA.promise);
+    cache.invalidate('movies');
+    const b = cache.getOrFetch('movies', () => fetchB.promise);
+
+    fetchA.reject(new Error('upstream down'));
+    await expect(a).rejects.toThrow('upstream down');
+
+    const third = vi.fn<() => Promise<string[]>>().mockResolvedValue(['third']);
+    const c = cache.getOrFetch('movies', third);
+    fetchB.resolve(['new']);
+    expect(await c).toEqual(['new']);
+    expect(await b).toEqual(['new']);
+    expect(third).not.toHaveBeenCalled();
+  });
+
+  it('clear() empties every key and drops every in-flight fetch', async () => {
+    cache.set('movies', ['m']);
+    const inflight = deferred<string[]>();
+    const series = cache.getOrFetch('series', () => inflight.promise);
+
+    cache.clear();
+    inflight.resolve(['stale']);
+    await series;
+
+    expect(cache.get('movies')).toBeNull();
+    expect(cache.get('series')).toBeNull();
+  });
+});
