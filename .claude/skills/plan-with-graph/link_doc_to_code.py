@@ -136,10 +136,14 @@ def resolve(mode: str, target: str, by_label: dict, by_source_file: dict) -> tup
         matches = by_label.get(target, [])
     else:
         # source_file is shared by every symbol extracted from that file, not just
-        # the file itself - narrow to the file-level node (label == bare filename),
-        # never guess between the file and the symbols inside it.
-        basename = Path(target).name
-        file_level = by_label.get(basename, [])
+        # the file itself - narrow to the file-level node, never guess between the
+        # file and the symbols inside it. graphify labels a file node with its bare
+        # filename, or with as many trailing path segments as it takes to tell apart
+        # files that share a basename (`kernel/container.ts`, `modules/index.ts`,
+        # the full `contract/scope.ts`), so accept any trailing-segment suffix.
+        parts = Path(target).parts
+        suffixes = {"/".join(parts[i:]) for i in range(len(parts))}
+        file_level = {nid for s in suffixes for nid in by_label.get(s, [])}
         matches = [nid for nid in by_source_file.get(target, []) if nid in file_level]
     if len(matches) == 1:
         return matches[0], "ok"
