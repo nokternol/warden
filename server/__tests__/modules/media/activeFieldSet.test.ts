@@ -113,4 +113,28 @@ describe('ActiveFieldSetCache', () => {
     expect(result).toEqual(new Set([MetadataProviderType.RADARR]));
     expect(activeTypes).toHaveBeenCalledTimes(1);
   });
+
+  it('a read in flight when provider:changed fires does not cache the old set', async () => {
+    let resolveOld!: (types: Set<MetadataProviderType>) => void;
+    const activeTypes = vi
+      .fn<() => Promise<Set<MetadataProviderType>>>()
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveOld = resolve;
+          })
+      )
+      .mockResolvedValueOnce(new Set([MetadataProviderType.RADARR]));
+    const eventBus = new DomainEventBus();
+    const cache = new ActiveFieldSetCache({ providerSettingsService: { activeTypes }, eventBus });
+
+    const inFlight = cache.get();
+    eventBus.emit('provider:changed', {});
+    resolveOld(new Set([MetadataProviderType.PLEX]));
+    await inFlight;
+
+    const fresh = await cache.get();
+    expect(activeTypes).toHaveBeenCalledTimes(2);
+    expect(fresh.has('plexAddedAt')).toBe(false);
+  });
 });
