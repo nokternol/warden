@@ -15,6 +15,7 @@ import { AutomationService } from '@server/modules/automations/automationService
 import type { Filter } from '@server/modules/media/ruleRegistry';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
+import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRadarrMovie } from '../../../../tests/factories';
@@ -48,7 +49,7 @@ describe('AutomationExecutor — invalid automations', () => {
     const db = getDb();
     automationService = new AutomationService({ db });
     providerSettingsService = new ProviderSettingsService({ db });
-    mediaQueryService = new MediaQueryService({ db });
+    mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
     executor = new AutomationExecutor({
       automationService,
       automationRunService: new AutomationRunService({ db }),
@@ -227,6 +228,8 @@ describe('AutomationExecutor — invalid automations', () => {
       status: 'degraded',
       providerStatus: [],
       qualificationIssues: [{ filterKey: 'retiredRule', providerId: 99, reason: 'not_active' }],
+      findings: [],
+      queryList: 'clear',
     });
 
     await executor.execute(automation.id);

@@ -15,6 +15,7 @@ import { AutomationService } from '@server/modules/automations/automationService
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
 import { IdentityResolutionJob } from '@server/modules/providers/identityResolutionJob';
+import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createRadarrMovie } from '../../../../tests/factories';
@@ -49,7 +50,7 @@ describe('AutomationExecutor writes to automation_runs', () => {
     automationService = new AutomationService({ db });
     automationRunService = new AutomationRunService({ db });
     providerSettingsService = new ProviderSettingsService({ db });
-    mediaQueryService = new MediaQueryService({ db });
+    mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
     executor = new AutomationExecutor({
       automationService,
       automationRunService,

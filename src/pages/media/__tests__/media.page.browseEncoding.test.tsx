@@ -61,7 +61,13 @@ describe('MediaPage browse encoding', () => {
           name: body.name,
           contentType: 'movie' as const,
           filters: body.filters,
-          health: { status: 'healthy' as const, providerStatus: [], qualificationIssues: [] },
+          health: {
+            status: 'healthy' as const,
+            providerStatus: [],
+            qualificationIssues: [],
+            findings: [],
+            queryList: 'clear' as const,
+          },
           createdAt: new Date().toISOString(),
         };
       })

@@ -3,7 +3,8 @@ import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { AutomationService } from '@server/modules/automations/automationService';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { filterReadinessOver } from '@tests/helpers/filterReadiness';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const ISO_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
@@ -26,7 +27,7 @@ describe('MediaQueryService', () => {
 
   beforeEach(async () => {
     await initializeDatabase(testConfig);
-    service = new MediaQueryService({ db: getDb() });
+    service = new MediaQueryService({ db: getDb(), filterReadiness: filterReadinessOver(getDb()) });
   });
 
   afterEach(async () => {
@@ -223,6 +224,38 @@ describe('MediaQueryService', () => {
     const health = await service.getHealthForAutomation(query, provider.id);
 
     expect(health.qualificationIssues).toEqual([]);
+  });
+
+  it('lists a query on an enrichment-only rule with a data-incomplete finding before any enrichment run', async () => {
+    const db = getDb();
+    await db.insert(metadataProviders).values([
+      { type: MetadataProviderType.RADARR, name: 'Radarr', url: 'http://radarr' },
+      { type: MetadataProviderType.TAUTULLI, name: 'Tautulli', url: 'http://tautulli' },
+    ]);
+    await service.create({
+      name: 'Watched',
+      contentType: 'movie',
+      filters: [{ ruleKey: 'watched', value: true }],
+    });
+
+    const [listed] = await service.list();
+
+    expect(listed.health.findings).toMatchObject([{ kind: 'data-incomplete', ruleKey: 'watched' }]);
+    expect(listed.health.queryList).toBe('broken');
+  });
+
+  it('reads the readiness facts once however many queries it lists', async () => {
+    const readiness = filterReadinessOver(getDb());
+    const readFacts = vi.spyOn(readiness, 'readFacts');
+    const listing = new MediaQueryService({ db: getDb(), filterReadiness: readiness });
+    for (const name of ['A', 'B', 'C']) {
+      await listing.create({ name, contentType: 'movie', filters: [] });
+    }
+    readFacts.mockClear();
+
+    await listing.list();
+
+    expect(readFacts).toHaveBeenCalledTimes(1);
   });
 
   // ── create ────────────────────────────────────────────────────────────────

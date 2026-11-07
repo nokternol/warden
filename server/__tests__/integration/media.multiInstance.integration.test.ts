@@ -18,6 +18,7 @@ import { createMediaQueryProcedures } from '@server/modules/mediaQueries';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { createMockConfig, createRadarrMovie } from '@tests/factories';
 import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
+import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import { http, HttpResponse } from 'msw';
@@ -119,7 +120,10 @@ describe('Multi-instance Radarr — identity resolution + preview fan-out', () =
       )
     );
 
-    const mediaQueryService = new MediaQueryService({ db });
+    const mediaQueryService = new MediaQueryService({
+      db,
+      filterReadiness: filterReadinessOver(db),
+    });
     const query = await mediaQueryService.create({
       name: 'Downloaded',
       contentType: 'movie',

@@ -7,7 +7,13 @@ const query: MediaQueryRecord = {
   name: 'Stale Movies',
   contentType: 'movie',
   filters: [{ ruleKey: 'year', value: { max: 2020 } }],
-  health: { status: 'healthy', providerStatus: [], qualificationIssues: [] },
+  health: {
+    status: 'healthy',
+    providerStatus: [],
+    qualificationIssues: [],
+    findings: [],
+    queryList: 'clear',
+  },
   createdAt: '2026-01-15T00:00:00Z',
 };
 
@@ -40,6 +46,8 @@ export const Degraded: Story = () => (
             },
           ],
           qualificationIssues: [],
+          findings: [],
+          queryList: 'clear',
         },
       }}
       onLoad={noop}

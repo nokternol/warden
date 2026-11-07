@@ -14,6 +14,7 @@ import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryServic
 import { ProviderSettingsService } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient } from '@tests/helpers/api';
+import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import express, { type Express } from 'express';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -39,7 +40,10 @@ describe('POST /api/automations — Session C', () => {
     const container = buildContainer({ config, db });
 
     const providerService = new ProviderSettingsService({ db });
-    const mediaQueryService = new MediaQueryService({ db });
+    const mediaQueryService = new MediaQueryService({
+      db,
+      filterReadiness: filterReadinessOver(db),
+    });
 
     const provider = await providerService.create({
       type: MetadataProviderType.RADARR,

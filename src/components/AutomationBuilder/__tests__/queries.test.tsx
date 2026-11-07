@@ -14,7 +14,13 @@ const query = (id: number, name: string): MediaQueryRecord => ({
   name,
   contentType: 'movie',
   filters: [],
-  health: { status: 'healthy', providerStatus: [], qualificationIssues: [] },
+  health: {
+    status: 'healthy',
+    providerStatus: [],
+    qualificationIssues: [],
+    findings: [],
+    queryList: 'clear',
+  },
   createdAt: '2024-01-01T00:00:00Z',
 });
 const QUERIES = [query(1, 'Old Movies'), query(2, 'Watchlist')];

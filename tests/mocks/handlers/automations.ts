@@ -69,7 +69,13 @@ export const automationsHandlers = [
   mockProcedure(contract.automations.run, () => null),
 ];
 
-const MOCK_HEALTH = { status: 'healthy' as const, providerStatus: [], qualificationIssues: [] };
+const MOCK_HEALTH = {
+  status: 'healthy' as const,
+  providerStatus: [],
+  qualificationIssues: [],
+  findings: [],
+  queryList: 'clear' as const,
+};
 
 export const MOCK_MEDIA_QUERIES: MediaQueryRecord[] = [
   {

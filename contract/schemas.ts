@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ReadinessFindingSchema } from './readiness';
 
 // Accepts a Date object (from services) or an ISO string (from JSON.parse).
 // Always outputs a string — matches the JSON wire format.
@@ -93,6 +94,10 @@ export const QueryHealthSchema = z
     status: z.enum(['healthy', 'degraded']),
     providerStatus: z.array(ProviderStatusSchema),
     qualificationIssues: z.array(QualificationIssueSchema),
+    /** Every reason the query's filters cannot be trusted, from filter readiness. */
+    findings: z.array(ReadinessFindingSchema),
+    /** How the query list shows them. */
+    queryList: z.enum(['clear', 'checkData', 'broken']),
   })
   .strict();
 

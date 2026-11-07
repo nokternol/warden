@@ -15,6 +15,7 @@ import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryServic
 import { ProviderSettingsService } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient } from '@tests/helpers/api';
+import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import express, { type Express } from 'express';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -108,7 +109,10 @@ describe('POST /api/automations/:id/run — Phase 3', () => {
       apiKey: 'k',
       settings: { enabledTasks: ['unmonitorMovie'] },
     });
-    const query = await new MediaQueryService({ db }).create({
+    const query = await new MediaQueryService({
+      db,
+      filterReadiness: filterReadinessOver(db),
+    }).create({
       name: 'Q',
       contentType: 'movie',
       filters: [],

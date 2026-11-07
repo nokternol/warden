@@ -29,6 +29,7 @@ import {
   TautulliProvider,
 } from '@server/modules/providers';
 import type { ProviderConfig } from '@server/modules/providers/connections/baseProviderConnection';
+import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRadarrMovie, createSonarrSeries } from '../../../../tests/factories';
@@ -199,7 +200,7 @@ describe('AutomationExecutor', () => {
     const db = getDb();
     automationService = new AutomationService({ db });
     providerSettingsService = new ProviderSettingsService({ db });
-    mediaQueryService = new MediaQueryService({ db });
+    mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
     executor = new AutomationExecutor({
       automationService,
       automationRunService: new AutomationRunService({ db }),
@@ -1759,7 +1760,7 @@ describe('non-source actuators — id translation through the identity graph', (
     const db = getDb();
     automationService = new AutomationService({ db });
     providerSettingsService = new ProviderSettingsService({ db });
-    mediaQueryService = new MediaQueryService({ db });
+    mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
   });
 
   afterEach(async () => {
@@ -2124,7 +2125,7 @@ describe('task parameters — stored on the automation, threaded into run', () =
     const db = getDb();
     automationService = new AutomationService({ db });
     providerSettingsService = new ProviderSettingsService({ db });
-    mediaQueryService = new MediaQueryService({ db });
+    mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
   });
 
   afterEach(async () => {

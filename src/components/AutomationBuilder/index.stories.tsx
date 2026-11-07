@@ -35,7 +35,13 @@ const queries: MediaQueryRecord[] = [
     name: 'Old Movies',
     contentType: 'movie',
     filters: [{ ruleKey: 'yearMax', value: 2015 }],
-    health: { status: 'healthy', providerStatus: [], qualificationIssues: [] },
+    health: {
+      status: 'healthy',
+      providerStatus: [],
+      qualificationIssues: [],
+      findings: [],
+      queryList: 'clear',
+    },
     createdAt: '2024-01-01T00:00:00Z',
   },
 ];

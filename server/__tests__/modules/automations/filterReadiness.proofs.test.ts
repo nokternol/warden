@@ -22,7 +22,7 @@ import {
 } from '@server/database/schema';
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
-import { ConflictError } from '@server/kernel/errors';
+import { ConflictError, ValidationError } from '@server/kernel/errors';
 import { DomainEventBus } from '@server/kernel/eventBus';
 import { getChildLogger } from '@server/kernel/logger';
 import { AutomationExecutor } from '@server/modules/automations/automationExecutor';
@@ -36,6 +36,7 @@ import type { Filter, NormalizedMovie } from '@server/modules/media/ruleRegistry
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { PlexProvider, ProviderSettingsService } from '@server/modules/providers';
 import { IdentityResolutionJob } from '@server/modules/providers/identityResolutionJob';
+import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { desc, eq } from 'drizzle-orm';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -71,7 +72,7 @@ describe('filter readiness, as automations see it', () => {
     const db = getDb();
     automationService = new AutomationService({ db });
     providerSettingsService = new ProviderSettingsService({ db });
-    mediaQueryService = new MediaQueryService({ db });
+    mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
     executor = new AutomationExecutor({
       automationService,
       automationRunService: new AutomationRunService({ db }),
@@ -144,14 +145,15 @@ describe('filter readiness, as automations see it', () => {
   }
 
   describe('safety pins', () => {
-    it('saves a query on a rule whose only producer is a deferred provider type', async () => {
+    it('refuses to save a query on a rule the scope declaration defers', async () => {
       // `tmdbStatus` is produced only by TMDB, which the scope declaration defers.
-      const query = await mediaQueryService.create({
-        name: 'Released',
-        contentType: 'movie',
-        filters: [{ ruleKey: 'tmdbStatus', value: 'Released' }],
-      });
-      expect(query.filters).toEqual([{ ruleKey: 'tmdbStatus', value: 'Released' }]);
+      await expect(
+        mediaQueryService.create({
+          name: 'Released',
+          contentType: 'movie',
+          filters: [{ ruleKey: 'tmdbStatus', value: 'Released' }],
+        })
+      ).rejects.toThrow(ValidationError);
     });
 
     it('stops a run whose filter only a deferred provider type could supply', async () => {
@@ -164,8 +166,12 @@ describe('filter readiness, as automations see it', () => {
       const exclude = await mediaQueryService.create({
         name: 'Released',
         contentType: 'movie',
-        filters: [{ ruleKey: 'tmdbStatus', value: 'Released' }],
+        filters: [],
       });
+      // Written past `create`'s validation, as a query saved before the rule was deferred.
+      await getDb()
+        .insert(mediaQueryFilterValues)
+        .values({ mediaQueryId: exclude.id, filterKey: 'tmdbStatus', value: 'Released' });
       const automation = await automationOver(radarr.id, [
         { id: include.id, role: 'include' },
         { id: exclude.id, role: 'exclude' },
@@ -242,8 +248,8 @@ describe('filter readiness, as automations see it', () => {
     });
   });
 
-  describe('known defects, pinned as they are', () => {
-    it('reports a query naming a rule that no longer exists as healthy', async () => {
+  describe('saved queries show the findings that stop a run', () => {
+    it('reports a query naming a rule that no longer exists as broken', async () => {
       const query = await mediaQueryService.create({
         name: 'Keep',
         contentType: 'movie',
@@ -254,10 +260,11 @@ describe('filter readiness, as automations see it', () => {
         .values({ mediaQueryId: query.id, filterKey: 'retiredRule', value: 'x' });
 
       const [listed] = await mediaQueryService.list();
-      expect(listed.health.status).toBe('healthy');
+      expect(listed.health.findings.map((f) => f.kind)).toContain('unknown-rule');
+      expect(listed.health.queryList).toBe('broken');
     });
 
-    it('reports a movie query on Monitored as healthy when only Sonarr is configured, so there is no movie library', async () => {
+    it('reports a movie query on Monitored as having no movie library when only Sonarr is configured', async () => {
       await providerSettingsService.create({
         type: MetadataProviderType.SONARR,
         name: 'Sonarr',
@@ -269,18 +276,20 @@ describe('filter readiness, as automations see it', () => {
         contentType: 'movie',
         filters: [{ ruleKey: 'monitored', value: true }],
       });
-      expect(query.health.status).toBe('healthy');
+      expect(query.health.findings.map((f) => f.kind)).toEqual(['no-library']);
     });
 
-    it('reports a filterless query as healthy with no provider configured at all', async () => {
+    it('reports a filterless query as having no movie library with no provider configured at all', async () => {
       const query = await mediaQueryService.create({
         name: 'All',
         contentType: 'movie',
         filters: [],
       });
-      expect(query.health.status).toBe('healthy');
+      expect(query.health.findings.map((f) => f.kind)).toEqual(['no-library']);
     });
+  });
 
+  describe('known defects, pinned as they are', () => {
     it('skips a run using a Seerr filter while the library holds no Seerr data, though Seerr is connected and enrichment succeeded', async () => {
       // A library where nobody has requested anything through Seerr is a legitimate state;
       // nothing distinguishes it from data that failed to load.
@@ -335,7 +344,10 @@ describe('a non-source actuator whose query names a source instance', () => {
     const db = getDb();
     const providerSettingsService = new ProviderSettingsService({ db });
     const automationService = new AutomationService({ db });
-    const mediaQueryService = new MediaQueryService({ db });
+    const mediaQueryService = new MediaQueryService({
+      db,
+      filterReadiness: filterReadinessOver(db),
+    });
     const radarr = await providerSettingsService.create({
       type: MetadataProviderType.RADARR,
       name: 'Radarr',

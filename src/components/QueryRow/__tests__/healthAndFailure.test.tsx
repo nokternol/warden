@@ -13,6 +13,8 @@ const query: MediaQueryRecord = {
     status: 'degraded',
     providerStatus: [{ providerType: 'TAUTULLI', configured: false, affectedFilterKeys: ['w'] }],
     qualificationIssues: [],
+    findings: [],
+    queryList: 'clear',
   },
   createdAt: '2024-01-01T00:00:00Z',
 };
@@ -47,6 +49,8 @@ describe('QueryRow', () => {
           },
         ],
         qualificationIssues: [],
+        findings: [],
+        queryList: 'clear',
       },
     };
     render(<QueryRow query={mixed} onLoad={vi.fn()} onDelete={vi.fn()} />);
