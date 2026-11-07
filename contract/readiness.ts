@@ -138,7 +138,7 @@ export function describeFinding(description: FindingDescription): {
       return {
         message: `${description.ruleLabel} filter has no data: no ${NOUN[description.contentType]} holds a value for it`,
         clears:
-          'Clears when a title gets a value. If the field is empty on purpose, sign it off on the automation.',
+          'Clears when a title gets a value. If it is empty on purpose, an automation relying on this filter needs it signed off on the Automations page before its schedule runs.',
       };
   }
 }

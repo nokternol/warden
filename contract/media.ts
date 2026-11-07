@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { base } from './base';
+import { ReadinessFindingSchema } from './readiness';
 import { type ContentType, ContentTypeSchema, FilterSchema, ProviderTypeSchema } from './schemas';
 
 // ─── Browse query ───────────────────────────────────────────────────────────────
@@ -95,6 +96,10 @@ const browsePage = <T extends z.ZodType>(item: T) =>
     pageSize: z.number(),
     yearRange: z.object({ min: z.number().nullable(), max: z.number().nullable() }),
     errors: z.array(MediaErrorSchema),
+    /** Every reason the page's filters cannot be trusted, from filter readiness. */
+    findings: z.array(ReadinessFindingSchema),
+    /** What the Media page does with them. */
+    mediaPage: z.enum(['clear', 'warns']),
   });
 
 /** A provider-owned lookup entry, tagged with the instance it came from. */

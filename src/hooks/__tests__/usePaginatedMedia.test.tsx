@@ -15,6 +15,8 @@ const EMPTY_PAGE = {
   pageSize: 48,
   yearRange: { min: null, max: null },
   errors: [],
+  findings: [],
+  mediaPage: 'clear' as const,
 };
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -119,6 +121,8 @@ describe('usePaginatedMedia', () => {
           ],
           totalCount: 2,
           errors: page === 1 ? [] : [{ provider: 'Radarr Main', error: 'Timed out' }],
+          findings: [],
+          mediaPage: 'clear' as const,
         };
       })
     );

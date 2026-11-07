@@ -24,6 +24,8 @@ const EMPTY_PAGE = {
   pageSize: 48,
   yearRange: { min: null, max: null },
   errors: [],
+  findings: [],
+  mediaPage: 'clear' as const,
 };
 
 // Isolate SWR cache per test
@@ -170,5 +172,34 @@ describe('MediaPage heading order', () => {
     );
     expect(await screen.findByRole('heading', { level: 1, name: 'Media' })).toBeInTheDocument();
     expect(await screen.findByRole('heading', { level: 2, name: 'Movies' })).toBeInTheDocument();
+  });
+});
+
+describe('MediaPage filter readiness', () => {
+  it('shows findings in their own notice, apart from the source failures', async () => {
+    server.use(
+      mockProcedure(contract.media.browse.movie, () => ({
+        ...EMPTY_PAGE,
+        errors: [{ provider: 'Radarr Main', error: "Couldn't be reached: timed out" }],
+        findings: [
+          {
+            id: 'no-data::watched:2',
+            kind: 'no-data' as const,
+            ruleKey: 'watched',
+            providerIds: [2],
+            message: 'Watched filter has no data: no movie holds a value for it',
+            clears: 'Clears when a title gets a value.',
+          },
+        ],
+        mediaPage: 'warns' as const,
+      }))
+    );
+    render(<MediaPage />, { wrapper: Wrapper });
+
+    const notice = await screen.findByRole('status', { name: 'Filter warnings' });
+    expect(notice).toHaveTextContent('Watched filter has no data');
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('Radarr Main');
+    expect(alert).not.toHaveTextContent('Watched');
   });
 });

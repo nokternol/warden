@@ -1,6 +1,7 @@
 import type { Filter } from '@app/hooks/useMediaQueries';
 import { apiKey } from '@app/lib/api/useApi';
 import type { BrowseQuery } from '@contract/media';
+import type { ReadinessFinding } from '@contract/readiness';
 import { useCallback, useLayoutEffect, useRef } from 'react';
 import useSWRInfinite from 'swr/infinite';
 
@@ -11,6 +12,7 @@ interface PaginatedPage<T> {
   pageSize: number;
   yearRange?: { min: number | null; max: number | null };
   errors?: { provider: string; error: string }[];
+  findings?: ReadinessFinding[];
 }
 
 /** What to browse: the saved-query `Filter` entries and the sort order. */
@@ -114,6 +116,8 @@ export function usePaginatedMedia<T>(
     sourceErrors: Array.from(
       new Map(data?.flatMap((page) => page.errors ?? []).map((e) => [e.provider, e])).values()
     ),
+    // The filters are the same on every page, so the first page's findings stand for all.
+    findings: data?.[0]?.findings ?? [],
     refresh: mutate,
   };
 }

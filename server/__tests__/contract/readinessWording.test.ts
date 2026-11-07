@@ -75,7 +75,7 @@ describe('describeFinding', () => {
     [
       { kind: 'no-data', ruleLabel: 'Seerr request status', contentType: 'movie' },
       'Seerr request status filter has no data: no movie holds a value for it',
-      /sign it off/,
+      /signed off on the Automations page/,
     ],
   ];
 

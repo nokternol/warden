@@ -1,3 +1,4 @@
+import type { ContentType } from '@contract/schemas';
 import { MetadataProviderType } from '@server/database/schema';
 import { api } from '@server/kernel/api';
 import { MediaCache } from '@server/kernel/cache';
@@ -22,7 +23,7 @@ import {
   type SonarrTag,
   isMediaSourceType,
 } from '@server/modules/providers';
-import { EnrichmentQueries } from './enrichment/enrichment.queries';
+import { type FilterReadiness, filterAnswer, findingsFor } from './filterReadiness';
 import { paginateItems } from './media.pagination';
 import { sortMedia } from './media.sort';
 import { resolutionTier } from './mediaFieldProvider';
@@ -59,6 +60,7 @@ interface MediaCradle {
   providerFactory?: IProviderFactory;
   mediaQueryEngine: MediaQueryEngine;
   eventBus: DomainEventBus;
+  filterReadiness: Pick<FilterReadiness, 'readFacts'>;
   db?: DrizzleDb;
 }
 
@@ -138,33 +140,8 @@ function toMediaError(providerName: string, err: unknown): MediaError {
   };
 }
 
-/**
- * A filter on enrichment-only data (play history, favourites, request status) that no provider
- * has supplied for this content type matches nothing. Without this, an empty result reads as
- * "no titles match" when the truth is "no data to match against".
- */
-async function noDataErrors(
-  filters: Filter[],
-  contentType: 'movie' | 'series',
-  enrichment: EnrichmentQueries | undefined
-): Promise<MediaError[]> {
-  if (!enrichment) return [];
-  const errors: MediaError[] = [];
-  for (const { ruleKey } of filters) {
-    const rule = getRule(ruleKey, contentType);
-    if (!rule?.sourceField || rule.providers.some(isMediaSourceType)) continue;
-    if (await enrichment.hasValues(rule.sourceField, contentType)) continue;
-    errors.push({
-      provider: rule.label,
-      error: 'No connected provider has supplied this data yet, so the filter matches nothing.',
-    });
-  }
-  return errors;
-}
-
 export function createMediaProcedures(cradle: MediaCradle) {
   const { providerSettingsService, mediaQueryEngine } = cradle;
-  const enrichment = cradle.db ? new EnrichmentQueries({ db: cradle.db }) : undefined;
   const factory = cradle.providerFactory ?? new ProviderFactory();
 
   // Caches are owned by this factory invocation — same inputs produce isolated state.
@@ -311,6 +288,15 @@ export function createMediaProcedures(cradle: MediaCradle) {
       });
   }
 
+  /** Why the page's filters may not select what they describe, and what the page does about it. */
+  async function readiness(filters: Filter[], contentType: ContentType) {
+    const findings = findingsFor(await cradle.filterReadiness.readFacts(), {
+      contentType,
+      filters,
+    });
+    return { findings, mediaPage: filterAnswer(findings).mediaPage };
+  }
+
   /** One page of the movies matching `filters`, grouped by TMDB id across instances. */
   async function browseMovies(filters: Filter[], view: BrowseView) {
     const { sublists, errors } = await getMovies();
@@ -340,7 +326,8 @@ export function createMediaProcedures(cradle: MediaCradle) {
     return {
       ...paginateItems(grouped, { page: view.page, pageSize: view.pageSize }),
       yearRange,
-      errors: [...errors, ...(await noDataErrors(filters, 'movie', enrichment))],
+      errors,
+      ...(await readiness(filters, 'movie')),
     };
   }
 
@@ -373,7 +360,8 @@ export function createMediaProcedures(cradle: MediaCradle) {
     return {
       ...paginateItems(grouped, { page: view.page, pageSize: view.pageSize }),
       yearRange,
-      errors: [...errors, ...(await noDataErrors(filters, 'series', enrichment))],
+      errors,
+      ...(await readiness(filters, 'series')),
     };
   }
 

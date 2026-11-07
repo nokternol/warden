@@ -37,6 +37,8 @@ const EMPTY_PAGE = {
   pageSize: 48,
   yearRange: { min: null, max: null },
   errors: [],
+  findings: [],
+  mediaPage: 'clear' as const,
 };
 
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
