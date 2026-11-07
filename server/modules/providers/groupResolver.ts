@@ -20,17 +20,24 @@ const PRIMARY_COLUMN: Record<
   series: mediaIdentity.tvdbId,
 };
 
+/** An id a provider reports as 0 or below means it has none (Sonarr's `tvdbId: 0`). */
+function positive(id: number | undefined): number | undefined {
+  return id !== undefined && id > 0 ? id : undefined;
+}
+
 /**
  * Find-or-create the logical group (`media_identity` row) an item's ids belong to.
  * Never merges two existing groups — a find always resolves to exactly one group,
  * and identifiers are only ever filled onto it (never overwritten), per the design's
- * "grouping: find-or-create, never merge" decision.
+ * "grouping: find-or-create, never merge" decision. A TMDB or TVDB id that is not positive is
+ * treated as missing, so unrelated titles a provider reports with id 0 never share a group.
  */
 export async function resolveGroup(
   db: DrizzleDb,
   kind: ContentType,
-  ids: GroupIds
+  reported: GroupIds
 ): Promise<number> {
+  const ids = { ...reported, tmdbId: positive(reported.tmdbId), tvdbId: positive(reported.tvdbId) };
   const primaryId = kind === 'movie' ? ids.tmdbId : ids.tvdbId;
   const primaryColumn = PRIMARY_COLUMN[kind];
 

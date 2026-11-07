@@ -24,7 +24,7 @@ export type { MediaCradle } from './media.registrations';
 export type { MediaItem, MediaItemSet } from './mediaItem';
 
 // Which title a copy belongs to: the one key every title count de-duplicates by.
-export { titleKeyOf } from './mediaItem';
+export { identifiesTitle, titleKeyOf } from './mediaItem';
 export type { NormalizedMovie } from './movie';
 export type { NormalizedSeries } from './series';
 

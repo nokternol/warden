@@ -112,6 +112,9 @@ The answer is one place, not a complete one. These are known and not checked:
   off.
 - **An unreachable source shows as a failed run**, not as a finding: nothing records whether a provider
   can be reached until a run tries.
-- **Some reasons a run stops belong to the automation, not its filters**, and show only as its last run:
-  the automation's own provider being inactive, the reach guard, and a task that is not enabled.
+- **Some reasons a run stops belong to the automation, not its filters**: the automation's own provider
+  being inactive, the reach guard, an excluded copy whose title is not resolved yet, and a task that is
+  not enabled. They are not findings and cannot be signed off. The first three are also listed among
+  the readiness check's problems, so Run Now says the run will be skipped; a task that is not enabled
+  shows as a failed count and as the run's outcome.
 - **Findings are refetched with the screen**, not pushed when an enrichment run completes.

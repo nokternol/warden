@@ -56,3 +56,11 @@ export function titleKeyOf(item: MediaItem, contentType: ContentType): string | 
   if (ids.providerId === undefined || nativeId === undefined) return undefined;
   return titleKey(ids.providerId, nativeId, contentType === 'movie' ? ids.tmdb : ids.tvdb);
 }
+
+/**
+ * Whether anything identifies which title a copy belongs to beyond the copy itself: false for a
+ * copy whose primary id is missing or not positive, which `titleKey` makes its own title.
+ */
+export function identifiesTitle(item: MediaItem, contentType: ContentType): boolean {
+  return titleKeyOf(item, contentType) !== itemKey(item);
+}

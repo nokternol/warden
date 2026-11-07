@@ -382,8 +382,18 @@ describe('AutomationExecutor — invalid automations', () => {
 
       const [run] = await getDb().select().from(automationRuns);
       expect(run.status).toBe('skipped');
-      expect(run.error).toMatch(/40 of 40 titles/);
+      expect(run.error).toMatch(/40 of 40 copies/);
       expect(deletes).toBe(0);
+    });
+
+    it('tells Run Now beforehand that a run over most of a library will be skipped', async () => {
+      server.use(http.get(`${RADARR_URL}/api/v3/movie`, () => HttpResponse.json(movies(40))));
+      const automation = await destructiveAutomation();
+
+      const readiness = await executor.readiness(automation.id);
+
+      expect(readiness.runNow).toBe('stops');
+      expect(readiness.problems).toEqual([expect.stringMatching(/40 of 40 copies/)]);
     });
 
     it('records a run as running before its task acts', async () => {

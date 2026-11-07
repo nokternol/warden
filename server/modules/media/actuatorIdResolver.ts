@@ -26,7 +26,8 @@ type AddressedActuatorType = keyof typeof ADDRESS_COLUMN_BY_TYPE;
  * stamped yet drop out (no id to address), as do copies marked deleted (they
  * left their source, so a deleted row answers as a missing one). Multiple
  * instance copies of one identity collapse to a single id. `addressed` is the subset of `items` that
- * reached an actuator id — the items the task targets.
+ * reached an actuator id — the items the task targets. `recorded` says whether a copy has a live
+ * `media_item` row in any identity, stamped or not.
  */
 export async function resolveActuatorTargets(
   db: DrizzleDb,
@@ -36,6 +37,7 @@ export async function resolveActuatorTargets(
   actuatorIds: string[];
   addressed: MediaItem[];
   actuatorIdOf: (item: MediaItem) => string | undefined;
+  recorded: (item: MediaItem) => boolean;
 }> {
   const column = ADDRESS_COLUMN_BY_TYPE[actuatorType as AddressedActuatorType];
   if (!column) {
@@ -43,7 +45,9 @@ export async function resolveActuatorTargets(
   }
 
   const match = sourceCopyMatch(items);
-  if (!match) return { actuatorIds: [], addressed: [], actuatorIdOf: () => undefined };
+  if (!match) {
+    return { actuatorIds: [], addressed: [], actuatorIdOf: () => undefined, recorded: () => false };
+  }
 
   const rows = await db
     .select({
@@ -56,6 +60,7 @@ export async function resolveActuatorTargets(
     .where(and(match, eq(mediaItems.deleted, false)));
 
   const actuatorIdByItemKey = new Map<string, string>();
+  const recordedKeys = new Set(rows.map((row) => rawItemKey(row.providerId, row.externalId)));
   for (const row of rows) {
     if (row.actuatorId !== null) {
       actuatorIdByItemKey.set(rawItemKey(row.providerId, row.externalId), row.actuatorId);
@@ -65,5 +70,6 @@ export async function resolveActuatorTargets(
     actuatorIds: [...new Set(actuatorIdByItemKey.values())],
     addressed: items.filter((item) => actuatorIdByItemKey.has(itemKey(item) ?? '')),
     actuatorIdOf: (item) => actuatorIdByItemKey.get(itemKey(item) ?? ''),
+    recorded: (item) => recordedKeys.has(itemKey(item) ?? ''),
   };
 }

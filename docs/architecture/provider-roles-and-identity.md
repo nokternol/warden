@@ -79,7 +79,11 @@ two-table split between the logical title and each instance's concrete copy of i
   primary id.
 - **`resolveGroup(db, kind, ids)`** ([`server/modules/providers/groupResolver.ts`](ref:path:server/modules/providers/groupResolver.ts)) is the
   sole find-or-create authority for which group an item belongs to: primary id per kind if present;
-  otherwise a fallback chain (`imdbId`, then `title`+`year`); otherwise a fresh group. Identifier fields
+  otherwise a fallback chain (`imdbId`, then `title`+`year`); otherwise a fresh group. A TMDB or TVDB
+  id that is not positive counts as missing: Sonarr reports `tvdbId: 0` for series it cannot match, and
+  keying on it would join unrelated series into one group sharing one Plex or Jellyfin id. Migration
+  `0036_identity_zero_ids` cleared groups keyed that way, along with the ids they borrowed from their
+  first copy, so the identity job's next run regroups those copies by title and year. Identifier fields
   are merged onto an existing group **fill-only** — a found group's non-`NULL` column is never
   overwritten. No code path ever merges two *existing* groups; a group left with zero `media_item` rows
   is swept, not merged away.
@@ -145,7 +149,8 @@ module owns every write to `media_identity`/`media_item`; media only translates 
 copy's coordinate and group ids. `createRun` writes the run row and its links in one `db.batch`, a single SQLite transaction on
 one connection; the link insert reads the new run's id inside that transaction. An interactive
 transaction is not used because `@libsql/client` opens a fresh connection for one, which loses a
-`:memory:` database. A user run's `itemCount` equals the number of items it recorded. System automations
+`:memory:` database. A user run's `itemCount` equals the number of items it recorded: source copies, so two instances'
+copies of one Plex title count two, matching the run items listed when the run expands. System automations
 target no catalog items and keep their runner-reported count.
 
 ## Enrichment: two distinct paths through the group/item split
