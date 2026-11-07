@@ -197,9 +197,10 @@ export const automationQueries = sqliteTable(
     automationId: integer('automationId')
       .notNull()
       .references(() => automations.id, { onDelete: 'cascade' }),
+    // An automation's query cannot be deleted while the automation uses it.
     queryId: integer('queryId')
       .notNull()
-      .references(() => mediaQueries.id, { onDelete: 'cascade' }),
+      .references(() => mediaQueries.id, { onDelete: 'restrict' }),
     role: text('role').notNull(), // 'include' | 'exclude'
     sortOrder: integer('sortOrder').notNull().default(0),
   },

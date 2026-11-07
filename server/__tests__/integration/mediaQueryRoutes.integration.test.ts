@@ -64,4 +64,35 @@ describe('media query routes', () => {
     expect(res.status).toBe(200);
     expect(res.body.data.filters[0].value).toEqual({ providerId: provider.id, ids: [5] });
   });
+
+  it('answers 409 with the reason when an automation uses the query being deleted', async () => {
+    const db = getDb();
+    const [provider] = await db
+      .insert(metadataProviders)
+      .values({
+        type: MetadataProviderType.RADARR,
+        name: 'Radarr',
+        url: 'http://radarr',
+        settings: JSON.stringify({ enabledTasks: ['unmonitorMovie'] }),
+      })
+      .returning();
+    const query = await supertest(app)
+      .post('/api/media-queries')
+      .send({ name: 'Q', contentType: 'movie', filters: [] });
+    await supertest(app)
+      .post('/api/automations')
+      .send({
+        name: 'A',
+        providerId: provider.id,
+        taskId: 'unmonitorMovie',
+        schedule: '0 2 * * *',
+        queryId: query.body.data.id,
+      })
+      .expect(200);
+
+    const res = await supertest(app).delete(`/api/media-queries/${query.body.data.id}`);
+
+    expect(res.status).toBe(409);
+    expect(JSON.stringify(res.body)).toContain('used by an automation');
+  });
 });

@@ -8,7 +8,7 @@ import {
   metadataProviders,
 } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
-import { NotFoundError, ValidationError } from '../../kernel/errors';
+import { ConflictError, NotFoundError, ValidationError } from '../../kernel/errors';
 import { type Filter, type FilterValue, getRule } from '../media';
 
 export type { FilterValue, Filter };
@@ -138,6 +138,14 @@ function computeHealth(
 
   const status = hasUnavailable ? 'unavailable' : hasDegraded ? 'degraded' : 'healthy';
   return { status, providerStatus, qualificationIssues };
+}
+
+/** SQLite's refusal of a write that would break a foreign key, however the driver wraps it. */
+function isForeignKeyViolation(err: unknown): boolean {
+  for (let e: unknown = err; e instanceof Error; e = (e as { cause?: unknown }).cause) {
+    if (/FOREIGN KEY constraint failed/.test(e.message)) return true;
+  }
+  return false;
 }
 
 // ─── Service ──────────────────────────────────────────────────────────────────
@@ -327,8 +335,19 @@ export class MediaQueryService {
     );
   }
 
+  /** Refused while an automation uses the query: the database restricts the delete. */
   async delete(id: number): Promise<void> {
-    const [row] = await this.db.delete(mediaQueries).where(eq(mediaQueries.id, id)).returning();
+    const [row] = await this.db
+      .delete(mediaQueries)
+      .where(eq(mediaQueries.id, id))
+      .returning()
+      .catch((err: unknown) => {
+        throw isForeignKeyViolation(err)
+          ? new ConflictError(
+              "This query is used by an automation, so it can't be deleted. Delete the automation first."
+            )
+          : err;
+      });
     if (!row) throw new NotFoundError(`Query ${id} not found`);
   }
 }

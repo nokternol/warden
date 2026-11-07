@@ -1,6 +1,7 @@
 import { MetadataProviderType, metadataProviders } from '@server/database/schema';
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
+import { AutomationService } from '@server/modules/automations/automationService';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -362,6 +363,34 @@ describe('MediaQueryService', () => {
     await service.delete(created.id);
     // Verify via list — if cascade works, no orphan rows cause issues
     expect(await service.list()).toHaveLength(0);
+  });
+
+  it('deletes a query once the automation that used it has been deleted', async () => {
+    const db = getDb();
+    const [radarr] = await db
+      .insert(metadataProviders)
+      .values({
+        type: MetadataProviderType.RADARR,
+        name: 'R',
+        url: 'http://r',
+        apiKey: 'k',
+        settings: JSON.stringify({ enabledTasks: ['unmonitorMovie'] }),
+      })
+      .returning();
+    const query = await service.create({ name: 'Q', contentType: 'movie', filters: [] });
+    const automations = new AutomationService({ db });
+    const automation = await automations.create({
+      name: 'A',
+      providerId: radarr.id,
+      taskId: 'unmonitorMovie',
+      schedule: '0 2 * * *',
+      queries: [{ queryId: query.id, role: 'include' }],
+    });
+
+    await automations.delete(automation.id);
+    await service.delete(query.id);
+
+    expect(await service.list()).toEqual([]);
   });
 
   it('throws NotFoundError when deleting an unknown id', async () => {
