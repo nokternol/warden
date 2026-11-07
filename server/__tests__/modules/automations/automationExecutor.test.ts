@@ -1607,6 +1607,36 @@ describe('AutomationExecutor', () => {
       expect(changes).toHaveLength(1);
     });
 
+    it('emits media:changed once for a media-scoped task that throws after acting', async () => {
+      const bus = new DomainEventBus();
+      const changes: DomainEvents['media:changed'][] = [];
+      bus.on('media:changed', (p) => changes.push(p));
+
+      const movies = [createRadarrMovie({ id: 1, title: 'A', hasFile: true })];
+      const unmonitorMovies = vi.fn(async () => {
+        throw new Error('Radarr failed on the 6th of 10 titles');
+      });
+      const mockRadarr = radarrSource(movies, {
+        unmonitorMovies,
+        triggerMoviesSearch: async () => {},
+      });
+
+      const provider = await seedRadarrProvider(providerSettingsService);
+      const query = await seedMediaQuery(mediaQueryService, []);
+      const automation = await seedAutomation(automationService, {
+        queryId: query.id,
+        providerId: provider.id,
+        taskId: 'unmonitorMovie',
+      });
+
+      await makeExecutor(bus, mockRadarr).execute(automation.id);
+
+      expect(unmonitorMovies).toHaveBeenCalledOnce();
+      expect(changes).toHaveLength(1);
+      const dto = (await automationService.list()).find((a) => a.id === automation.id)!;
+      expect(dto.lastRun!.status).toBe('error');
+    });
+
     it('does not emit media:changed when a scoped task changed zero items', async () => {
       const bus = new DomainEventBus();
       const changes: DomainEvents['media:changed'][] = [];
