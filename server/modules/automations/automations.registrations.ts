@@ -3,6 +3,7 @@ import { AutomationExecutor } from './automationExecutor';
 import { AutomationRunService } from './automationRunService';
 import { AutomationScheduler } from './automationScheduler';
 import { AutomationService } from './automationService';
+import { RunHistoryEnrichmentOutcome } from './enrichmentOutcome';
 
 /**
  * What the automations module contributes to the app container. The app
@@ -15,6 +16,8 @@ export interface AutomationsCradle {
   automationRunService: AutomationRunService;
   automationExecutor: AutomationExecutor;
   automationScheduler: AutomationScheduler;
+  /** `media`'s filter readiness reads the enrichment outcome through this. */
+  enrichmentOutcomeSource: RunHistoryEnrichmentOutcome;
 }
 
 /**
@@ -30,6 +33,7 @@ export function registerAutomationsDependencies<TCradle extends AutomationsCradl
     automationRunService: asClass(AutomationRunService).singleton(),
     automationExecutor: asClass(AutomationExecutor).singleton(),
     automationScheduler: asClass(AutomationScheduler).singleton(),
+    enrichmentOutcomeSource: asClass(RunHistoryEnrichmentOutcome).singleton(),
   };
   // TCradle extends AutomationsCradle, so the slice's keys and resolver types
   // are a subset of the app pair type.
