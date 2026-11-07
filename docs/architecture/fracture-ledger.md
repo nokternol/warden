@@ -555,10 +555,9 @@ Earlier entries in this ledger use the names that were current when they healed 
 
 ### Rule key and content type — two names kept (recorded 2026-11-01)
 
-- **Fracture:** the wire fields `QualificationIssue.filterKey` and `ProviderStatus.affectedFilterKeys` and
-  the column `media_query_filter_values.filterKey` hold rule keys. `media_identity.kind` holds a content
-  type.
-- **Status:** left in place for the MVP, since no user sees them and one needs a migration.
+- **Fracture:** the column `media_query_filter_values.filterKey` holds a rule key. `media_identity.kind`
+  holds a content type.
+- **Status:** left in place for the MVP, since no user sees them and renaming either needs a migration.
 
 ### Title lookup — two mechanisms, one blocked (recorded 2026-11-01, MVP slice B4)
 
