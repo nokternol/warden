@@ -195,8 +195,8 @@ raw-DTO lookup both are.
 `MediaSourceFactory.sourcesFor(contentType)` ([`server/modules/media/mediaSourceFactory.ts`](ref:path:server/modules/media/mediaSourceFactory.ts)) resolves a
 `ContentType` to one `{ providerId, name, source: MediaSource }` entry per *active instance* owning it —
 never collapsed to one. `GET /api/media-queries/:id/preview` fans out over it, evaluating the query spec
-once per instance and summing per-instance match counts into `{ count, instances: [{ providerId, name,
-count }] }`. The executor instead binds a specific provider by `automation.provider.id`, since it needs
+once per instance, and counts the pooled matches in titles: `{ count }` is the number of distinct
+`titleKeyOf` keys, so a title held by two instances counts once, the same unit as the Media page. The executor instead binds a specific provider by `automation.provider.id`, since it needs
 the actuator role on the same instance for `task.run` — an automation targets one instance; running the
 same query against two instances is two automations sharing that query record.
 
@@ -210,11 +210,15 @@ with their own `providerId` (`normalizeRadarrMovie(m, providerId)`), so every it
 keys on `itemKey(item)` (`${providerId}:${externalId}`), so two instances' rows sharing a raw provider id
 are never conflated.
 
-**Display dedup** groups the matched raw rows by native primary id (`tmdbId` for movies, `tvdbId` for
-series; a row with no primary id falls back to `${providerId}:${id}`, its own singleton group) —
-computed live per request over provider data, no DB join, no dependency on the identity job having run,
-the same key `resolveGroup` uses so the live browse view and the persisted `media_identity` grouping
-agree by construction. Grouping happens **after** engine matching, so filter semantics are ANY: a title
+**Display dedup** groups the matched raw rows by `titleKey`
+([`server/modules/media/mediaItem.ts`](ref:path:server/modules/media/mediaItem.ts)): the native primary
+id (`tmdbId` for movies, `tvdbId` for series), or `${providerId}:${id}` when the primary id is missing or
+not positive (Sonarr reports `tvdbId: 0` for series it cannot match), making that row its own title —
+computed live per request over provider data, no DB join, no dependency on the identity job having run.
+The saved-query preview counts titles with the same key over normalised items (`titleKeyOf`), so its
+count and the Media page's total are in one unit. The persisted `media_identity` grouping does not
+always agree: `resolveGroup` also falls back to the imdb id and then to title and year when no primary id
+exists, so two copies browse shows as two titles can share one identity, and with it one actuator id. Grouping happens **after** engine matching, so filter semantics are ANY: a title
 appears if at least one of its copies matched (the motivating case — "do I have this in 4k?"). The
 representative row is the first matched copy in sort order, decorated with additive `sourceCount` and
 `sourceProviderIds` fields; pagination and totals operate on the grouped rows. With exactly one active

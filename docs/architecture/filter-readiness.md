@@ -80,7 +80,7 @@ module; no consumer reads it.
 | Media page ([`ReadinessNotice`](ref:path:src/components/ReadinessNotice/index.tsx)) | A warning-styled notice beside the results. The red source-failure alert holds only providers that could not be read. |
 | Scheduled run ([`AutomationExecutor`](ref:path:server/modules/automations/automationExecutor.ts)) | Runs only when every finding is fixed or signed off. A blocked schedule keeps ticking to re-check, and records its skip once while the reason is unchanged. |
 | Run Now | Always records its outcome. Runs past the findings awaiting sign-off that the user chose to proceed past, for that run only; a finding not named stops it, so a stale prompt cannot approve a new finding. |
-| Automation row ([`AutomationRow`](ref:path:src/components/AutomationRow/index.tsx)) | Lists needs-fix lines with what clears them, awaiting sign-off lines with Accept, and signed-off lines, so accepted risk stays visible. Run Now checks first through `automations.readiness`, which answers the findings before the target count, so a failed count cannot hide them or stop the run being started. |
+| Automation row ([`AutomationRow`](ref:path:src/components/AutomationRow/index.tsx)) | Lists needs-fix lines with what clears them, awaiting sign-off lines with Accept, and signed-off lines, so accepted risk stays visible. Run Now checks first through `automations.readiness`, read again when the check opens, which answers the findings before the target count, so a failed count cannot hide them or stop the run being started. Until that read answers nothing is confirmable, and a failed read shows no earlier answer. |
 
 The executor adds one problem of its own: the automation's provider is not active.
 

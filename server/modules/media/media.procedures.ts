@@ -27,7 +27,7 @@ import { type FilterReadiness, filterAnswer, findingsFor } from './filterReadine
 import { paginateItems } from './media.pagination';
 import { sortMedia } from './media.sort';
 import { resolutionTier } from './mediaFieldProvider';
-import { itemKey, rawItemKey } from './mediaItem';
+import { itemKey, rawItemKey, titleKey } from './mediaItem';
 import type { MediaQueryEngine } from './mediaQueryEngine';
 import { resetMediaData } from './mediaReset';
 import type { MediaSource } from './mediaSource';
@@ -102,22 +102,23 @@ type DecoratedProfile = RadarrProfile & {
 type Attributed<T> = T & { providerId: number };
 
 /**
- * Groups matched raw rows by native primary id (fallback `providerId:id` when absent),
- * computed live per request — no DB join, no dependency on the identity job having run,
- * the same key `resolveGroup` uses so browse and persistence agree by construction.
+ * Groups matched raw rows into titles by `titleKey` (the native primary id, or `providerId:id`
+ * when it is missing or not positive), computed live per request — no DB join, no dependency on
+ * the identity job having run. The identity graph (`resolveGroup`) also falls back to the imdb id
+ * and to title and year when no primary id exists; browse does not, so a copy without a primary
+ * id is its own title here even when the identity graph joins it to another.
  * Filter semantics are ANY: grouping happens after engine matching, so a title appears if
  * at least one of its copies matched. The representative is the first matched copy in the
  * current sort order; `sourceCount`/`sourceProviderIds` are additive — with one instance
  * every group is a singleton, so the row is byte-identical apart from these two fields.
  */
-function groupByPrimaryId<T extends { id: number }>(
+function groupByTitle<T extends { id: number }>(
   sorted: Attributed<T>[],
   primaryIdOf: (row: T) => number | null | undefined
 ): Array<T & { sourceCount: number; sourceProviderIds: number[] }> {
   const groups = new Map<string, Attributed<T>[]>();
   for (const row of sorted) {
-    const primaryId = primaryIdOf(row);
-    const key = primaryId != null ? `primary:${primaryId}` : rawItemKey(row.providerId, row.id);
+    const key = titleKey(row.providerId, row.id, primaryIdOf(row));
     const copies = groups.get(key);
     if (copies) copies.push(row);
     else groups.set(key, [row]);
@@ -322,7 +323,7 @@ export function createMediaProcedures(cradle: MediaCradle) {
         .map((m) => ({ ...m, providerId }))
     );
     const sorted = sortMedia(matchedRaw, view.sort, (m) => m.hasFile);
-    const grouped = groupByPrimaryId(sorted, (m) => m.tmdbId);
+    const grouped = groupByTitle(sorted, (m) => m.tmdbId);
     return {
       ...paginateItems(grouped, { page: view.page, pageSize: view.pageSize }),
       yearRange,
@@ -356,7 +357,7 @@ export function createMediaProcedures(cradle: MediaCradle) {
         .map((s) => ({ ...s, providerId }))
     );
     const sorted = sortMedia(matchedRaw, view.sort, (s) => s.monitored);
-    const grouped = groupByPrimaryId(sorted, (s) => s.tvdbId);
+    const grouped = groupByTitle(sorted, (s) => s.tvdbId);
     return {
       ...paginateItems(grouped, { page: view.page, pageSize: view.pageSize }),
       yearRange,

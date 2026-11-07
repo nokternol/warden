@@ -119,3 +119,30 @@ export const RunCheckCountFailed: Story = () => (
     />
   </Frame>
 );
+
+/** Opening Run Now refetches the check; nothing is confirmable until that read answers. */
+export const RunCheckChecking: Story = () => (
+  <Frame>
+    <RunCheck
+      taskLabel="Delete movie + files"
+      destructive
+      onConfirm={noop}
+      onCancel={noop}
+      onRetry={noop}
+    />
+  </Frame>
+);
+
+/** The check started at open failed: no earlier count is shown, only the failure and Retry. */
+export const RunCheckCheckFailed: Story = () => (
+  <Frame>
+    <RunCheck
+      failed
+      taskLabel="Delete movie + files"
+      destructive
+      onConfirm={noop}
+      onCancel={noop}
+      onRetry={noop}
+    />
+  </Frame>
+);

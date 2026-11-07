@@ -78,10 +78,10 @@ describe('GET /api/media-queries/:id/preview', () => {
     await closeDatabase();
   });
 
-  it('returns { count, instances } for a known query id', async () => {
+  it('returns { count } for a known query id', async () => {
     const res = await client.get(`/api/media-queries/${seededQueryId}/preview`);
     const data = expectSuccessResponse(res);
-    expect(data).toMatchObject({ count: expect.any(Number), instances: expect.any(Array) });
+    expect(data).toEqual({ count: expect.any(Number) });
   });
 
   it('returns 404 for an unknown query id', async () => {
@@ -89,7 +89,7 @@ describe('GET /api/media-queries/:id/preview', () => {
     expectErrorResponse(res, 404);
   });
 
-  it('returns the engine match count for the query against the active instance, named in instances', async () => {
+  it('returns the engine match count for the query against the active instance', async () => {
     server.use(
       http.get(`${RADARR_URL}/api/v3/movie`, () =>
         HttpResponse.json([
@@ -101,11 +101,10 @@ describe('GET /api/media-queries/:id/preview', () => {
 
     const res = await client.get(`/api/media-queries/${filteredQueryId}/preview`);
     const data = expectSuccessResponse(res);
-    expect(data.count).toBe(1);
-    expect(data.instances).toEqual([{ providerId: expect.any(Number), name: 'Radarr', count: 1 }]);
+    expect(data).toEqual({ count: 1 });
   });
 
-  it('returns { count: 0, instances: [] } when no instance is active', async () => {
+  it('returns { count: 0 } when no instance is active', async () => {
     const noInstanceQuery = await mediaQueryService.create({
       name: 'No Instance',
       contentType: 'series',
@@ -114,6 +113,6 @@ describe('GET /api/media-queries/:id/preview', () => {
 
     const res = await client.get(`/api/media-queries/${noInstanceQuery.id}/preview`);
     const data = expectSuccessResponse(res);
-    expect(data).toEqual({ count: 0, instances: [] });
+    expect(data).toEqual({ count: 0 });
   });
 });

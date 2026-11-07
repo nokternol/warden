@@ -11,7 +11,7 @@ import { RUN_STATUS } from '@app/lib/runStatus';
 import { cn } from '@app/lib/utils/cn';
 import { relativeTime, safeHumanSchedule } from '@app/lib/utils/time';
 import { Power, PowerOff, Trash2, Zap } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import ReadinessBlocks from './ReadinessBlocks';
 import RunCheck from './RunCheck';
 
@@ -77,6 +77,28 @@ function LastRun({ automation }: { automation: AutomationDto }) {
 }
 
 /**
+ * The readiness a Run Now confirmation may show: only the answer to the read that opening it (or
+ * Retry) started. Until that read answers nothing is confirmable, and if it fails no earlier answer
+ * is shown. Each read gets an id, so one from an earlier open settling late cannot end a newer one.
+ */
+function useCheckOnOpen(readiness: ReturnType<typeof useAutomationReadiness>) {
+  const checkId = useRef(0);
+  const [checking, setChecking] = useState(false);
+  const recheck = () => {
+    const id = ++checkId.current;
+    setChecking(true);
+    void readiness.mutate().finally(() => {
+      if (checkId.current === id) setChecking(false);
+    });
+  };
+  return {
+    recheck,
+    checked: !checking && !readiness.error ? readiness.data : undefined,
+    failed: !checking && Boolean(readiness.error),
+  };
+}
+
+/**
  * One automation: what it does, when, how its last run went and what can be done to it. System
  * automations can only be run on demand, so they omit `onToggle` and `onDelete`.
  */
@@ -117,6 +139,7 @@ function Root({
   // Run Now asks first unless the check has answered that it simply runs.
   const needsRunCheck =
     needsRunConfirmation || (isUserAutomation && readiness.data?.runNow !== 'runs');
+  const runCheck = useCheckOnOpen(readiness);
   const extraQueries = automation.queries.length - 1;
 
   const run = async (consentedFindings?: string[]) => {
@@ -207,8 +230,10 @@ function Root({
               <button
                 type="button"
                 onClick={() => {
-                  if (needsRunCheck) setConfirming('run');
-                  else void run();
+                  if (needsRunCheck) {
+                    setConfirming('run');
+                    runCheck.recheck();
+                  } else void run();
                 }}
                 disabled={runStatus === 'loading' || !tasksKnown}
                 title={runTitle}
@@ -281,17 +306,15 @@ function Root({
 
             {confirming === 'run' && (
               <RunCheck
-                readiness={readiness.data}
-                failed={Boolean(readiness.error)}
+                readiness={runCheck.checked}
+                failed={runCheck.failed}
                 taskLabel={taskLabel}
                 destructive={needsRunConfirmation}
                 onConfirm={(consentedFindings) => {
                   void run(consentedFindings).then(() => readiness.mutate());
                 }}
                 onCancel={() => setConfirming(null)}
-                onRetry={() => {
-                  void readiness.mutate();
-                }}
+                onRetry={runCheck.recheck}
               />
             )}
 

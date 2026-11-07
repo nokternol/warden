@@ -38,7 +38,7 @@ describe('AutomationQueryList', () => {
     await waitFor(() => expect(screen.getByText(/14 excluded/i)).toBeInTheDocument());
   });
 
-  it('shows approximate net count with ~ prefix when both include and exclude automationQueries are present', async () => {
+  it("shows only each row's own count when an exclude is present, with no net figure", async () => {
     const automationQueries = [
       { queryId: 1, role: 'include' as const, sortOrder: 0 },
       { queryId: 2, role: 'exclude' as const, sortOrder: 1 },
@@ -50,8 +50,9 @@ describe('AutomationQueryList', () => {
         onChange={vi.fn()}
       />
     );
-    // MSW: id=1 → 42, id=2 → 14; net = 42 - 14 = 28
-    await waitFor(() => expect(screen.getByText(/~28 to act on/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/14 excluded/i)).toBeInTheDocument());
+    expect(screen.getByText(/42 matched/i)).toBeInTheDocument();
+    expect(screen.queryByText(/to act on/i)).not.toBeInTheDocument();
   });
 
   it('shows an inline error when automationQueries has no include entry with a selected query', () => {

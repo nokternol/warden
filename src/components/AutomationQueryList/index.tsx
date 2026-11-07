@@ -2,7 +2,6 @@ import Button from '@app/components/Button';
 import { api } from '@app/lib/api/client';
 import { useApi } from '@app/lib/api/useApi';
 import type { AutomationQueryInput } from '@contract/automations';
-import useSWR from 'swr';
 
 /** An automation query as the list edits it: always in a known position. */
 export type AutomationQueryItem = Required<AutomationQueryInput>;
@@ -79,29 +78,6 @@ function AutomationQueryRow({
   );
 }
 
-async function fetchAllPreviews(
-  automationQueries: AutomationQueryItem[]
-): Promise<{ role: AutomationQueryItem['role']; count: number }[]> {
-  return Promise.all(
-    automationQueries.map(async (s) => {
-      const { count } = await api.mediaQueries.preview({ id: s.queryId });
-      return { role: s.role, count };
-    })
-  );
-}
-
-function useNetCount(automationQueries: AutomationQueryItem[]): number | null {
-  const key =
-    automationQueries.length > 0 && automationQueries.some((s) => s.role === 'exclude')
-      ? `preview:${automationQueries.map((s) => `${s.queryId}:${s.role}`).join(',')}`
-      : null;
-  const { data } = useSWR(key, () => fetchAllPreviews(automationQueries));
-  if (!data) return null;
-  const includeTotal = data.filter((d) => d.role === 'include').reduce((s, d) => s + d.count, 0);
-  const excludeTotal = data.filter((d) => d.role === 'exclude').reduce((s, d) => s + d.count, 0);
-  return Math.max(0, includeTotal - excludeTotal);
-}
-
 export default function AutomationQueryList({
   automationQueries,
   queries,
@@ -121,7 +97,6 @@ export default function AutomationQueryList({
 
   const excludeCount = automationQueries.filter((s) => s.role === 'exclude').length;
   const hasInclude = automationQueries.some((s) => s.role === 'include');
-  const net = useNetCount(automationQueries);
 
   return (
     <div className="space-y-2">
@@ -139,7 +114,6 @@ export default function AutomationQueryList({
           onRemove={() => onChange(automationQueries.filter((_, j) => j !== i))}
         />
       ))}
-      {net != null && <p className="text-xs text-text-secondary">~{net} to act on</p>}
       {!hasInclude && automationQueries.length > 0 && (
         <p className="text-xs text-text-secondary">At least one query must be included.</p>
       )}

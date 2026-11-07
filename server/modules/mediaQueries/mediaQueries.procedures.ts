@@ -1,5 +1,5 @@
 import { api } from '@server/kernel/api';
-import type { MediaQueryEngine, MediaSourceFactory } from '@server/modules/media';
+import { type MediaQueryEngine, type MediaSourceFactory, titleKeyOf } from '@server/modules/media';
 import type { MediaQueryService } from './mediaQueryService';
 
 interface Cradle {
@@ -31,21 +31,17 @@ export function createMediaQueryProcedures(cradle: Cradle) {
       const query = await mediaQueryService.getById(input.id);
       const entries = await mediaSourceFactory.sourcesFor(query.contentType);
 
-      const instances = await Promise.all(
-        entries.map(async ({ providerId, name, source }) => {
-          const set = await mediaQueryEngine.evaluate({
+      const matched = await Promise.all(
+        entries.map(({ source }) =>
+          mediaQueryEngine.evaluate({
             source,
             contentType: query.contentType,
             clauses: [{ filters: query.filters, role: 'include' }],
-          });
-          return { providerId, name, count: set.length };
-        })
+          })
+        )
       );
-
-      return {
-        count: instances.reduce((sum, i) => sum + i.count, 0),
-        instances,
-      };
+      const titles = new Set(matched.flat().map((item) => titleKeyOf(item, query.contentType)));
+      return { count: titles.size };
     }),
   });
 }

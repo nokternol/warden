@@ -29,7 +29,7 @@ builds the provider once, hands the instance to `evaluate`, and reuses the *same
 | Caller | Builds the provider via | Uses the result for |
 |---|---|---|
 | `AutomationExecutor.planRun` | `providerFactory.create(providerSettings)` | the run's target items and their actuator ids; `execute` passes the ids to `task.run` |
-| `GET /media-queries/:id/preview` | one active instance per `MediaSourceFactory.sourcesFor(contentType)` entry — no longer single-active for `movie`/`series` | `{ count, instances: [{ providerId, name, count }] }`, summed across instances |
+| `GET /media-queries/:id/preview` | one active instance per `MediaSourceFactory.sourcesFor(contentType)` entry — no longer single-active for `movie`/`series` | `{ count }` in **titles**: the matches pooled across instances, de-duplicated by `titleKeyOf` (TMDB id for movies, TVDB id for series), the key browse groups by; rejects if any instance cannot be read |
 | `media.browse.movie`/`media.browse.series` (`browseMovies`/`browseSeries` in `media.procedures.ts`) | a thin adapter over the cached per-instance sublists (`{ getMediaItems: async () => sublists.flatMap(...) }`, each item self-describing its `providerId`) | id set → live display-grouping → sort/paginate |
 
 The browse adapter lets the procedure keep its cached multi-instance fetch (and per-instance `yearRange`/
