@@ -86,38 +86,42 @@ describe('MediaQueryService', () => {
     expect(result[1].contentType).toBe('series');
   });
 
-  it('returns health: healthy when query has no filter values', async () => {
+  const activeRadarr = () =>
+    getDb()
+      .insert(metadataProviders)
+      .values({ type: MetadataProviderType.RADARR, name: 'Radarr', url: 'http://r' })
+      .returning();
+  const kinds = (dto: { health: { findings: { kind: string }[] } }) =>
+    dto.health.findings.map((f) => f.kind);
+
+  it('has no finding for a query with no filters when its library source is active', async () => {
+    await activeRadarr();
     await service.create({ name: 'Empty', contentType: 'movie', filters: [] });
     const [dto] = await service.list();
-    expect(dto.health.status).toBe('healthy');
-    expect(dto.health.providerStatus).toEqual([]);
+    expect(dto.health.findings).toEqual([]);
+    expect(dto.health.queryList).toBe('clear');
   });
 
-  it('returns health: degraded when filter source providers are not configured', async () => {
+  it('reports no library when no source of the content type is configured', async () => {
     await service.create({
       name: 'Filtered',
       contentType: 'movie',
       filters: [{ ruleKey: 'hasFile', value: true }],
     });
     const [dto] = await service.list();
-    // No providers configured in test DB → all optional filters degrade
-    expect(dto.health.status).toBe('degraded');
+    expect(kinds(dto)).toEqual(['no-library']);
+    expect(dto.health.queryList).toBe('broken');
   });
 
-  it('is healthy when a filter has a connected provider, though others that could supply it are not', async () => {
-    await getDb().insert(metadataProviders).values({
-      type: MetadataProviderType.RADARR,
-      name: 'Radarr',
-      url: 'http://r',
-      isActive: true,
-    });
+  it('has no finding when a filter has a connected provider, though others that could supply it are not', async () => {
+    await activeRadarr();
     await service.create({
       name: 'Early 2000s',
       contentType: 'movie',
       filters: [{ ruleKey: 'year', value: { min: 2000, max: 2005 } }],
     });
     const [dto] = await service.list();
-    expect(dto.health.status).toBe('healthy');
+    expect(dto.health.findings).toEqual([]);
   });
 
   it('does not report a provider type that cannot be configured as missing', async () => {
@@ -133,19 +137,16 @@ describe('MediaQueryService', () => {
       filters: [{ ruleKey: 'genres', value: 'Drama' }],
     });
     const [dto] = await service.list();
-    expect(dto.health.status).toBe('healthy');
-    expect(dto.health.providerStatus.map((p) => p.providerType)).toEqual([
-      MetadataProviderType.SONARR,
-    ]);
+    expect(dto.health.findings).toEqual([]);
   });
 
-  it('flags a qualificationIssue and degrades health when an entry is qualified to a providerId that is not an active instance', async () => {
-    const db = getDb();
-    const [provider] = await db
+  it('reports an inactive instance when an entry is qualified to a providerId that is not active', async () => {
+    await activeRadarr();
+    const [inactive] = await getDb()
       .insert(metadataProviders)
       .values({
         type: MetadataProviderType.RADARR,
-        name: 'Radarr',
+        name: 'Old Radarr',
         url: 'http://radarr',
         isActive: false,
       })
@@ -153,23 +154,18 @@ describe('MediaQueryService', () => {
     await service.create({
       name: 'Dangling',
       contentType: 'movie',
-      filters: [{ ruleKey: 'qualityProfileIds', value: { providerId: provider.id, ids: [5] } }],
+      filters: [{ ruleKey: 'qualityProfileIds', value: { providerId: inactive.id, ids: [5] } }],
     });
 
     const [dto] = await service.list();
 
-    expect(dto.health.status).toBe('degraded');
-    expect(dto.health.qualificationIssues).toEqual([
-      { filterKey: 'qualityProfileIds', providerId: provider.id, reason: 'not_active' },
+    expect(dto.health.findings).toMatchObject([
+      { kind: 'inactive-instance', ruleKey: 'qualityProfileIds', providerIds: [inactive.id] },
     ]);
   });
 
-  it('is healthy when the qualified providerId is an active instance', async () => {
-    const db = getDb();
-    const [provider] = await db
-      .insert(metadataProviders)
-      .values({ type: MetadataProviderType.RADARR, name: 'Radarr', url: 'http://radarr' })
-      .returning();
+  it('has no finding when the qualified providerId is an active instance', async () => {
+    const [provider] = await activeRadarr();
     await service.create({
       name: 'Qualified',
       contentType: 'movie',
@@ -178,7 +174,7 @@ describe('MediaQueryService', () => {
 
     const [dto] = await service.list();
 
-    expect(dto.health.qualificationIssues).toEqual([]);
+    expect(dto.health.findings).toEqual([]);
   });
 
   it('lists a query on an enrichment-only rule with a data-incomplete finding before any enrichment run', async () => {

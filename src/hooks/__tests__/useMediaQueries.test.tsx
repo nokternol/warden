@@ -17,9 +17,6 @@ const savedQuery: MediaQueryRecord = {
   contentType: 'movie',
   filters: [],
   health: {
-    status: 'healthy',
-    providerStatus: [],
-    qualificationIssues: [],
     findings: [],
     queryList: 'clear',
   },

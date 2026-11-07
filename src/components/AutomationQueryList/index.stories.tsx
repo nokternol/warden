@@ -9,9 +9,6 @@ const query = (id: number, name: string): MediaQueryRecord => ({
   contentType: 'movie',
   filters: [],
   health: {
-    status: 'healthy',
-    providerStatus: [],
-    qualificationIssues: [],
     findings: [],
     queryList: 'clear',
   },

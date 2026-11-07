@@ -1,4 +1,5 @@
 import type { MediaQueryRecord } from '@app/hooks/useMediaQueries';
+import type { ReadinessFinding } from '@contract/readiness';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -9,53 +10,63 @@ const query: MediaQueryRecord = {
   name: 'Stale',
   contentType: 'movie',
   filters: [],
-  health: {
-    status: 'degraded',
-    providerStatus: [{ providerType: 'TAUTULLI', configured: false, affectedFilterKeys: ['w'] }],
-    qualificationIssues: [],
-    findings: [],
-    queryList: 'clear',
-  },
+  health: { findings: [], queryList: 'clear' },
   createdAt: '2024-01-01T00:00:00Z',
 };
 
-describe('QueryRow', () => {
-  it('surfaces health other than healthy, with the reason', async () => {
-    render(<QueryRow query={query} onLoad={vi.fn()} onDelete={vi.fn()} />);
-    expect(screen.getByText('Degraded')).toBeInTheDocument();
-    expect(await screen.findByText('Tautulli is not configured.')).toBeInTheDocument();
-  });
+const finding = (kind: ReadinessFinding['kind'], message: string): ReadinessFinding => ({
+  id: `${kind}:${message}`,
+  kind,
+  providerIds: [],
+  message,
+  clears: '',
+});
 
-  it('names only providers whose filters nothing connected can supply', async () => {
-    const mixed: MediaQueryRecord = {
+describe('QueryRow', () => {
+  it("marks a query broken and states its findings' messages", () => {
+    const broken: MediaQueryRecord = {
       ...query,
       health: {
-        status: 'degraded',
-        providerStatus: [
-          {
-            providerType: 'RADARR',
-            configured: true,
-            affectedFilterKeys: ['year'],
-          },
-          {
-            providerType: 'SONARR',
-            configured: false,
-            affectedFilterKeys: ['year'],
-          },
-          {
-            providerType: 'PLEX',
-            configured: false,
-            affectedFilterKeys: ['watched'],
-          },
+        ...query.health,
+        findings: [
+          finding(
+            'no-provider',
+            'Watched filter needs a Tautulli, Plex or Jellyfin provider, and none is active'
+          ),
         ],
-        qualificationIssues: [],
-        findings: [],
-        queryList: 'clear',
+        queryList: 'broken',
       },
     };
-    render(<QueryRow query={mixed} onLoad={vi.fn()} onDelete={vi.fn()} />);
-    expect(await screen.findByText('Plex is not configured.')).toBeInTheDocument();
-    expect(screen.queryByText(/sonarr/i)).not.toBeInTheDocument();
+    render(<QueryRow query={broken} onLoad={vi.fn()} onDelete={vi.fn()} />);
+    expect(screen.getByText('Broken')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Watched filter needs a Tautulli, Plex or Jellyfin provider, and none is active/
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('asks to check data, saying what clears it, when every finding can be signed off', () => {
+    const suspect: MediaQueryRecord = {
+      ...query,
+      health: {
+        ...query.health,
+        findings: [
+          {
+            ...finding(
+              'no-data',
+              'Seerr request status filter has no data: no movie holds a value for it'
+            ),
+            clears:
+              'An automation relying on this filter needs it signed off on the Automations page.',
+          },
+        ],
+        queryList: 'checkData',
+      },
+    };
+    render(<QueryRow query={suspect} onLoad={vi.fn()} onDelete={vi.fn()} />);
+    expect(screen.getByText('Check data')).toBeInTheDocument();
+    expect(screen.getByText(/needs it signed off on the Automations page/)).toBeInTheDocument();
   });
 
   it('a failed delete says so and keeps the confirmation', async () => {

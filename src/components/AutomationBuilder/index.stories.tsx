@@ -36,9 +36,6 @@ const queries: MediaQueryRecord[] = [
     contentType: 'movie',
     filters: [{ ruleKey: 'yearMax', value: 2015 }],
     health: {
-      status: 'healthy',
-      providerStatus: [],
-      qualificationIssues: [],
       findings: [],
       queryList: 'clear',
     },

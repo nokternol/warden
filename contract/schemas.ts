@@ -73,27 +73,8 @@ export const FilterSchema = z
   .strict();
 export type Filter = z.infer<typeof FilterSchema>;
 
-export const ProviderStatusSchema = z
-  .object({
-    providerType: z.string(),
-    configured: z.boolean(),
-    affectedFilterKeys: z.array(z.string()),
-  })
-  .strict();
-
-export const QualificationIssueSchema = z
-  .object({
-    filterKey: z.string(),
-    providerId: z.number(),
-    reason: z.enum(['not_active', 'wrong_automation_provider']),
-  })
-  .strict();
-
 export const QueryHealthSchema = z
   .object({
-    status: z.enum(['healthy', 'degraded']),
-    providerStatus: z.array(ProviderStatusSchema),
-    qualificationIssues: z.array(QualificationIssueSchema),
     /** Every reason the query's filters cannot be trusted, from filter readiness. */
     findings: z.array(ReadinessFindingSchema),
     /** How the query list shows them. */

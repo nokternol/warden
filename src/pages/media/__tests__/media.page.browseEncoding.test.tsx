@@ -64,9 +64,6 @@ describe('MediaPage browse encoding', () => {
           contentType: 'movie' as const,
           filters: body.filters,
           health: {
-            status: 'healthy' as const,
-            providerStatus: [],
-            qualificationIssues: [],
             findings: [],
             queryList: 'clear' as const,
           },

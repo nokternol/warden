@@ -14,9 +14,6 @@ const mockQuery: MediaQueryRecord = {
   contentType: 'movie',
   filters: [{ ruleKey: 'year', value: { max: 2020 } }],
   health: {
-    status: 'healthy',
-    providerStatus: [],
-    qualificationIssues: [],
     findings: [],
     queryList: 'clear',
   },

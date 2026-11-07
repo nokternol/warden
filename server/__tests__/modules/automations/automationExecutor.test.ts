@@ -858,7 +858,7 @@ describe('AutomationExecutor', () => {
           name: 'Q',
           contentType: 'movie' as const,
           filters: [],
-          health: { status: 'healthy' as const, providerStatus: [] },
+          health: { findings: [], queryList: 'clear' as const },
           createdAt: new Date().toISOString(),
         }),
       };
@@ -942,7 +942,7 @@ describe('AutomationExecutor', () => {
           name: 'Q',
           contentType: 'movie' as const,
           filters: [],
-          health: { status: 'healthy' as const, providerStatus: [] },
+          health: { findings: [], queryList: 'clear' as const },
           createdAt: new Date().toISOString(),
         }),
       };

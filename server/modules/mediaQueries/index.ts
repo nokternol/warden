@@ -26,6 +26,5 @@ export type {
   MediaQueryRecord,
   MediaQueryService,
   MediaQueryValue,
-  ProviderStatus,
   QueryHealth,
 } from './mediaQueryService';

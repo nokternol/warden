@@ -79,9 +79,6 @@ export const automationsHandlers = [
 ];
 
 const MOCK_HEALTH = {
-  status: 'healthy' as const,
-  providerStatus: [],
-  qualificationIssues: [],
   findings: [],
   queryList: 'clear' as const,
 };

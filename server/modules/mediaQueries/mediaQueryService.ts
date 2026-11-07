@@ -1,13 +1,8 @@
 import type { ReadinessFinding } from '@contract/readiness';
 import { type ContentType, isInstanceScopedValue, isRangeValue } from '@contract/schemas';
-import { isOfferedProviderType, isOfferedRule, scope } from '@contract/scope';
+import { isOfferedRule, scope } from '@contract/scope';
 import { eq } from 'drizzle-orm';
-import {
-  type MetadataProviderType,
-  mediaQueries,
-  mediaQueryFilterValues,
-  metadataProviders,
-} from '../../database/schema';
+import { mediaQueries, mediaQueryFilterValues } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
 import { ConflictError, NotFoundError, ValidationError } from '../../kernel/errors';
 import {
@@ -29,24 +24,9 @@ export interface MediaQueryValue {
   filters: Filter[];
 }
 
-export interface ProviderStatus {
-  providerType: MetadataProviderType;
-  configured: boolean;
-  affectedFilterKeys: string[];
-}
-
-/** A filter entry's `providerId` qualification the engine cannot honor. */
-export interface QualificationIssue {
-  filterKey: string;
-  providerId: number;
-  reason: 'not_active' | 'wrong_automation_provider';
-}
-
+/** Whether a saved query's filters can be trusted, from filter readiness. */
 export interface QueryHealth {
-  status: 'healthy' | 'degraded';
-  providerStatus: ProviderStatus[];
-  qualificationIssues: QualificationIssue[];
-  /** Every reason the query's filters cannot be trusted, from filter readiness. */
+  /** Every reason the query's filters cannot be trusted. */
   findings: ReadinessFinding[];
   queryList: FilterAnswer['queryList'];
 }
@@ -82,70 +62,10 @@ function serializeValue(value: FilterValue): string {
 
 function computeHealth(
   facts: ReadinessFacts,
-  list: { queryId?: number; filters: Filter[]; contentType: ContentType },
-  automationProviderId?: number
+  list: { queryId?: number; filters: Filter[]; contentType: ContentType }
 ): QueryHealth {
-  const { filters, contentType } = list;
-  const active = facts.providers.filter((p) => p.isActive);
-  const activeProviderTypes = new Set(active.map((p) => p.type));
-  const activeProviderIds = new Set(active.map((p) => p.id));
   const findings = findingsFor(facts, list);
-  const { queryList } = filterAnswer(findings);
-  const qualificationIssues: QualificationIssue[] = [];
-  for (const { ruleKey, value } of filters) {
-    if (!isInstanceScopedValue(value) || value.providerId === undefined) continue;
-    const { providerId } = value;
-    if (!activeProviderIds.has(providerId)) {
-      qualificationIssues.push({ filterKey: ruleKey, providerId, reason: 'not_active' });
-    } else if (automationProviderId !== undefined && providerId !== automationProviderId) {
-      qualificationIssues.push({
-        filterKey: ruleKey,
-        providerId,
-        reason: 'wrong_automation_provider',
-      });
-    }
-  }
-
-  if (filters.length === 0) {
-    return {
-      status: 'healthy',
-      providerStatus: [],
-      qualificationIssues: [],
-      findings,
-      queryList,
-    };
-  }
-
-  // Collect per-providerType requirements across all filter keys
-  const providerMap = new Map<MetadataProviderType, string[]>();
-
-  for (const { ruleKey } of filters) {
-    const rule = getRule(ruleKey, contentType);
-    if (!rule) continue;
-    // A provider type that cannot be configured cannot be missing.
-    for (const pt of rule.providers.filter((type) => isOfferedProviderType(scope, type))) {
-      providerMap.set(pt, [...(providerMap.get(pt) ?? []), ruleKey]);
-    }
-  }
-
-  const providerStatus: ProviderStatus[] = [];
-  for (const [providerType, keys] of providerMap) {
-    const configured = activeProviderTypes.has(providerType);
-    providerStatus.push({ providerType, configured, affectedFilterKeys: keys });
-  }
-
-  // A filter is supplied when any one of the providers that can supply it is connected, so a
-  // year filter on movies is satisfied by Radarr without Sonarr or Plex. Only a filter with no
-  // connected provider at all degrades the query.
-  const supplied = new Set(
-    providerStatus.filter((s) => s.configured).flatMap((s) => s.affectedFilterKeys)
-  );
-  const unsupplied = filters.some(
-    ({ ruleKey }) =>
-      !supplied.has(ruleKey) && providerStatus.some((s) => s.affectedFilterKeys.includes(ruleKey))
-  );
-  const status = unsupplied || qualificationIssues.length > 0 ? 'degraded' : 'healthy';
-  return { status, providerStatus, qualificationIssues, findings, queryList };
+  return { findings, queryList: filterAnswer(findings).queryList };
 }
 
 /** SQLite's refusal of a write that would break a foreign key, however the driver wraps it. */
