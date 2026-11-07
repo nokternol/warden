@@ -505,6 +505,27 @@ Earlier entries in this ledger use the names that were current when they healed 
 - **Healed by:** correcting each statement. The core model's example is now the MVP's destination
   scenario, built from rules and a task that exist. The old provider spec plan is deleted, and an architecture doc no longer leans on an in-progress ticket.
 
+### Media cache invalidation — four mechanisms, one false (recorded and healed 2026-11-07)
+
+- **Fracture:** the media caches were cleared by three partial mechanisms and one that did nothing. A
+  callback built by the media procedures and threaded through the composition root into the providers
+  procedures cleared the browse and lookup caches after provider update and delete, but not create. The
+  `provider:changed` event cleared only the active field set, and wasn't sent on delete. `media:changed`
+  was sent after automation runs, but nothing in production listened. The 60-second expiry covered
+  everything, eventually, and was documented nowhere.
+- **How it misled:** the comment above `SYSTEM_TASKS` said a `media:changed` evicted the movie and series
+  caches, so anyone chasing a stale Media page after an automation looked at a path that didn't exist.
+  The rule for when a task declares `affects: 'media'` was never written down, so the tag tasks were
+  added without it and their runs would have missed the trigger even once it had a listener. The
+  callback also put back the `providers → media` dependency the module rules forbid, through a
+  constructor argument the dependency checker couldn't see.
+- **Healed by:** the kernel event bus is the only mechanism. The media procedures clear every cache
+  they own on `media:changed` and `provider:changed`, over one array, and the callback is gone. Every
+  provider mutation sends `provider:changed`. An actuator task's `media:changed` is sent once it has
+  acted, even if it then fails. Both caches drop an in-flight fetch on invalidation so it can't write
+  old data back. The `affects` rule is written at the descriptor and enforced by a test that pins every
+  task leaving it off. The expiry is kept, documented as the route for changes the bus can't see.
+
 ## Open
 
 ### Ratings — two mechanisms, one blocked (recorded 2026-11-01, MVP slice B4)

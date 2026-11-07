@@ -23,8 +23,12 @@ executor happens, and something outside it needs to react.* Today neither reacti
   underlying data changed.
 
 The domain event bus (`media:changed`, `run:started`, `run:completed`) exists precisely to drive both of
-these, but currently emits into the void — no consumer subscribes to either for this purpose yet (a
-`provider:changed` consumer exists elsewhere, unrelated to runs or enrichment).
+these. `media:changed` already has a consumer: the media procedures clear their upstream-fetch caches on
+it (and on `provider:changed`). The enrichment cache will sit beside them on the same event. Nothing
+consumes the run lifecycle events yet. When the enrichment cache lands,
+`media.cache.enrichmentFresh.integration.test.ts` fails by design: it pins that browse reads enrichment
+fresh, and its header names the senders (`media.reset`, the system jobs) that must then send
+`media:changed`.
 
 ## Why it needs solving
 
@@ -63,14 +67,15 @@ these, but currently emits into the void — no consumer subscribes to either fo
 
 ## Blockers / friction
 
-- **The bus isn't safe for real consumers yet.** `EventEmitter.emit` is synchronous and re-throws a
-  listener's exception into the caller — a throwing cache/SSE consumer today would get mis-recorded as an
-  execution failure, or abort a run before the provider is even called. This has to be fixed (listener
-  isolation) before any consumer attaches, not after.
-- **No teardown contract.** The bus is a singleton; per-connection SSE consumers will `bus.on()` per
-  request. Nothing manages listener lifecycle or caps (`maxListeners` defaults to 10), so a consumer that
-  forgets to unsubscribe on disconnect leaks permanently, and concurrent streams will hit the warning
-  ceiling.
+- **The bus doesn't isolate listeners.** `EventEmitter.emit` is synchronous and re-throws a listener's
+  exception into the sender. In-process listeners follow the convention of catching their own errors
+  (the media cache listener does), but per-connection SSE consumers are many and transient, so bus-level
+  isolation is still needed before they attach — a throwing stream would otherwise be mis-recorded as an
+  execution failure.
+- **No teardown contract for SSE.** In-process listeners subscribe once, or unsubscribe with `off` when
+  built per test. Per-connection SSE consumers will `bus.on()` per request, and nothing manages their
+  lifecycle or caps (`maxListeners` defaults to 10), so a stream that forgets to unsubscribe on
+  disconnect leaks permanently, and concurrent streams will hit the warning ceiling.
 - **Ordering and replay are both currently accidental.** Events happen to fire
   `run:started → run:completed → media:changed` today, but nothing guarantees it, and there's no
   replay/buffer — an event emitted before a consumer attaches (e.g. at startup, before the scheduler's

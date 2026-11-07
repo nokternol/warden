@@ -224,9 +224,11 @@ already-established membership set). `ActiveFieldSetCache` wraps it in a compute
 accessors sharing one underlying fetch (`get()` for the field set, `getActiveTypes()` for the raw
 provider-type set), invalidated by a `provider:changed` domain event
 ([`kernel/eventBus.ts`](ref:path:server/kernel/eventBus.ts)) rather than a direct import —
-`ProviderSettingsService.create`/`update` emit it after a successful mutation, the same
+`ProviderSettingsService.create`/`update`/`delete` emit it after a successful mutation, the same
 `providers → media`-illegal boundary the precedence validator crosses via the event bus instead of an
-import.
+import. The cache has no expiry, so it captures a generation counter before each read awaits and caches
+the result only if no `provider:changed` arrived meanwhile: a read in flight across a delete can't write
+the deleted provider's fields back.
 
 ## `ruleRegistry.ts`: derived where possible, hand-listed where genuinely source-owned
 
