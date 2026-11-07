@@ -93,12 +93,6 @@ async function resolveTaskOptions(
 }
 
 /**
- * The `providers` procedures of the API contract: configured-instance CRUD,
- * connection probing, and provider capabilities. `invalidateMediaCaches` runs
- * after an instance is updated or deleted so media caches never serve data
- * from a provider that changed.
- */
-/**
  * A stored key, for probing the address it was saved with. The client never holds this key, so
  * sending it to another host would hand it to whoever runs that host: a changed address needs the
  * key entered again.
@@ -113,10 +107,11 @@ function storedKeyFor(
   return stored.apiKey ?? undefined;
 }
 
-export function createProvidersProcedures(
-  cradle: ProvidersCradle,
-  invalidateMediaCaches: () => void
-) {
+/**
+ * The `providers` procedures of the API contract: configured-instance CRUD,
+ * connection probing, and provider capabilities.
+ */
+export function createProvidersProcedures(cradle: ProvidersCradle) {
   const { providerSettingsService, providerFactory, config, scope } = cradle;
 
   /** Refuses a provider type the scope declaration defers. */
@@ -157,14 +152,11 @@ export function createProvidersProcedures(
     update: api.providers.update.handler(async ({ input }) => {
       const { id, ...patch } = input;
       if (patch.settings) await assertEnablesOnlyOfferedTasks(id, patch.settings);
-      const result = await providerSettingsService.update(id, patch);
-      invalidateMediaCaches();
-      return result;
+      return providerSettingsService.update(id, patch);
     }),
 
     delete: api.providers.delete.handler(async ({ input }) => {
       await providerSettingsService.delete(input.id);
-      invalidateMediaCaches();
       return null;
     }),
 

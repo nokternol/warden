@@ -26,7 +26,7 @@ import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { http, HttpResponse } from 'msw';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -66,6 +66,17 @@ describe('Paginated Media API', () => {
   let unauthedClient: ReturnType<typeof createApiClient>;
   let cradle: ReturnType<typeof buildContainer>['cradle'];
 
+  // Each build subscribes to the shared bus; dispose them so listeners don't pile up across tests.
+  const builtMedia: Array<{ dispose(): void }> = [];
+  function buildMedia() {
+    const media = createMediaProcedures(cradle);
+    builtMedia.push(media);
+    return media;
+  }
+  afterEach(() => {
+    for (const media of builtMedia.splice(0)) media.dispose();
+  });
+
   beforeAll(async () => {
     const mockConfig = createMockConfig({
       NODE_ENV: 'test',
@@ -95,7 +106,7 @@ describe('Paginated Media API', () => {
       apiKey: 'fake-key',
     });
 
-    const mediaRoutes = serveApi({ media: createMediaProcedures(cradle).procedures });
+    const mediaRoutes = serveApi({ media: buildMedia().procedures });
 
     authedApp = express();
     authedApp.use(express.json());
@@ -233,7 +244,7 @@ describe('Paginated Media API', () => {
 
   // ─── provider error propagation ─────────────────────────────────────────────
   //
-  // Each test creates a fresh serveApi({ media: createMediaProcedures(cradle).procedures }) so the cache is cold
+  // Each test creates a fresh serveApi({ media: buildMedia().procedures }) so the cache is cold
   // and the per-test MSW override is the sole source of truth for that request.
   //
   describe('provider error propagation', () => {
@@ -260,9 +271,7 @@ describe('Paginated Media API', () => {
         )
       );
 
-      const client = buildErrorClient(
-        serveApi({ media: createMediaProcedures(cradle).procedures })
-      );
+      const client = buildErrorClient(serveApi({ media: buildMedia().procedures }));
       const res = await client.get(browsePath('movie'));
       const data = expectSuccessResponse(res);
 
@@ -282,9 +291,7 @@ describe('Paginated Media API', () => {
         )
       );
 
-      const client = buildErrorClient(
-        serveApi({ media: createMediaProcedures(cradle).procedures })
-      );
+      const client = buildErrorClient(serveApi({ media: buildMedia().procedures }));
       const res = await client.get(browsePath('series'));
       const data = expectSuccessResponse(res);
 
@@ -300,9 +307,7 @@ describe('Paginated Media API', () => {
         http.get('http://localhost:7878/api/v3/movie', () => HttpResponse.json(makeMovies(2)))
       );
 
-      const client = buildErrorClient(
-        serveApi({ media: createMediaProcedures(cradle).procedures })
-      );
+      const client = buildErrorClient(serveApi({ media: buildMedia().procedures }));
       const res = await client.get(browsePath('movie'));
       const data = expectSuccessResponse(res);
 
@@ -328,9 +333,7 @@ describe('Paginated Media API', () => {
         )
       );
 
-      const client = buildErrorClient(
-        serveApi({ media: createMediaProcedures(cradle).procedures })
-      );
+      const client = buildErrorClient(serveApi({ media: buildMedia().procedures }));
       const res = await client.get(browsePath('series'));
       const data = expectSuccessResponse(res);
 

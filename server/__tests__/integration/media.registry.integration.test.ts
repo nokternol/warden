@@ -21,7 +21,7 @@ import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { http, HttpResponse } from 'msw';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 const REG_MOVIES = [
   {
@@ -79,6 +79,17 @@ const mockUser = {
 describe('Media browse — registry-delegated predicates', () => {
   let cradle: import('@server/container').Cradle;
 
+  // Each build subscribes to the shared bus; dispose them so listeners don't pile up across tests.
+  const builtMedia: Array<{ dispose(): void }> = [];
+  function buildMedia() {
+    const media = createMediaProcedures(cradle);
+    builtMedia.push(media);
+    return media;
+  }
+  afterEach(() => {
+    for (const media of builtMedia.splice(0)) media.dispose();
+  });
+
   beforeAll(async () => {
     const mockConfig = createMockConfig({
       NODE_ENV: 'test',
@@ -114,7 +125,7 @@ describe('Media browse — registry-delegated predicates', () => {
       _req.user = mockUser;
       next();
     });
-    app.use('/api/media', serveApi({ media: createMediaProcedures(cradle).procedures }));
+    app.use('/api/media', serveApi({ media: buildMedia().procedures }));
     app.use(errorHandlerMiddleware);
     return createApiClient(app);
   }

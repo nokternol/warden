@@ -44,7 +44,7 @@ describe('Providers API Integration', () => {
     });
     app.use(
       serveApi(
-        { providers: createProvidersProcedures(container.cradle, () => {}) },
+        { providers: createProvidersProcedures(container.cradle) },
         { scope: proceduresOffered }
       )
     );

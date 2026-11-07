@@ -17,7 +17,7 @@ import { createMockConfig } from '@tests/factories';
 import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import { http, HttpResponse } from 'msw';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { server } from '../../../tests/mocks/server';
 
 const PLEX_URL = 'http://localhost:32400';
@@ -50,6 +50,17 @@ function buildAuthedApp(routes: ReturnType<typeof serveApi>): Express {
 
 describe('Jellyfin lookup routes — additional producer alongside Plex', () => {
   let cradle: ReturnType<typeof buildContainer>['cradle'];
+
+  // Each build subscribes to the shared bus; dispose them so listeners don't pile up across tests.
+  const builtMedia: Array<{ dispose(): void }> = [];
+  function buildMedia() {
+    const media = createMediaProcedures(cradle);
+    builtMedia.push(media);
+    return media;
+  }
+  afterEach(() => {
+    for (const media of builtMedia.splice(0)) media.dispose();
+  });
 
   beforeAll(async () => {
     const mockConfig = createMockConfig({ DB_PATH: ':memory:', DB_LOGGING: false });
@@ -105,7 +116,7 @@ describe('Jellyfin lookup routes — additional producer alongside Plex', () => 
       )
     );
 
-    const routes = serveApi({ media: createMediaProcedures(cradle).procedures });
+    const routes = serveApi({ media: buildMedia().procedures });
     const client = createApiClient(buildAuthedApp(routes));
 
     const res = await client.get('/api/media/studio');
@@ -133,7 +144,7 @@ describe('Jellyfin lookup routes — additional producer alongside Plex', () => 
       )
     );
 
-    const routes = serveApi({ media: createMediaProcedures(cradle).procedures });
+    const routes = serveApi({ media: buildMedia().procedures });
     const client = createApiClient(buildAuthedApp(routes));
 
     const res = await client.get('/api/media/file-resolutions');
@@ -163,7 +174,7 @@ describe('Jellyfin lookup routes — additional producer alongside Plex', () => 
       )
     );
 
-    const routes = serveApi({ media: createMediaProcedures(cradle).procedures });
+    const routes = serveApi({ media: buildMedia().procedures });
     const client = createApiClient(buildAuthedApp(routes));
 
     const res = await client.get('/api/media/labels');

@@ -50,7 +50,7 @@ describe('GET /api/providers/ratings — TMDB key DI isolation', () => {
     });
     app.use(
       serveApi(
-        { providers: createProvidersProcedures(container.cradle, () => {}) },
+        { providers: createProvidersProcedures(container.cradle) },
         { scope: proceduresOffered }
       )
     );

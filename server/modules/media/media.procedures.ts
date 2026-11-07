@@ -2,6 +2,7 @@ import { MetadataProviderType } from '@server/database/schema';
 import { api } from '@server/kernel/api';
 import { MediaCache } from '@server/kernel/cache';
 import type { DrizzleDb } from '@server/kernel/db';
+import type { DomainEventBus } from '@server/kernel/eventBus';
 import { getChildLogger } from '@server/kernel/logger';
 import {
   type IProviderFactory,
@@ -35,6 +36,9 @@ import { type Filter, type NormalizedMovie, type NormalizedSeries, getRule } fro
 
 const log = getChildLogger('MediaProcedures');
 
+/** The bus events on which the media procedures clear every cache they own. */
+const CLEARED_ON = ['media:changed', 'provider:changed'] as const;
+
 // ─── Handler-local helpers ────────────────────────────────────────────────────
 
 function computeYearRange(items: Array<{ year?: number }>): {
@@ -54,6 +58,7 @@ interface MediaCradle {
   providerSettingsService: ProviderSettingsService;
   providerFactory?: IProviderFactory;
   mediaQueryEngine: MediaQueryEngine;
+  eventBus: DomainEventBus;
   db?: DrizzleDb;
 }
 
@@ -372,25 +377,34 @@ export function createMediaProcedures(cradle: MediaCradle) {
     };
   }
 
-  function invalidateMediaCaches(): void {
-    moviesCache.invalidate('movies');
-    seriesCache.invalidate('series');
-    tagsCache.invalidate('tags');
-    qualityProfilesCache.invalidate('qualityProfiles');
-    languageProfilesCache.invalidate('languageProfiles');
-    genresCache.invalidate('genres');
-    networksCache.invalidate('networks');
-    studioCache.invalidate('studio');
-    releaseGroupsCache.invalidate('releaseGroups');
-    collectionNamesCache.invalidate('collectionNames');
-    fileContainerCache.invalidate('fileContainer');
-    videoCodecCache.invalidate('videoCodec');
-    audioCodecCache.invalidate('audioCodec');
-    fileResolutionCache.invalidate('fileResolution');
-    labelsCache.invalidate('labels');
-    plexItemsCache.invalidate('plexItems');
-    jellyfinItemsCache.invalidate('jellyfinItems');
+  const caches: Array<{ clear(): void }> = [
+    moviesCache,
+    seriesCache,
+    tagsCache,
+    qualityProfilesCache,
+    languageProfilesCache,
+    genresCache,
+    networksCache,
+    studioCache,
+    releaseGroupsCache,
+    collectionNamesCache,
+    fileContainerCache,
+    videoCodecCache,
+    audioCodecCache,
+    fileResolutionCache,
+    labelsCache,
+    plexItemsCache,
+    jellyfinItemsCache,
+  ];
+
+  function clearCaches(): void {
+    try {
+      for (const cache of caches) cache.clear();
+    } catch (err) {
+      log.error('Clearing the media caches failed', { err });
+    }
   }
+  for (const event of CLEARED_ON) cradle.eventBus.on(event, clearCaches);
 
   const procedures = {
     browse: {
@@ -631,5 +645,10 @@ export function createMediaProcedures(cradle: MediaCradle) {
     }),
   };
 
-  return { procedures, invalidateMediaCaches };
+  /** Unsubscribes this instance's cache clearing from the bus; for instances built per test. */
+  function dispose(): void {
+    for (const event of CLEARED_ON) cradle.eventBus.off(event, clearCaches);
+  }
+
+  return { procedures, dispose };
 }
