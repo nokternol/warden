@@ -43,6 +43,9 @@ export type {
   ProviderSummary,
 } from './providerSettingsService';
 
+// How a provider type is named in anything shown to the user.
+export { providerTypeLabel } from './providerCatalogue';
+
 // Per-provider task enablement read by automations.
 export { readEnabledTaskIds } from './taskEnablement';
 
