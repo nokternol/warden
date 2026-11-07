@@ -197,9 +197,13 @@ instances) rather than a single source's `idOf`. `idOf` stays as the provider-na
 `task.run` speaks — unambiguous within one bound instance, which is what an automation execution and a
 raw-DTO lookup both are.
 
-`MediaSourceFactory.sourcesFor(contentType)` ([`server/modules/media/mediaSourceFactory.ts`](ref:path:server/modules/media/mediaSourceFactory.ts)) resolves a
-`ContentType` to one `{ providerId, name, source: MediaSource }` entry per *active instance* owning it —
-never collapsed to one. `GET /api/media-queries/:id/preview` fans out over it, evaluating the query spec
+`MediaSourceFactory.activeInstances(contentType)` ([`server/modules/media/mediaSourceFactory.ts`](ref:path:server/modules/media/mediaSourceFactory.ts))
+is the one place the catalog's source instances are chosen: every active instance of the provider type
+`SOURCE_OWNER` names for the content type, each with its connection built (`{ providerId, name,
+provider }`), never collapsed to one. Browse, the saved-query preview and pooled runs all read through it;
+browse builds its own factory from its cradle's `providerSettingsService` and `providerFactory`, so a
+test's injected provider factory reaches it. `sourcesFor(contentType)` binds each of those instances as
+a `{ providerId, name, source: MediaSource }` entry. `GET /api/media-queries/:id/preview` fans out over it, evaluating the query spec
 once per instance, and counts the pooled matches in titles: `{ count }` is the number of distinct
 `titleKeyOf` keys, so a title held by two instances counts once, the same unit as the Media page. The executor instead binds a specific provider by `automation.provider.id`, since it needs
 the actuator role on the same instance for `task.run` — an automation targets one instance; running the
@@ -207,11 +211,17 @@ same query against two instances is two automations sharing that query record.
 
 ## Browse: per-instance sublists, live display dedup, and instance-qualified filters
 
-`media.procedures.ts`'s `getMovies()`/`getSeries()` fetch every active instance's raw
-`RadarrMovie[]`/`SonarrSeries[]` into **per-instance sublists** (`{ providerId, providerName, movies }`),
-never flattened into one array before matching. The inline `MediaSource` normalizes each sublist's rows
-with their own `providerId` (`normalizeRadarrMovie(m, providerId)`), so every item pooled into
-`MediaQueryEngine.evaluate` self-describes which instance produced it. Raw-row recovery after matching
+`media.procedures.ts`'s `getMovies()`/`getSeries()` fetch every instance `activeInstances` returns into
+cached **per-instance sublists** of raw `RadarrMovie[]`/`SonarrSeries[]` rows (`{ providerId,
+providerName, movies }`), never flattened into one array before matching. Each sublist is bound as a
+source by the over-rows binders `radarrRowsSource`/`sonarrRowsSource`
+([`server/modules/media/sourceAdapters.ts`](ref:path:server/modules/media/sourceAdapters.ts)), which
+normalise the rows with their own `providerId` into new objects on every read, so every item pooled
+into `MediaQueryEngine.evaluate` self-describes which instance produced it, and enrichment merged into
+one request's items never reaches the cached rows or another request. The connection-bound adapters
+(`radarrMediaSource`/`sonarrMediaSource`, used by the preview, pooled runs and a Radarr or Sonarr
+automation's own catalog) fetch their rows and delegate to the same binders: one way builds a source,
+whether its rows come from a cache or a live read. Raw-row recovery after matching
 keys on `itemKey(item)` (`${providerId}:${externalId}`), so two instances' rows sharing a raw provider id
 are never conflated.
 
