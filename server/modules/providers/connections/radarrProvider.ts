@@ -164,6 +164,7 @@ export class RadarrProvider extends BaseProviderConnection implements MediaActua
         id: 'addTag',
         label: 'Add tag',
         destructive: false,
+        affects: 'media',
         parameter: { type: 'select', label: 'Tag', optionsRoute: 'tags' },
         run: async (ids, parameterValue) =>
           this.applyTag(ids.map(Number), Number(requireParameter('addTag', parameterValue)), 'add'),
@@ -172,6 +173,7 @@ export class RadarrProvider extends BaseProviderConnection implements MediaActua
         id: 'removeTag',
         label: 'Remove tag',
         destructive: false,
+        affects: 'media',
         parameter: { type: 'select', label: 'Tag', optionsRoute: 'tags' },
         run: async (ids, parameterValue) =>
           this.applyTag(
