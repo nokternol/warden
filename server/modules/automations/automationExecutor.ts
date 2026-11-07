@@ -560,8 +560,10 @@ export class AutomationExecutor {
   }
 }
 
-// System data jobs span every source, so they declare scope but no sourceType —
-// a `media:changed` from here evicts both movie and series caches.
+// System data jobs write enrichment and identity data. They declare `affects: 'media'`
+// for caches held over that data; none exists yet, and the planned enrichment cache will
+// be the first. Today's media caches hold only upstream fetches, which these jobs don't
+// change (`media.cache.enrichmentFresh.integration.test.ts` fails if that stops being so).
 export const SYSTEM_TASKS: Record<string, { affects?: 'media' }> = {
   'system:enrichment': { affects: 'media' },
   'system:identity-resolution': { affects: 'media' },

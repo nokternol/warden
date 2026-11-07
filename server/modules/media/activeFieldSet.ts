@@ -90,9 +90,11 @@ export interface ActiveTypesSource {
 /**
  * Caches `activeFieldSet`'s union so `ruleRegistry`/`gatedDescriptors` don't
  * recompute it (and re-query every provider's active state) per request.
- * Invalidates on `provider:changed` — the same event `ProviderSettingsService`
- * emits from `create`/`update`, kept decoupled via the kernel event bus so
- * `providers` never imports from `media`.
+ * Invalidates on `provider:changed`, which `ProviderSettingsService` sends from
+ * create, update and delete, kept decoupled via the kernel event bus so
+ * `providers` never imports from `media`. It has no expiry, so a read in flight
+ * when the event fires returns its result without caching it: the old set can
+ * never be written back.
  */
 export class ActiveFieldSetCache {
   private readonly source: ActiveTypesSource;

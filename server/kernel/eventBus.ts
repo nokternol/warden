@@ -19,20 +19,34 @@ export interface DomainEvents {
     runId: number;
     ranAt: Date;
   };
-  // Data-change events are namespaced by the scope they affect: a task declaring
-  // `affects: 'media'` emits `media:changed`. New scopes add their own
-  // `<scope>:changed` event rather than overloading one event with a discriminator.
-  // The payload is intentionally empty — the cache it drives is whole-scope, so the
-  // event only needs to say *that* media changed, not which slice. A discriminator
-  // is added only if/when a consumer segments its cache and proves it needs one.
+  // Upstream library data changed by Warden.
+  // Sent by: the automation executor once an actuator task declaring `affects: 'media'`
+  // has acted on at least one item (whether or not the run then succeeds), and by a
+  // system data job that reports changes. Any future writer of library data sends it
+  // directly.
+  // Heard by: the media procedures, which clear every cache they own.
+  // Data-change events are namespaced by the scope they affect; a new scope adds its own
+  // `<scope>:changed` event rather than a discriminator on this one. The payload is empty
+  // because the caches it clears are whole-scope; a discriminator is added only when a
+  // consumer segments its cache and proves it needs one.
   'media:changed': Record<string, never>;
-  // Emitted by ProviderSettingsService.create/update wherever a provider's active-type
-  // membership can change — the trigger media's active-field-set cache invalidates on.
-  // Lives on the kernel bus (not a media import into providers) so providers stays
-  // ignorant of media's EnrichmentFields/field-ownership concerns.
+  // Provider configuration changed: which providers exist, are active, or what they serve.
+  // Sent by: every `ProviderSettingsService` mutation (create, update, delete) except
+  // `recordTest`, which changes only a provider's test status.
+  // Heard by: `ActiveFieldSetCache` and the media procedures' caches.
+  // It lives on the kernel bus so `providers` never imports from `media`.
   'provider:changed': Record<string, never>;
 }
 
+/**
+ * In-process domain events between modules.
+ *
+ * Delivery is synchronous: every listener runs before `emit` returns (pinned by
+ * `eventBus.test.ts`), so a sender's caller sees the listeners' effects as soon as the
+ * call returns. `emit` re-throws a listener's exception into the sender, so a listener
+ * catches its own errors. A long-lived listener subscribes once; a listener built per
+ * request or per test unsubscribes with `off`.
+ */
 export class DomainEventBus {
   private readonly emitter = new EventEmitter();
 

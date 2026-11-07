@@ -377,6 +377,19 @@ export function createMediaProcedures(cradle: MediaCradle) {
     };
   }
 
+  /**
+   * Every cache this instance owns. A cache added here must go in this array, which the
+   * handler below clears. What clears them:
+   * - `media:changed`: upstream library data changed by Warden (an automation task that
+   *   declares `affects: 'media'` and has acted, or a system data job with changes).
+   * - `provider:changed`: a provider was created, updated or deleted, so its library joined,
+   *   changed or left.
+   * - The 60s expiry: changes Warden can't see, such as edits in Radarr's own UI, upstream
+   *   background commands finishing, or an upstream service recovering by itself.
+   * A failed provider fetch is cached as a partial or empty result (an error entry, or an
+   * empty list) until the expiry or a provider edit, so requests during an outage don't each
+   * wait on the dead upstream (`media.cache.failuresCached.integration.test.ts`).
+   */
   const caches: Array<{ clear(): void }> = [
     moviesCache,
     seriesCache,
@@ -397,6 +410,7 @@ export function createMediaProcedures(cradle: MediaCradle) {
     jellyfinItemsCache,
   ];
 
+  /** Bus listener: catches its own errors, since a throw would re-enter the event's sender. */
   function clearCaches(): void {
     try {
       for (const cache of caches) cache.clear();
@@ -404,6 +418,7 @@ export function createMediaProcedures(cradle: MediaCradle) {
       log.error('Clearing the media caches failed', { err });
     }
   }
+
   for (const event of CLEARED_ON) cradle.eventBus.on(event, clearCaches);
 
   const procedures = {
