@@ -73,9 +73,11 @@ Feedback is split into two independent pieces, neither of which involves the dom
   check for ~2s once it succeeds, before reverting to idle. This confirms the click was
   *received*, not that the underlying job has *finished* — a distinction the row is careful not to
   blur (title text reads "Run triggered", never "Run complete"). Row actions are always visible, and a
-  failed trigger stays as an inline alert at the row. A user automation whose task is destructive
-  confirms inline first, stating the count from `automations.preview`, and cannot run until that
-  count has arrived.
+  failed trigger stays as an inline alert at the row. A user automation whose task is destructive,
+  or that has filter readiness findings, checks inline first through `automations.readiness`: it
+  states the count (or that counting failed), asks before proceeding past a finding awaiting sign-off,
+  and says when the run will be skipped and why. The row also lists what blocks the automation, with
+  Accept on each finding awaiting sign-off.
 - **Last outcome.** The row shows the last run's outcome and reason, and links to
   `/runs?automationId=N`. A skip leaves the `lastRun` summary alone, so the row reads the newest run
   from the run history to show a skipped-as-invalid attempt.

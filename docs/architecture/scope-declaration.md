@@ -119,7 +119,5 @@ no copy. [`useProviderTypes`](ref:path:src/hooks/useProviderTypes.ts) fetches th
   provider catalogue on the server.
 - **An automation saved before its task was deferred still runs.** The executor checks enablement,
   not the declaration.
-- **Query health still reports deferred producers.** A query's provider status lists every type in a
-  rule's `providers`, deferred ones included.
 - **Per-type form fields stay on the client.** The Jellyfin user-id field, and the type icons, are
   still keyed by type name in the components.
