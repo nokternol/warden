@@ -650,6 +650,17 @@ names, so nothing is renamed twice.
     filters, and the Ratings page and panel if kept) reads it.
   - Decision 7 holds: a surface left deferred stays compiled, typechecked, tested and blocked by
     `contract/scope.ts`; it is not deleted unless decision 12 retires it as a feature.
+- **Defects this slice repairs**, whichever option is chosen (an option that retires the code
+  repairs them by deleting it; one that keeps it fixes them). This slice is their only owner:
+  - The `ratings` procedure (`server/modules/providers/providers.procedures.ts`) builds its TMDB, OMDB
+    and TVmaze connections with `new` instead of through `ProviderFactory`, and passes literal URLs
+    that repeat the provider catalogue's `defaultUrl`; the OMDb literal is `https://` while the
+    catalogue (`providerCatalogue.ts`) says `http://`. Read cold, the fully built handler looks live
+    beneath its deferral.
+  - `formatRating` and `getSummaryText` in `server/modules/providers/ratingsAggregation.ts` have no
+    callers.
+  - `ratingsAggregation.ts` logs with `console.warn` where every other server file uses the module
+    logger.
 - **Behaviours:** written into this section once decision 12 is taken, in the slice's own PR.
 - **Done when:** the ledger entry moves to Healed, `contract/scope.ts`'s ratings entries say why
   they remain (or are removed), and Post-MVP no longer lists ratings as an unresolved duplicate.
@@ -665,6 +676,17 @@ names, so nothing is renamed twice.
   - Each remaining way to look up a title does a job no other does, and its name says which (so two
     things that both "search" do not remain unless they are distinct jobs, named apart).
   - Decision 7 holds for a surface left deferred.
+- **Defects this slice repairs**, whichever option is chosen (an option that retires the code
+  repairs them by deleting it; one that keeps it fixes them). This slice is their only owner:
+  - `searchProvider` (`server/modules/media/media.search.procedures.ts`) is its own switch from
+    provider type to connection class, building six connection classes with `new` inside the `media`
+    module instead of through `ProviderFactory`. It is one of the reasons `providers/index.ts` exports
+    connection classes to other modules "until Phase 4"; once it is gone, that comment stops naming
+    the search handler.
+  - Plex and Jellyfin search download every library's full contents on each submit to match a
+    substring.
+  - The Search page (`src/pages/search/index.page.tsx`) hard-codes status colours instead of the
+    theme's status components, and renders each result as a raw `JSON.stringify` dump.
 - **Behaviours:** written into this section once decision 13 is taken, in the slice's own PR.
 - **Done when:** the ledger entry moves to Healed, `contract/scope.ts`'s search entries say why they
   remain (or are removed), and Post-MVP no longer lists search as an unresolved duplicate.
