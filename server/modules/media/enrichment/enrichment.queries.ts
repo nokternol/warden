@@ -33,18 +33,6 @@ export class EnrichmentQueries {
     return fields;
   }
 
-  /** Whether any title of this content type holds a value for this field. */
-  async hasValues(field: keyof EnrichmentFields, contentType: ContentType): Promise<boolean> {
-    const [row] = await this.deps.db
-      .select({ id: mediaEnrichment.fieldId })
-      .from(mediaEnrichment)
-      .innerJoin(enrichmentField, eq(enrichmentField.id, mediaEnrichment.fieldId))
-      .innerJoin(mediaIdentity, eq(mediaIdentity.id, mediaEnrichment.mediaIdentityId))
-      .where(and(eq(enrichmentField.key, field), eq(mediaIdentity.kind, contentType)))
-      .limit(1);
-    return row !== undefined;
-  }
-
   async getByIdentityIds(ids: number[]): Promise<Map<number, Partial<EnrichmentFields>>> {
     if (ids.length === 0) return new Map();
     const rows = await this.deps.db

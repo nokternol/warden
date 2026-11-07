@@ -6,9 +6,8 @@ import { buildContainer } from '@server/container';
  * Two kinds of test live here:
  * - **Safety pins**: behaviour that protects the library. Asserted on the run's status and on
  *   the actuator never being called, never on message wording.
- * - **Known defects, pinned as they are**: behaviour that is wrong today. Each says what is
- *   wrong; a change that fixes it is expected to fail the test, and rewrites it to the fixed
- *   behaviour.
+ * - **Readiness behaviour**: what saved queries and runs report for the filter problems the
+ *   readiness reviews proved, each pinned at the behaviour that fixed it.
  *
  * Run: vitest run --project server
  */
@@ -78,6 +77,7 @@ describe('filter readiness, as automations see it', () => {
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
       mediaQueryService,
+      filterReadiness: filterReadinessOver(getDb()),
       db,
     });
     unmonitorCalls = 0;
@@ -208,8 +208,9 @@ describe('filter readiness, as automations see it', () => {
 
       await executor.execute(automation.id);
 
+      // Readiness refuses the run before the engine's own throw on an unknown rule is reached.
       const run = await latestRun();
-      expect(run.status).toBe('error');
+      expect(run.status).toBe('skipped');
       expect(run.error).toMatch(/no longer exists: retiredRule/);
       expect(unmonitorCalls).toBe(0);
     });
@@ -289,10 +290,10 @@ describe('filter readiness, as automations see it', () => {
     });
   });
 
-  describe('known defects, pinned as they are', () => {
-    it('skips a run using a Seerr filter while the library holds no Seerr data, though Seerr is connected and enrichment succeeded', async () => {
+  describe('a filter whose field holds no value', () => {
+    it('blocks a scheduled run using a Seerr filter while no title holds Seerr data, saying so rather than that data is loading', async () => {
       // A library where nobody has requested anything through Seerr is a legitimate state;
-      // nothing distinguishes it from data that failed to load.
+      // nothing distinguishes it from data that failed to load, so only a user can accept it.
       const radarr = await seedRadarr();
       await providerSettingsService.create({
         type: MetadataProviderType.SEERR,
@@ -323,7 +324,9 @@ describe('filter readiness, as automations see it', () => {
 
       const run = await latestRun();
       expect(run.status).toBe('skipped');
-      expect(run.error).toMatch(/^Seerr request status filter's data has not finished loading$/);
+      expect(run.error).toBe(
+        'Seerr request status filter has no data: no movie holds a value for it'
+      );
     });
   });
 });
@@ -337,10 +340,8 @@ describe('a non-source actuator whose query names a source instance', () => {
     await _resetDatabase();
   });
 
-  it('is skipped as "not this automation\'s provider", though the engine matches the instance-qualified filter on the pooled catalog', async () => {
-    // Known defect. The engine gates an instance-qualified value on the item's own source
-    // instance; the readiness check compares it with the automation's provider instead, which
-    // for a Plex actuator is never a Radarr instance.
+  /** A Plex actuator over one Radarr instance's pooled catalog of two tagged movies. */
+  async function plexOverPooledRadarr() {
     const db = getDb();
     const providerSettingsService = new ProviderSettingsService({ db });
     const automationService = new AutomationService({ db });
@@ -376,7 +377,6 @@ describe('a non-source actuator whose query names a source instance', () => {
         .insert(mediaItems)
         .values({ providerId: radarr.id, externalId: n, mediaIdentityId: id });
     }
-    const filter: Filter = { ruleKey: 'tagIds', value: { providerId: radarr.id, ids: [7] } };
 
     const plexInstance = new PlexProvider(
       { name: 'Plex', url: 'http://localhost:32400', apiKey: 'plex-token', settings: {} },
@@ -390,6 +390,7 @@ describe('a non-source actuator whose query names a source instance', () => {
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
       mediaQueryService,
+      filterReadiness: filterReadinessOver(db),
       providerFactory: { create: () => plexInstance },
       mediaSourceFactory: {
         sourcesFor: async () => [
@@ -405,6 +406,33 @@ describe('a non-source actuator whose query names a source instance', () => {
       },
       db,
     });
+    return {
+      db,
+      radarr,
+      plex,
+      items,
+      executor,
+      mediaQueryService,
+      automationService,
+      providerSettingsService,
+      deleteFromLibrary,
+    };
+  }
+
+  it("runs, since the engine matches an instance-qualified filter on the pooled catalog by each title's own source instance", async () => {
+    // A non-source actuator acts on the pooled catalogs of every source, so a filter value need
+    // only name an active source instance, never the automation's own provider.
+    const {
+      db,
+      radarr,
+      plex,
+      items,
+      executor,
+      mediaQueryService,
+      automationService,
+      deleteFromLibrary,
+    } = await plexOverPooledRadarr();
+    const filter: Filter = { ruleKey: 'tagIds', value: { providerId: radarr.id, ids: [7] } };
     const query = await mediaQueryService.create({
       name: 'Tagged',
       contentType: 'movie',
@@ -423,9 +451,53 @@ describe('a non-source actuator whose query names a source instance', () => {
     await executor.execute(automation.id);
 
     const [run] = await db.select().from(automationRuns);
+    expect(run.status).toBe('success');
+    expect(deleteFromLibrary).toHaveBeenCalledWith(['rk-1', 'rk-2']);
+  });
+
+  it('is refused when its filter names an active instance that is not a source of the content type', async () => {
+    // A tag id minted by a Sonarr instance matches no movie, so the exclude would protect nothing.
+    const {
+      plex,
+      executor,
+      mediaQueryService,
+      automationService,
+      providerSettingsService,
+      deleteFromLibrary,
+    } = await plexOverPooledRadarr();
+    const sonarr = await providerSettingsService.create({
+      type: MetadataProviderType.SONARR,
+      name: 'Sonarr',
+      url: 'http://localhost:8989/api/v3',
+      apiKey: 'k',
+    });
+    const include = await mediaQueryService.create({
+      name: 'All',
+      contentType: 'movie',
+      filters: [],
+    });
+    const exclude = await mediaQueryService.create({
+      name: 'Keep',
+      contentType: 'movie',
+      filters: [{ ruleKey: 'tagIds', value: { providerId: sonarr.id, ids: [7] } }],
+    });
+    const automation = await automationService.create({
+      name: 'Clean Plex',
+      queries: [
+        { queryId: include.id, role: 'include' },
+        { queryId: exclude.id, role: 'exclude' },
+      ],
+      providerId: plex.id,
+      taskId: 'deleteFromLibrary',
+      schedule: '0 2 * * *',
+    });
+
+    await executor.execute(automation.id);
+
+    const [run] = await getDb().select().from(automationRuns);
     expect(run.status).toBe('skipped');
     expect(run.error).toBe(
-      `Tags filter names Radarr instance ${radarr.id}, which is not this automation's provider (Plex instance ${plex.id})`
+      `Tags filter names Sonarr instance ${sonarr.id}, which is not a Radarr provider`
     );
     expect(deleteFromLibrary).not.toHaveBeenCalled();
   });

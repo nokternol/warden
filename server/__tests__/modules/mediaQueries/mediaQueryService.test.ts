@@ -181,51 +181,6 @@ describe('MediaQueryService', () => {
     expect(dto.health.qualificationIssues).toEqual([]);
   });
 
-  it("getHealthForAutomation flags an entry qualified to a provider other than the automation's own binding", async () => {
-    const db = getDb();
-    const [providerA] = await db
-      .insert(metadataProviders)
-      .values({ type: MetadataProviderType.RADARR, name: 'Radarr A', url: 'http://radarrA' })
-      .returning();
-    const [providerB] = await db
-      .insert(metadataProviders)
-      .values({ type: MetadataProviderType.RADARR, name: 'Radarr B', url: 'http://radarrB' })
-      .returning();
-    const query = await service.create({
-      name: 'Bound elsewhere',
-      contentType: 'movie',
-      filters: [{ ruleKey: 'qualityProfileIds', value: { providerId: providerA.id, ids: [5] } }],
-    });
-
-    const health = await service.getHealthForAutomation(query, providerB.id);
-
-    expect(health.status).toBe('degraded');
-    expect(health.qualificationIssues).toEqual([
-      {
-        filterKey: 'qualityProfileIds',
-        providerId: providerA.id,
-        reason: 'wrong_automation_provider',
-      },
-    ]);
-  });
-
-  it("getHealthForAutomation is healthy when every qualified entry matches the automation's own provider", async () => {
-    const db = getDb();
-    const [provider] = await db
-      .insert(metadataProviders)
-      .values({ type: MetadataProviderType.RADARR, name: 'Radarr', url: 'http://radarr' })
-      .returning();
-    const query = await service.create({
-      name: 'Bound correctly',
-      contentType: 'movie',
-      filters: [{ ruleKey: 'qualityProfileIds', value: { providerId: provider.id, ids: [5] } }],
-    });
-
-    const health = await service.getHealthForAutomation(query, provider.id);
-
-    expect(health.qualificationIssues).toEqual([]);
-  });
-
   it('lists a query on an enrichment-only rule with a data-incomplete finding before any enrichment run', async () => {
     const db = getDb();
     await db.insert(metadataProviders).values([

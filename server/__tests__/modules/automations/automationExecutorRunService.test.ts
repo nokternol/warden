@@ -56,6 +56,7 @@ describe('AutomationExecutor writes to automation_runs', () => {
       automationRunService,
       providerSettingsService,
       mediaQueryService,
+      filterReadiness: filterReadinessOver(getDb()),
     });
   });
 

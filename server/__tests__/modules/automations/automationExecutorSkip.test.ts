@@ -4,7 +4,12 @@
  *
  * Run: vitest run --project server
  */
-import { MetadataProviderType, automationRunItems, automationRuns } from '@server/database/schema';
+import {
+  MetadataProviderType,
+  automationRunItems,
+  automationRuns,
+  mediaQueryFilterValues,
+} from '@server/database/schema';
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { DomainEventBus, type DomainEvents } from '@server/kernel/eventBus';
@@ -55,6 +60,7 @@ describe('AutomationExecutor — invalid automations', () => {
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
       mediaQueryService,
+      filterReadiness: filterReadinessOver(getDb()),
       db,
     });
     unmonitorCalls = 0;
@@ -113,7 +119,7 @@ describe('AutomationExecutor — invalid automations', () => {
     expect(runs).toHaveLength(1);
     expect(runs[0].status).toBe('skipped');
     expect(runs[0].error).toBe(
-      `Tags filter names Radarr instance ${removed.id}, which is not an active provider`
+      `Tags filter names Provider instance ${removed.id}, which is not an active provider`
     );
     expect(unmonitorCalls).toBe(0);
   });
@@ -144,7 +150,7 @@ describe('AutomationExecutor — invalid automations', () => {
       'Automation skipped as invalid',
       expect.objectContaining({
         automationId: automation.id,
-        reason: `Tags filter names Radarr instance ${removed.id}, which is not an active provider`,
+        reason: `Tags filter names Provider instance ${removed.id}, which is not an active provider`,
       })
     );
   });
@@ -174,7 +180,7 @@ describe('AutomationExecutor — invalid automations', () => {
     const [run] = await getDb().select().from(automationRuns);
     expect(run.status).toBe('skipped');
     expect(run.error).toBe(
-      `Radarr instance ${own.id}, this automation's provider, is not an active provider`
+      `Radarr instance ${own.id}, this automation's provider, is not an active provider; There is no movie library: no Radarr provider is active`
     );
     expect(unmonitorCalls).toBe(0);
   });
@@ -202,6 +208,7 @@ describe('AutomationExecutor — invalid automations', () => {
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
       mediaQueryService,
+      filterReadiness: filterReadinessOver(getDb()),
       eventBus: bus,
     });
     const own = await seedRadarr('Own Radarr');
@@ -224,20 +231,17 @@ describe('AutomationExecutor — invalid automations', () => {
   it('names the raw filter key when no rule is registered for it', async () => {
     const own = await seedRadarr('Own Radarr');
     const automation = await seedAutomationOver(own.id, []);
-    vi.spyOn(mediaQueryService, 'getHealthForAutomation').mockResolvedValue({
-      status: 'degraded',
-      providerStatus: [],
-      qualificationIssues: [{ filterKey: 'retiredRule', providerId: 99, reason: 'not_active' }],
-      findings: [],
-      queryList: 'clear',
-    });
+    const [{ queryId }] = automation.queries ?? [];
+    // Written past `create`'s validation, as a rule removed from the registry leaves it.
+    await getDb()
+      .insert(mediaQueryFilterValues)
+      .values({ mediaQueryId: queryId, filterKey: 'retiredRule', value: 'x' });
 
     await executor.execute(automation.id);
 
     const [run] = await getDb().select().from(automationRuns);
-    expect(run.error).toBe(
-      'retiredRule filter names Provider instance 99, which is not an active provider'
-    );
+    expect(run.status).toBe('skipped');
+    expect(run.error).toBe('A filter names a rule that no longer exists: retiredRule');
   });
 
   describe('hardening', () => {
@@ -276,7 +280,7 @@ describe('AutomationExecutor — invalid automations', () => {
 
       const [run] = await getDb().select().from(automationRuns);
       expect(run.status).toBe('skipped');
-      expect(run.error).toMatch(/no connected provider/);
+      expect(run.error).toMatch(/needs a .* provider, and none is active/);
     });
 
     it('will not exclude on play history that has not been loaded, since nothing would be protected', async () => {

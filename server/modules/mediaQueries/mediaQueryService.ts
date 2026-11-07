@@ -305,19 +305,6 @@ export class MediaQueryService {
     };
   }
 
-  /**
-   * Health as seen from a specific automation binding: on top of the usual provider-configured
-   * checks, an entry qualified to a `providerId` other than the automation's own is flagged —
-   * by the `matchItems` gate it matches nothing, so this is misconfiguration made visible
-   * rather than a silent no-op.
-   */
-  async getHealthForAutomation(
-    record: Pick<MediaQueryRecord, 'filters' | 'contentType'>,
-    automationProviderId: number
-  ): Promise<QueryHealth> {
-    return computeHealth(await this.filterReadiness.readFacts(), record, automationProviderId);
-  }
-
   /** Refused while an automation uses the query: the database restricts the delete. */
   async delete(id: number): Promise<void> {
     const [row] = await this.db

@@ -206,6 +206,7 @@ describe('AutomationExecutor', () => {
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
       mediaQueryService,
+      filterReadiness: filterReadinessOver(getDb()),
     });
   });
 
@@ -234,6 +235,7 @@ describe('AutomationExecutor', () => {
         automationRunService: new AutomationRunService({ db }),
         providerSettingsService,
         mediaQueryService,
+        filterReadiness: filterReadinessOver(getDb()),
         systemTaskRunner: { run },
       });
       const id = await seedSystemAutomation('system:identity-resolution');
@@ -255,6 +257,7 @@ describe('AutomationExecutor', () => {
         automationRunService: new AutomationRunService({ db }),
         providerSettingsService,
         mediaQueryService,
+        filterReadiness: filterReadinessOver(getDb()),
         systemTaskRunner: { run },
       });
       const id = await seedSystemAutomation('system:enrichment');
@@ -274,6 +277,7 @@ describe('AutomationExecutor', () => {
         automationRunService,
         providerSettingsService,
         mediaQueryService,
+        filterReadiness: filterReadinessOver(getDb()),
         systemTaskRunner: { run: async () => 5 },
       });
       const id = await seedSystemAutomation('system:identity-resolution');
@@ -299,6 +303,7 @@ describe('AutomationExecutor', () => {
         automationRunService: new AutomationRunService({ db }),
         providerSettingsService,
         mediaQueryService,
+        filterReadiness: filterReadinessOver(getDb()),
         systemTaskRunner: { run },
       });
       const id = await seedSystemAutomation('system:identity-resolution');
@@ -758,6 +763,7 @@ describe('AutomationExecutor', () => {
         automationService,
         providerSettingsService,
         mediaQueryService,
+        filterReadiness: filterReadinessOver(getDb()),
         providerFactory: mockFactory,
         automationRunService: {
           beginRun: async () => ({ id: 1 }),
@@ -796,6 +802,7 @@ describe('AutomationExecutor', () => {
         automationService,
         providerSettingsService,
         mediaQueryService,
+        filterReadiness: filterReadinessOver(getDb()),
         providerFactory: mockFactory,
         automationRunService: {
           beginRun: async () => ({ id: 1 }),
@@ -846,11 +853,6 @@ describe('AutomationExecutor', () => {
           health: { status: 'healthy' as const, providerStatus: [] },
           createdAt: new Date().toISOString(),
         }),
-        getHealthForAutomation: async () => ({
-          status: 'healthy' as const,
-          providerStatus: [],
-          qualificationIssues: [],
-        }),
       };
 
       const mockProviderSettingsService = {
@@ -870,6 +872,7 @@ describe('AutomationExecutor', () => {
       const legacyExecutor = new AutomationExecutor({
         automationService: mockAutomationService as unknown as AutomationService,
         mediaQueryService: mockMediaQueryService as unknown as MediaQueryService,
+        filterReadiness: filterReadinessOver(getDb()),
         providerSettingsService: mockProviderSettingsService as unknown as ProviderSettingsService,
         providerFactory: { create: () => mockRadarr },
         automationRunService: {
@@ -933,11 +936,6 @@ describe('AutomationExecutor', () => {
           health: { status: 'healthy' as const, providerStatus: [] },
           createdAt: new Date().toISOString(),
         }),
-        getHealthForAutomation: async () => ({
-          status: 'healthy' as const,
-          providerStatus: [],
-          qualificationIssues: [],
-        }),
       };
 
       const mockProviderSettingsService = {
@@ -957,6 +955,14 @@ describe('AutomationExecutor', () => {
       const executorWithMocks = new AutomationExecutor({
         automationService: mockAutomationService as unknown as AutomationService,
         mediaQueryService: mockMediaQueryService as unknown as MediaQueryService,
+        // The provider settings are mocked, so readiness judges against the same instance.
+        filterReadiness: {
+          readFacts: async () => ({
+            providers: [{ id: 1, type: MetadataProviderType.RADARR, isActive: true }],
+            latestEnrichment: 'success',
+            fieldsWithValues: { movie: new Set(), series: new Set() },
+          }),
+        },
         providerSettingsService: mockProviderSettingsService as unknown as ProviderSettingsService,
         providerFactory: mockFactory,
         automationRunService: {
@@ -1015,6 +1021,7 @@ describe('AutomationExecutor', () => {
         automationRunService: new AutomationRunService({ db }),
         providerSettingsService,
         mediaQueryService,
+        filterReadiness: filterReadinessOver(getDb()),
         providerFactory: mockFactory,
         db,
       });
@@ -1046,6 +1053,7 @@ describe('AutomationExecutor', () => {
         automationRunService: new AutomationRunService({ db }),
         providerSettingsService,
         mediaQueryService,
+        filterReadiness: filterReadinessOver(getDb()),
         providerFactory: {
           create: () =>
             radarrSource([], {
@@ -1137,6 +1145,7 @@ describe('AutomationExecutor', () => {
         automationRunService: new AutomationRunService({ db }),
         providerSettingsService,
         mediaQueryService,
+        filterReadiness: filterReadinessOver(getDb()),
         providerFactory: mockFactory,
         db,
       });
@@ -1193,6 +1202,7 @@ describe('AutomationExecutor', () => {
         automationRunService: new AutomationRunService({ db }),
         providerSettingsService,
         mediaQueryService,
+        filterReadiness: filterReadinessOver(getDb()),
         providerFactory: mockFactory,
         db,
       });
@@ -1251,6 +1261,7 @@ describe('AutomationExecutor', () => {
         automationService,
         providerSettingsService,
         mediaQueryService,
+        filterReadiness: filterReadinessOver(getDb()),
         providerFactory: mockFactory,
         automationRunService: {
           beginRun: async () => ({ id: 1 }),
@@ -1303,6 +1314,7 @@ describe('AutomationExecutor', () => {
         automationService,
         providerSettingsService,
         mediaQueryService,
+        filterReadiness: filterReadinessOver(getDb()),
         providerFactory: mockFactory,
         automationRunService: {
           beginRun: async () => ({ id: 1 }),
@@ -1325,6 +1337,7 @@ describe('AutomationExecutor', () => {
         automationService,
         providerSettingsService,
         mediaQueryService,
+        filterReadiness: filterReadinessOver(getDb()),
         providerFactory: { create: () => radarrSource(movies) },
         automationRunService: {
           beginRun: async () => ({ id: 1 }),
@@ -1392,6 +1405,7 @@ describe('AutomationExecutor', () => {
         automationService,
         providerSettingsService,
         mediaQueryService,
+        filterReadiness: filterReadinessOver(getDb()),
         providerFactory: { create: () => radarr },
         automationRunService: new AutomationRunService({ db }),
       });
@@ -1447,6 +1461,7 @@ describe('AutomationExecutor', () => {
         automationService,
         providerSettingsService,
         mediaQueryService,
+        filterReadiness: filterReadinessOver(getDb()),
         providerFactory: mockFactory,
         automationRunService: {
           beginRun: async () => ({ id: 1 }),
@@ -1481,6 +1496,7 @@ describe('AutomationExecutor', () => {
         automationRunService: new AutomationRunService({ db }),
         providerSettingsService,
         mediaQueryService,
+        filterReadiness: filterReadinessOver(getDb()),
         systemTaskRunner: { run },
         eventBus: bus,
       });
@@ -1513,6 +1529,7 @@ describe('AutomationExecutor', () => {
         automationRunService: new AutomationRunService({ db }),
         providerSettingsService,
         mediaQueryService,
+        filterReadiness: filterReadinessOver(getDb()),
         systemTaskRunner: { run: vi.fn(async () => 3) },
         eventBus: bus,
       });
@@ -1548,6 +1565,7 @@ describe('AutomationExecutor', () => {
         automationRunService: new AutomationRunService({ db }),
         providerSettingsService,
         mediaQueryService,
+        filterReadiness: filterReadinessOver(getDb()),
         systemTaskRunner: {
           run: vi.fn(async () => {
             throw new Error('runner boom');
@@ -1578,6 +1596,7 @@ describe('AutomationExecutor', () => {
         automationService,
         providerSettingsService,
         mediaQueryService,
+        filterReadiness: filterReadinessOver(getDb()),
         providerFactory: { create: () => provider },
         automationRunService: new AutomationRunService({ db: getDb() }),
         eventBus: bus,
@@ -1696,6 +1715,7 @@ describe('AutomationExecutor', () => {
         automationRunService: new AutomationRunService({ db }),
         providerSettingsService,
         mediaQueryService,
+        filterReadiness: filterReadinessOver(getDb()),
         systemTaskRunner: { run: vi.fn(async () => 4) },
         eventBus: bus,
       });
@@ -1717,6 +1737,7 @@ describe('AutomationExecutor', () => {
         automationRunService: new AutomationRunService({ db }),
         providerSettingsService,
         mediaQueryService,
+        filterReadiness: filterReadinessOver(getDb()),
         systemTaskRunner: { run: vi.fn(async () => 0) },
         eventBus: bus,
       });
@@ -1840,6 +1861,7 @@ describe('non-source actuators — id translation through the identity graph', (
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
       mediaQueryService,
+      filterReadiness: filterReadinessOver(getDb()),
       providerFactory: { create: () => plexInstance },
       mediaSourceFactory: fakeMovieSources(radarrProv.id),
       db,
@@ -1879,6 +1901,7 @@ describe('non-source actuators — id translation through the identity graph', (
       automationRunService,
       providerSettingsService,
       mediaQueryService,
+      filterReadiness: filterReadinessOver(getDb()),
       providerFactory: { create: () => plexInstance },
       mediaSourceFactory: fakeMovieSources(radarrProv.id),
       db,
@@ -1930,6 +1953,7 @@ describe('non-source actuators — id translation through the identity graph', (
       automationRunService,
       providerSettingsService,
       mediaQueryService,
+      filterReadiness: filterReadinessOver(getDb()),
       providerFactory: { create: () => plexInstance },
       mediaSourceFactory: {
         sourcesFor: async () => [
@@ -1972,6 +1996,7 @@ describe('non-source actuators — id translation through the identity graph', (
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
       mediaQueryService,
+      filterReadiness: filterReadinessOver(getDb()),
       providerFactory: { create: () => plexInstance },
       mediaSourceFactory: fakeMovieSources(radarrProv.id),
       db,
@@ -2012,6 +2037,7 @@ describe('non-source actuators — id translation through the identity graph', (
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
       mediaQueryService,
+      filterReadiness: filterReadinessOver(getDb()),
       providerFactory: { create: () => tautulliInstance },
       mediaSourceFactory: fakeMovieSources(radarrProv.id),
       db,
@@ -2056,6 +2082,7 @@ describe('non-source actuators — id translation through the identity graph', (
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
       mediaQueryService,
+      filterReadiness: filterReadinessOver(getDb()),
       providerFactory: { create: () => plexInstance },
       mediaSourceFactory: {
         sourcesFor: async () => [
@@ -2099,6 +2126,7 @@ describe('non-source actuators — id translation through the identity graph', (
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
       mediaQueryService,
+      filterReadiness: filterReadinessOver(getDb()),
       providerFactory: { create: () => tautulliInstance },
       mediaSourceFactory: fakeMovieSources(radarrProv.id),
       db,
@@ -2156,6 +2184,7 @@ describe('task parameters — stored on the automation, threaded into run', () =
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
       mediaQueryService,
+      filterReadiness: filterReadinessOver(getDb()),
       providerFactory: { create: () => radarr },
     });
 
@@ -2188,6 +2217,7 @@ describe('task parameters — stored on the automation, threaded into run', () =
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
       mediaQueryService,
+      filterReadiness: filterReadinessOver(getDb()),
       providerFactory: { create: () => radarr },
     });
 

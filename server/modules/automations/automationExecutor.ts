@@ -1,5 +1,5 @@
 import type { AutomationPreview } from '@contract/automations';
-import type { AutomationRunStatus, ContentType } from '@contract/schemas';
+import type { AutomationRunStatus } from '@contract/schemas';
 import type { MetadataProvider } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
 import { ValidationError } from '../../kernel/errors';
@@ -8,12 +8,13 @@ import { getChildLogger } from '../../kernel/logger';
 import {
   EnrichmentQueries,
   MediaQueryEngine,
-  getRule,
+  automationAnswer,
+  findingsFor,
   mediaSourceFor,
   resolveActuatorTargets,
 } from '../media';
-import type { EnrichmentFields, MediaSource, MediaSourceFactory } from '../media';
-import type { MediaQueryRecord, MediaQueryService, QueryHealth } from '../mediaQueries';
+import type { FilterReadiness, MediaSource, MediaSourceFactory } from '../media';
+import type { MediaQueryRecord, MediaQueryService } from '../mediaQueries';
 import {
   type ActuatorTask,
   type IProviderFactory,
@@ -39,6 +40,7 @@ interface ExecutorDeps {
   automationRunService: AutomationRunService;
   providerSettingsService: ProviderSettingsService;
   mediaQueryService: MediaQueryService;
+  filterReadiness: Pick<FilterReadiness, 'readFacts'>;
   providerFactory?: IProviderFactory;
   mediaQueryEngine?: MediaQueryEngine;
   enrichmentQueries?: EnrichmentQueries;
@@ -64,8 +66,6 @@ interface RunPlan {
   poolSize: number;
   matchedCount: number;
 }
-
-const ENRICHMENT_TASK_ID = 'system:enrichment';
 
 /** Below this many targets a destructive run is small enough to be its own limit. */
 const REACH_CHECK_MIN_ITEMS = 20;
@@ -108,27 +108,6 @@ function instanceName(type: string | undefined, providerId: number): string {
   return `${type ? providerTypeName(type) : 'Provider'} instance ${providerId}`;
 }
 
-/** A filter's rule label, or its raw key when no rule is registered for it. */
-function filterLabel(filterKey: string, contentType: ContentType): string {
-  return getRule(filterKey, contentType)?.label ?? filterKey;
-}
-
-type ProviderStatus = QueryHealth['providerStatus'][number];
-type QualificationIssue = QueryHealth['qualificationIssues'][number];
-
-/** One line saying why a filter's instance qualification keeps the automation from running. */
-function describeQualificationIssue(
-  { filterKey, providerId, reason }: QualificationIssue,
-  contentType: ContentType,
-  automationProvider: MetadataProvider
-): string {
-  const rule = getRule(filterKey, contentType);
-  const filter = `${filterLabel(filterKey, contentType)} filter names ${instanceName(rule?.providers[0], providerId)}`;
-  return reason === 'not_active'
-    ? `${filter}, which is not an active provider`
-    : `${filter}, which is not this automation's provider (${instanceName(automationProvider.type, automationProvider.id)})`;
-}
-
 // ─── Executor ─────────────────────────────────────────────────────────────────
 
 export class AutomationExecutor {
@@ -138,7 +117,7 @@ export class AutomationExecutor {
   private readonly mediaQueryService: MediaQueryService;
   private readonly providerFactory: IProviderFactory;
   private readonly mediaQueryEngine: MediaQueryEngine;
-  private readonly enrichmentQueries?: EnrichmentQueries;
+  private readonly filterReadiness: Pick<FilterReadiness, 'readFacts'>;
   private readonly mediaSourceFactory?: Pick<MediaSourceFactory, 'sourcesFor'>;
   private readonly db?: DrizzleDb;
   private readonly systemTaskRunner?: SystemTaskRunnerLike;
@@ -160,7 +139,7 @@ export class AutomationExecutor {
         db: deps.db,
         enrichmentQueries: enrichmentQueries,
       });
-    this.enrichmentQueries = enrichmentQueries;
+    this.filterReadiness = deps.filterReadiness;
     this.mediaSourceFactory = deps.mediaSourceFactory;
     this.db = deps.db;
     this.systemTaskRunner = deps.systemTaskRunner;
@@ -314,60 +293,23 @@ export class AutomationExecutor {
     automationProvider: MetadataProvider,
     automationQueries: LoadedQuery[]
   ): Promise<string[]> {
-    const automationProviderId = automationProvider.id;
     const problems: string[] = [];
     if (!automationProvider.isActive) {
       problems.push(
-        `${instanceName(automationProvider.type, automationProviderId)}, this automation's provider, is not an active provider`
+        `${instanceName(automationProvider.type, automationProvider.id)}, this automation's provider, is not an active provider`
       );
     }
-    for (const { record } of automationQueries) {
-      const { contentType } = record;
-      const health = await this.mediaQueryService.getHealthForAutomation(
-        record,
-        automationProviderId
-      );
-      for (const issue of health.qualificationIssues) {
-        problems.push(describeQualificationIssue(issue, contentType, automationProvider));
-      }
-      problems.push(...(await this.missingEnrichment(record, health.providerStatus)));
-    }
+    const facts = await this.filterReadiness.readFacts();
+    const findings = automationQueries.flatMap(({ queryId, record }) =>
+      findingsFor(
+        facts,
+        { queryId, contentType: record.contentType, filters: record.filters },
+        { id: automationProvider.id, type: automationProvider.type }
+      )
+    );
+    const { blocks } = automationAnswer(findings, new Set());
+    problems.push(...[...blocks.needsFix, ...blocks.awaitingSignOff].map((f) => f.message));
     return problems;
-  }
-
-  /**
-   * A title with no stored value is unknown and matches neither value of a filter on it. Until
-   * enrichment data is known to be complete, such a filter can select the wrong titles: an include
-   * misses titles it should act on, and an exclude fails to protect titles it should. Fields a source
-   * supplies itself arrive with the catalog, so only enrichment-only rules are checked.
-   */
-  private async missingEnrichment(
-    { filters, contentType }: MediaQueryRecord,
-    providerStatus: ProviderStatus[]
-  ): Promise<string[]> {
-    if (!this.enrichmentQueries) return [];
-    const problems: string[] = [];
-    for (const { ruleKey } of filters) {
-      const rule = getRule(ruleKey, contentType);
-      if (!rule?.sourceField || rule.providers.some(isMediaSourceType)) continue;
-      const producers = providerStatus.filter((s) => s.affectedFilterKeys.includes(ruleKey));
-      if (!producers.some((s) => s.configured)) {
-        problems.push(`${rule.label} filter has no connected provider to supply its data`);
-      } else if (!(await this.enrichmentIsComplete(rule.sourceField, contentType))) {
-        problems.push(`${rule.label} filter's data has not finished loading`);
-      }
-    }
-    return problems;
-  }
-
-  /** The latest enrichment run finished cleanly, and this content type has values for the field. */
-  private async enrichmentIsComplete(
-    field: keyof EnrichmentFields,
-    contentType: ContentType
-  ): Promise<boolean> {
-    const latest = await this.automationRunService.latestStatusOfTask(ENRICHMENT_TASK_ID);
-    if (latest !== 'success') return false;
-    return (await this.enrichmentQueries?.hasValues(field, contentType)) ?? false;
   }
 
   /**
