@@ -93,6 +93,14 @@ describe('POST /api/automations/:id/run — Phase 3', () => {
     execute.mockRestore();
   });
 
+  it('answers 409 to a sign-off for a finding that is not awaiting one', async () => {
+    const res = await client
+      .post(`/api/automations/${systemAutomationId}/sign-offs`)
+      .send({ findingId: 'no-data:1:seerrRequestStatus:4' });
+
+    expect(res.status).toBe(409);
+  });
+
   it('returns 404 for an unknown automation id', async () => {
     const res = await client.post('/api/automations/999999/run');
 

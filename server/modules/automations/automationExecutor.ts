@@ -1,4 +1,5 @@
-import type { AutomationPreview } from '@contract/automations';
+import type { AutomationPreview, AutomationReadiness } from '@contract/automations';
+import type { ReadinessFinding } from '@contract/readiness';
 import type { AutomationRunStatus } from '@contract/schemas';
 import type { MetadataProvider } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
@@ -323,14 +324,35 @@ export class AutomationExecutor {
 
   /**
    * Why a user automation cannot run on this trigger, one line per problem; empty when it can.
-   * Keeps the automation's stored blocks in step with the findings on the way.
    */
   private async blockingProblems(
     automationId: number,
     automationProvider: MetadataProvider,
     automationQueries: LoadedQuery[],
-    run: RunTrigger
+    started: RunTrigger
   ): Promise<string[]> {
+    const { findings, signedOff, problems } = await this.judge(
+      automationId,
+      automationProvider,
+      automationQueries
+    );
+    const consented = new Set(started.trigger === 'runNow' ? started.consentedFindings : []);
+    const answer = automationAnswer(findings, signedOff, consented);
+    const verdict = started.trigger === 'schedule' ? answer.schedule : answer.runNow;
+    if (problems.length === 0 && verdict === 'runs') return [];
+    const awaiting = answer.blocks.awaitingSignOff.filter((f) => !consented.has(f.id));
+    return [...problems, ...[...answer.blocks.needsFix, ...awaiting].map((f) => f.message)];
+  }
+
+  /**
+   * The automation's own problems, its filter findings and which are signed off. Keeps its stored
+   * blocks in step with the findings on the way.
+   */
+  private async judge(
+    automationId: number,
+    automationProvider: MetadataProvider,
+    automationQueries: LoadedQuery[]
+  ): Promise<{ findings: ReadinessFinding[]; signedOff: Set<string>; problems: string[] }> {
     const problems: string[] = [];
     if (!automationProvider.isActive) {
       problems.push(
@@ -348,14 +370,41 @@ export class AutomationExecutor {
     // Before any sign-off is known, every finding a user could accept awaits sign-off.
     const signOffable = automationAnswer(findings, new Set()).blocks.awaitingSignOff;
     const signedOff = await this.automationBlockService.reconcile(automationId, signOffable);
-    const consented = new Set(run.trigger === 'runNow' ? run.consentedFindings : []);
-    const answer = automationAnswer(findings, signedOff, consented);
-    const proceeds = run.trigger === 'schedule' ? answer.schedule : answer.runNow;
-    if (proceeds !== 'runs') {
-      const awaiting = answer.blocks.awaitingSignOff.filter((f) => !consented.has(f.id));
-      problems.push(...[...answer.blocks.needsFix, ...awaiting].map((f) => f.message));
+    return { findings, signedOff, problems };
+  }
+
+  /**
+   * What a Run Now of this automation would do, and why, before anything runs. The findings are
+   * answered even when counting the targets fails, so a broken source cannot hide them.
+   */
+  async readiness(automationId: number): Promise<AutomationReadiness> {
+    const automation = await this.automationService.getById(automationId);
+    if (!automation.provider) {
+      throw new Error(`Automation ${automationId} has no provider`);
     }
-    return problems;
+    const providerSettings = await this.providerSettingsService.findById(automation.provider.id);
+    const queries = await this.loadQueries(automation.queries ?? []);
+    const { findings, signedOff, problems } = await this.judge(
+      automationId,
+      providerSettings,
+      queries
+    );
+    const answer = automationAnswer(findings, signedOff);
+    const counted = await this.planRun(automation.taskId, providerSettings, queries).then(
+      (plan) => ({ count: plan.actuatorIds.length }),
+      (err: unknown) => ({
+        count: null,
+        countError: err instanceof Error ? err.message : 'Unknown error',
+      })
+    );
+    return {
+      schedule: problems.length > 0 ? 'blocked' : answer.schedule,
+      runNow: problems.length > 0 ? 'stops' : answer.runNow,
+      blocks: answer.blocks,
+      problems,
+      contentType: queries[0]?.record.contentType ?? 'movie',
+      ...counted,
+    };
   }
 
   /**

@@ -67,6 +67,15 @@ export const automationsHandlers = [
   mockProcedure(contract.automations.delete, () => null),
 
   mockProcedure(contract.automations.run, () => null),
+  mockProcedure(contract.automations.readiness, () => ({
+    schedule: 'runs' as const,
+    runNow: 'runs' as const,
+    blocks: { needsFix: [], awaitingSignOff: [], signedOff: [] },
+    problems: [],
+    count: 3,
+    contentType: 'movie' as const,
+  })),
+  mockProcedure(contract.automations.signOff, () => null),
 ];
 
 const MOCK_HEALTH = {

@@ -48,14 +48,19 @@ export function useAutomations(options?: { kind?: 'user' | 'system' }) {
     await mutate();
   };
 
-  const run = async (id: number): Promise<void> => {
-    await api.automations.run({ id });
+  const run = async (id: number, consentedFindings?: string[]): Promise<void> => {
+    await api.automations.run({ id, consentedFindings });
     for (const delay of POLL_DELAYS_MS) {
       setTimeout(() => {
         void mutate();
         void globalMutate(apiKey(api.automations.runs, latestRunInput(id)));
       }, delay);
     }
+  };
+
+  /** Accepts a finding awaiting sign-off as known risk for automation `id`. */
+  const signOff = async (id: number, findingId: string): Promise<void> => {
+    await api.automations.signOff({ id, findingId });
   };
 
   return {
@@ -68,5 +73,6 @@ export function useAutomations(options?: { kind?: 'user' | 'system' }) {
     setStatus,
     remove,
     run,
+    signOff,
   };
 }

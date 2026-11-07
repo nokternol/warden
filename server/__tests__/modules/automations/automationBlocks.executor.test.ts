@@ -193,4 +193,31 @@ describe('an automation whose filter has no data', () => {
     expect((await userRuns()).map((r) => r.status)).toEqual(['skipped']);
     expect(unmonitorCalls).toBe(0);
   });
+
+  it('answers what Run Now would do, the findings awaiting sign-off, and the count', async () => {
+    const readiness = await executor.readiness(automationId);
+
+    expect(readiness).toMatchObject({
+      schedule: 'blocked',
+      runNow: 'asks',
+      problems: [],
+      count: 1,
+      contentType: 'movie',
+    });
+    expect(readiness.blocks.awaitingSignOff).toMatchObject([
+      { kind: 'no-data', ruleKey: 'seerrRequestStatus' },
+    ]);
+  });
+
+  it('still answers the findings when the count fails', async () => {
+    server.use(
+      http.get(`${RADARR_URL}/api/v3/movie`, () => new HttpResponse(null, { status: 500 }))
+    );
+
+    const readiness = await executor.readiness(automationId);
+
+    expect(readiness.runNow).toBe('asks');
+    expect(readiness.count).toBeNull();
+    expect(readiness.countError).toEqual(expect.any(String));
+  });
 });

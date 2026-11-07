@@ -49,6 +49,7 @@ export default function AutomationsPage() {
     setStatus,
     remove: removeAutomation,
     run,
+    signOff,
   } = useAutomations({ kind: 'user' });
   const { providers } = useProviderSettings();
   const { sources } = useMediaSources();
@@ -171,7 +172,8 @@ export default function AutomationsPage() {
                         setStatus(a.id, a.status === 'active' ? 'disabled' : 'active')
                       }
                       onDelete={() => removeAutomation(a.id)}
-                      onRun={() => run(a.id)}
+                      onRun={(consented) => run(a.id, consented)}
+                      onSignOff={(findingId) => signOff(a.id, findingId)}
                     />
                   ))}
                 </RowTable>
