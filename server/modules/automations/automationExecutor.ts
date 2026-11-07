@@ -13,7 +13,7 @@ import {
   resolveActuatorTargets,
 } from '../media';
 import type { EnrichmentFields, MediaSource, MediaSourceFactory } from '../media';
-import type { MediaQueryService, QueryHealth } from '../mediaQueries';
+import type { MediaQueryRecord, MediaQueryService, QueryHealth } from '../mediaQueries';
 import {
   type ActuatorTask,
   type IProviderFactory,
@@ -51,6 +51,9 @@ interface ExecutorDeps {
 
 /** One query an automation targets with, by id and role. */
 type TargetingQuery = Pick<AutomationQueryDto, 'queryId' | 'role'>;
+
+/** A targeting query with its saved record, loaded once for everything a run decides. */
+type LoadedQuery = TargetingQuery & { record: MediaQueryRecord };
 
 /** What a user run acts on: the task, its target items, and their actuator ids. */
 interface RunPlan {
@@ -112,14 +115,6 @@ function filterLabel(filterKey: string, contentType: ContentType): string {
 
 type ProviderStatus = QueryHealth['providerStatus'][number];
 type QualificationIssue = QueryHealth['qualificationIssues'][number];
-
-/** One line saying which rule needs a provider type that is not configured. */
-function describeMissingProvider(
-  { providerType, affectedFilterKeys }: ProviderStatus,
-  contentType: ContentType
-): string {
-  return `${filterLabel(affectedFilterKeys[0], contentType)} filter needs a ${providerTypeName(providerType)} provider, which is not configured`;
-}
 
 /** One line saying why a filter's instance qualification keeps the automation from running. */
 function describeQualificationIssue(
@@ -229,12 +224,13 @@ export class AutomationExecutor {
         const providerSettings = await this.providerSettingsService.findById(
           automation.provider!.id
         );
-        const problems = await this.blockingProblems(providerSettings, current.queries ?? []);
+        const queries = await this.loadQueries(current.queries ?? []);
+        const problems = await this.blockingProblems(providerSettings, queries);
         if (problems.length > 0) {
           await this.recordSkip(automationId, taskId, problems.join('; '));
           return;
         }
-        const plan = await this.planRun(current.taskId, providerSettings, current.queries ?? []);
+        const plan = await this.planRun(current.taskId, providerSettings, queries);
         targets = plan.targets;
         itemCount = targets.items.length;
         const excess = excessiveReach(plan);
@@ -304,10 +300,19 @@ export class AutomationExecutor {
     });
   }
 
+  private loadQueries(automationQueries: TargetingQuery[]): Promise<LoadedQuery[]> {
+    return Promise.all(
+      automationQueries.map(async (query) => ({
+        ...query,
+        record: await this.mediaQueryService.getById(query.queryId),
+      }))
+    );
+  }
+
   /** Why a user automation cannot run, one line per problem; empty when it can. */
   private async blockingProblems(
     automationProvider: MetadataProvider,
-    automationQueries: TargetingQuery[]
+    automationQueries: LoadedQuery[]
   ): Promise<string[]> {
     const automationProviderId = automationProvider.id;
     const problems: string[] = [];
@@ -316,21 +321,16 @@ export class AutomationExecutor {
         `${instanceName(automationProvider.type, automationProviderId)}, this automation's provider, is not an active provider`
       );
     }
-    for (const { queryId } of automationQueries) {
-      const { contentType } = await this.mediaQueryService.getById(queryId);
+    for (const { record } of automationQueries) {
+      const { contentType } = record;
       const health = await this.mediaQueryService.getHealthForAutomation(
-        queryId,
+        record,
         automationProviderId
       );
-      for (const status of health.providerStatus) {
-        if (status.required && !status.configured) {
-          problems.push(describeMissingProvider(status, contentType));
-        }
-      }
       for (const issue of health.qualificationIssues) {
         problems.push(describeQualificationIssue(issue, contentType, automationProvider));
       }
-      problems.push(...(await this.missingEnrichment(queryId, contentType, health.providerStatus)));
+      problems.push(...(await this.missingEnrichment(record, health.providerStatus)));
     }
     return problems;
   }
@@ -342,19 +342,15 @@ export class AutomationExecutor {
    * supplies itself arrive with the catalog, so only enrichment-only rules are checked.
    */
   private async missingEnrichment(
-    queryId: number,
-    contentType: ContentType,
+    { filters, contentType }: MediaQueryRecord,
     providerStatus: ProviderStatus[]
   ): Promise<string[]> {
     if (!this.enrichmentQueries) return [];
-    const { filters } = await this.mediaQueryService.getById(queryId);
     const problems: string[] = [];
     for (const { ruleKey } of filters) {
       const rule = getRule(ruleKey, contentType);
       if (!rule?.sourceField || rule.providers.some(isMediaSourceType)) continue;
       const producers = providerStatus.filter((s) => s.affectedFilterKeys.includes(ruleKey));
-      // A required provider's absence is already reported by the health check.
-      if (producers.some((s) => s.required && !s.configured)) continue;
       if (!producers.some((s) => s.configured)) {
         problems.push(`${rule.label} filter has no connected provider to supply its data`);
       } else if (!(await this.enrichmentIsComplete(rule.sourceField, contentType))) {
@@ -384,7 +380,11 @@ export class AutomationExecutor {
     queries: TargetingQuery[];
   }): Promise<AutomationPreview> {
     const providerSettings = await this.providerSettingsService.findById(draft.providerId);
-    const plan = await this.planRun(draft.taskId, providerSettings, draft.queries);
+    const plan = await this.planRun(
+      draft.taskId,
+      providerSettings,
+      await this.loadQueries(draft.queries)
+    );
     return { count: plan.actuatorIds.length, contentType: plan.targets.contentType };
   }
 
@@ -396,17 +396,12 @@ export class AutomationExecutor {
   private async planRun(
     taskId: string,
     providerSettings: MetadataProvider,
-    automationQueries: TargetingQuery[]
+    automationQueries: LoadedQuery[]
   ): Promise<RunPlan> {
-    const queryDtos = await Promise.all(
-      automationQueries.map((automationQuery) =>
-        this.mediaQueryService.getById(automationQuery.queryId)
-      )
-    );
-    const contentType = queryDtos[0].contentType;
-    const querySpecs = automationQueries.map((automationQuery, i) => ({
-      filters: queryDtos[i].filters,
-      role: automationQuery.role,
+    const contentType = automationQueries[0].record.contentType;
+    const querySpecs = automationQueries.map(({ record, role }) => ({
+      filters: record.filters,
+      role,
     }));
 
     const provider = this.providerFactory.create(providerSettings, log);

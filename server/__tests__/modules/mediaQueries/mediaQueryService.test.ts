@@ -196,7 +196,7 @@ describe('MediaQueryService', () => {
       filters: [{ ruleKey: 'qualityProfileIds', value: { providerId: providerA.id, ids: [5] } }],
     });
 
-    const health = await service.getHealthForAutomation(query.id, providerB.id);
+    const health = await service.getHealthForAutomation(query, providerB.id);
 
     expect(health.status).toBe('degraded');
     expect(health.qualificationIssues).toEqual([
@@ -220,7 +220,7 @@ describe('MediaQueryService', () => {
       filters: [{ ruleKey: 'qualityProfileIds', value: { providerId: provider.id, ids: [5] } }],
     });
 
-    const health = await service.getHealthForAutomation(query.id, provider.id);
+    const health = await service.getHealthForAutomation(query, provider.id);
 
     expect(health.qualificationIssues).toEqual([]);
   });

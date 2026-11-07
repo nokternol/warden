@@ -75,7 +75,6 @@ export type Filter = z.infer<typeof FilterSchema>;
 export const ProviderStatusSchema = z
   .object({
     providerType: z.string(),
-    required: z.boolean(),
     configured: z.boolean(),
     affectedFilterKeys: z.array(z.string()),
   })
@@ -91,7 +90,7 @@ export const QualificationIssueSchema = z
 
 export const QueryHealthSchema = z
   .object({
-    status: z.enum(['healthy', 'degraded', 'unavailable']),
+    status: z.enum(['healthy', 'degraded']),
     providerStatus: z.array(ProviderStatusSchema),
     qualificationIssues: z.array(QualificationIssueSchema),
   })

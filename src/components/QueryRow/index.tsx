@@ -12,7 +12,6 @@ import { useState } from 'react';
 
 const HEALTH_BADGE = {
   degraded: { variant: 'warning', label: 'Degraded' },
-  unavailable: { variant: 'error', label: 'Unavailable' },
 } as const;
 
 const ISSUE_REASONS = {

@@ -21,7 +21,6 @@ export interface MediaQueryValue {
 
 export interface ProviderStatus {
   providerType: MetadataProviderType;
-  required: boolean;
   configured: boolean;
   affectedFilterKeys: string[];
 }
@@ -34,7 +33,7 @@ export interface QualificationIssue {
 }
 
 export interface QueryHealth {
-  status: 'healthy' | 'degraded' | 'unavailable';
+  status: 'healthy' | 'degraded';
   providerStatus: ProviderStatus[];
   qualificationIssues: QualificationIssue[];
 }
@@ -95,48 +94,34 @@ function computeHealth(
   }
 
   // Collect per-providerType requirements across all filter keys
-  const providerMap = new Map<MetadataProviderType, { required: boolean; keys: string[] }>();
+  const providerMap = new Map<MetadataProviderType, string[]>();
 
   for (const { ruleKey } of filters) {
     const rule = getRule(ruleKey, contentType);
     if (!rule) continue;
     // A provider type that cannot be configured cannot be missing.
     for (const pt of rule.providers.filter((type) => isOfferedProviderType(scope, type))) {
-      const existing = providerMap.get(pt);
-      if (existing) {
-        existing.keys.push(ruleKey);
-        if (rule.required) existing.required = true;
-      } else {
-        providerMap.set(pt, { required: rule.required, keys: [ruleKey] });
-      }
+      providerMap.set(pt, [...(providerMap.get(pt) ?? []), ruleKey]);
     }
   }
 
   const providerStatus: ProviderStatus[] = [];
-  for (const [providerType, { required, keys }] of providerMap) {
+  for (const [providerType, keys] of providerMap) {
     const configured = activeProviderTypes.has(providerType);
-    providerStatus.push({ providerType, required, configured, affectedFilterKeys: keys });
+    providerStatus.push({ providerType, configured, affectedFilterKeys: keys });
   }
 
   // A filter is supplied when any one of the providers that can supply it is connected, so a
   // year filter on movies is satisfied by Radarr without Sonarr or Plex. Only a filter with no
-  // connected provider at all degrades the query, or makes it unavailable when the rule is required.
+  // connected provider at all degrades the query.
   const supplied = new Set(
     providerStatus.filter((s) => s.configured).flatMap((s) => s.affectedFilterKeys)
   );
-  let hasUnavailable = false;
-  let hasDegraded = false;
-  for (const { ruleKey } of filters) {
-    const rule = getRule(ruleKey, contentType);
-    if (!rule || supplied.has(ruleKey)) continue;
-    if (!providerStatus.some((s) => s.affectedFilterKeys.includes(ruleKey))) continue;
-    if (rule.required) hasUnavailable = true;
-    else hasDegraded = true;
-  }
-
-  if (qualificationIssues.length > 0) hasDegraded = true;
-
-  const status = hasUnavailable ? 'unavailable' : hasDegraded ? 'degraded' : 'healthy';
+  const unsupplied = filters.some(
+    ({ ruleKey }) =>
+      !supplied.has(ruleKey) && providerStatus.some((s) => s.affectedFilterKeys.includes(ruleKey))
+  );
+  const status = unsupplied || qualificationIssues.length > 0 ? 'degraded' : 'healthy';
   return { status, providerStatus, qualificationIssues };
 }
 
@@ -321,10 +306,9 @@ export class MediaQueryService {
    * rather than a silent no-op.
    */
   async getHealthForAutomation(
-    queryId: number,
+    record: Pick<MediaQueryRecord, 'filters' | 'contentType'>,
     automationProviderId: number
   ): Promise<QueryHealth> {
-    const record = await this.getById(queryId);
     const { types: activeProviderTypes, ids: activeProviderIds } = await this.activeProviders();
     return computeHealth(
       record.filters,

@@ -35,7 +35,6 @@ export const Degraded: Story = () => (
           providerStatus: [
             {
               providerType: 'TAUTULLI',
-              required: false,
               configured: false,
               affectedFilterKeys: ['watched'],
             },

@@ -11,9 +11,7 @@ const query: MediaQueryRecord = {
   filters: [],
   health: {
     status: 'degraded',
-    providerStatus: [
-      { providerType: 'TAUTULLI', required: false, configured: false, affectedFilterKeys: ['w'] },
-    ],
+    providerStatus: [{ providerType: 'TAUTULLI', configured: false, affectedFilterKeys: ['w'] }],
     qualificationIssues: [],
   },
   createdAt: '2024-01-01T00:00:00Z',
@@ -34,19 +32,16 @@ describe('QueryRow', () => {
         providerStatus: [
           {
             providerType: 'RADARR',
-            required: false,
             configured: true,
             affectedFilterKeys: ['year'],
           },
           {
             providerType: 'SONARR',
-            required: false,
             configured: false,
             affectedFilterKeys: ['year'],
           },
           {
             providerType: 'PLEX',
-            required: false,
             configured: false,
             affectedFilterKeys: ['watched'],
           },

@@ -77,7 +77,6 @@ describe('MEDIA_RULES', () => {
         rule.dataType
       );
       expect(rule.providers.length).toBeGreaterThan(0);
-      expect(typeof rule.required).toBe('boolean');
       expect(typeof rule.predicate).toBe('function');
     }
   });

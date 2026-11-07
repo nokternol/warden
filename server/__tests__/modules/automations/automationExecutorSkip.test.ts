@@ -178,31 +178,6 @@ describe('AutomationExecutor — invalid automations', () => {
     expect(unmonitorCalls).toBe(0);
   });
 
-  // No rule is `required` yet, so no real filter can make a query unavailable.
-  it('skips an automation whose query needs a provider type that is not configured', async () => {
-    const own = await seedRadarr('Own Radarr');
-    const automation = await seedAutomationOver(own.id, [{ ruleKey: 'watched', value: true }]);
-    vi.spyOn(mediaQueryService, 'getHealthForAutomation').mockResolvedValue({
-      status: 'unavailable',
-      providerStatus: [
-        {
-          providerType: MetadataProviderType.TAUTULLI,
-          required: true,
-          configured: false,
-          affectedFilterKeys: ['watched'],
-        },
-      ],
-      qualificationIssues: [],
-    });
-
-    await executor.execute(automation.id);
-
-    const [run] = await getDb().select().from(automationRuns);
-    expect(run.status).toBe('skipped');
-    expect(run.error).toBe('Watched filter needs a Tautulli provider, which is not configured');
-    expect(unmonitorCalls).toBe(0);
-  });
-
   it('runs again once the problem is fixed, since validity is derived on each run', async () => {
     const own = await seedRadarr('Own Radarr');
     const automation = await seedAutomationOver(own.id, []);
@@ -260,28 +235,6 @@ describe('AutomationExecutor — invalid automations', () => {
     expect(run.error).toBe(
       'retiredRule filter names Provider instance 99, which is not an active provider'
     );
-  });
-
-  it('names the raw filter key when a missing provider affects an unregistered rule', async () => {
-    const own = await seedRadarr('Own Radarr');
-    const automation = await seedAutomationOver(own.id, []);
-    vi.spyOn(mediaQueryService, 'getHealthForAutomation').mockResolvedValue({
-      status: 'unavailable',
-      providerStatus: [
-        {
-          providerType: MetadataProviderType.TAUTULLI,
-          required: true,
-          configured: false,
-          affectedFilterKeys: ['retiredRule'],
-        },
-      ],
-      qualificationIssues: [],
-    });
-
-    await executor.execute(automation.id);
-
-    const [run] = await getDb().select().from(automationRuns);
-    expect(run.error).toBe('retiredRule filter needs a Tautulli provider, which is not configured');
   });
 
   describe('hardening', () => {
@@ -489,6 +442,35 @@ describe('AutomationExecutor — invalid automations', () => {
       expect(excessiveReach({ task, matchedCount: 80, poolSize: 80 })).toMatch(/80 of 80/);
       expect(excessiveReach({ task, matchedCount: 40, poolSize: 80 })).toBeUndefined();
       expect(excessiveReach({ task, matchedCount: 10, poolSize: 10 })).toBeUndefined();
+    });
+
+    it('loads each query it targets once per run', async () => {
+      const radarr = await seedRadarr('Radarr');
+      const include = await mediaQueryService.create({
+        name: 'All',
+        contentType: 'movie',
+        filters: [],
+      });
+      const exclude = await mediaQueryService.create({
+        name: 'Tagged',
+        contentType: 'movie',
+        filters: [tagsOf(radarr.id)],
+      });
+      const automation = await automationService.create({
+        name: 'Nightly',
+        queries: [
+          { queryId: include.id, role: 'include' },
+          { queryId: exclude.id, role: 'exclude' },
+        ],
+        providerId: radarr.id,
+        taskId: 'unmonitorMovie',
+        schedule: '0 2 * * *',
+      });
+      const getById = vi.spyOn(mediaQueryService, 'getById');
+
+      await executor.execute(automation.id);
+
+      expect(getById.mock.calls.map(([id]) => id).sort()).toEqual([include.id, exclude.id].sort());
     });
 
     it('reports an automation as running only while it is', async () => {
