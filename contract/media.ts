@@ -57,7 +57,10 @@ const BrowseCopiesSchema = {
 
 /**
  * One movie as Radarr describes it. The fields the client reads are declared;
- * the rest of Radarr's record passes through unchanged.
+ * the rest of Radarr's record passes through unchanged. `ratings` is
+ * deliberately undeclared: `ratingsOf` (contract/ratings.ts) reads it
+ * defensively, and leaving it out of the schema means output validation never
+ * rejects or strips a record over a rating shape Radarr changes.
  */
 export const ManagedMovieSchema = z.looseObject({
   id: z.number(),
@@ -72,7 +75,8 @@ export const ManagedMovieSchema = z.looseObject({
 
 /**
  * One series as Sonarr describes it. The fields the client reads are declared;
- * the rest of Sonarr's record passes through unchanged.
+ * the rest of Sonarr's record passes through unchanged, `ratings` deliberately
+ * so, as for a movie.
  */
 export const ManagedSeriesSchema = z.looseObject({
   id: z.number(),
