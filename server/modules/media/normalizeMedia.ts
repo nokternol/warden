@@ -3,6 +3,11 @@ import { radarrTagsFieldSource, sonarrTagsFieldSource } from './mediaFieldProvid
 import type { NormalizedMovie } from './movie';
 import type { NormalizedSeries } from './series';
 
+/** A rating's value, or undefined when unrated: zero value with no votes. */
+function ratedValue(rating: { value: number; votes?: number } | undefined): number | undefined {
+  return rating?.value === 0 && !rating.votes ? undefined : rating?.value;
+}
+
 /**
  * Translate provider DTOs into the canonical Normalized* domain shapes the
  * ruleRegistry operates on. Shared by the automation executor and the media
@@ -22,7 +27,7 @@ export function normalizeRadarrMovie(m: RadarrMovie, providerId: number): Normal
     addedDate: m.added,
     sizeOnDiskBytes: m.statistics?.sizeOnDisk,
     certification: m.certification,
-    imdbRating: m.ratings?.imdb?.value,
+    imdbRating: ratedValue(m.ratings?.imdb),
     folderName: m.folderName,
     path: m.path,
     movieFileCount: m.statistics?.movieFileCount,
