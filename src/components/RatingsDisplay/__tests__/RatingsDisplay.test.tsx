@@ -23,4 +23,11 @@ describe('RatingsDisplay', () => {
     expect(items[1]).toHaveTextContent('88/100');
     expect(items[1]).not.toHaveTextContent('votes');
   });
+
+  it('says "No ratings" when the title has none', () => {
+    render(<RatingsDisplay ratings={[]} />);
+
+    expect(screen.getByText('No ratings')).toBeInTheDocument();
+    expect(screen.queryByRole('listitem')).toBeNull();
+  });
 });

@@ -36,3 +36,10 @@ export const WithoutVotes: Story = () => (
     <RatingsDisplay ratings={[{ source: 'imdb', label: 'IMDb', value: 6.2, scale: 10 }]} />
   </div>
 );
+
+/** A title its record reports no rating for. */
+export const NoRatings: Story = () => (
+  <div style={frame}>
+    <RatingsDisplay ratings={[]} />
+  </div>
+);

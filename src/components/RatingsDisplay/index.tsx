@@ -25,14 +25,17 @@ interface RatingsDisplayProps {
   ratings: TitleRating[];
 }
 
-/** A title's ratings, one row per source, each value on its own source's scale. */
-const Root = ({ ratings }: RatingsDisplayProps) => (
-  <ul className={styles.sources}>
-    {ratings.map((rating) => (
-      <Source key={rating.source} rating={rating} />
-    ))}
-  </ul>
-);
+/** A title's ratings, one row per source, each value on its own source's scale; "No ratings" when it has none. */
+const Root = ({ ratings }: RatingsDisplayProps) =>
+  ratings.length === 0 ? (
+    <p className={styles.empty}>No ratings</p>
+  ) : (
+    <ul className={styles.sources}>
+      {ratings.map((rating) => (
+        <Source key={rating.source} rating={rating} />
+      ))}
+    </ul>
+  );
 
 export const RatingsDisplay = Object.assign(Root, { Source });
 
