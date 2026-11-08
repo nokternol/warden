@@ -55,7 +55,7 @@ describe('EnrichmentJobFactory', () => {
     });
     const [identity] = await db
       .insert(mediaIdentity)
-      .values({ kind: 'movie', tmdbId: 603, plexRatingKey: '1', resolvedAt: 0 })
+      .values({ contentType: 'movie', tmdbId: 603, plexRatingKey: '1', resolvedAt: 0 })
       .returning();
     server.use(
       http.get(`${TAUTULLI_URL}/api/v2`, () =>
@@ -88,7 +88,7 @@ describe('EnrichmentJobFactory', () => {
     });
     const [identity] = await db
       .insert(mediaIdentity)
-      .values({ kind: 'movie', tmdbId: 603, jellyfinItemId: 'jf-1', resolvedAt: 0 })
+      .values({ contentType: 'movie', tmdbId: 603, jellyfinItemId: 'jf-1', resolvedAt: 0 })
       .returning();
     server.use(
       http.get(`${JELLYFIN_URL}/Users/:userId/Items`, () =>
@@ -107,7 +107,9 @@ describe('EnrichmentJobFactory', () => {
   });
 
   it('returns a runnable job when no enrichment providers are active', async () => {
-    await getDb().insert(mediaIdentity).values({ kind: 'movie', tmdbId: 604, resolvedAt: 0 });
+    await getDb()
+      .insert(mediaIdentity)
+      .values({ contentType: 'movie', tmdbId: 604, resolvedAt: 0 });
 
     const job = await makeFactory().create();
 

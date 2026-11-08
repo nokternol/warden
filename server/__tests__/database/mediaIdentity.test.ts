@@ -30,10 +30,10 @@ describe('media_identity table', () => {
     const db = getDb();
     const [row] = await db
       .insert(mediaIdentity)
-      .values({ kind: 'movie', tmdbId: 100, imdbId: 'tt1234567' })
+      .values({ contentType: 'movie', tmdbId: 100, imdbId: 'tt1234567' })
       .returning();
 
-    expect(row.kind).toBe('movie');
+    expect(row.contentType).toBe('movie');
     expect(row.tmdbId).toBe(100);
     expect(row.imdbId).toBe('tt1234567');
     expect(row.id).toBeTypeOf('number');
@@ -41,7 +41,9 @@ describe('media_identity table', () => {
 
   it('enforces one movie group per tmdbId', async () => {
     const db = getDb();
-    await db.insert(mediaIdentity).values({ kind: 'movie', tmdbId: 1 });
-    await expect(db.insert(mediaIdentity).values({ kind: 'movie', tmdbId: 1 })).rejects.toThrow();
+    await db.insert(mediaIdentity).values({ contentType: 'movie', tmdbId: 1 });
+    await expect(
+      db.insert(mediaIdentity).values({ contentType: 'movie', tmdbId: 1 })
+    ).rejects.toThrow();
   });
 });

@@ -59,7 +59,7 @@ describe('resolveActuatorTargets', () => {
     const [{ id: identityId }] = await db
       .insert(mediaIdentity)
       .values({
-        kind: 'movie',
+        contentType: 'movie',
         tmdbId: opts.copies[0].externalId * 100,
         plexRatingKey: opts.plexRatingKey,
         jellyfinItemId: opts.jellyfinItemId,

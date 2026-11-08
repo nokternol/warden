@@ -59,7 +59,7 @@ describe('EnrichmentJob', () => {
     const db = getDb();
     await db
       .insert(mediaIdentity)
-      .values({ kind: 'movie', tmdbId: 100, plexRatingKey: 'fresh', enrichedAt: FRESH });
+      .values({ contentType: 'movie', tmdbId: 100, plexRatingKey: 'fresh', enrichedAt: FRESH });
 
     const enricher = fakeEnricher(MetadataProviderType.PLEX, () => undefined);
     await new EnrichmentJob({ db, enrichmentQueries: queries, enrichers: [enricher] }).run();
@@ -71,7 +71,7 @@ describe('EnrichmentJob', () => {
     const db = getDb();
     const [identity] = await db
       .insert(mediaIdentity)
-      .values({ kind: 'movie', tmdbId: 100, plexRatingKey: 'abc123', enrichedAt: STALE })
+      .values({ contentType: 'movie', tmdbId: 100, plexRatingKey: 'abc123', enrichedAt: STALE })
       .returning();
 
     const tautulli = fakeEnricher(MetadataProviderType.TAUTULLI, (item) =>
@@ -92,7 +92,7 @@ describe('EnrichmentJob', () => {
     const db = getDb();
     const [identity] = await db
       .insert(mediaIdentity)
-      .values({ kind: 'movie', tmdbId: 100, plexRatingKey: 'k', enrichedAt: STALE })
+      .values({ contentType: 'movie', tmdbId: 100, plexRatingKey: 'k', enrichedAt: STALE })
       .returning();
 
     const plex = fakeEnricher(MetadataProviderType.PLEX, () => ({ playCount: 2 }));
@@ -107,7 +107,7 @@ describe('EnrichmentJob', () => {
     const db = getDb();
     const [identity] = await db
       .insert(mediaIdentity)
-      .values({ kind: 'movie', plexRatingKey: 'k', enrichedAt: STALE })
+      .values({ contentType: 'movie', plexRatingKey: 'k', enrichedAt: STALE })
       .returning();
 
     const iso = new Date(1_700_000_000 * 1000).toISOString();
@@ -122,7 +122,7 @@ describe('EnrichmentJob', () => {
     const db = getDb();
     const [identity] = await db
       .insert(mediaIdentity)
-      .values({ kind: 'movie', plexRatingKey: 'k', enrichedAt: STALE })
+      .values({ contentType: 'movie', plexRatingKey: 'k', enrichedAt: STALE })
       .returning();
 
     const iso = new Date(1_700_000_000 * 1000).toISOString();
@@ -137,7 +137,7 @@ describe('EnrichmentJob', () => {
     const db = getDb();
     const [identity] = await db
       .insert(mediaIdentity)
-      .values({ kind: 'movie', plexRatingKey: 'k', enrichedAt: STALE })
+      .values({ contentType: 'movie', plexRatingKey: 'k', enrichedAt: STALE })
       .returning();
 
     const plex = fakeEnricher(MetadataProviderType.PLEX, () => ({ studio: 'Legendary Pictures' }));
@@ -151,7 +151,7 @@ describe('EnrichmentJob', () => {
     const db = getDb();
     await db
       .insert(mediaIdentity)
-      .values({ kind: 'movie', jellyfinItemId: 'jf-abc', enrichedAt: STALE });
+      .values({ contentType: 'movie', jellyfinItemId: 'jf-abc', enrichedAt: STALE });
 
     let seenJellyfinId: string | number | undefined;
     const jellyfin = fakeEnricher(MetadataProviderType.JELLYFIN, (item) => {
@@ -167,7 +167,7 @@ describe('EnrichmentJob', () => {
     const db = getDb();
     const [identity] = await db
       .insert(mediaIdentity)
-      .values({ kind: 'movie', tmdbId: 100, enrichedAt: STALE })
+      .values({ contentType: 'movie', tmdbId: 100, enrichedAt: STALE })
       .returning();
 
     const tautulli = fakeEnricher(MetadataProviderType.TAUTULLI, () => undefined);
@@ -186,7 +186,7 @@ describe('EnrichmentJob', () => {
     const db = getDb();
     const [identity] = await db
       .insert(mediaIdentity)
-      .values({ kind: 'movie', plexRatingKey: 'k' })
+      .values({ contentType: 'movie', plexRatingKey: 'k' })
       .returning();
 
     const tautulli = fakeEnricher(MetadataProviderType.TAUTULLI, () => ({ playCount: 7 }));
@@ -199,8 +199,8 @@ describe('EnrichmentJob', () => {
   it('returns the number of identity rows it enriched', async () => {
     const db = getDb();
     await db.insert(mediaIdentity).values([
-      { kind: 'movie', tmdbId: 100, enrichedAt: STALE },
-      { kind: 'movie', tmdbId: 200, enrichedAt: STALE },
+      { contentType: 'movie', tmdbId: 100, enrichedAt: STALE },
+      { contentType: 'movie', tmdbId: 200, enrichedAt: STALE },
     ]);
 
     const job = new EnrichmentJob({

@@ -273,7 +273,7 @@ export const mediaIdentity = sqliteTable(
     id: integer('id').primaryKey({ autoIncrement: true }),
     /** ContentType — 'movie' | 'series'. Scopes the primary-id namespace: a TMDB
      *  movie id and a TMDB tv id with the same number are different titles. */
-    kind: text('kind').notNull(),
+    contentType: text('contentType').notNull(),
     tmdbId: integer('tmdbId'),
     imdbId: text('imdbId'),
     tvdbId: integer('tvdbId'),
@@ -292,10 +292,10 @@ export const mediaIdentity = sqliteTable(
   (table) => [
     uniqueIndex('ux_media_identity_movie_tmdb')
       .on(table.tmdbId)
-      .where(sql`kind = 'movie' AND tmdbId IS NOT NULL`),
+      .where(sql`contentType = 'movie' AND tmdbId IS NOT NULL`),
     uniqueIndex('ux_media_identity_series_tvdb')
       .on(table.tvdbId)
-      .where(sql`kind = 'series' AND tvdbId IS NOT NULL`),
+      .where(sql`contentType = 'series' AND tvdbId IS NOT NULL`),
     index('idx_media_identity_tmdb').on(table.tmdbId),
     index('idx_media_identity_tvdb').on(table.tvdbId),
     index('idx_media_identity_imdb').on(table.imdbId),

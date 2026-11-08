@@ -1004,7 +1004,10 @@ describe('AutomationExecutor', () => {
       const provider = await seedRadarrProvider(providerSettingsService);
 
       // Seed media_identity + a media_item copy for movie 1 + enrichment (playCount=3)
-      const [identity] = await db.insert(mediaIdentity).values({ kind: 'movie' }).returning();
+      const [identity] = await db
+        .insert(mediaIdentity)
+        .values({ contentType: 'movie' })
+        .returning();
       await db
         .insert(mediaItems)
         .values({ providerId: provider.id, externalId: 1, mediaIdentityId: identity.id });
@@ -1047,7 +1050,10 @@ describe('AutomationExecutor', () => {
     async function watchedAutomation(valuesHeldBy: 'movie' | 'series' = 'movie') {
       const db = getDb();
       const provider = await seedRadarrProvider(providerSettingsService);
-      const [identity] = await db.insert(mediaIdentity).values({ kind: valuesHeldBy }).returning();
+      const [identity] = await db
+        .insert(mediaIdentity)
+        .values({ contentType: valuesHeldBy })
+        .returning();
       await new EnrichmentQueries({ db }).replaceFields(identity.id, { playCount: 3 });
       const query = await mediaQueryService.create({
         name: 'Unwatched',
@@ -1117,7 +1123,7 @@ describe('AutomationExecutor', () => {
 
       const provider = await seedRadarrProvider(providerSettingsService);
 
-      const [id10] = await db.insert(mediaIdentity).values({ kind: 'movie' }).returning();
+      const [id10] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
       await db
         .insert(mediaItems)
         .values({ providerId: provider.id, externalId: 10, mediaIdentityId: id10.id });
@@ -1126,7 +1132,7 @@ describe('AutomationExecutor', () => {
       });
 
       const twoDaysAgoUnix = Math.floor((Date.now() - 2 * 86_400_000) / 1000);
-      const [id11] = await db.insert(mediaIdentity).values({ kind: 'movie' }).returning();
+      const [id11] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
       await db
         .insert(mediaItems)
         .values({ providerId: provider.id, externalId: 11, mediaIdentityId: id11.id });
@@ -1185,7 +1191,10 @@ describe('AutomationExecutor', () => {
       const provider = await seedSonarrProvider(providerSettingsService);
 
       // Seed media_identity + a media_item copy for series 1 + enrichment (playCount=5)
-      const [identity] = await db.insert(mediaIdentity).values({ kind: 'series' }).returning();
+      const [identity] = await db
+        .insert(mediaIdentity)
+        .values({ contentType: 'series' })
+        .returning();
       await db
         .insert(mediaItems)
         .values({ providerId: provider.id, externalId: 1, mediaIdentityId: identity.id });
@@ -1845,7 +1854,7 @@ describe('non-source actuators — id translation through the identity graph', (
       const [{ id: identityId }] = await db
         .insert(mediaIdentity)
         .values({
-          kind: 'movie',
+          contentType: 'movie',
           tmdbId: externalId * 100,
           title: `Movie ${externalId}`,
           plexRatingKey,
@@ -1955,7 +1964,7 @@ describe('non-source actuators — id translation through the identity graph', (
     const plexProv = await seedPlexProvider();
     const [{ id: identityId }] = await db
       .insert(mediaIdentity)
-      .values({ kind: 'movie', tmdbId: 500, title: 'Heat', plexRatingKey: 'rk-5' })
+      .values({ contentType: 'movie', tmdbId: 500, title: 'Heat', plexRatingKey: 'rk-5' })
       .returning({ id: mediaIdentity.id });
     for (const providerId of [radarrProv.id, radarr4kProv.id]) {
       await db
@@ -2092,7 +2101,7 @@ describe('non-source actuators — id translation through the identity graph', (
     const plexProv = await seedPlexProvider();
     const [{ id: identityId }] = await db
       .insert(mediaIdentity)
-      .values({ kind: 'movie', tmdbId: 500, title: 'Heat', plexRatingKey: 'rk-5' })
+      .values({ contentType: 'movie', tmdbId: 500, title: 'Heat', plexRatingKey: 'rk-5' })
       .returning({ id: mediaIdentity.id });
     for (const providerId of [radarrProv.id, radarr4kProv.id]) {
       await db

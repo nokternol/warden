@@ -75,7 +75,7 @@ export async function ensureSourceCopies(
     recordedKeys.add(key);
     ids.push(
       await recordSourceCopy(db, {
-        kind: contentType,
+        contentType,
         ...coordinate,
         ids: groupIdsOf(item),
       })

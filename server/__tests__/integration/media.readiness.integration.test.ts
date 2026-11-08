@@ -113,7 +113,7 @@ describe('Media browse — filter readiness', () => {
   it('returns no finding once a title holds a value', async () => {
     const [identity] = await getDb()
       .insert(mediaIdentity)
-      .values({ kind: 'movie', tmdbId: 1 })
+      .values({ contentType: 'movie', tmdbId: 1 })
       .returning();
     await new EnrichmentQueries({ db: getDb() }).replaceFields(identity.id, { playCount: 1 });
 

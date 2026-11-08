@@ -170,7 +170,7 @@ describe('AutomationExecutor writes to automation_runs', () => {
       const db = getDb();
       const [{ id: identityId }] = await db
         .insert(mediaIdentity)
-        .values({ kind: 'movie', tmdbId: movie.tmdbId, title: movie.title })
+        .values({ contentType: 'movie', tmdbId: movie.tmdbId, title: movie.title })
         .returning({ id: mediaIdentity.id });
       const [{ id }] = await db
         .insert(mediaItems)

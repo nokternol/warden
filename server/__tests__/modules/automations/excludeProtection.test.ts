@@ -77,7 +77,7 @@ describe('exclude protection for a non-source actuator', () => {
     const db = getDb();
     const [{ id }] = await db
       .insert(mediaIdentity)
-      .values({ kind: 'movie', ...identity })
+      .values({ contentType: 'movie', ...identity })
       .returning({ id: mediaIdentity.id });
     for (const copy of copies) {
       await db

@@ -6,7 +6,7 @@ import { type GroupIds, resolveGroup } from './groupResolver';
 
 /** One configured instance's copy of a title, as its catalog reports it. */
 export interface SourceCopy {
-  kind: ContentType;
+  contentType: ContentType;
   providerId: number;
   externalId: number;
   /** The identifiers that place the copy in its `media_identity` group. */
@@ -22,7 +22,7 @@ export interface SourceCopy {
  * empty, and the job's orphan-group sweep removes it.
  */
 export async function recordSourceCopy(db: DrizzleDb, copy: SourceCopy): Promise<number> {
-  const mediaIdentityId = await resolveGroup(db, copy.kind, copy.ids);
+  const mediaIdentityId = await resolveGroup(db, copy.contentType, copy.ids);
   const [created] = await db
     .insert(mediaItems)
     .values({ providerId: copy.providerId, externalId: copy.externalId, mediaIdentityId })

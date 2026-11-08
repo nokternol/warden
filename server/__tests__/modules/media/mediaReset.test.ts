@@ -39,7 +39,7 @@ describe('resetMediaData', () => {
       .insert(metadataProviders)
       .values({ type: MetadataProviderType.RADARR, name: 'Radarr', url: 'http://radarr' })
       .returning({ id: metadataProviders.id });
-    const [identity] = await db.insert(mediaIdentity).values({ kind: 'movie' }).returning();
+    const [identity] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
     await db
       .insert(mediaItems)
       .values({ providerId: radarrId, externalId: 1, mediaIdentityId: identity.id });
@@ -58,7 +58,7 @@ describe('resetMediaData', () => {
     await db
       .insert(metadataProviders)
       .values({ type: MetadataProviderType.RADARR, name: 'Radarr', url: 'http://radarr' });
-    await db.insert(mediaIdentity).values({ kind: 'movie' });
+    await db.insert(mediaIdentity).values({ contentType: 'movie' });
 
     await resetMediaData(db);
 

@@ -34,30 +34,30 @@ function positive(id: number | undefined): number | undefined {
  */
 export async function resolveGroup(
   db: DrizzleDb,
-  kind: ContentType,
+  contentType: ContentType,
   reported: GroupIds
 ): Promise<number> {
   const ids = { ...reported, tmdbId: positive(reported.tmdbId), tvdbId: positive(reported.tvdbId) };
-  const primaryId = kind === 'movie' ? ids.tmdbId : ids.tvdbId;
-  const primaryColumn = PRIMARY_COLUMN[kind];
+  const primaryId = contentType === 'movie' ? ids.tmdbId : ids.tvdbId;
+  const primaryColumn = PRIMARY_COLUMN[contentType];
 
   if (primaryId !== undefined) {
     const [existing] = await db
       .select()
       .from(mediaIdentity)
-      .where(and(eq(mediaIdentity.kind, kind), eq(primaryColumn, primaryId)));
+      .where(and(eq(mediaIdentity.contentType, contentType), eq(primaryColumn, primaryId)));
     if (existing) {
       await fillMissingIdentifiers(db, existing, ids);
       return existing.id;
     }
-    return insertGroup(db, kind, ids);
+    return insertGroup(db, contentType, ids);
   }
 
   if (ids.imdbId !== undefined) {
     const [existing] = await db
       .select()
       .from(mediaIdentity)
-      .where(and(eq(mediaIdentity.kind, kind), eq(mediaIdentity.imdbId, ids.imdbId)));
+      .where(and(eq(mediaIdentity.contentType, contentType), eq(mediaIdentity.imdbId, ids.imdbId)));
     if (existing) {
       await fillMissingIdentifiers(db, existing, ids);
       return existing.id;
@@ -70,7 +70,7 @@ export async function resolveGroup(
       .from(mediaIdentity)
       .where(
         and(
-          eq(mediaIdentity.kind, kind),
+          eq(mediaIdentity.contentType, contentType),
           eq(mediaIdentity.title, ids.title),
           eq(mediaIdentity.year, ids.year)
         )
@@ -81,14 +81,18 @@ export async function resolveGroup(
     }
   }
 
-  return insertGroup(db, kind, ids);
+  return insertGroup(db, contentType, ids);
 }
 
-async function insertGroup(db: DrizzleDb, kind: ContentType, ids: GroupIds): Promise<number> {
+async function insertGroup(
+  db: DrizzleDb,
+  contentType: ContentType,
+  ids: GroupIds
+): Promise<number> {
   const [row] = await db
     .insert(mediaIdentity)
     .values({
-      kind,
+      contentType,
       tmdbId: ids.tmdbId ?? null,
       tvdbId: ids.tvdbId ?? null,
       imdbId: ids.imdbId ?? null,

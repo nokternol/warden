@@ -305,7 +305,10 @@ describe('filter readiness, as automations see it', () => {
       });
       await enrichmentRan('success');
       const db = getDb();
-      const [identity] = await db.insert(mediaIdentity).values({ kind: 'movie' }).returning();
+      const [identity] = await db
+        .insert(mediaIdentity)
+        .values({ contentType: 'movie' })
+        .returning();
       await new EnrichmentQueries({ db }).replaceFields(identity.id, { playCount: 1 });
       const include = await mediaQueryService.create({
         name: 'All',
@@ -373,7 +376,12 @@ describe('a non-source actuator whose query names a source instance', () => {
     for (const n of [1, 2]) {
       const [{ id }] = await db
         .insert(mediaIdentity)
-        .values({ kind: 'movie', tmdbId: n * 100, title: `Movie ${n}`, plexRatingKey: `rk-${n}` })
+        .values({
+          contentType: 'movie',
+          tmdbId: n * 100,
+          title: `Movie ${n}`,
+          plexRatingKey: `rk-${n}`,
+        })
         .returning({ id: mediaIdentity.id });
       await db
         .insert(mediaItems)
@@ -531,7 +539,7 @@ describe('what "the latest enrichment run succeeded" does and does not say', () 
     const db = getDb();
     const [identity] = await db
       .insert(mediaIdentity)
-      .values({ kind: 'movie', tmdbId: 1, enrichedAt: NOW - 2 * 86400 })
+      .values({ contentType: 'movie', tmdbId: 1, enrichedAt: NOW - 2 * 86400 })
       .returning();
     const plex = enricher(MetadataProviderType.PLEX, { playCount: 3 });
     const seerr: MediaEnricher = {
@@ -555,7 +563,7 @@ describe('what "the latest enrichment run succeeded" does and does not say', () 
     const db = getDb();
     const [identity] = await db
       .insert(mediaIdentity)
-      .values({ kind: 'movie', tmdbId: 1 })
+      .values({ contentType: 'movie', tmdbId: 1 })
       .returning();
     await queries.replaceFields(identity.id, { playCount: 3, seerrRequestStatus: 2 });
 
@@ -571,7 +579,7 @@ describe('what "the latest enrichment run succeeded" does and does not say', () 
     const bus = new DomainEventBus();
     const providerSettingsService = new ProviderSettingsService({ db, eventBus: bus });
     const enrichedAt = NOW - 3600;
-    await db.insert(mediaIdentity).values({ kind: 'movie', tmdbId: 1, enrichedAt });
+    await db.insert(mediaIdentity).values({ contentType: 'movie', tmdbId: 1, enrichedAt });
 
     await providerSettingsService.create({
       type: MetadataProviderType.TAUTULLI,
@@ -594,7 +602,9 @@ describe('what "the latest enrichment run succeeded" does and does not say', () 
   it('re-reads a title once identity resolution links it to a newly connected Jellyfin server', async () => {
     // The Plex counterpart is pinned in identityResolutionJob.test.ts.
     const db = getDb();
-    await db.insert(mediaIdentity).values({ kind: 'movie', tmdbId: 100, enrichedAt: NOW - 3600 });
+    await db
+      .insert(mediaIdentity)
+      .values({ contentType: 'movie', tmdbId: 100, enrichedAt: NOW - 3600 });
     const jellyfinProvider = {
       getAllItems: vi
         .fn()
