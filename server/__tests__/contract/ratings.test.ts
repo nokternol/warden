@@ -19,4 +19,10 @@ describe('a title’s ratings', () => {
       { source: 'metacritic', label: 'Metacritic', value: 74, votes: 0, scale: 100 },
     ]);
   });
+
+  it('lists a Sonarr series record’s single rating as the community rating', () => {
+    expect(ratingsOf('series', { votes: 412, value: 8.6 })).toEqual([
+      { source: 'community', label: 'Community', value: 8.6, votes: 412, scale: 10 },
+    ]);
+  });
 });
