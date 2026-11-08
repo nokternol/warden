@@ -82,7 +82,7 @@ describe('MediaPage — ratings panel', () => {
     expect(requests).toEqual([]);
   });
 
-  it('shows the clicked series’ community rating, read from its record', async () => {
+  it('shows the clicked series’ community rating, read from its record, without a request', async () => {
     const wire: ManagedSeries = {
       id: 79126,
       title: 'The Wire',
@@ -100,12 +100,15 @@ describe('MediaPage — ratings panel', () => {
     await waitFor(() => {
       expect(screen.getByTestId('media-card-series-79126')).toBeInTheDocument();
     });
+    const requests = requestsFromNow();
     fireEvent.click(screen.getByTestId('media-card-series-79126'));
 
     const dialog = await screen.findByRole('dialog', { name: 'Ratings for The Wire' });
     expect(within(dialog).getByText('Community')).toBeInTheDocument();
     expect(dialog).toHaveTextContent('9.4/10');
     expect(dialog).toHaveTextContent('3,100 votes');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(requests).toEqual([]);
   });
 
   it('says "No ratings" for a title its record reports none for, and closes', async () => {
