@@ -710,6 +710,7 @@ export function MediaContent({
           }}
           title={selected?.title ?? ''}
           year={selected?.year}
+          ratings={[]}
         />
       )}
     </>
