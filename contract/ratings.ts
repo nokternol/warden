@@ -40,22 +40,37 @@ interface SourceEntry {
   votes?: number;
 }
 
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
 /**
  * Each source's raw entry in a record's `ratings`: a Radarr movie keys one
  * entry per source, a Sonarr series carries a single community entry.
  */
-function entriesOf(contentType: ContentType, ratings: unknown): [RatingSource, SourceEntry][] {
-  if (contentType === 'series') return [['community', ratings as SourceEntry]];
-  const record = ratings as Record<string, SourceEntry>;
-  return MOVIE_SOURCES.map((source) => [source, record[source]]);
+function entriesOf(contentType: ContentType, ratings: unknown): [RatingSource, unknown][] {
+  if (contentType === 'series') return [['community', ratings]];
+  return MOVIE_SOURCES.map((source) => [source, isObject(ratings) ? ratings[source] : undefined]);
 }
 
-/** The ratings a title's Radarr (`movie`) or Sonarr (`series`) record reports. */
+/**
+ * An entry that rates the title: a finite number, and not the zero value with
+ * no votes that Radarr and Sonarr send for an unrated title.
+ */
+function isRated(entry: unknown): entry is SourceEntry {
+  if (!isObject(entry)) return false;
+  const { value, votes } = entry;
+  if (typeof value !== 'number' || !Number.isFinite(value)) return false;
+  return !(value === 0 && !votes);
+}
+
+/**
+ * The ratings a title's Radarr (`movie`) or Sonarr (`series`) record reports.
+ * Sources the record leaves out, does not rate with a number, or reports as
+ * unrated are absent; keys outside the source list are ignored.
+ */
 export function ratingsOf(contentType: ContentType, ratings: unknown): TitleRating[] {
-  return entriesOf(contentType, ratings).map(([source, { value, votes }]) => ({
-    source,
-    ...SOURCES[source],
-    value,
-    votes,
-  }));
+  return entriesOf(contentType, ratings).flatMap(([source, entry]) =>
+    isRated(entry) ? [{ source, ...SOURCES[source], value: entry.value, votes: entry.votes }] : []
+  );
 }

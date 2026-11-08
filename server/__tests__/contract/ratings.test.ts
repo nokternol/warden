@@ -25,4 +25,21 @@ describe('a title’s ratings', () => {
       { source: 'community', label: 'Community', value: 8.6, votes: 412, scale: 10 },
     ]);
   });
+
+  it('leaves out a source that is missing, non-numeric or unrated, and keys outside the source list', () => {
+    const radarrRatings = {
+      imdb: { value: 0, votes: 0, type: 'user' },
+      tmdb: { value: 'n/a', votes: 10 },
+      metacritic: { value: 0 },
+      rottenTomatoes: { value: 0, votes: 12 },
+      letterboxd: { value: 4.1, votes: 300 },
+    };
+
+    expect(ratingsOf('movie', radarrRatings)).toEqual([
+      { source: 'rottenTomatoes', label: 'Rotten Tomatoes', value: 0, votes: 12, scale: 100 },
+    ]);
+    expect(ratingsOf('movie', undefined)).toEqual([]);
+    expect(ratingsOf('series', { votes: 0, value: 0 })).toEqual([]);
+    expect(ratingsOf('series', null)).toEqual([]);
+  });
 });
