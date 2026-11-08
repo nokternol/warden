@@ -173,7 +173,7 @@ describe('filter readiness, as automations see it', () => {
       // Written past `create`'s validation, as a query saved before the rule was deferred.
       await getDb()
         .insert(mediaQueryFilterValues)
-        .values({ mediaQueryId: exclude.id, filterKey: 'tmdbStatus', value: 'Released' });
+        .values({ mediaQueryId: exclude.id, ruleKey: 'tmdbStatus', value: 'Released' });
       const automation = await automationOver(radarr.id, [
         { id: include.id, role: 'include' },
         { id: exclude.id, role: 'exclude' },
@@ -202,7 +202,7 @@ describe('filter readiness, as automations see it', () => {
       // Written past `create`'s validation, as a rule removed from the registry leaves it.
       await getDb()
         .insert(mediaQueryFilterValues)
-        .values({ mediaQueryId: exclude.id, filterKey: 'retiredRule', value: 'x' });
+        .values({ mediaQueryId: exclude.id, ruleKey: 'retiredRule', value: 'x' });
       const automation = await automationOver(radarr.id, [
         { id: include.id, role: 'include' },
         { id: exclude.id, role: 'exclude' },
@@ -260,7 +260,7 @@ describe('filter readiness, as automations see it', () => {
       });
       await getDb()
         .insert(mediaQueryFilterValues)
-        .values({ mediaQueryId: query.id, filterKey: 'retiredRule', value: 'x' });
+        .values({ mediaQueryId: query.id, ruleKey: 'retiredRule', value: 'x' });
 
       const [listed] = await mediaQueryService.list();
       expect(listed.health.findings.map((f) => f.kind)).toContain('unknown-rule');

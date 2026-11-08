@@ -12,12 +12,12 @@ describe('mediaQueries schema', () => {
 });
 
 describe('mediaQueryFilterValues schema', () => {
-  it('is exported and has mediaQueryId, filterKey, value columns', async () => {
+  it('is exported and has mediaQueryId, ruleKey, value columns', async () => {
     const schema = databaseSchema;
     expect((schema as Record<string, unknown>).mediaQueryFilterValues).toBeDefined();
     const cols = Object.keys((schema as Record<string, unknown>).mediaQueryFilterValues as object);
     expect(cols).toContain('mediaQueryId');
-    expect(cols).toContain('filterKey');
+    expect(cols).toContain('ruleKey');
     expect(cols).toContain('value');
   });
 });

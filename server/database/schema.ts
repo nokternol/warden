@@ -153,7 +153,7 @@ export const mediaQueryFilterValues = sqliteTable(
     mediaQueryId: integer('mediaQueryId')
       .notNull()
       .references(() => mediaQueries.id, { onDelete: 'cascade' }),
-    filterKey: text('filterKey').notNull(),
+    ruleKey: text('ruleKey').notNull(),
     value: text('value').notNull(),
   },
   (table) => [index('IDX_mqfv_queryId').on(table.mediaQueryId)]

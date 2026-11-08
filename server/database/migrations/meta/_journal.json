@@ -260,6 +260,13 @@
       "when": 1793654450378,
       "tag": "0036_identity_zero_ids",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1793654451378,
+      "tag": "0037_rule_key_content_type",
+      "breakpoints": true
     }
   ]
 }

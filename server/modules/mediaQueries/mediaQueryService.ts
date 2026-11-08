@@ -101,9 +101,9 @@ export class MediaQueryService {
     const filtersByQueryId = new Map<number, Filter[]>();
     for (const fv of fvRows) {
       const contentType = contentTypeByQueryId.get(fv.mediaQueryId);
-      const rule = contentType ? getRule(fv.filterKey, contentType) : undefined;
+      const rule = contentType ? getRule(fv.ruleKey, contentType) : undefined;
       const dataType = rule?.dataType ?? 'string';
-      const entry: Filter = { ruleKey: fv.filterKey, value: coerceValue(fv.value, dataType) };
+      const entry: Filter = { ruleKey: fv.ruleKey, value: coerceValue(fv.value, dataType) };
       const arr = filtersByQueryId.get(fv.mediaQueryId) ?? [];
       arr.push(entry);
       filtersByQueryId.set(fv.mediaQueryId, arr);
@@ -172,7 +172,7 @@ export class MediaQueryService {
       await this.db.insert(mediaQueryFilterValues).values(
         draft.filters.map(({ ruleKey, value }) => ({
           mediaQueryId: row.id,
-          filterKey: ruleKey,
+          ruleKey,
           value: serializeValue(value),
         }))
       );
@@ -204,9 +204,9 @@ export class MediaQueryService {
       .where(eq(mediaQueryFilterValues.mediaQueryId, id));
 
     const filters: Filter[] = fvRows.map((fv) => {
-      const rule = getRule(fv.filterKey, row.contentType as ContentType);
+      const rule = getRule(fv.ruleKey, row.contentType as ContentType);
       const dataType = rule?.dataType ?? 'string';
-      return { ruleKey: fv.filterKey, value: coerceValue(fv.value, dataType) };
+      return { ruleKey: fv.ruleKey, value: coerceValue(fv.value, dataType) };
     });
 
     const health = computeHealth(await this.filterReadiness.readFacts(), {

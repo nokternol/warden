@@ -238,7 +238,7 @@ describe('AutomationExecutor — invalid automations', () => {
     // Written past `create`'s validation, as a rule removed from the registry leaves it.
     await getDb()
       .insert(mediaQueryFilterValues)
-      .values({ mediaQueryId: queryId, filterKey: 'retiredRule', value: 'x' });
+      .values({ mediaQueryId: queryId, ruleKey: 'retiredRule', value: 'x' });
 
     await executor.execute(automation.id);
 
