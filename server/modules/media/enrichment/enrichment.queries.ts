@@ -28,7 +28,7 @@ export class EnrichmentQueries {
       series: new Set(),
     };
     for (const { contentType, key } of rows) {
-      fields[contentType as ContentType]?.add(key as keyof EnrichmentFields);
+      fields[contentType]?.add(key as keyof EnrichmentFields);
     }
     return fields;
   }

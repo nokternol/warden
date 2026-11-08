@@ -1,4 +1,4 @@
-import type { AutomationStatus } from '@contract/schemas';
+import type { AutomationStatus, ContentType } from '@contract/schemas';
 import { sql } from 'drizzle-orm';
 import {
   index,
@@ -271,9 +271,9 @@ export const mediaIdentity = sqliteTable(
   'media_identity',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
-    /** ContentType — 'movie' | 'series'. Scopes the primary-id namespace: a TMDB
-     *  movie id and a TMDB tv id with the same number are different titles. */
-    contentType: text('contentType').notNull(),
+    /** Scopes the primary-id namespace: a TMDB movie id and a TMDB tv id with the same
+     *  number are different titles. */
+    contentType: text('contentType').$type<ContentType>().notNull(),
     tmdbId: integer('tmdbId'),
     imdbId: text('imdbId'),
     tvdbId: integer('tvdbId'),

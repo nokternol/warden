@@ -1,6 +1,6 @@
 import type { Client } from '@libsql/client';
 import { describe, expect, it } from 'vitest';
-import { applyMigration, databaseBefore } from './migrationHarness';
+import { applyMigration, columnNames, databaseBefore } from './migrationHarness';
 
 const MIGRATION = '0029_filter_instance_scope';
 
@@ -96,9 +96,11 @@ describe('migration 0029 — instance-scoped filter values name their instance',
 
     await applyMigration(client, MIGRATION);
 
-    const columns = (await client.execute('PRAGMA table_info(media_query_filter_values)')).rows.map(
-      (r) => r.name
-    );
-    expect(columns).toEqual(['id', 'mediaQueryId', 'filterKey', 'value']);
+    expect(await columnNames(client, 'media_query_filter_values')).toEqual([
+      'id',
+      'mediaQueryId',
+      'filterKey',
+      'value',
+    ]);
   });
 });

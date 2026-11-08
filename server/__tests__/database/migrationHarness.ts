@@ -44,3 +44,9 @@ export async function applyMigration(client: Client, tag: string): Promise<void>
     await client.execute(statement);
   }
 }
+
+/** The column names of `table`, in declaration order. */
+export async function columnNames(client: Client, table: string): Promise<string[]> {
+  const info = await client.execute(`PRAGMA table_info(${table})`);
+  return info.rows.map((r) => String(r.name));
+}

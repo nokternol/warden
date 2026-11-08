@@ -453,8 +453,7 @@ names, so nothing is renamed twice.
   name the new columns.
 - **As built:** migration 0037 renames both columns in place. The local variables, the `SourceCopy`
   field and the Plex and Jellyfin lookup tables that carried a content type under the name `kind` take
-  `contentType` too. The EAV doc never named the columns, so only `provider-roles-and-identity.md`,
-  `media-providers.md`, `VOCABULARY.md` and the ledger changed.
+  `contentType` too.
 
 ### Track C — One mechanism per job
 

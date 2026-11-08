@@ -4,7 +4,7 @@
  */
 import type { Client } from '@libsql/client';
 import { afterEach, describe, expect, it } from 'vitest';
-import { applyMigration, databaseBefore } from '../database/migrationHarness';
+import { applyMigration, columnNames, databaseBefore } from '../database/migrationHarness';
 
 const TAG = '0037_rule_key_content_type';
 let client: Client | undefined;
@@ -13,11 +13,6 @@ afterEach(() => {
   client?.close();
   client = undefined;
 });
-
-async function columnNames(db: Client, table: string): Promise<string[]> {
-  const info = await db.execute(`PRAGMA table_info(${table})`);
-  return info.rows.map((r) => String(r.name));
-}
 
 describe('migration 0037: rule key and content type column names', () => {
   it('reads saved query filters back unchanged under the ruleKey column', async () => {
