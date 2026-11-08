@@ -1,11 +1,12 @@
+import { type TitleRating, ratingsOf } from '@contract/ratings';
 import type { RadarrMovie, SonarrSeries } from '../providers';
 import { radarrTagsFieldSource, sonarrTagsFieldSource } from './mediaFieldProvider';
 import type { NormalizedMovie } from './movie';
 import type { NormalizedSeries } from './series';
 
-/** A rating's value, or undefined when unrated: zero value with no votes. */
-function ratedValue(rating: { value: number; votes?: number } | undefined): number | undefined {
-  return rating?.value === 0 && !rating.votes ? undefined : rating?.value;
+/** The value `source` gives the title, or undefined when the record has no rating from it. */
+function ratingFrom(ratings: TitleRating[], source: TitleRating['source']): number | undefined {
+  return ratings.find((rating) => rating.source === source)?.value;
 }
 
 /**
@@ -27,7 +28,7 @@ export function normalizeRadarrMovie(m: RadarrMovie, providerId: number): Normal
     addedDate: m.added,
     sizeOnDiskBytes: m.statistics?.sizeOnDisk,
     certification: m.certification,
-    imdbRating: ratedValue(m.ratings?.imdb),
+    imdbRating: ratingFrom(ratingsOf('movie', m.ratings), 'imdb'),
     folderName: m.folderName,
     path: m.path,
     movieFileCount: m.statistics?.movieFileCount,
@@ -80,7 +81,7 @@ export function normalizeSonarrSeries(s: SonarrSeries, providerId: number): Norm
     ended: s.ended,
     episodePercentage: s.statistics?.percentOfEpisodes,
     lastAiredAt: s.previousAiring,
-    communityRating: s.ratings?.value === 0 && !s.ratings?.votes ? undefined : s.ratings?.value,
+    communityRating: ratingFrom(ratingsOf('series', s.ratings), 'community'),
     path: s.path,
     images: s.images,
     nextAiring: s.nextAiring,

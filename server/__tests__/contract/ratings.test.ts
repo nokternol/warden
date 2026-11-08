@@ -1,4 +1,7 @@
 import { ratingsOf } from '@contract/ratings';
+import { normalizeRadarrMovie, normalizeSonarrSeries } from '@server/modules/media/normalizeMedia';
+import type { RadarrMovie, SonarrSeries } from '@server/modules/providers';
+import { createRadarrMovie, createSonarrSeries } from '@tests/factories';
 import { describe, expect, it } from 'vitest';
 
 describe('a title’s ratings', () => {
@@ -41,5 +44,30 @@ describe('a title’s ratings', () => {
     expect(ratingsOf('movie', undefined)).toEqual([]);
     expect(ratingsOf('series', { votes: 0, value: 0 })).toEqual([]);
     expect(ratingsOf('series', null)).toEqual([]);
+  });
+
+  it('gives the filters the same IMDb and community values it gives the ratings panel', () => {
+    const movieRatings: unknown[] = [
+      { imdb: { value: 7.8, votes: 900, type: 'user' } },
+      { imdb: { value: 0, votes: 0, type: 'user' } },
+      { imdb: { value: 'n/a', votes: 3, type: 'user' } },
+      undefined,
+    ];
+    for (const ratings of movieRatings) {
+      const movie = createRadarrMovie({ ratings: ratings as RadarrMovie['ratings'] });
+      const imdb = ratingsOf('movie', ratings).find((r) => r.source === 'imdb');
+      expect(normalizeRadarrMovie(movie, 1).imdbRating).toBe(imdb?.value);
+    }
+
+    const seriesRatings: unknown[] = [
+      { votes: 40, value: 6.1 },
+      { votes: 0, value: 0 },
+      { value: null },
+    ];
+    for (const ratings of seriesRatings) {
+      const series = createSonarrSeries({ ratings: ratings as SonarrSeries['ratings'] });
+      const community = ratingsOf('series', ratings).find((r) => r.source === 'community');
+      expect(normalizeSonarrSeries(series, 1).communityRating).toBe(community?.value);
+    }
   });
 });
