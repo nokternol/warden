@@ -37,7 +37,12 @@ export interface TitleRating {
 
 interface SourceEntry {
   value: number;
-  votes?: number;
+  votes?: unknown;
+}
+
+/** A vote count the record gives as a finite number; any other value reads as no count. */
+function votesOf(entry: SourceEntry): number | undefined {
+  return typeof entry.votes === 'number' && Number.isFinite(entry.votes) ? entry.votes : undefined;
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -71,6 +76,8 @@ function isRated(entry: unknown): entry is SourceEntry {
  */
 export function ratingsOf(contentType: ContentType, ratings: unknown): TitleRating[] {
   return entriesOf(contentType, ratings).flatMap(([source, entry]) =>
-    isRated(entry) ? [{ source, ...SOURCES[source], value: entry.value, votes: entry.votes }] : []
+    isRated(entry)
+      ? [{ source, ...SOURCES[source], value: entry.value, votes: votesOf(entry) }]
+      : []
   );
 }

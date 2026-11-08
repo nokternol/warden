@@ -46,6 +46,12 @@ describe('a title’s ratings', () => {
     expect(ratingsOf('series', null)).toEqual([]);
   });
 
+  it('leaves out a vote count that is not a number, keeping the rating', () => {
+    expect(ratingsOf('movie', { imdb: { value: 7.1, votes: 'many' } })).toEqual([
+      { source: 'imdb', label: 'IMDb', value: 7.1, votes: undefined, scale: 10 },
+    ]);
+  });
+
   it('gives the filters the same IMDb and community values it gives the ratings panel', () => {
     const movieRatings: unknown[] = [
       { imdb: { value: 7.8, votes: 900, type: 'user' } },
