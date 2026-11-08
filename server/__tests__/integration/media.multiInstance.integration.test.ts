@@ -16,7 +16,7 @@ import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createMediaQueryProcedures } from '@server/modules/mediaQueries';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
-import { createMockConfig, createRadarrMovie } from '@tests/factories';
+import { createMockConfig, createRadarrMovie, createSonarrSeries } from '@tests/factories';
 import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { server } from '@tests/mocks/server';
@@ -26,6 +26,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const RADARR_URL = 'http://localhost:7878';
 const RADARR_4K_URL = 'http://localhost:7879';
+const SONARR_URL = 'http://localhost:8989';
 
 describe('Multi-instance Radarr — identity resolution + preview fan-out', () => {
   let db: DrizzleDb;
@@ -62,6 +63,12 @@ describe('Multi-instance Radarr — identity resolution + preview fan-out', () =
       apiKey: 'key-2',
     });
     radarr4kId = radarr4k.id;
+    await container.cradle.providerSettingsService.create({
+      type: MetadataProviderType.SONARR,
+      name: 'Sonarr',
+      url: `${SONARR_URL}/api/v3`,
+      apiKey: 'key-3',
+    });
 
     const app: Express = express();
     app.use(express.json());
@@ -105,39 +112,45 @@ describe('Multi-instance Radarr — identity resolution + preview fan-out', () =
     expect(items.map((i) => i.providerId).sort()).toEqual([radarrId, radarr4kId].sort());
   });
 
-  it('preview fans out over both instances and sums their match counts', async () => {
-    server.use(
-      http.get(`${RADARR_URL}/api/v3/movie`, () =>
-        HttpResponse.json([
-          createRadarrMovie({ id: 1, title: 'Alpha', hasFile: true, tmdbId: 100 }),
-        ])
-      ),
-      http.get(`${RADARR_4K_URL}/api/v3/movie`, () =>
-        HttpResponse.json([
-          createRadarrMovie({ id: 1, title: 'Beta', hasFile: true, tmdbId: 200 }),
-          createRadarrMovie({ id: 2, title: 'Gamma', hasFile: false, tmdbId: 300 }),
-        ])
-      )
-    );
-
+  async function previewOf(contentType: 'movie' | 'series'): Promise<unknown> {
     const mediaQueryService = new MediaQueryService({
       db,
       filterReadiness: filterReadinessOver(db),
     });
     const query = await mediaQueryService.create({
-      name: 'Downloaded',
-      contentType: 'movie',
-      filters: [{ ruleKey: 'hasFile', value: true }],
+      name: `Everything ${contentType} ${Math.random()}`,
+      contentType,
+      filters: [],
     });
+    return expectSuccessResponse(await client.get(`/api/media-queries/${query.id}/preview`));
+  }
 
-    const res = await client.get(`/api/media-queries/${query.id}/preview`);
-    const data = expectSuccessResponse(res);
-
-    expect(data.count).toBe(2);
-    expect(data.instances).toHaveLength(2);
-    expect(data.instances.map((i: { providerId: number }) => i.providerId).sort()).toEqual(
-      [radarrId, radarr4kId].sort()
+  it('preview counts one title for copies sharing a TMDB id on two instances, and two for different ids', async () => {
+    server.use(
+      http.get(`${RADARR_URL}/api/v3/movie`, () =>
+        HttpResponse.json([
+          createRadarrMovie({ id: 1, title: 'Alpha', tmdbId: 100 }),
+          createRadarrMovie({ id: 2, title: 'Beta', tmdbId: 200 }),
+        ])
+      ),
+      http.get(`${RADARR_4K_URL}/api/v3/movie`, () =>
+        HttpResponse.json([createRadarrMovie({ id: 1, title: 'Alpha 4K', tmdbId: 100 })])
+      )
     );
-    expect(data.instances.every((i: { count: number }) => i.count === 1)).toBe(true);
+
+    expect(await previewOf('movie')).toEqual({ count: 2 });
+  });
+
+  it('preview counts each series Sonarr reports with a TVDB id of 0 as its own title', async () => {
+    server.use(
+      http.get(`${SONARR_URL}/api/v3/series`, () =>
+        HttpResponse.json([
+          createSonarrSeries({ id: 1, title: 'Unlisted A', tvdbId: 0 }),
+          createSonarrSeries({ id: 2, title: 'Unlisted B', tvdbId: 0 }),
+        ])
+      )
+    );
+
+    expect(await previewOf('series')).toEqual({ count: 2 });
   });
 });

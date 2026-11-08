@@ -2,7 +2,9 @@ import { getChildLogger } from '@server/kernel/logger';
 import {
   mediaSourceFor,
   radarrMediaSource,
+  radarrRowsSource,
   sonarrMediaSource,
+  sonarrRowsSource,
 } from '@server/modules/media/sourceAdapters';
 import type { ProviderConfig } from '@server/modules/providers/connections/baseProviderConnection';
 import { RadarrProvider } from '@server/modules/providers/connections/radarrProvider';
@@ -92,5 +94,43 @@ describe('mediaSourceFor', () => {
     const source = mediaSourceFor(sonarr, 6);
     const [item] = await source.getMediaItems();
     expect(item._sourceIds.providerId).toBe(6);
+  });
+});
+
+describe('the over-rows binders', () => {
+  it("normalise the rows they were given into new objects on every read, so one match never sees another's enrichment", async () => {
+    for (const [source, title] of [
+      [radarrRowsSource([movie], 5), 'The Matrix'],
+      [sonarrRowsSource([series], 5), 'Breaking Bad'],
+    ] as const) {
+      const firstRead = await source.getMediaItems();
+      expect(firstRead).toHaveLength(1);
+      const [first] = firstRead;
+      Object.assign(first, { playCount: 3 });
+      const [second] = await source.getMediaItems();
+
+      expect(second).not.toBe(first);
+      expect(second.playCount).toBeUndefined();
+      expect(second.title).toBe(title);
+      expect(second._sourceIds.providerId).toBe(5);
+      expect(source.idOf(second)).toBe(1);
+    }
+  });
+});
+
+describe('the connection-bound adapters', () => {
+  it('fetch the library once per read, and again on the next', async () => {
+    const radarr = new RadarrProvider(mockConfig, mockLogger);
+    const getMovies = vi.spyOn(radarr, 'getMovies').mockResolvedValue([movie]);
+    const sonarr = new SonarrProvider(mockConfig, mockLogger);
+    const getSeries = vi.spyOn(sonarr, 'getSeries').mockResolvedValue([series]);
+
+    for (const source of [radarrMediaSource(radarr, 5), sonarrMediaSource(sonarr, 5)]) {
+      await source.getMediaItems();
+      await source.getMediaItems();
+    }
+
+    expect(getMovies).toHaveBeenCalledTimes(2);
+    expect(getSeries).toHaveBeenCalledTimes(2);
   });
 });

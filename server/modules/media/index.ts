@@ -22,6 +22,9 @@ export type { MediaCradle } from './media.registrations';
 
 // Canonical item shapes every provider role (Source, Enricher) operates on.
 export type { MediaItem, MediaItemSet } from './mediaItem';
+
+// Which title a copy belongs to: the one key every title count de-duplicates by.
+export { identifiesTitle, titleKeyOf } from './mediaItem';
 export type { NormalizedMovie } from './movie';
 export type { NormalizedSeries } from './series';
 
@@ -29,9 +32,10 @@ export type { NormalizedSeries } from './series';
 export { normalizeRadarrMovie, normalizeSonarrSeries } from './normalizeMedia';
 
 // The read role a media-owning provider plays for the query engine, and the
-// adapters that bind providers' native connections to it.
+// adapter that binds a source provider's own connection to it (a Radarr or
+// Sonarr automation's catalog).
 export type { MediaSource } from './mediaSource';
-export { mediaSourceFor, radarrMediaSource, sonarrMediaSource } from './sourceAdapters';
+export { mediaSourceFor } from './sourceAdapters';
 
 // Owner-type policy: which provider type owns each content type, resolved to
 // a bound MediaSource.

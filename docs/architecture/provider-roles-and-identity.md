@@ -79,7 +79,11 @@ two-table split between the logical title and each instance's concrete copy of i
   primary id.
 - **`resolveGroup(db, kind, ids)`** ([`server/modules/providers/groupResolver.ts`](ref:path:server/modules/providers/groupResolver.ts)) is the
   sole find-or-create authority for which group an item belongs to: primary id per kind if present;
-  otherwise a fallback chain (`imdbId`, then `title`+`year`); otherwise a fresh group. Identifier fields
+  otherwise a fallback chain (`imdbId`, then `title`+`year`); otherwise a fresh group. A TMDB or TVDB
+  id that is not positive counts as missing: Sonarr reports `tvdbId: 0` for series it cannot match, and
+  keying on it would join unrelated series into one group sharing one Plex or Jellyfin id. Migration
+  `0036_identity_zero_ids` cleared groups keyed that way, along with the ids they borrowed from their
+  first copy, so the identity job's next run regroups those copies by title and year. Identifier fields
   are merged onto an existing group **fill-only** — a found group's non-`NULL` column is never
   overwritten. No code path ever merges two *existing* groups; a group left with zero `media_item` rows
   is swept, not merged away.
@@ -145,7 +149,8 @@ module owns every write to `media_identity`/`media_item`; media only translates 
 copy's coordinate and group ids. `createRun` writes the run row and its links in one `db.batch`, a single SQLite transaction on
 one connection; the link insert reads the new run's id inside that transaction. An interactive
 transaction is not used because `@libsql/client` opens a fresh connection for one, which loses a
-`:memory:` database. A user run's `itemCount` equals the number of items it recorded. System automations
+`:memory:` database. A user run's `itemCount` equals the number of items it recorded: source copies, so two instances'
+copies of one Plex title count two, matching the run items listed when the run expands. System automations
 target no catalog items and keep their runner-reported count.
 
 ## Enrichment: two distinct paths through the group/item split
@@ -192,29 +197,43 @@ instances) rather than a single source's `idOf`. `idOf` stays as the provider-na
 `task.run` speaks — unambiguous within one bound instance, which is what an automation execution and a
 raw-DTO lookup both are.
 
-`MediaSourceFactory.sourcesFor(contentType)` ([`server/modules/media/mediaSourceFactory.ts`](ref:path:server/modules/media/mediaSourceFactory.ts)) resolves a
-`ContentType` to one `{ providerId, name, source: MediaSource }` entry per *active instance* owning it —
-never collapsed to one. `GET /api/media-queries/:id/preview` fans out over it, evaluating the query spec
-once per instance and summing per-instance match counts into `{ count, instances: [{ providerId, name,
-count }] }`. The executor instead binds a specific provider by `automation.provider.id`, since it needs
+`MediaSourceFactory.activeInstances(contentType)` ([`server/modules/media/mediaSourceFactory.ts`](ref:path:server/modules/media/mediaSourceFactory.ts))
+is the one place the catalog's source instances are chosen: every active instance of the provider type
+`SOURCE_OWNER` names for the content type, each with its connection built (`{ providerId, name,
+provider }`), never collapsed to one. Browse, the saved-query preview and pooled runs all read through it;
+browse builds its own factory from its cradle's `providerSettingsService` and `providerFactory`, so a
+test's injected provider factory reaches it. `sourcesFor(contentType)` binds each of those instances as
+a `{ providerId, name, source: MediaSource }` entry. `GET /api/media-queries/:id/preview` fans out over it, evaluating the query spec
+once per instance, and counts the pooled matches in titles: `{ count }` is the number of distinct
+`titleKeyOf` keys, so a title held by two instances counts once, the same unit as the Media page. The executor instead binds a specific provider by `automation.provider.id`, since it needs
 the actuator role on the same instance for `task.run` — an automation targets one instance; running the
 same query against two instances is two automations sharing that query record.
 
 ## Browse: per-instance sublists, live display dedup, and instance-qualified filters
 
-`media.procedures.ts`'s `getMovies()`/`getSeries()` fetch every active instance's raw
-`RadarrMovie[]`/`SonarrSeries[]` into **per-instance sublists** (`{ providerId, providerName, movies }`),
-never flattened into one array before matching. The inline `MediaSource` normalizes each sublist's rows
-with their own `providerId` (`normalizeRadarrMovie(m, providerId)`), so every item pooled into
-`MediaQueryEngine.evaluate` self-describes which instance produced it. Raw-row recovery after matching
+`media.procedures.ts`'s `getMovies()`/`getSeries()` fetch every instance `activeInstances` returns into
+cached **per-instance sublists** of raw `RadarrMovie[]`/`SonarrSeries[]` rows (`{ providerId,
+providerName, movies }`), never flattened into one array before matching. Each sublist is bound as a
+source by the over-rows binders `radarrRowsSource`/`sonarrRowsSource`
+([`server/modules/media/sourceAdapters.ts`](ref:path:server/modules/media/sourceAdapters.ts)), which
+normalise the rows with their own `providerId` into new objects on every read, so every item pooled
+into `MediaQueryEngine.evaluate` self-describes which instance produced it, and enrichment merged into
+one request's items never reaches the cached rows or another request. The connection-bound adapters
+(`radarrMediaSource`/`sonarrMediaSource`, used by the preview, pooled runs and a Radarr or Sonarr
+automation's own catalog) fetch their rows and delegate to the same binders: one way builds a source,
+whether its rows come from a cache or a live read. Raw-row recovery after matching
 keys on `itemKey(item)` (`${providerId}:${externalId}`), so two instances' rows sharing a raw provider id
 are never conflated.
 
-**Display dedup** groups the matched raw rows by native primary id (`tmdbId` for movies, `tvdbId` for
-series; a row with no primary id falls back to `${providerId}:${id}`, its own singleton group) —
-computed live per request over provider data, no DB join, no dependency on the identity job having run,
-the same key `resolveGroup` uses so the live browse view and the persisted `media_identity` grouping
-agree by construction. Grouping happens **after** engine matching, so filter semantics are ANY: a title
+**Display dedup** groups the matched raw rows by `titleKey`
+([`server/modules/media/mediaItem.ts`](ref:path:server/modules/media/mediaItem.ts)): the native primary
+id (`tmdbId` for movies, `tvdbId` for series), or `${providerId}:${id}` when the primary id is missing or
+not positive (Sonarr reports `tvdbId: 0` for series it cannot match), making that row its own title —
+computed live per request over provider data, no DB join, no dependency on the identity job having run.
+The saved-query preview counts titles with the same key over normalised items (`titleKeyOf`), so its
+count and the Media page's total are in one unit. The persisted `media_identity` grouping does not
+always agree: `resolveGroup` also falls back to the imdb id and then to title and year when no primary id
+exists, so two copies browse shows as two titles can share one identity, and with it one actuator id. Grouping happens **after** engine matching, so filter semantics are ANY: a title
 appears if at least one of its copies matched (the motivating case — "do I have this in 4k?"). The
 representative row is the first matched copy in sort order, decorated with additive `sourceCount` and
 `sourceProviderIds` fields; pagination and totals operate on the grouped rows. With exactly one active

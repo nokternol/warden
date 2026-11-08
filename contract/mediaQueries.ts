@@ -17,16 +17,13 @@ export const mediaQueries = {
     .input(z.object({ id: IdSchema }))
     .output(z.null()),
 
-  /** How many items the query matches now, per active source instance and in total. */
+  /**
+   * How many titles the query matches now, read live from every active source instance of its
+   * content type. Copies sharing a provider id (TMDB for movies, TVDB for series) are one title.
+   * Rejects when any instance cannot be read, so a count is never quietly short.
+   */
   preview: base
     .route({ method: 'GET', path: '/api/media-queries/{id}/preview' })
     .input(z.object({ id: IdSchema }))
-    .output(
-      z.object({
-        count: z.number(),
-        instances: z.array(
-          z.object({ providerId: z.number(), name: z.string(), count: z.number() })
-        ),
-      })
-    ),
+    .output(z.object({ count: z.number() })),
 };

@@ -25,24 +25,46 @@ export interface MediaSourceEntry {
   source: MediaSource;
 }
 
+/** The connection each content type's owning provider type exposes. */
+interface SourceConnection {
+  movie: RadarrProvider;
+  series: SonarrProvider;
+}
+
+/** One active instance owning a content type, with its connection built. */
+export interface SourceInstance<C extends ContentType = ContentType> {
+  providerId: number;
+  name: string;
+  provider: SourceConnection[C];
+}
+
 export class MediaSourceFactory {
   constructor(private readonly deps: Deps) {}
 
-  /** One entry per active instance owning `contentType`. Never collapsed to one. */
-  async sourcesFor(contentType: ContentType): Promise<MediaSourceEntry[]> {
+  /**
+   * Every active instance owning `contentType` (by `SOURCE_OWNER`), each with its connection built.
+   * The one place the catalog's source instances are chosen: browse, the saved-query preview and
+   * pooled runs all read through it. Never collapsed to one.
+   */
+  async activeInstances<C extends ContentType>(contentType: C): Promise<SourceInstance<C>[]> {
     const settingsList = await this.deps.providerSettingsService.findActiveByTypes([
       SOURCE_OWNER[contentType],
     ]);
-    return settingsList.map((settings) => {
-      const provider = this.deps.providerFactory.create(settings, log) as
-        | RadarrProvider
-        | SonarrProvider;
-      return {
-        providerId: settings.id,
-        name: settings.name,
-        source: mediaSourceFor(provider, settings.id),
-      };
-    });
+    return settingsList.map((settings) => ({
+      providerId: settings.id,
+      name: settings.name,
+      provider: this.deps.providerFactory.create(settings, log) as SourceConnection[C],
+    }));
+  }
+
+  /** One entry per active instance owning `contentType`. Never collapsed to one. */
+  async sourcesFor(contentType: ContentType): Promise<MediaSourceEntry[]> {
+    const instances = await this.activeInstances(contentType);
+    return instances.map(({ providerId, name, provider }) => ({
+      providerId,
+      name,
+      source: mediaSourceFor(provider, providerId),
+    }));
   }
 }
 

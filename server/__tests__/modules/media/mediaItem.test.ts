@@ -1,4 +1,4 @@
-import { externalIdOf, itemKey } from '@server/modules/media/mediaItem';
+import { externalIdOf, itemKey, titleKey } from '@server/modules/media/mediaItem';
 import type { NormalizedMovie } from '@server/modules/media/movie';
 import type { NormalizedSeries } from '@server/modules/media/series';
 import { describe, expect, it } from 'vitest';
@@ -31,5 +31,20 @@ describe('itemKey', () => {
     expect(itemKey(noProvider)).toBeUndefined();
     const noExternal: NormalizedMovie = { _sourceIds: { providerId: 3 }, title: 'M' };
     expect(itemKey(noExternal)).toBeUndefined();
+  });
+});
+
+describe('titleKey', () => {
+  it('gives copies sharing a positive primary id one title, whatever instance holds them', () => {
+    expect(titleKey(1, 10, 603)).toBe(titleKey(2, 77, 603));
+    expect(titleKey(1, 10, 603)).not.toBe(titleKey(1, 11, 604));
+  });
+
+  it('makes a copy with a missing or non-positive primary id its own title', () => {
+    expect(titleKey(1, 10, undefined)).toBe('1:10');
+    expect(titleKey(1, 10, null)).toBe('1:10');
+    expect(titleKey(1, 10, 0)).toBe('1:10');
+    expect(titleKey(2, 11, 0)).toBe('2:11');
+    expect(titleKey(1, 12, -1)).toBe('1:12');
   });
 });

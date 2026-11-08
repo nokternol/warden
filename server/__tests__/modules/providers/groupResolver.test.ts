@@ -120,4 +120,15 @@ describe('resolveGroup', () => {
     expect(rowB.tmdbId).toBe(604);
     expect(await db.select().from(mediaIdentity)).toHaveLength(2);
   });
+
+  it('treats a primary id of 0 as missing, so unrelated series Sonarr reports with tvdbId 0 stay apart', async () => {
+    const db = getDb();
+
+    const first = await resolveGroup(db, 'series', { tvdbId: 0, title: 'Unlisted A', year: 2020 });
+    const second = await resolveGroup(db, 'series', { tvdbId: 0, title: 'Unlisted B', year: 2021 });
+
+    expect(second).not.toBe(first);
+    const rows = await db.select().from(mediaIdentity);
+    expect(rows.map((r) => r.tvdbId)).toEqual([null, null]);
+  });
 });

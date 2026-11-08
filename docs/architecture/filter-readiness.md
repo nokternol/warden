@@ -80,7 +80,7 @@ module; no consumer reads it.
 | Media page ([`ReadinessNotice`](ref:path:src/components/ReadinessNotice/index.tsx)) | A warning-styled notice beside the results. The red source-failure alert holds only providers that could not be read. |
 | Scheduled run ([`AutomationExecutor`](ref:path:server/modules/automations/automationExecutor.ts)) | Runs only when every finding is fixed or signed off. A blocked schedule keeps ticking to re-check, and records its skip once while the reason is unchanged. |
 | Run Now | Always records its outcome. Runs past the findings awaiting sign-off that the user chose to proceed past, for that run only; a finding not named stops it, so a stale prompt cannot approve a new finding. |
-| Automation row ([`AutomationRow`](ref:path:src/components/AutomationRow/index.tsx)) | Lists needs-fix lines with what clears them, awaiting sign-off lines with Accept, and signed-off lines, so accepted risk stays visible. Run Now checks first through `automations.readiness`, which answers the findings before the target count, so a failed count cannot hide them or stop the run being started. |
+| Automation row ([`AutomationRow`](ref:path:src/components/AutomationRow/index.tsx)) | Lists needs-fix lines with what clears them, awaiting sign-off lines with Accept, and signed-off lines, so accepted risk stays visible. Run Now checks first through `automations.readiness`, read again when the check opens, which answers the findings before the target count, so a failed count cannot hide them or stop the run being started. Until that read answers nothing is confirmable, and a failed read shows no earlier answer. |
 
 The executor adds one problem of its own: the automation's provider is not active.
 
@@ -112,6 +112,9 @@ The answer is one place, not a complete one. These are known and not checked:
   off.
 - **An unreachable source shows as a failed run**, not as a finding: nothing records whether a provider
   can be reached until a run tries.
-- **Some reasons a run stops belong to the automation, not its filters**, and show only as its last run:
-  the automation's own provider being inactive, the reach guard, and a task that is not enabled.
+- **Some reasons a run stops belong to the automation, not its filters**: the automation's own provider
+  being inactive, the reach guard, an excluded copy whose title is not resolved yet, and a task that is
+  not enabled. They are not findings and cannot be signed off. The first three are also listed among
+  the readiness check's problems, so Run Now says the run will be skipped; a task that is not enabled
+  shows as a failed count and as the run's outcome.
 - **Findings are refetched with the screen**, not pushed when an enrichment run completes.

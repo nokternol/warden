@@ -1,6 +1,6 @@
 import type { AutomationPreview, AutomationReadiness } from '@contract/automations';
 import type { ReadinessFinding } from '@contract/readiness';
-import type { AutomationRunStatus } from '@contract/schemas';
+import type { AutomationRunStatus, ContentType } from '@contract/schemas';
 import type { MetadataProvider } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
 import { ValidationError } from '../../kernel/errors';
@@ -11,10 +11,18 @@ import {
   MediaQueryEngine,
   automationAnswer,
   findingsFor,
+  identifiesTitle,
   mediaSourceFor,
   resolveActuatorTargets,
+  titleKeyOf,
 } from '../media';
-import type { FilterReadiness, MediaSource, MediaSourceFactory } from '../media';
+import type {
+  FilterReadiness,
+  MediaItem,
+  MediaQueryClause,
+  MediaSource,
+  MediaSourceFactory,
+} from '../media';
 import type { MediaQueryRecord, MediaQueryService } from '../mediaQueries';
 import {
   type ActuatorTask,
@@ -76,6 +84,11 @@ interface RunPlan {
   /** How many source copies the query was evaluated against, and how many it matched. */
   poolSize: number;
   matchedCount: number;
+  /**
+   * Titles of excluded copies nothing yet identifies: no primary id and no recorded identity, so
+   * neither the identity graph nor the title key can say which actuator ids they protect.
+   */
+  unresolvedExcludes: string[];
 }
 
 /** Below this many targets a destructive run is small enough to be its own limit. */
@@ -92,7 +105,25 @@ export function excessiveReach({
 }: Pick<RunPlan, 'task' | 'matchedCount' | 'poolSize'>): string | undefined {
   if (!task.destructive || matchedCount < REACH_CHECK_MIN_ITEMS) return undefined;
   if (matchedCount * 2 <= poolSize) return undefined;
-  return `Not run: this would act on ${matchedCount} of ${poolSize} titles, more than half the library. Narrow its queries if that is intended.`;
+  return `Not run: this would act on ${matchedCount} of ${poolSize} copies, more than half the library. Narrow its queries if that is intended.`;
+}
+
+/**
+ * Why a run should wait: an exclude matched a copy whose title cannot be resolved yet, so acting
+ * now could reach the very title it protects.
+ */
+export function unresolvedExclude({ unresolvedExcludes }: Pick<RunPlan, 'unresolvedExcludes'>) {
+  if (unresolvedExcludes.length === 0) return undefined;
+  return `Not run: an excluded title is not resolved yet (${unresolvedExcludes.join(', ')}). The automation will run once identity resolution has seen it.`;
+}
+
+/** Why a planned run will not act, one line per reason; empty when it will. */
+function whyPlanWontRun(
+  plan: Pick<RunPlan, 'task' | 'matchedCount' | 'poolSize' | 'unresolvedExcludes'>
+) {
+  return [unresolvedExclude(plan), excessiveReach(plan)].filter(
+    (r): r is string => r !== undefined
+  );
 }
 
 /** A source that remembers how many items it returned. */
@@ -241,9 +272,9 @@ export class AutomationExecutor {
         const plan = await this.planRun(current.taskId, providerSettings, queries);
         targets = plan.targets;
         itemCount = targets.items.length;
-        const excess = excessiveReach(plan);
-        if (excess) {
-          await this.recordSkip(automationId, taskId, excess);
+        const notRun = whyPlanWontRun(plan);
+        if (notRun.length > 0) {
+          await this.recordSkip(automationId, taskId, notRun.join('; '));
           return;
         }
         const run = await this.automationRunService.beginRun({ automationId, kind, targets });
@@ -391,7 +422,11 @@ export class AutomationExecutor {
     );
     const answer = automationAnswer(findings, signedOff);
     const counted = await this.planRun(automation.taskId, providerSettings, queries).then(
-      (plan) => ({ count: plan.actuatorIds.length }),
+      (plan) => {
+        // A run skipped after planning says so here, so Run Now does not confirm a run that won't act.
+        problems.push(...whyPlanWontRun(plan));
+        return { count: plan.actuatorIds.length };
+      },
       (err: unknown) => ({
         count: null,
         countError: err instanceof Error ? err.message : 'Unknown error',
@@ -472,6 +507,7 @@ export class AutomationExecutor {
         actuatorIds: [...targetById.keys()],
         poolSize: mediaSource.count(),
         matchedCount: matched.length,
+        unresolvedExcludes: [],
       };
     }
 
@@ -503,22 +539,13 @@ export class AutomationExecutor {
       clauses: querySpecs,
     });
     const resolved = await resolveActuatorTargets(this.db, providerSettings.type, matched);
-    // Copies of one title share an actuator id, so an exclude on any copy protects the title.
-    const excludes = querySpecs.filter((spec) => spec.role === 'exclude');
-    const protectedIds = new Set<string>();
-    if (excludes.length > 0) {
-      const excluded = await this.mediaQueryEngine.evaluate({
-        source: pooled,
-        contentType,
-        clauses: excludes.map((spec) => ({ ...spec, role: 'include' as const })),
-      });
-      const { actuatorIds } = await resolveActuatorTargets(
-        this.db,
-        providerSettings.type,
-        excluded
-      );
-      for (const id of actuatorIds) protectedIds.add(id);
-    }
+    const { protectedIds, unresolved } = await this.excludeProtection(
+      pooled,
+      contentType,
+      querySpecs,
+      providerSettings.type,
+      resolved
+    );
     const actuatorIds = resolved.actuatorIds.filter((id) => !protectedIds.has(id));
     return {
       task,
@@ -532,7 +559,46 @@ export class AutomationExecutor {
       actuatorIds,
       poolSize: pooled.count(),
       matchedCount: resolved.addressed.length,
+      unresolvedExcludes: unresolved.map((item) => item.title),
     };
+  }
+
+  /**
+   * The actuator ids a pooled run's excludes protect, judged on the same read as its includes. An
+   * actuator id is protected when any copy resolving to it is excluded, or carries the title key of
+   * an excluded copy. The second covers an excluded copy the identity job has not recorded yet,
+   * whose sibling copies are already stamped. Both the ids passed to the task and the run's
+   * recorded targets are filtered by this one set. `unresolved` holds the excluded copies neither
+   * route can place: no positive primary id and no recorded identity.
+   */
+  private async excludeProtection(
+    pooled: MediaSource,
+    contentType: ContentType,
+    querySpecs: MediaQueryClause[],
+    actuatorType: MetadataProvider['type'],
+    resolved: Awaited<ReturnType<typeof resolveActuatorTargets>>
+  ): Promise<{ protectedIds: Set<string>; unresolved: MediaItem[] }> {
+    const protectedIds = new Set<string>();
+    const excludes = querySpecs.filter((spec) => spec.role === 'exclude');
+    if (excludes.length === 0 || !this.db) return { protectedIds, unresolved: [] };
+    const excluded = await this.mediaQueryEngine.evaluate({
+      source: pooled,
+      contentType,
+      clauses: excludes.map((spec) => ({ ...spec, role: 'include' as const })),
+    });
+    const excludedResolved = await resolveActuatorTargets(this.db, actuatorType, excluded);
+    for (const id of excludedResolved.actuatorIds) protectedIds.add(id);
+    const excludedTitles = new Set(excluded.map((item) => titleKeyOf(item, contentType)));
+    for (const item of resolved.addressed) {
+      const id = resolved.actuatorIdOf(item);
+      if (id !== undefined && excludedTitles.has(titleKeyOf(item, contentType))) {
+        protectedIds.add(id);
+      }
+    }
+    const unresolved = excluded.filter(
+      (item) => !excludedResolved.recorded(item) && !identifiesTitle(item, contentType)
+    );
+    return { protectedIds, unresolved };
   }
 
   /**

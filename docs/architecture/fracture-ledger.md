@@ -544,6 +544,39 @@ Earlier entries in this ledger use the names that were current when they healed 
   sign-offs per automation. The `required` flag and the old health fields are gone, deferred rules
   cannot be saved, and a query an automation uses cannot be deleted.
 
+### Catalog reads and counts — two read paths, counts in unnamed units (recorded and healed 2026-11-07)
+
+- **Fracture:** the movie and series catalog was read two ways. Browse chose Radarr and Sonarr
+  instances itself, by hard-coded provider type, and bound its cached rows through an inline source;
+  the saved-query preview and pooled runs went through `MediaSourceFactory.sourcesFor` and the
+  connection-bound adapters. Every count was taken in its own unnamed unit: the Media page counted
+  titles grouped by TMDB or TVDB id, a query row summed each instance's copies, the builder's net line
+  subtracted summed copies on the client, and a run counted actuator targets.
+- **How it misled:** with two Radarr instances holding one movie, the Media page showed 1, the query row
+  2 and a Plex delete acted on 1, and the net line's difference of sums was not the size of a set
+  difference. Series Sonarr reports with `tvdbId: 0` collapsed into one title on the Media page and into
+  one identity, so a Plex delete could address the wrong series. An exclude matching a copy the identity
+  job had not recorded yet protected nothing, so a "keep" tag on a new 4K copy did not stop Plex deleting
+  the title. Run Now's count was read when the row mounted, so the number confirmed could be as old as
+  the page.
+- **Healed by:** one title key (`titleKey`: a positive TMDB id for movies, TVDB id for series, else the
+  copy is its own title), used by browse and the preview; the identity graph ignores a zero primary id,
+  and a migration cleared groups merged on one. One place chooses source instances
+  (`MediaSourceFactory.activeInstances`) and one way builds a source (the over-rows binders, which the
+  connection-bound adapters delegate to). The net line is deleted. Run Now counts again when it opens.
+  For a non-source actuator, exclude protection also goes by title key, at actuator-id level, and an
+  excluded copy nothing identifies skips the run.
+- **Different on purpose:** three units, each named where it shows: **titles** on the Media page and the
+  query rows, **targets** (the ids a task acts on) in the destructive confirmation and Run Now, and
+  **copies** in a run's recorded items and the reach guard. Scope differs from unit: a query row counts
+  titles across every instance of its content type, while a Radarr or Sonarr automation acts only on its
+  own instance, so a row and that automation's count can differ for scope alone. Read policy differs by
+  consumer: browse is cached (up to 60 seconds, not surfaced) and partial, naming the instances it could
+  not read; the preview and runs are live, the preview rejects on a failed instance, and a run fails
+  closed. A Radarr or Sonarr automation builds its own source from its provider's connection, through the
+  same binder. The counts come from separate evaluations that share a key and a source builder, not
+  from one match.
+
 ## Open
 
 ### Ratings — two mechanisms, one blocked (recorded 2026-11-01, MVP slice B4)
@@ -569,3 +602,12 @@ Earlier entries in this ledger use the names that were current when they healed 
 - **Status:** Search is deferred in `contract/scope.ts`, so it is unreachable but present. The MVP slice
   "One title lookup" in `docs/in_progress/mvp/plan.md` decides whether they do one job or two and
   settles it, and the MVP does not close until it merges.
+
+### Source instance choice — the identity job chooses its own (recorded 2026-11-07)
+
+- **Fracture:** the identity resolution job chooses its Radarr and Sonarr instances itself
+  (`identityJobFactory.ts`), apart from `MediaSourceFactory.activeInstances`, which browse, the preview and
+  runs share. `providers` may not import `media`, so the job cannot use the media module's helper.
+- **Status:** both select the active instances of the source-owning type today, so they agree; a change
+  to how catalog instances are chosen must still be made in both places. The enrichment job chooses
+  enrichers, not catalog sources, and is not part of this entry.

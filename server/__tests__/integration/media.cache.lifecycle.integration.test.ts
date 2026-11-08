@@ -11,7 +11,7 @@ import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createMediaProcedures } from '@server/modules/media';
-import { createMockConfig } from '@tests/factories';
+import { createMockConfig, createSonarrSeries } from '@tests/factories';
 import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import { http, HttpResponse } from 'msw';
@@ -126,6 +126,30 @@ describe('MediaHandler cache lifecycle', () => {
     expect(radarrCallCount).toBe(1);
     expect(expectSuccessResponse(res1).items).toHaveLength(1);
     expect(expectSuccessResponse(res2).items).toHaveLength(1);
+  });
+
+  it('serves a second browse page from the cached rows, with no second upstream request', async () => {
+    const calls = { radarr: 0, sonarr: 0 };
+    server.use(
+      http.get('http://localhost:7878/api/v3/movie', () => {
+        calls.radarr++;
+        return HttpResponse.json([makeRadarrMovie('Inception')]);
+      }),
+      http.get('http://localhost:8989/api/v3/series', () => {
+        calls.sonarr++;
+        return HttpResponse.json([createSonarrSeries({ title: 'Dark' })]);
+      })
+    );
+    const client = createApiClient(buildAuthedApp(serveApi({ media: buildMedia().procedures })));
+
+    for (const type of ['movie', 'series'] as const) {
+      const first = expectSuccessResponse(await client.get(browsePath(type)));
+      const second = expectSuccessResponse(await client.get(browsePath(type)));
+      expect(second.items).toEqual(first.items);
+      expect(second.items).toHaveLength(1);
+    }
+
+    expect(calls).toEqual({ radarr: 1, sonarr: 1 });
   });
 
   it('two createMediaProcedures() instances have independent caches', async () => {

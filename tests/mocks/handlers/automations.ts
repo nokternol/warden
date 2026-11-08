@@ -124,6 +124,6 @@ export const mediaQueriesHandlers = [
 
   mockProcedure(contract.mediaQueries.preview, ({ params }) => {
     const count = Number(params.id) === 1 ? 42 : 14;
-    return { count, instances: [{ providerId: 1, name: 'Radarr Main', count }] };
+    return { count };
   }),
 ];

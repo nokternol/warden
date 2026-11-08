@@ -213,4 +213,29 @@ describe('Browse display dedup — multiple active Radarr instances', () => {
     expect(solo.sourceCount).toBe(1);
     expect(solo.sourceProviderIds).toEqual([radarrId]);
   });
+
+  it('keeps copies whose primary id is 0 as separate titles, even on different instances', async () => {
+    const row = (id: number, title: string) => ({
+      id,
+      title,
+      hasFile: true,
+      monitored: true,
+      tmdbId: 0,
+      profileId: 1,
+      qualityProfileId: 1,
+      tags: [],
+      folderName: `/m/${id}`,
+      path: `/m/${id}`,
+    });
+    server.use(
+      http.get(`${RADARR_URL}/api/v3/movie`, () => HttpResponse.json([row(1, 'Unlisted A')])),
+      http.get(`${RADARR_4K_URL}/api/v3/movie`, () => HttpResponse.json([row(2, 'Unlisted B')]))
+    );
+
+    const res = await client.get(browsePath('movie', [], { pageSize: 100 }));
+    const data = expectSuccessResponse(res);
+
+    expect(data.totalCount).toBe(2);
+    expect(data.items.map((m: { sourceCount: number }) => m.sourceCount)).toEqual([1, 1]);
+  });
 });

@@ -441,6 +441,45 @@ describe('IdentityResolutionJob', () => {
     ]);
   });
 
+  it('moves series once joined on a TVDB id of 0 into their own groups, once that group no longer holds the id', async () => {
+    const db = getDb();
+    // A group as migration 0036 leaves it: its zero id and borrowed ids cleared, both copies still in it.
+    const [{ id: joined }] = await db
+      .insert(mediaIdentity)
+      .values({ kind: 'series', title: 'Unlisted A', year: 2020 })
+      .returning({ id: mediaIdentity.id });
+    for (const externalId of [1, 2]) {
+      await db
+        .insert(mediaItems)
+        .values({ providerId: sonarrProviderId, externalId, mediaIdentityId: joined });
+    }
+    const unlisted = (id: number, title: string, year: number) =>
+      makeSeries({
+        id,
+        title,
+        year,
+        tvdbId: 0,
+        tmdbId: undefined,
+        imdbId: undefined,
+        tvMazeId: undefined,
+      });
+    const sonarrProvider = {
+      getSeries: vi
+        .fn()
+        .mockResolvedValue([unlisted(1, 'Unlisted A', 2020), unlisted(2, 'Unlisted B', 2021)]),
+    };
+
+    await new IdentityResolutionJob({
+      db,
+      seriesSources: [{ providerId: sonarrProviderId, provider: sonarrProvider }],
+    }).runForSeries();
+
+    const identities = await db.select().from(mediaIdentity);
+    expect(identities.map((i) => i.title).sort()).toEqual(['Unlisted A', 'Unlisted B']);
+    const items = await db.select().from(mediaItems);
+    expect(new Set(items.map((i) => i.mediaIdentityId)).size).toBe(2);
+  });
+
   it('upserts a Sonarr series into media_identity (kind=series) and a media_item copy for the instance', async () => {
     const db = getDb();
     const sonarrProvider = { getSeries: vi.fn().mockResolvedValue([makeSeries()]) };

@@ -253,6 +253,13 @@
       "when": 1793654449378,
       "tag": "0035_automation_blocks",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1793654450378,
+      "tag": "0036_identity_zero_ids",
+      "breakpoints": true
     }
   ]
 }
