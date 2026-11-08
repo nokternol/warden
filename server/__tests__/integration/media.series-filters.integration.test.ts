@@ -239,6 +239,18 @@ describe('Media browse — series registry predicates', () => {
         'Low',
       ]);
     });
+    it('does not match an unrated series, which Sonarr reports as zero votes and zero value', async () => {
+      const client = clientWithSeries([
+        ...list,
+        series(3, 'Unrated', { ratings: { votes: 0, value: 0 } }),
+      ]);
+      const res = await client.get(
+        browsePath('series', [{ ruleKey: 'communityRating', value: { max: 5 } }], { pageSize: 100 })
+      );
+      expect(expectSuccessResponse(res).items.map((s: { title: string }) => s.title)).toEqual([
+        'Low',
+      ]);
+    });
   });
 
   describe('ended', () => {

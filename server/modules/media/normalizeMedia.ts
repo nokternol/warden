@@ -75,7 +75,7 @@ export function normalizeSonarrSeries(s: SonarrSeries, providerId: number): Norm
     ended: s.ended,
     episodePercentage: s.statistics?.percentOfEpisodes,
     lastAiredAt: s.previousAiring,
-    communityRating: s.ratings?.value,
+    communityRating: s.ratings?.value === 0 && !s.ratings?.votes ? undefined : s.ratings?.value,
     path: s.path,
     images: s.images,
     nextAiring: s.nextAiring,
