@@ -35,6 +35,7 @@ import { cn } from '@app/lib/utils/cn';
 import { guardPage } from '@app/lib/utils/guardPage';
 import type { MediaRuleDescriptor } from '@contract/media';
 import type { ProviderType } from '@contract/providers';
+import { type TitleRating, ratingsOf } from '@contract/ratings';
 import type { ReadinessFinding } from '@contract/readiness';
 import type { ContentType } from '@contract/schemas';
 import { isOfferedSection, scope } from '@contract/scope';
@@ -409,6 +410,7 @@ function useSentinel(onIntersect: () => void) {
 interface SelectedMedia {
   title: string;
   year?: number;
+  ratings: TitleRating[];
 }
 
 export type ActiveTab = 'movies' | 'series';
@@ -583,7 +585,11 @@ export function MediaContent({
                 onClick={
                   RATINGS_PANEL_OFFERED
                     ? (id) => {
-                        setSelected({ title: movie.title, year: movie.year });
+                        setSelected({
+                          title: movie.title,
+                          year: movie.year,
+                          ratings: ratingsOf('movie', movie.ratings),
+                        });
                         setSelectedId(id);
                       }
                     : undefined
@@ -655,7 +661,7 @@ export function MediaContent({
                 onClick={
                   RATINGS_PANEL_OFFERED
                     ? (id) => {
-                        setSelected({ title: item.title, year: item.year });
+                        setSelected({ title: item.title, year: item.year, ratings: [] });
                         setSelectedId(id);
                       }
                     : undefined
@@ -710,7 +716,7 @@ export function MediaContent({
           }}
           title={selected?.title ?? ''}
           year={selected?.year}
-          ratings={[]}
+          ratings={selected?.ratings ?? []}
         />
       )}
     </>
