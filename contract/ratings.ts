@@ -64,9 +64,9 @@ function entriesOf(contentType: ContentType, ratings: unknown): [RatingSource, u
  */
 function isRated(entry: unknown): entry is SourceEntry {
   if (!isObject(entry)) return false;
-  const { value, votes } = entry;
+  const { value } = entry;
   if (typeof value !== 'number' || !Number.isFinite(value)) return false;
-  return !(value === 0 && !votes);
+  return !(value === 0 && !votesOf({ value, votes: entry.votes }));
 }
 
 /**

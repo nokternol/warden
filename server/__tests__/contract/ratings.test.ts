@@ -46,6 +46,11 @@ describe('a title’s ratings', () => {
     expect(ratingsOf('series', null)).toEqual([]);
   });
 
+  it('treats a zero value with a vote count that is not a number as unrated', () => {
+    expect(ratingsOf('movie', { imdb: { value: 0, votes: 'many' } })).toEqual([]);
+    expect(ratingsOf('series', { value: 0, votes: '0' })).toEqual([]);
+  });
+
   it('leaves out a vote count that is not a number, keeping the rating', () => {
     expect(ratingsOf('movie', { imdb: { value: 7.1, votes: 'many' } })).toEqual([
       { source: 'imdb', label: 'IMDb', value: 7.1, votes: undefined, scale: 10 },
