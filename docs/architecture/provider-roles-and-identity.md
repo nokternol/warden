@@ -45,7 +45,7 @@ the *only* place that fact is declared:
 - `ProviderSettingsService.assertNoActiveConflict` reads `isMediaSourceType` to decide whether the
   single-active-provider invariant (D8) applies — see below.
 - The identity job reads `SOURCE_OWNER`/`contentTypeOfSourceType` to know which provider types to fetch
-  and which content type (`kind`) to resolve their items under.
+  and which content type (`contentType`) to resolve their items under.
 
 A type graduating into the `MediaSource` role (Plex, per the still-open intent doc) would extend this one
 map; every consumer above inherits the change without its own edit.
@@ -70,15 +70,15 @@ future consumer can silently reintroduce last-one-wins.
 two-table split between the logical title and each instance's concrete copy of it:
 
 - **`media_identity` is the group** — one row per logical title, no per-source coordinate. Keyed
-  per-`kind` (a `ContentType`: `movie`/`series`, scoping the primary-id namespace: a TMDB movie id and a TMDB tv id with the
+  per-`contentType` (`movie`/`series`, scoping the primary-id namespace: a TMDB movie id and a TMDB tv id with the
   same number are different titles) by a partial-unique index on its primary id (`tmdbId` for movies,
   `tvdbId` for series).
 - **`media_item` is one row per instance's copy**, `UNIQUE(providerId, externalId)` — `providerId` is the
   *configured instance* (`metadata_provider.id`), not the provider type, so a non-4k Radarr and a 4k
   Radarr never collide; both copies attach to the same `media_identity` group when they report the same
   primary id.
-- **`resolveGroup(db, kind, ids)`** ([`server/modules/providers/groupResolver.ts`](ref:path:server/modules/providers/groupResolver.ts)) is the
-  sole find-or-create authority for which group an item belongs to: primary id per kind if present;
+- **`resolveGroup(db, contentType, ids)`** ([`server/modules/providers/groupResolver.ts`](ref:path:server/modules/providers/groupResolver.ts)) is the
+  sole find-or-create authority for which group an item belongs to: primary id per content type if present;
   otherwise a fallback chain (`imdbId`, then `title`+`year`); otherwise a fresh group. A TMDB or TVDB
   id that is not positive counts as missing: Sonarr reports `tvdbId: 0` for series it cannot match, and
   keying on it would join unrelated series into one group sharing one Plex or Jellyfin id. Migration
@@ -103,7 +103,7 @@ loop every active instance per type — never collapsed to one:
   rows. A deleted copy still counts for the sweep, so a removed title keeps its group and its name; a
   group empties only when its copies' provider is deleted (the `metadata_provider` cascade).
 - `runForPlex` never inserts a group — it only *stamps* `plexRatingKey` onto groups matching by
-  `kind` + `tmdbId`/`tvdbId`, closing a bug where an unscoped `tmdbId` match could cross the movie/tv id
+  `contentType` + `tmdbId`/`tvdbId`, closing a bug where an unscoped `tmdbId` match could cross the movie/tv id
   namespaces. It reads the ids from each library item's `Guid` list (`tmdb://N`, `tvdb://N`), which Plex
   includes in a listing only when the request asks with `includeGuids=1`. A stamp writes only a new or
   changed id and clears that group's `enrichedAt`, so the next enrichment run reads the linked server

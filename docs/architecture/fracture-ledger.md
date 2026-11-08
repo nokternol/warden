@@ -577,6 +577,19 @@ Earlier entries in this ledger use the names that were current when they healed 
   same binder. The counts come from separate evaluations that share a key and a source builder, not
   from one match.
 
+### Rule key and content type — two names kept (recorded 2026-11-01 — healed 2026-11-08, MVP slice B7)
+
+- **Fracture:** the column `media_query_filter_values.filterKey` held a rule key, and `media_identity.kind`
+  held a content type, after every name in code had moved to `ruleKey` and `contentType`.
+- **How it misled:** a reader following a rule key or a content type from the contract into a query
+  met a second name at the table, and could not tell from the name that it was the same thing.
+- **Healed by:** migration 0037 renames both columns in place (`ALTER TABLE … RENAME COLUMN`), so every
+  saved filter and every grouped title keeps its row, and the partial unique indexes that scope a primary
+  id to a content type keep working: a movie and a series with the same external id stay separate titles.
+  The schema, the media query service, group resolution, the identity job, source copies and the
+  enrichment queries use `ruleKey` and `contentType` directly; no code maps an old name to a new one.
+  The migrations already applied, and their tests, keep the names that were current when they ran.
+
 ## Open
 
 ### Ratings — two mechanisms, one blocked (recorded 2026-11-01, MVP slice B4)
@@ -586,14 +599,6 @@ Earlier entries in this ledger use the names that were current when they healed 
 - **Status:** the second mechanism is deferred in `contract/scope.ts`, so it is unreachable but present.
   The MVP slice "One ratings mechanism" in `docs/in_progress/mvp/plan.md` settles them to one, and the
   MVP does not close until it merges.
-
-### Rule key and content type — two names kept (recorded 2026-11-01)
-
-- **Fracture:** the column `media_query_filter_values.filterKey` holds a rule key. `media_identity.kind`
-  holds a content type.
-- **Status:** no user sees them, and renaming either needs a migration. The MVP slice "Rule key and
-  content type in the schema" in `docs/in_progress/mvp/plan.md` renames both, and the MVP does not
-  close until it merges.
 
 ### Title lookup — two mechanisms, one blocked (recorded 2026-11-01, MVP slice B4)
 
