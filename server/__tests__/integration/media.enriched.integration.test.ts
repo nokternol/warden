@@ -92,7 +92,7 @@ async function seedEnrichment(sourceId: number, fields: Partial<EnrichmentFields
     .where(eq(metadataProviders.type, MetadataProviderType.RADARR));
   const [identity] = await db
     .insert(mediaIdentity)
-    .values({ kind: 'movie', enrichedAt: Math.floor(Date.now() / 1000) })
+    .values({ contentType: 'movie', enrichedAt: Math.floor(Date.now() / 1000) })
     .returning();
   await db
     .insert(mediaItems)

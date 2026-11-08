@@ -48,7 +48,7 @@ describe('recordSourceCopy', () => {
 
     await expect(
       recordSourceCopy(db, {
-        kind: 'movie',
+        contentType: 'movie',
         providerId: provider.id,
         externalId: movie.id,
         ids: { tmdbId: movie.tmdbId, title: movie.title, year: movie.year },

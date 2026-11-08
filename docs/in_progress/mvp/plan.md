@@ -451,6 +451,9 @@ names, so nothing is renamed twice.
   Migrations already applied keep their original text.
 - **Docs:** the ledger entry moves to Healed; `VOCABULARY.md` and the EAV/identity architecture docs
   name the new columns.
+- **As built:** migration 0037 renames both columns in place. The local variables, the `SourceCopy`
+  field and the Plex and Jellyfin lookup tables that carried a content type under the name `kind` take
+  `contentType` too.
 
 ### Track C — One mechanism per job
 

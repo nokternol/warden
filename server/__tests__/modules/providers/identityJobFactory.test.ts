@@ -78,7 +78,10 @@ describe('IdentityJobFactory', () => {
     const job = await makeFactory().create();
     await expect(runIdentityJob(job)).resolves.toBeUndefined();
 
-    const rows = await db.select().from(mediaIdentity).where(eq(mediaIdentity.kind, 'movie'));
+    const rows = await db
+      .select()
+      .from(mediaIdentity)
+      .where(eq(mediaIdentity.contentType, 'movie'));
     expect(rows).toHaveLength(1);
     expect(rows[0].tmdbId).toBe(603);
     const items = await db.select().from(mediaItems);
@@ -122,7 +125,10 @@ describe('IdentityJobFactory', () => {
     const job = await makeFactory().create();
     await job.runForMovies();
 
-    const identities = await db.select().from(mediaIdentity).where(eq(mediaIdentity.kind, 'movie'));
+    const identities = await db
+      .select()
+      .from(mediaIdentity)
+      .where(eq(mediaIdentity.contentType, 'movie'));
     expect(identities).toHaveLength(1); // same tmdbId → one shared group
     const items = await db.select().from(mediaItems);
     expect(items).toHaveLength(2);
@@ -140,7 +146,7 @@ describe('IdentityJobFactory', () => {
       url: PLEX_URL,
       apiKey: 'plex-token',
     });
-    await db.insert(mediaIdentity).values({ kind: 'movie', tmdbId: 603, resolvedAt: 0 });
+    await db.insert(mediaIdentity).values({ contentType: 'movie', tmdbId: 603, resolvedAt: 0 });
     server.use(
       http.get(`${PLEX_URL}/library/sections`, () =>
         HttpResponse.json({ MediaContainer: { Directory: [{ key: '1' }] } })
@@ -170,7 +176,7 @@ describe('IdentityJobFactory', () => {
       apiKey: 'jf-token',
       settings: { userId: 'test-user-id' },
     });
-    await db.insert(mediaIdentity).values({ kind: 'movie', tmdbId: 603, resolvedAt: 0 });
+    await db.insert(mediaIdentity).values({ contentType: 'movie', tmdbId: 603, resolvedAt: 0 });
     server.use(
       http.get(`${jellyfinUrl}/Users/:userId/Items`, () =>
         HttpResponse.json({
@@ -206,7 +212,10 @@ describe('IdentityJobFactory', () => {
     const job = await makeFactory().create();
     await runIdentityJob(job);
 
-    const [row] = await db.select().from(mediaIdentity).where(eq(mediaIdentity.kind, 'series'));
+    const [row] = await db
+      .select()
+      .from(mediaIdentity)
+      .where(eq(mediaIdentity.contentType, 'series'));
     expect(row.tvMazeId).toBe(169);
   });
 });

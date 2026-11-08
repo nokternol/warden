@@ -52,7 +52,7 @@ describe('mergeEnrichment', () => {
   it('maps enrichment onto the matching item by (providerId, externalId)', async () => {
     const db = getDb();
     const queries = new EnrichmentQueries({ db });
-    const [identity] = await db.insert(mediaIdentity).values({ kind: 'movie' }).returning();
+    const [identity] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
     await db
       .insert(mediaItems)
       .values({ providerId: radarrId, externalId: 1, mediaIdentityId: identity.id });
@@ -82,7 +82,7 @@ describe('mergeEnrichment', () => {
   it('leaves fields undefined when the enrichment row holds no value for them', async () => {
     const db = getDb();
     const queries = new EnrichmentQueries({ db });
-    const [identity] = await db.insert(mediaIdentity).values({ kind: 'movie' }).returning();
+    const [identity] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
     await db
       .insert(mediaItems)
       .values({ providerId: radarrId, externalId: 5, mediaIdentityId: identity.id });
@@ -108,7 +108,7 @@ describe('mergeEnrichment', () => {
   it('correctly attributes enrichment for a batch spanning two instances that share one group', async () => {
     const db = getDb();
     const queries = new EnrichmentQueries({ db });
-    const [identity] = await db.insert(mediaIdentity).values({ kind: 'movie' }).returning();
+    const [identity] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
     // Both instances' copies resolve to the same group — group-level enrichment is
     // read identically by both: watched-ness is a fact about the title, not the copy.
     await db.insert(mediaItems).values([
@@ -127,8 +127,8 @@ describe('mergeEnrichment', () => {
   it("does not cross-attribute enrichment between two instances' distinct copies with colliding external ids", async () => {
     const db = getDb();
     const queries = new EnrichmentQueries({ db });
-    const [identityA] = await db.insert(mediaIdentity).values({ kind: 'movie' }).returning();
-    const [identityB] = await db.insert(mediaIdentity).values({ kind: 'movie' }).returning();
+    const [identityA] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
+    const [identityB] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
     // Both instances happen to use raw id 1 for unrelated titles.
     await db.insert(mediaItems).values([
       { providerId: radarrId, externalId: 1, mediaIdentityId: identityA.id },

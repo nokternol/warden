@@ -98,7 +98,7 @@ describe('IdentityResolutionJob', () => {
 
   it('sets plexRatingKey on media_identity rows where a Plex guid matches by tmdbId', async () => {
     const db = getDb();
-    await db.insert(mediaIdentity).values({ kind: 'movie', tmdbId: 100 });
+    await db.insert(mediaIdentity).values({ contentType: 'movie', tmdbId: 100 });
 
     const plexProvider = {
       getAllItems: vi
@@ -113,10 +113,10 @@ describe('IdentityResolutionJob', () => {
     expect(rows[0].plexRatingKey).toBe('plex-key-42');
   });
 
-  it('runForJellyfin sets jellyfinItemId where a Jellyfin ProviderIds.Tmdb matches, kind-scoped', async () => {
+  it('runForJellyfin sets jellyfinItemId where a Jellyfin ProviderIds.Tmdb matches, content-type-scoped', async () => {
     const db = getDb();
-    await db.insert(mediaIdentity).values({ kind: 'movie', tmdbId: 100 });
-    await db.insert(mediaIdentity).values({ kind: 'series', tmdbId: 100 });
+    await db.insert(mediaIdentity).values({ contentType: 'movie', tmdbId: 100 });
+    await db.insert(mediaIdentity).values({ contentType: 'series', tmdbId: 100 });
 
     const jellyfinProvider = {
       getAllItems: vi
@@ -127,15 +127,21 @@ describe('IdentityResolutionJob', () => {
     const job = new IdentityResolutionJob({ db, jellyfinProvider });
     await job.runForJellyfin();
 
-    const movies = await db.select().from(mediaIdentity).where(eq(mediaIdentity.kind, 'movie'));
+    const movies = await db
+      .select()
+      .from(mediaIdentity)
+      .where(eq(mediaIdentity.contentType, 'movie'));
     expect(movies[0].jellyfinItemId).toBe('jf-42');
-    const shows = await db.select().from(mediaIdentity).where(eq(mediaIdentity.kind, 'series'));
+    const shows = await db
+      .select()
+      .from(mediaIdentity)
+      .where(eq(mediaIdentity.contentType, 'series'));
     expect(shows[0].jellyfinItemId).toBeNull();
   });
 
   it('runForJellyfin matches a series by ProviderIds.Tvdb', async () => {
     const db = getDb();
-    await db.insert(mediaIdentity).values({ kind: 'series', tvdbId: 200 });
+    await db.insert(mediaIdentity).values({ contentType: 'series', tvdbId: 200 });
 
     const jellyfinProvider = {
       getAllItems: vi
@@ -154,7 +160,7 @@ describe('IdentityResolutionJob', () => {
     const db = getDb();
     expect(await new IdentityResolutionJob({ db }).runForJellyfin()).toBe(0);
 
-    await db.insert(mediaIdentity).values({ kind: 'movie', tmdbId: 100 });
+    await db.insert(mediaIdentity).values({ contentType: 'movie', tmdbId: 100 });
     const jellyfinProvider = {
       getAllItems: vi.fn().mockResolvedValue([
         { Id: 'jf-hit', Type: 'Movie', ProviderIds: { Tmdb: '100' } },
@@ -169,7 +175,7 @@ describe('IdentityResolutionJob', () => {
 
   it('runForPlex counts rows actually changed, not Plex items processed', async () => {
     const db = getDb();
-    await db.insert(mediaIdentity).values({ kind: 'movie', tmdbId: 100 });
+    await db.insert(mediaIdentity).values({ contentType: 'movie', tmdbId: 100 });
 
     const plexProvider = {
       getAllItems: vi.fn().mockResolvedValue([
@@ -183,7 +189,7 @@ describe('IdentityResolutionJob', () => {
     expect(await job.runForPlex()).toBe(1);
   });
 
-  it('upserts a Radarr movie into media_identity (kind=movie) and a media_item copy for the instance', async () => {
+  it('upserts a Radarr movie into media_identity (contentType=movie) and a media_item copy for the instance', async () => {
     const db = getDb();
     const radarrProvider = { getMovies: vi.fn().mockResolvedValue([makeMovie()]) };
 
@@ -195,7 +201,7 @@ describe('IdentityResolutionJob', () => {
 
     const identities = await db.select().from(mediaIdentity);
     expect(identities).toHaveLength(1);
-    expect(identities[0].kind).toBe('movie');
+    expect(identities[0].contentType).toBe('movie');
     expect(identities[0].tmdbId).toBe(100);
     expect(identities[0].imdbId).toBe('tt0000001');
 
@@ -446,7 +452,7 @@ describe('IdentityResolutionJob', () => {
     // A group as migration 0036 leaves it: its zero id and borrowed ids cleared, both copies still in it.
     const [{ id: joined }] = await db
       .insert(mediaIdentity)
-      .values({ kind: 'series', title: 'Unlisted A', year: 2020 })
+      .values({ contentType: 'series', title: 'Unlisted A', year: 2020 })
       .returning({ id: mediaIdentity.id });
     for (const externalId of [1, 2]) {
       await db
@@ -480,7 +486,7 @@ describe('IdentityResolutionJob', () => {
     expect(new Set(items.map((i) => i.mediaIdentityId)).size).toBe(2);
   });
 
-  it('upserts a Sonarr series into media_identity (kind=series) and a media_item copy for the instance', async () => {
+  it('upserts a Sonarr series into media_identity (contentType=series) and a media_item copy for the instance', async () => {
     const db = getDb();
     const sonarrProvider = { getSeries: vi.fn().mockResolvedValue([makeSeries()]) };
 
@@ -492,7 +498,7 @@ describe('IdentityResolutionJob', () => {
 
     const identities = await db.select().from(mediaIdentity);
     expect(identities).toHaveLength(1);
-    expect(identities[0].kind).toBe('series');
+    expect(identities[0].contentType).toBe('series');
     expect(identities[0].tvdbId).toBe(200);
     expect(identities[0].tmdbId).toBe(300);
     expect(identities[0].imdbId).toBe('tt0000002');
@@ -563,7 +569,7 @@ describe('IdentityResolutionJob', () => {
     const db = getDb();
     const [seriesGroup] = await db
       .insert(mediaIdentity)
-      .values({ kind: 'series', tvdbId: 81189 })
+      .values({ contentType: 'series', tvdbId: 81189 })
       .returning();
 
     const plexProvider = {
@@ -581,15 +587,15 @@ describe('IdentityResolutionJob', () => {
     expect(row.plexRatingKey).toBe('plex-series');
   });
 
-  it('scopes the Plex stamp by kind — a movie tmdbId match never stamps a show group with the same numeric id', async () => {
+  it('scopes the Plex stamp by content type — a movie tmdbId match never stamps a show group with the same numeric id', async () => {
     const db = getDb();
     const [movieGroup] = await db
       .insert(mediaIdentity)
-      .values({ kind: 'movie', tmdbId: 603 })
+      .values({ contentType: 'movie', tmdbId: 603 })
       .returning();
     const [showGroup] = await db
       .insert(mediaIdentity)
-      .values({ kind: 'series', tmdbId: 603 })
+      .values({ contentType: 'series', tmdbId: 603 })
       .returning();
 
     const plexProvider = {
@@ -754,8 +760,8 @@ describe('IdentityResolutionJob', () => {
     it('links a Radarr movie to its Plex item by TMDB id, and a Sonarr series by TVDB id', async () => {
       serveCapturedPlex();
       const db = getDb();
-      await db.insert(mediaIdentity).values({ kind: 'movie', tmdbId: 584 }); // 2 Fast 2 Furious
-      await db.insert(mediaIdentity).values({ kind: 'series', tvdbId: 396390 }); // 1883
+      await db.insert(mediaIdentity).values({ contentType: 'movie', tmdbId: 584 }); // 2 Fast 2 Furious
+      await db.insert(mediaIdentity).values({ contentType: 'series', tvdbId: 396390 }); // 1883
       const plexProvider = new PlexProvider(
         { name: 'Plex', url: PLEX_URL, apiKey: 'token', settings: {} },
         getChildLogger('test')
@@ -763,8 +769,14 @@ describe('IdentityResolutionJob', () => {
 
       await new IdentityResolutionJob({ db, plexProvider }).runForPlex();
 
-      const movie = await db.select().from(mediaIdentity).where(eq(mediaIdentity.kind, 'movie'));
-      const series = await db.select().from(mediaIdentity).where(eq(mediaIdentity.kind, 'series'));
+      const movie = await db
+        .select()
+        .from(mediaIdentity)
+        .where(eq(mediaIdentity.contentType, 'movie'));
+      const series = await db
+        .select()
+        .from(mediaIdentity)
+        .where(eq(mediaIdentity.contentType, 'series'));
       expect(movie[0].plexRatingKey).toBe('408');
       expect(series[0].plexRatingKey).toBe('45669');
     });
@@ -774,7 +786,7 @@ describe('IdentityResolutionJob', () => {
       const db = getDb();
       await db
         .insert(mediaIdentity)
-        .values({ kind: 'movie', tmdbId: 584, enrichedAt: 1_700_000_000 });
+        .values({ contentType: 'movie', tmdbId: 584, enrichedAt: 1_700_000_000 });
       const plexProvider = new PlexProvider(
         { name: 'Plex', url: PLEX_URL, apiKey: 'token', settings: {} },
         getChildLogger('test')
@@ -789,9 +801,12 @@ describe('IdentityResolutionJob', () => {
     it('leaves a title already linked to the same Plex item untouched', async () => {
       serveCapturedPlex();
       const db = getDb();
-      await db
-        .insert(mediaIdentity)
-        .values({ kind: 'movie', tmdbId: 584, plexRatingKey: '408', enrichedAt: 1_700_000_000 });
+      await db.insert(mediaIdentity).values({
+        contentType: 'movie',
+        tmdbId: 584,
+        plexRatingKey: '408',
+        enrichedAt: 1_700_000_000,
+      });
       const plexProvider = new PlexProvider(
         { name: 'Plex', url: PLEX_URL, apiKey: 'token', settings: {} },
         getChildLogger('test')

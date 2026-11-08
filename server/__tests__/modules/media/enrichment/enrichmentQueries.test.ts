@@ -30,7 +30,7 @@ describe('EnrichmentQueries', () => {
 
   it('round-trips a written field value with its correct type', async () => {
     const db = getDb();
-    const [identity] = await db.insert(mediaIdentity).values({ kind: 'movie' }).returning();
+    const [identity] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
     const queries = new EnrichmentQueries({ db });
 
     await queries.replaceFields(identity.id, { playCount: 3 });
@@ -41,7 +41,7 @@ describe('EnrichmentQueries', () => {
 
   it('returns only the fields actually written for an identity, no null-padding for absent ones', async () => {
     const db = getDb();
-    const [identity] = await db.insert(mediaIdentity).values({ kind: 'movie' }).returning();
+    const [identity] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
     const queries = new EnrichmentQueries({ db });
 
     await queries.replaceFields(identity.id, { playCount: 3, tmdbStatus: 'Released' });
@@ -52,7 +52,7 @@ describe('EnrichmentQueries', () => {
 
   it('fully replaces prior fields — a field omitted from a later call is gone, not stale', async () => {
     const db = getDb();
-    const [identity] = await db.insert(mediaIdentity).values({ kind: 'movie' }).returning();
+    const [identity] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
     const queries = new EnrichmentQueries({ db });
 
     await queries.replaceFields(identity.id, { playCount: 3, tmdbStatus: 'Released' });
@@ -64,8 +64,8 @@ describe('EnrichmentQueries', () => {
 
   it('batches across multiple identity ids without cross-contaminating rows', async () => {
     const db = getDb();
-    const [identityA] = await db.insert(mediaIdentity).values({ kind: 'movie' }).returning();
-    const [identityB] = await db.insert(mediaIdentity).values({ kind: 'movie' }).returning();
+    const [identityA] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
+    const [identityB] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
     const queries = new EnrichmentQueries({ db });
 
     await queries.replaceFields(identityA.id, { playCount: 1 });
@@ -78,7 +78,7 @@ describe('EnrichmentQueries', () => {
 
   it('returns no entry for an identity with zero enrichment rows', async () => {
     const db = getDb();
-    const [identity] = await db.insert(mediaIdentity).values({ kind: 'movie' }).returning();
+    const [identity] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
     const queries = new EnrichmentQueries({ db });
 
     const result = await queries.getByIdentityIds([identity.id]);
@@ -88,7 +88,7 @@ describe('EnrichmentQueries', () => {
 
   it('round-trips a string value containing an embedded quote without double-encoding it', async () => {
     const db = getDb();
-    const [identity] = await db.insert(mediaIdentity).values({ kind: 'movie' }).returning();
+    const [identity] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
     const queries = new EnrichmentQueries({ db });
 
     await queries.replaceFields(identity.id, { tmdbStatus: 'In "Production"' });
@@ -99,7 +99,7 @@ describe('EnrichmentQueries', () => {
 
   it('throws when a field key has no seeded enrichment_field row (migration/EnrichmentFields drift)', async () => {
     const db = getDb();
-    const [identity] = await db.insert(mediaIdentity).values({ kind: 'movie' }).returning();
+    const [identity] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
     const queries = new EnrichmentQueries({ db });
     // Simulates seed drift: a key EnrichmentFields declares but the migration never seeded.
     await db.delete(enrichmentField).where(eq(enrichmentField.key, 'tmdbStatus'));

@@ -32,7 +32,7 @@ describe('media_enrichment table', () => {
     const db = getDb();
     const [identity] = await db
       .insert(mediaIdentity)
-      .values({ kind: 'movie', tmdbId: 500 })
+      .values({ contentType: 'movie', tmdbId: 500 })
       .returning();
     const [field] = await db
       .select()
@@ -51,7 +51,7 @@ describe('media_enrichment table', () => {
 
   it('enforces UNIQUE on (mediaIdentityId, fieldId) — one row per field per identity', async () => {
     const db = getDb();
-    const [identity] = await db.insert(mediaIdentity).values({ kind: 'movie' }).returning();
+    const [identity] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
     const [field] = await db
       .select()
       .from(enrichmentField)

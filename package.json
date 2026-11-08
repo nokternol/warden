@@ -23,7 +23,7 @@
     "ladle:build": "ladle build",
     "lint": "biome check --write src server contract",
     "lint:ci": "biome check src server contract",
-    "lint:fast": "{ git diff --name-only --diff-filter=ACMR HEAD; git ls-files --others --exclude-standard; } | sort -u | xargs -r yarn biome check --write",
+    "lint:fast": "{ git diff --name-only --diff-filter=ACMR HEAD; git ls-files --others --exclude-standard; } | sort -u | xargs -r yarn biome check --write --no-errors-on-unmatched",
     "format": "biome format --write .",
     "format:check": "biome format .",
     "typecheck": "yarn typecheck:server && yarn typecheck:client",

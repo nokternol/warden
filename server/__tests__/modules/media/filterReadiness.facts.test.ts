@@ -43,7 +43,7 @@ describe('FilterReadiness.readFacts', () => {
         { type: MetadataProviderType.PLEX, name: 'Plex', url: 'http://p', isActive: false },
       ])
       .returning();
-    const [movie] = await db.insert(mediaIdentity).values({ kind: 'movie' }).returning();
+    const [movie] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
     await new EnrichmentQueries({ db }).replaceFields(movie.id, { playCount: 2, labels: ['x'] });
 
     const facts = await new FilterReadiness({

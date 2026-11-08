@@ -39,14 +39,14 @@ describe('resolveGroup', () => {
     });
 
     const [row] = await db.select().from(mediaIdentity).where(eq(mediaIdentity.id, id));
-    expect(row.kind).toBe('movie');
+    expect(row.contentType).toBe('movie');
     expect(row.tmdbId).toBe(603);
     expect(row.imdbId).toBe('tt0133093');
     expect(row.title).toBe('The Matrix');
     expect(row.year).toBe(1999);
   });
 
-  it('finds the existing group by primary id per kind instead of creating a duplicate', async () => {
+  it('finds the existing group by primary id per content type instead of creating a duplicate', async () => {
     const db = getDb();
     const first = await resolveGroup(db, 'movie', { tmdbId: 603, title: 'The Matrix' });
 
@@ -57,7 +57,7 @@ describe('resolveGroup', () => {
     expect(rows).toHaveLength(1);
   });
 
-  it('scopes the primary id by kind — a movie and a show may share a numeric tmdb/tvdb id', async () => {
+  it('scopes the primary id by content type — a movie and a show may share a numeric tmdb/tvdb id', async () => {
     const db = getDb();
     const movieId = await resolveGroup(db, 'movie', { tmdbId: 603 });
     const showId = await resolveGroup(db, 'series', { tvdbId: 603 });
@@ -88,7 +88,7 @@ describe('resolveGroup', () => {
     expect(fallback).toBe(withPrimary);
   });
 
-  it('falls back to matching by (kind, title, year) when no primary id or imdbId match', async () => {
+  it('falls back to matching by (contentType, title, year) when no primary id or imdbId match', async () => {
     const db = getDb();
     const first = await resolveGroup(db, 'movie', { title: 'The Matrix', year: 1999 });
 

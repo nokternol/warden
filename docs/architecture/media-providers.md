@@ -140,7 +140,7 @@ by the `Guid` ids a listing carries with `includeGuids=1` — never inserts a gr
 **Role:** `MediaEnricher` + `MediaActuator`. Explicitly *not* `MediaSource`, same "media servers cannot
 own" limitation as Plex — Jellyfin only enriches Radarr/Sonarr-owned items, matched by
 `_sourceIds.jellyfin` (populated by the identity job's `runForJellyfin` stamping pass, matching by
-`kind` + `tmdbId`/`tvdbId`, mirroring `runForPlex`).
+`contentType` + `tmdbId`/`tvdbId`, mirroring `runForPlex`).
 
 **Auth:** access token (`X-Emby-Authorization` header) plus a configured `userId` setting (today's model —
 one Jellyfin user per configured instance, not full multi-user).

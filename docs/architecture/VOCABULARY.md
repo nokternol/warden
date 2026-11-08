@@ -123,6 +123,7 @@ fracture.
 | `MediaQuerySource`, `MediaQuerySpec.sources` | `MediaQueryClause`, `MediaQuerySpec.clauses` | Renamed (B6). |
 | `querySources`, `AutomationQuerySource`, `QuerySourceList`, table `automation_query_sources` | `queries`, `AutomationQuery`, `AutomationQueryList`, table `automation_queries` | Renamed (B6); migration 0028 renames the table and keeps its rows. |
 | `sourceProviders` on a rule, `deriveSourceProviders` | `providers`, `deriveProviders` | Renamed (B6). |
+| `media_query_filter_values.filterKey`, `media_identity.kind` (stored column names) | `media_query_filter_values.ruleKey`, `media_identity.contentType` | Renamed in place by migration 0037 (B7); no code or query reads the old names. |
 | `csv-ids` (rule data type) | `instance-ids`: its value is `{ providerId?, ids }`, not a CSV string | Renamed (C2). |
 | `BOOLEAN_VALUE_LABELS`, `ENUM_OPTIONS`, `SEGMENT_LABEL_OVERRIDES`, `groupsFor`, `ruleRendersControl` (client presentation tables) | The rule's own `valueLabels`, `options`, `shortLabel`, `lookup` and `group`, read from its descriptor | Deleted (C2). |
 | Maintainarr | Warden | Renamed (B5): log filenames, Plex product and device name, default `DB_PATH`, fixtures, README links. |

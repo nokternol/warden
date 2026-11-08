@@ -19,7 +19,7 @@ export class EnrichmentQueries {
   /** The fields at least one title of each content type holds a value for, in one query. */
   async fieldsWithValues(): Promise<Record<ContentType, Set<keyof EnrichmentFields>>> {
     const rows = await this.deps.db
-      .selectDistinct({ kind: mediaIdentity.kind, key: enrichmentField.key })
+      .selectDistinct({ contentType: mediaIdentity.contentType, key: enrichmentField.key })
       .from(mediaEnrichment)
       .innerJoin(enrichmentField, eq(enrichmentField.id, mediaEnrichment.fieldId))
       .innerJoin(mediaIdentity, eq(mediaIdentity.id, mediaEnrichment.mediaIdentityId));
@@ -27,8 +27,8 @@ export class EnrichmentQueries {
       movie: new Set(),
       series: new Set(),
     };
-    for (const { kind, key } of rows) {
-      fields[kind as ContentType]?.add(key as keyof EnrichmentFields);
+    for (const { contentType, key } of rows) {
+      fields[contentType]?.add(key as keyof EnrichmentFields);
     }
     return fields;
   }

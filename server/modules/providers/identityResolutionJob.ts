@@ -23,8 +23,8 @@ interface TVMazeLookupProvider {
   lookupByTvdbId(tvdbId: number): Promise<{ id: number } | null>;
 }
 
-const PLEX_KIND: Record<string, ContentType> = { movie: 'movie', show: 'series' };
-const JELLYFIN_KIND: Record<string, ContentType> = { Movie: 'movie', Series: 'series' };
+const PLEX_CONTENT_TYPE: Record<string, ContentType> = { movie: 'movie', show: 'series' };
+const JELLYFIN_CONTENT_TYPE: Record<string, ContentType> = { Movie: 'movie', Series: 'series' };
 
 interface Deps {
   db: DrizzleDb;
@@ -47,7 +47,7 @@ export class IdentityResolutionJob {
     let changed = 0;
     for (const item of items) {
       await yieldToEventLoop();
-      const kind = item.type ? PLEX_KIND[item.type] : undefined;
+      const contentType = item.type ? PLEX_CONTENT_TYPE[item.type] : undefined;
       for (const guid of item.Guid ?? []) {
         const tmdbMatch = guid.id.match(/^tmdb:\/\/(\d+)$/);
         const tvdbMatch = guid.id.match(/^tvdb:\/\/(\d+)$/);
@@ -56,14 +56,14 @@ export class IdentityResolutionJob {
             { plexRatingKey: item.ratingKey },
             mediaIdentity.tmdbId,
             Number.parseInt(tmdbMatch[1], 10),
-            kind
+            contentType
           );
         } else if (tvdbMatch) {
           changed += await this.stampIdentity(
             { plexRatingKey: item.ratingKey },
             mediaIdentity.tvdbId,
             Number.parseInt(tvdbMatch[1], 10),
-            kind
+            contentType
           );
         }
       }
@@ -74,7 +74,7 @@ export class IdentityResolutionJob {
 
   /**
    * Stamp an actuator-addressing id (`plexRatingKey` / `jellyfinItemId`) onto identities
-   * matching `column = id`, scoped by `kind` when known (an unscoped match could otherwise
+   * matching `column = id`, scoped by `contentType` when known (an unscoped match could otherwise
    * cross the movie/tv id namespaces — a TMDB movie id and a TMDB tv id with the same
    * number are different titles). Only rows whose id is new or different are written, and those
    * have `enrichedAt` cleared so the next enrichment run reads the newly linked server's data
@@ -84,7 +84,7 @@ export class IdentityResolutionJob {
     set: { plexRatingKey: string } | { jellyfinItemId: string },
     column: typeof mediaIdentity.tmdbId | typeof mediaIdentity.tvdbId,
     id: number,
-    kind: ContentType | undefined
+    contentType: ContentType | undefined
   ): Promise<number> {
     const [target, value] =
       'plexRatingKey' in set
@@ -96,7 +96,7 @@ export class IdentityResolutionJob {
       .where(
         and(
           eq(column, id),
-          kind ? eq(mediaIdentity.kind, kind) : undefined,
+          contentType ? eq(mediaIdentity.contentType, contentType) : undefined,
           or(isNull(target), ne(target, value))
         )
       );
@@ -109,7 +109,7 @@ export class IdentityResolutionJob {
     let changed = 0;
     for (const item of items) {
       await yieldToEventLoop();
-      const kind = item.Type ? JELLYFIN_KIND[item.Type] : undefined;
+      const contentType = item.Type ? JELLYFIN_CONTENT_TYPE[item.Type] : undefined;
       const tmdbId = Number.parseInt(item.ProviderIds?.Tmdb ?? '', 10);
       const tvdbId = Number.parseInt(item.ProviderIds?.Tvdb ?? '', 10);
       if (!Number.isNaN(tmdbId)) {
@@ -117,14 +117,14 @@ export class IdentityResolutionJob {
           { jellyfinItemId: item.Id },
           mediaIdentity.tmdbId,
           tmdbId,
-          kind
+          contentType
         );
       } else if (!Number.isNaN(tvdbId)) {
         changed += await this.stampIdentity(
           { jellyfinItemId: item.Id },
           mediaIdentity.tvdbId,
           tvdbId,
-          kind
+          contentType
         );
       }
     }
