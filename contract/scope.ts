@@ -69,8 +69,6 @@ export const scope: Scope = {
       '/dashboard',
       // A second way to find a title beside the title filter.
       '/search',
-      // Ratings have two mechanisms; blocked while they are not one.
-      '/ratings',
     ],
     sections: [
       // Ratings have two mechanisms; blocked while they are not one.
