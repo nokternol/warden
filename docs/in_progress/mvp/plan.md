@@ -51,12 +51,12 @@ code. Every path to them is blocked by the scope declaration.
 | Surface | Why it's deferred |
 |---|---|
 | Dashboard page | Automations plus first-run guidance is the MVP landing page (decision 3). |
-| Ratings page, media-page ratings panel, `/api/providers/ratings` | Ratings have two mechanisms (F10). C6 settles them to one before the MVP closes; the surface stays blocked unless C6's decision un-defers it. |
+| Media-page ratings panel | No MVP job reads per-title ratings; the browse-library view and a normalized rating are post-MVP. It reads the one ratings mechanism, `contract/ratings.ts` (C6). |
 | Search page, `/api/search/metadata` | A second way to find a title beside the title filter (F11). C7 decides its role and settles title lookup to one mechanism before the MVP closes; the surface stays blocked unless C7's decision un-defers it. |
 | `/api/providers/metadata` | No MVP consumer. |
 | `/api/app-settings` (the `appSettings` module, `settingsAwarePrecedence.ts`) | No UI and no consumer yet. It is the input to the post-MVP precedence work. |
 | Provider type TVMAZE | Not buildable through `ProviderFactory` yet (its API key is lost), so offering it is a reachable broken path (L1). |
-| Provider type OMDB | It feeds only the deferred ratings path. |
+| Provider type OMDB | No consumer until per-source ratings have an identity-keyed store (`docs/intent/media-ratings-provider.md`). |
 | Provider type TMDB | Not in the verification stack (decision 9). Login-page backdrops keep using the `TMDB_API_KEY` environment setting, which is separate from the provider type. |
 | Rules with no control or no live producer | For example, `certification` has no lookup today. C5's invariant lists them in the declaration. |
 
@@ -642,7 +642,7 @@ names, so nothing is renamed twice.
 
 **C6 · One ratings mechanism** (after C5; decision 12; must merge before G1)
 - **Model:** Opus 5.5 (a design decision, then the heal it implies).
-- **Why:** F10. Rating filters (`imdbRating`, `communityRating`) run through enrichment, while
+- **Why:** F10. Rating filters (`imdbRating`, `communityRating`) read source fields of the normalized item, while
   `/api/providers/ratings` (`ratingsAggregation.ts`) is a separate, title-keyed, on-demand aggregation
   feeding the Ratings page and the Media page's ratings panel. The fracture ledger holds this open as
   *"Ratings — two mechanisms, one blocked"*. Blocking the second mechanism (S1) hid it but did not
@@ -992,8 +992,9 @@ names, so nothing is renamed twice.
 3. Maintenance of soft-deleted `media_item` rows (retention or purge policy).
 4. Any provider type not offered in the MVP. After C2 and C5, adding one
    is a server-only change.
-5. Un-deferring each deferred surface. The duplicate mechanisms behind ratings and search are
-   settled inside the MVP (C6, C7), so un-deferring builds on what those slices decided.
+5. Un-deferring each deferred surface. Ratings are one mechanism (C6: the catalog, read by
+   `contract/ratings.ts`), and search is settled inside the MVP by C7, so un-deferring builds on what
+   those slices decided.
 6. A link from an automation's blocking problem to the query that needs fixing. The Automations page
    already lists each block with its reason and what clears it.
 7. `docs/intent/`: automation archive, realtime run state, ratings provider, inter-provider

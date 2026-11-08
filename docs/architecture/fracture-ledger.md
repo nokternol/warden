@@ -590,15 +590,32 @@ Earlier entries in this ledger use the names that were current when they healed 
   enrichment queries use `ruleKey` and `contentType` directly; no code maps an old name to a new one.
   The migrations already applied, and their tests, keep the names that were current when they ran.
 
+### Ratings — two mechanisms, one blocked (recorded 2026-11-01 — healed 2026-11-08, MVP slice C6)
+
+- **Fracture:** a title's ratings came from two places. The rating filters (`imdbRating`,
+  `communityRating`) read the title's Radarr or Sonarr record through normalization. Separately,
+  `/api/providers/ratings` searched TMDB, OMDb and TVmaze by typed title and year, averaged what came
+  back, and fed the Ratings page and the Media page's ratings panel. The second path was deferred, so it
+  could not be reached, but it was still there.
+- **How it misled:** "what is this title's rating?" had two answers that could disagree. The live path
+  matched by title, which is ambiguous, and ignored Warden's identity model. Read cold, its fully built
+  handler looked live beneath its deferral, and it had defects of its own: connections built with `new`
+  and literal URLs (OMDb's `https://` disagreeing with the catalogue's `http://`), two uncalled helpers,
+  and `console.warn` instead of the module logger. A filter also read a Radarr or Sonarr unrated entry
+  (`{ votes: 0, value: 0 }`) as a real zero, so "rating at most 5" selected unrated titles.
+- **Healed by:** the catalog is the one ratings mechanism. `contract/ratings.ts` (`ratingsOf`) is the
+  only reader of a record's `ratings`. Normalization takes the filters' IMDb and community values from
+  it, and the Media page passes the clicked title's `ratingsOf(...)` to the panel, which makes no
+  request. Each source keeps its own scale, and an unrated entry (value 0 with zero or missing votes) is
+  absent, so it matches no rating filter, as include or as exclude. The aggregation is gone: the route,
+  its procedure, `ratingsAggregation.ts`, `keyResolver.ts`, `getRatings` on the three connections, and
+  `useRatings`. So is the Ratings page, retired as a feature rather than deferred, since a typed-title
+  lookup would be a second title lookup and the panel already answers the question.
+- **Different on purpose:** the panel stays deferred, because no MVP job reads per-title ratings. OMDB
+  stays a deferred provider type with no consumer. One normalized rating to sort by, computed from
+  identity-keyed per-source values, is the later direction. It is not built.
+
 ## Open
-
-### Ratings — two mechanisms, one blocked (recorded 2026-11-01, MVP slice B4)
-
-- **Fracture:** rating filters run through enrichment, while `/api/providers/ratings` is a separate
-  aggregation feeding its own page and panel.
-- **Status:** the second mechanism is deferred in `contract/scope.ts`, so it is unreachable but present.
-  The MVP slice "One ratings mechanism" in `docs/in_progress/mvp/plan.md` settles them to one, and the
-  MVP does not close until it merges.
 
 ### Title lookup — two mechanisms, one blocked (recorded 2026-11-01, MVP slice B4)
 

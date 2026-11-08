@@ -10,15 +10,13 @@ HTTP transport down to the system job, and exposes it through one crafted public
 providers/
   index.ts                    # Public interface — the only import surface for code outside the module
   providers.procedures.ts     # API contract procedures: instance CRUD and connection test, actuator
-                              #   tasks, task options, ad-hoc metadata, aggregated ratings
+                              #   tasks, task options, ad-hoc metadata
   connectionProbe.ts          # One cheap upstream call per provider type to test connection details
   connections/                # BaseProviderConnection + one class per external system
   roles.ts                    # Capability role providers own: MediaActuator (task discovery)
-  ratingsAggregation.ts       # Cross-provider rating aggregation (Tmdb/Omdb/TvMaze), module-private
   providerFactory.ts          # Constructs the connection class for a stored provider row
   providerSettingsService.ts  # Persistence + projection of configured providers
   taskEnablement.ts           # Per-instance enabledTasks authority (readEnabledTaskIds)
-  keyResolver.ts              # API-key resolution priority: request > stored > environment
   plexService.ts              # Validates a Plex auth token against plex.tv (used by auth login)
   tmdbService.ts              # TMDB lookups backed by MediaCache
   identityResolutionJob.ts    # System job linking provider-native ids into media_identity

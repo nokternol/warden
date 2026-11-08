@@ -40,7 +40,10 @@ once). None are modelled-only.
 `inCinemasDate`, `physicalReleaseDate`, `digitalReleaseDate`, `collectionName`, `isAvailable`,
 `radarrStatus`, etc.) are normalized directly onto `NormalizedMovie` by
 [`normalizeMedia.ts`](ref:path:server/modules/media/normalizeMedia.ts) and gated straight into
-`ruleRegistry.ts` — no enrichment step needed for source-owned data.
+`ruleRegistry.ts` — no enrichment step needed for source-owned data. A record's ratings are read
+through [`contract/ratings.ts`](ref:path:contract/ratings.ts) (`ratingsOf`), the one reader shared with
+the Media page's ratings panel: `imdbRating` is its IMDb entry, and an unrated entry (value 0 with no
+votes) leaves it undefined. Sonarr's `communityRating` is read the same way.
 
 ## Sonarr
 
@@ -201,20 +204,18 @@ server is not yet verified.
 **Auth:** API key (`api_key` query param).
 
 **What the app can pull today** ([`connections/tmdbProvider.ts`](ref:path:server/modules/providers/connections/tmdbProvider.ts)):
-`getStatus(tmdbId)`, `search(query)`, `getMovieDetails`/`getTvDetails`, enriched variants
-`getMovieDetailsEnriched`/`getTvDetailsEnriched` (certification, keywords, collection, spoken languages,
-origin country), `getMovieWatchProviders`/`getTvWatchProviders` (streaming-service flags for a region),
-and `getRatings(title, year)` (title-search based rating lookup used by the separate ratings-aggregation
-feature, below).
+`getStatus(tmdbId)`, `getMovieDetailsEnriched`/`getTvDetailsEnriched` (certification, keywords,
+collection, spoken languages, origin country), and `getMovieWatchProviders`/`getTvWatchProviders`
+(streaming-service flags for a region).
 
 **Wired into the media-item pipeline?** Partially. `tmdbEnricher`
 ([`enrichment/enricherAdapters.ts`](ref:path:server/modules/media/enrichment/enricherAdapters.ts)) only
 calls `getStatus(tmdbId)`, contributing a single field (`tmdbStatus`), gated into `ruleRegistry.ts`. The
-much larger enriched-details/watch-providers/ratings surface (`getMovieDetailsEnriched`, watch providers,
-`getRatings`) is implemented but consumed only by the separate on-demand
-`ratingsAggregation.ts`/`providers.ratings` procedure (deferred: it answers 404, with the ratings page and panel blocked too) and `TmdbService`'s trending-backdrops
-feature ([`server/modules/providers/tmdbService.ts`](ref:path:server/modules/providers/tmdbService.ts),
-unrelated background-image fetching) — none of it flows through `EnrichmentJob` onto a `MediaItem`. Also
+larger enriched-details and watch-providers surface is implemented but has no consumer, and nothing
+reads TMDB's `vote_average` as a rating. `TmdbService`'s trending-backdrops feature
+([`server/modules/providers/tmdbService.ts`](ref:path:server/modules/providers/tmdbService.ts),
+unrelated background-image fetching) calls TMDB on its own. None of it flows through `EnrichmentJob`
+onto a `MediaItem`. Also
 note `ruleRegistry.ts`'s `genres`/`year`/`certification` rules already list TMDB as a `providers`
 entry even though no enricher currently populates those fields from TMDB for a `MediaItem` — those entries
 describe a plausible source, not a wired one.
@@ -224,22 +225,17 @@ describe a plausible source, not a wired one.
 **What it is:** IMDB-backed ratings/metadata lookup service (also aggregates Rotten Tomatoes and
 Metacritic scores).
 
-**Role:** inert toward the media pipeline today — `OmdbProvider` implements neither `MediaSource` nor
-`MediaEnricher` nor `MediaActuator`; it exists purely as a callable connection.
+**Role:** inert. `OmdbProvider` implements none of `MediaSource`, `MediaEnricher` or `MediaActuator`.
+It is the connection `ProviderFactory` builds for the type, and it carries only what the base
+connection gives every provider.
 
 **Auth:** API key (`apikey` query param).
 
 **What the app can pull today** ([`connections/omdbProvider.ts`](ref:path:server/modules/providers/connections/omdbProvider.ts)):
-a single method, `getRatings(title, year)` — title-search (movie, falling back to series) returning IMDB
-rating/votes, Rotten Tomatoes %, Metacritic score, award-winner/Oscar-winner flags (regex over the
-`Awards` string), director, actors, language, box office.
+nothing. The type is deferred and has no consumer. Per-source ratings would need an identity-keyed
+store before OMDb has anything to feed, since a title search is ambiguous.
 
-**Wired into the media-item pipeline?** No — used only by the separate ratings-aggregation feature
-(`server/modules/providers/ratingsAggregation.ts`, the `providers.ratings` procedure in `providers.procedures.ts`, deferred by the scope declaration). Not an
-enricher, not referenced by `enricherAdapters.ts` or `ruleRegistry.ts` for any `MediaItem` field. (The
-`certification`/`imdbRating` rules in `ruleRegistry.ts` list `OMDB` as a `providers` entry, but no
-enricher currently populates either field from OMDB — same "listed but not wired" gap as TMDB's
-`genres`/`year`/`certification` entries above.)
+**Wired into the media-item pipeline?** No. No enricher or rule names OMDB as a producer.
 
 ## TVMaze
 
@@ -255,15 +251,11 @@ base, with `apiKey: null` — no
 `metadata_provider` row is required to use it.
 
 **What the app can pull today** ([`connections/tvmazeProvider.ts`](ref:path:server/modules/providers/connections/tvmazeProvider.ts)):
-`search(query)`, `getShow(tvmazeId)` (includes `genres`, `network.name`/`network.country`, `rating.average`,
-`externals` id crosswalk to TVDB/IMDB), `lookupByTvdbId(tvdbId)`, and `getRatings(title, year)` (used by
-ratings aggregation).
+`lookupByTvdbId(tvdbId)`, which resolves a TVmaze show id from a TheTVDB id.
 
-**Wired into the media-item pipeline?** No — used only by ratings aggregation
-(`ratingsAggregation.ts`). `ruleRegistry.ts`'s `network` rule already lists `TVMAZE` as a
-`providers` entry alongside Sonarr; this one is a real, live-testable capability (`getShow` genuinely
-returns per-show `network` data) that simply has no enricher built yet — unlike the TMDB/OMDB
-"listed but nothing populates it" cases above, TVMaze's is a buildable gap, not a stale one.
+**Wired into the media-item pipeline?** No. `ruleRegistry.ts`'s `network` rule lists `TVMAZE` as a
+`providers` entry beside Sonarr. TVmaze's show endpoint does return per-show `network` data, so this is
+a buildable gap (an enricher and a show read), not a stale entry like TMDB's.
 
 ## Summary table
 
@@ -280,9 +272,9 @@ reaches them.
 | Plex | MediaEnricher, MediaActuator | Yes — `plexEnricher` + identity stamping | Yes |
 | Jellyfin | MediaEnricher, MediaActuator | Yes — `jellyfinEnricher` | Yes |
 | Seerr | MediaEnricher | Yes — `seerrEnricher` | Yes (the request manager) |
-| TMDB | MediaEnricher | Partially — only `getStatus` wired; richer surface used by ratings aggregation only | No |
-| OMDB | inert | No — ratings aggregation only | No |
-| TVMaze | inert | No — ratings aggregation only; `network` data is real and buildable | No |
+| TMDB | MediaEnricher | Partially — only `getStatus` wired; the enriched-details and watch-providers surface has no consumer | No |
+| OMDB | inert | No — no consumer | No |
+| TVMaze | inert | No — `network` data is real and buildable | No |
 
 ## Relationship to `MediaFieldProvider`/`MediaFieldSource`
 
@@ -290,7 +282,6 @@ This catalog is the ground-truth input
 [`docs/architecture/media-field-provider-role.md`](ref:path:docs/architecture/media-field-provider-role.md)'s
 adapters bind to — this doc is where to check which providers actually expose data today (and via which
 connection method) before assuming a new enrichable field is easy to add. In particular: TVMaze's
-`network` data is real and already half-declared in `ruleRegistry.ts` but has no adapter; TMDB and
-OMDB's ratings/details surfaces are fully implemented in their connection classes but sit behind the
-separate ratings-aggregation feature, not the enrichment job, so wiring them into a
+`network` data is real and already half-declared in `ruleRegistry.ts` but has no adapter; TMDB's
+enriched-details surface is implemented in its connection class with no consumer, so wiring it into a
 `MediaFieldProvider` is plausible future work, not a rebuild from nothing — the Seerr adapter is the model: a thin shell binding a connection to the role.
