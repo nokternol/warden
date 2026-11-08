@@ -250,7 +250,6 @@ export const MEDIA_RULES = [
       MetadataProviderType.RADARR,
       MetadataProviderType.SONARR,
       MetadataProviderType.TMDB,
-      MetadataProviderType.OMDB,
     ],
     predicate: (item, value) => {
       if (!item.certification) return false;

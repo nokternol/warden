@@ -27,7 +27,6 @@ type Method = 'get' | 'patch';
 
 /** Every deferred procedure, called as a caller with valid input would call it. */
 const DEFERRED_CALLS: [Method, string][] = [
-  ['get', '/api/providers/ratings?title=Inception'],
   ['get', '/api/providers/metadata?type=RADARR&url=http://localhost:7878'],
   ['get', '/api/search/metadata?title=Inception'],
   ['get', '/api/app-settings'],

@@ -79,7 +79,4 @@ export { SonarrProvider } from './connections/sonarrProvider';
 export type { SonarrProfile, SonarrSeries, SonarrTag } from './connections/sonarrProvider';
 export { TautulliProvider } from './connections/tautulliProvider';
 export type { TautulliHistoryItem } from './connections/tautulliProvider';
-export type { OmdbRating } from './connections/omdbProvider';
 export { TmdbProvider } from './connections/tmdbProvider';
-export type { TmdbRating } from './connections/tmdbProvider';
-export type { TvMazeRating } from './connections/tvmazeProvider';

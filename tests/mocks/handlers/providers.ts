@@ -1,5 +1,4 @@
 import { contract } from '@contract/index';
-import type { AggregatedRatings } from '@contract/providers';
 import { type ProcedureOutput, mockProcedure } from '../contract';
 
 const SONARR_RESPONSE = {
@@ -73,48 +72,10 @@ const RESPONSE_BY_TYPE: Record<string, ProcedureOutput<typeof contract.providers
   SEERR: SEERR_RESPONSE,
 };
 
-const RATINGS_RESPONSE: AggregatedRatings = {
-  title: 'Breaking Bad',
-  year: 2008,
-  ids: {
-    tmdbId: 1396,
-    imdbId: 'tt0903747',
-    tvdbId: 81189,
-    tvMazeId: 169,
-  },
-  tmdb: {
-    source: 'tmdb',
-    tvRating: 8.9,
-    tvVotes: 5234,
-    popularity: 123.45,
-    found: true,
-  },
-  omdb: {
-    source: 'omdb',
-    imdbRating: 9.5,
-    imdbVotes: 1823456,
-    rottenTomatoesRating: 96,
-    metacriticRating: 99,
-    found: true,
-  },
-  tvmaze: {
-    source: 'tvmaze',
-    rating: 9.1,
-    found: true,
-  },
-  summary: {
-    averageRating: 9.17,
-    totalSources: 3,
-    foundSources: 3,
-  },
-};
-
 export const providersHandlers = [
   mockProcedure(contract.providers.tasks, () => []),
   mockProcedure(contract.providers.metadata, ({ request }) => {
     const type = new URL(request.url).searchParams.get('type') ?? '';
     return RESPONSE_BY_TYPE[type];
   }),
-
-  mockProcedure(contract.providers.ratings, () => RATINGS_RESPONSE),
 ];

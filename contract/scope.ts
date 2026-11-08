@@ -42,7 +42,8 @@ export const scope: Scope = {
     providerTypes: [
       // Not in the stack the offered types are verified against.
       'TMDB',
-      // Feeds only the deferred ratings path.
+      // No consumer until per-source ratings have an identity-keyed store;
+      // see docs/intent/media-ratings-provider.md.
       'OMDB',
       // Not buildable through ProviderFactory: its API key is lost.
       'TVMAZE',
@@ -55,8 +56,6 @@ export const scope: Scope = {
     ],
     tasks: [],
     procedures: [
-      // Ratings have two mechanisms; blocked while they are not one.
-      '/api/providers/ratings',
       // No MVP consumer.
       '/api/providers/metadata',
       // A second way to find a title beside the title filter.
@@ -71,7 +70,8 @@ export const scope: Scope = {
       '/search',
     ],
     sections: [
-      // Ratings have two mechanisms; blocked while they are not one.
+      // No MVP job reads per-title ratings; the browse-library view and a
+      // normalized rating are post-MVP.
       'mediaRatingsPanel',
     ],
   },

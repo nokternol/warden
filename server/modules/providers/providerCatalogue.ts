@@ -56,14 +56,14 @@ export const PROVIDER_CATALOGUE = {
     apiKeyRequired: true,
     apiPath: '',
     defaultUrl: 'https://api.themoviedb.org/3',
-    filterData: ['Ratings', 'Metadata'],
+    filterData: ['Metadata'],
   },
   [MetadataProviderType.OMDB]: {
     label: 'OMDB',
     apiKeyRequired: true,
     apiPath: '',
     defaultUrl: 'http://www.omdbapi.com',
-    filterData: ['Ratings', 'Metadata'],
+    filterData: [],
   },
   [MetadataProviderType.TVMAZE]: {
     label: 'TVmaze',

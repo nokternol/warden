@@ -48,7 +48,7 @@ export const HostedTypeWithFixedUrl: Story = () => (
           label: 'TMDB',
           apiPath: '',
           defaultUrl: 'https://api.themoviedb.org/3',
-          filterData: ['Ratings', 'Metadata'],
+          filterData: ['Metadata'],
         },
       ]}
       onSubmit={() => {}}
