@@ -661,7 +661,11 @@ export function MediaContent({
                 onClick={
                   RATINGS_PANEL_OFFERED
                     ? (id) => {
-                        setSelected({ title: item.title, year: item.year, ratings: [] });
+                        setSelected({
+                          title: item.title,
+                          year: item.year,
+                          ratings: ratingsOf('series', item.ratings),
+                        });
                         setSelectedId(id);
                       }
                     : undefined

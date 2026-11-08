@@ -1,5 +1,5 @@
 import { contract } from '@contract/index';
-import type { ManagedMovie } from '@contract/media';
+import type { ManagedMovie, ManagedSeries } from '@contract/media';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { render } from '@tests/helpers/component';
 import { mockProcedure } from '@tests/mocks/contract';
@@ -82,22 +82,33 @@ describe('MediaPage — ratings panel', () => {
     expect(requests).toEqual([]);
   });
 
-  it('opens ratings panel when a movie card is clicked', async () => {
+  it('shows the clicked series’ community rating, read from its record', async () => {
+    const wire: ManagedSeries = {
+      id: 79126,
+      title: 'The Wire',
+      year: 2002,
+      status: 'ended',
+      monitored: true,
+      tvdbId: 79126,
+      sourceCount: 1,
+      sourceProviderIds: [2],
+      ratings: { votes: 3100, value: 9.4 },
+    };
+    server.use(mockProcedure(contract.media.browse.series, () => pageOf([wire])));
     render(<MediaPage />, { wrapper: Wrapper });
 
     await waitFor(() => {
-      expect(screen.getByText('Movie 1')).toBeInTheDocument();
+      expect(screen.getByTestId('media-card-series-79126')).toBeInTheDocument();
     });
+    fireEvent.click(screen.getByTestId('media-card-series-79126'));
 
-    fireEvent.click(screen.getByTestId('media-card-movie-1'));
-
-    await waitFor(() => {
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
-    });
-    expect(screen.getAllByText('Movie 1').length).toBeGreaterThan(0);
+    const dialog = await screen.findByRole('dialog', { name: 'Ratings for The Wire' });
+    expect(within(dialog).getByText('Community')).toBeInTheDocument();
+    expect(dialog).toHaveTextContent('9.4/10');
+    expect(dialog).toHaveTextContent('3,100 votes');
   });
 
-  it('closes ratings panel when close is clicked', async () => {
+  it('says "No ratings" for a title its record reports none for, and closes', async () => {
     render(<MediaPage />, { wrapper: Wrapper });
 
     await waitFor(() => {
@@ -106,28 +117,13 @@ describe('MediaPage — ratings panel', () => {
 
     fireEvent.click(screen.getByTestId('media-card-movie-1'));
 
-    await waitFor(() => {
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
-    });
+    const dialog = await screen.findByRole('dialog', { name: 'Ratings for Movie 1' });
+    expect(dialog).toHaveTextContent('No ratings');
 
     fireEvent.click(screen.getByRole('button', { name: /close/i }));
 
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).toBeNull();
-    });
-  });
-
-  it('opens the panel from a series card too, once the section has no entry in the declaration', async () => {
-    render(<MediaPage />, { wrapper: Wrapper });
-
-    await waitFor(() => {
-      expect(screen.getByTestId('media-card-series-1')).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByTestId('media-card-series-1'));
-
-    await waitFor(() => {
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
   });
 });
