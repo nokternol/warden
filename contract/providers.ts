@@ -52,64 +52,6 @@ export const ProviderTaskOptionsAvailabilitySchema = z.object({
   options: z.array(ProviderTaskOptionSchema),
 });
 
-const TmdbRatingSchema = z.object({
-  source: z.literal('tmdb'),
-  tmdbId: z.number().optional(),
-  imdbId: z.string().optional(),
-  mediaType: z.enum(['movie', 'tv']).optional(),
-  movieRating: z.number().optional(),
-  movieVotes: z.number().optional(),
-  tvRating: z.number().optional(),
-  tvVotes: z.number().optional(),
-  popularity: z.number().optional(),
-  found: z.boolean(),
-});
-
-const OmdbRatingSchema = z.object({
-  source: z.literal('omdb'),
-  imdbId: z.string().optional(),
-  imdbRating: z.number().optional(),
-  imdbVotes: z.number().optional(),
-  rottenTomatoesRating: z.number().optional(),
-  metacriticRating: z.number().optional(),
-  found: z.boolean(),
-  awardWinner: z.boolean().optional(),
-  oscarWinner: z.boolean().optional(),
-  director: z.string().optional(),
-  actors: z.string().optional(),
-  language: z.string().optional(),
-  boxOffice: z.number().optional(),
-});
-
-const TvMazeRatingSchema = z.object({
-  source: z.literal('tvmaze'),
-  tvMazeId: z.number().optional(),
-  tvdbId: z.number().nullable().optional(),
-  imdbId: z.string().nullable().optional(),
-  rating: z.number().optional(),
-  found: z.boolean(),
-});
-
-/** One title's ratings from every rating source that answered. */
-export const AggregatedRatingsSchema = z.object({
-  title: z.string(),
-  year: z.number().optional(),
-  ids: z.object({
-    tmdbId: z.number().optional(),
-    imdbId: z.string().optional(),
-    tvdbId: z.number().nullable().optional(),
-    tvMazeId: z.number().optional(),
-  }),
-  tmdb: TmdbRatingSchema.optional(),
-  omdb: OmdbRatingSchema.optional(),
-  tvmaze: TvMazeRatingSchema.optional(),
-  summary: z.object({
-    averageRating: z.number().optional(),
-    totalSources: z.number(),
-    foundSources: z.number(),
-  }),
-});
-
 const ProviderSettingsInputSchema = z.object({
   name: z.string().min(1),
   url: z.string().url(),
@@ -223,24 +165,6 @@ export const providers = {
       })
     )
     .output(z.object({ type: z.string(), data: z.record(z.string(), z.unknown()) }).optional()),
-
-  /** A title's ratings aggregated across TMDB, OMDb and TVmaze. */
-  ratings: base
-    .route({ method: 'GET', path: '/api/providers/ratings' })
-    .input(
-      z.object({
-        title: z.string().min(1),
-        year: z
-          .union([
-            z.number(),
-            z.string().transform((v) => (v ? Number.parseInt(v, 10) : undefined)),
-          ])
-          .optional(),
-        tmdbApiKey: z.string().optional(),
-        omdbApiKey: z.string().optional(),
-      })
-    )
-    .output(AggregatedRatingsSchema),
 };
 
 export type { ProviderType } from './schemas';
@@ -253,4 +177,3 @@ export type ProviderTask = z.infer<typeof ProviderTaskSchema>;
 export type ProviderTaskAvailability = z.infer<typeof ProviderTaskAvailabilitySchema>;
 export type ProviderTaskOption = z.infer<typeof ProviderTaskOptionSchema>;
 export type ProviderTaskOptionsAvailability = z.infer<typeof ProviderTaskOptionsAvailabilitySchema>;
-export type AggregatedRatings = z.infer<typeof AggregatedRatingsSchema>;

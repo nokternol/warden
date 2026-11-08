@@ -1,0 +1,84 @@
+import { ratingsOf } from '@contract/ratings';
+import { normalizeRadarrMovie, normalizeSonarrSeries } from '@server/modules/media/normalizeMedia';
+import type { RadarrMovie, SonarrSeries } from '@server/modules/providers';
+import { createRadarrMovie, createSonarrSeries } from '@tests/factories';
+import { describe, expect, it } from 'vitest';
+
+describe('a title’s ratings', () => {
+  it('lists each source a Radarr movie record reports, with its label, value, votes and scale', () => {
+    const radarrRatings = {
+      imdb: { value: 7.8, votes: 812345, type: 'user' },
+      tmdb: { value: 7.4, votes: 9120, type: 'user' },
+      metacritic: { value: 74, votes: 0, type: 'user' },
+      rottenTomatoes: { value: 88, votes: 0, type: 'user' },
+      trakt: { value: 7.9, votes: 15002, type: 'user' },
+    };
+
+    expect(ratingsOf('movie', radarrRatings)).toEqual([
+      { source: 'imdb', label: 'IMDb', value: 7.8, votes: 812345, scale: 10 },
+      { source: 'tmdb', label: 'TMDB', value: 7.4, votes: 9120, scale: 10 },
+      { source: 'trakt', label: 'Trakt', value: 7.9, votes: 15002, scale: 10 },
+      { source: 'rottenTomatoes', label: 'Rotten Tomatoes', value: 88, votes: 0, scale: 100 },
+      { source: 'metacritic', label: 'Metacritic', value: 74, votes: 0, scale: 100 },
+    ]);
+  });
+
+  it('lists a Sonarr series record’s single rating as the community rating', () => {
+    expect(ratingsOf('series', { votes: 412, value: 8.6 })).toEqual([
+      { source: 'community', label: 'Community', value: 8.6, votes: 412, scale: 10 },
+    ]);
+  });
+
+  it('leaves out a source that is missing, non-numeric or unrated, and keys outside the source list', () => {
+    const radarrRatings = {
+      imdb: { value: 0, votes: 0, type: 'user' },
+      tmdb: { value: 'n/a', votes: 10 },
+      metacritic: { value: 0 },
+      rottenTomatoes: { value: 0, votes: 12 },
+      letterboxd: { value: 4.1, votes: 300 },
+    };
+
+    expect(ratingsOf('movie', radarrRatings)).toEqual([
+      { source: 'rottenTomatoes', label: 'Rotten Tomatoes', value: 0, votes: 12, scale: 100 },
+    ]);
+    expect(ratingsOf('movie', undefined)).toEqual([]);
+    expect(ratingsOf('series', { votes: 0, value: 0 })).toEqual([]);
+    expect(ratingsOf('series', null)).toEqual([]);
+  });
+
+  it('treats a zero value with a vote count that is not a number as unrated', () => {
+    expect(ratingsOf('movie', { imdb: { value: 0, votes: 'many' } })).toEqual([]);
+    expect(ratingsOf('series', { value: 0, votes: '0' })).toEqual([]);
+  });
+
+  it('leaves out a vote count that is not a number, keeping the rating', () => {
+    expect(ratingsOf('movie', { imdb: { value: 7.1, votes: 'many' } })).toEqual([
+      { source: 'imdb', label: 'IMDb', value: 7.1, votes: undefined, scale: 10 },
+    ]);
+  });
+
+  it('gives the filters the same IMDb and community values it gives the ratings panel', () => {
+    const movieRatings: unknown[] = [
+      { imdb: { value: 7.8, votes: 900, type: 'user' } },
+      { imdb: { value: 0, votes: 0, type: 'user' } },
+      { imdb: { value: 'n/a', votes: 3, type: 'user' } },
+      undefined,
+    ];
+    for (const ratings of movieRatings) {
+      const movie = createRadarrMovie({ ratings: ratings as RadarrMovie['ratings'] });
+      const imdb = ratingsOf('movie', ratings).find((r) => r.source === 'imdb');
+      expect(normalizeRadarrMovie(movie, 1).imdbRating).toBe(imdb?.value);
+    }
+
+    const seriesRatings: unknown[] = [
+      { votes: 40, value: 6.1 },
+      { votes: 0, value: 0 },
+      { value: null },
+    ];
+    for (const ratings of seriesRatings) {
+      const series = createSonarrSeries({ ratings: ratings as SonarrSeries['ratings'] });
+      const community = ratingsOf('series', ratings).find((r) => r.source === 'community');
+      expect(normalizeSonarrSeries(series, 1).communityRating).toBe(community?.value);
+    }
+  });
+});

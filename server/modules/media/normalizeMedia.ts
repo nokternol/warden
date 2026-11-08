@@ -1,7 +1,13 @@
+import { type TitleRating, ratingsOf } from '@contract/ratings';
 import type { RadarrMovie, SonarrSeries } from '../providers';
 import { radarrTagsFieldSource, sonarrTagsFieldSource } from './mediaFieldProvider';
 import type { NormalizedMovie } from './movie';
 import type { NormalizedSeries } from './series';
+
+/** The value `source` gives the title, or undefined when the record has no rating from it. */
+function ratingFrom(ratings: TitleRating[], source: TitleRating['source']): number | undefined {
+  return ratings.find((rating) => rating.source === source)?.value;
+}
 
 /**
  * Translate provider DTOs into the canonical Normalized* domain shapes the
@@ -22,7 +28,7 @@ export function normalizeRadarrMovie(m: RadarrMovie, providerId: number): Normal
     addedDate: m.added,
     sizeOnDiskBytes: m.statistics?.sizeOnDisk,
     certification: m.certification,
-    imdbRating: m.ratings?.imdb?.value,
+    imdbRating: ratingFrom(ratingsOf('movie', m.ratings), 'imdb'),
     folderName: m.folderName,
     path: m.path,
     movieFileCount: m.statistics?.movieFileCount,
@@ -75,7 +81,7 @@ export function normalizeSonarrSeries(s: SonarrSeries, providerId: number): Norm
     ended: s.ended,
     episodePercentage: s.statistics?.percentOfEpisodes,
     lastAiredAt: s.previousAiring,
-    communityRating: s.ratings?.value,
+    communityRating: ratingFrom(ratingsOf('series', s.ratings), 'community'),
     path: s.path,
     images: s.images,
     nextAiring: s.nextAiring,

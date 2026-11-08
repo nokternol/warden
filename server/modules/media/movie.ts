@@ -31,7 +31,6 @@ export interface NormalizedMovie extends Partial<EnrichmentFields> {
   sizeOnDiskBytes?: number;
   certification?: string;
   imdbRating?: number;
-  tmdbRating?: number;
   /** Filesystem location — display only, no substring-match filter control exists yet. */
   folderName?: string;
   path?: string;

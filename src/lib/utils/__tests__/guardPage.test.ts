@@ -6,7 +6,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const DEFERRED_PAGES: [string, () => Promise<{ getServerSideProps: GetServerSideProps }>][] = [
   ['/dashboard', () => import('@app/pages/dashboard/index.page')],
   ['/search', () => import('@app/pages/search/index.page')],
-  ['/ratings', () => import('@app/pages/ratings/index.page')],
 ];
 
 function requestFor(resolvedUrl: string) {
@@ -32,9 +31,9 @@ describe('a deferred page', () => {
   });
 
   it('answers 404 whatever the query string', async () => {
-    const { getServerSideProps } = await import('@app/pages/ratings/index.page');
+    const { getServerSideProps } = await import('@app/pages/dashboard/index.page');
 
-    expect(await getServerSideProps(requestFor('/ratings?title=Heat'))).toEqual({
+    expect(await getServerSideProps(requestFor('/dashboard?tab=recent'))).toEqual({
       notFound: true,
     });
   });
@@ -50,11 +49,11 @@ describe('an un-deferred page', () => {
     const declared = {
       deferred: {
         ...scope.deferred,
-        pages: scope.deferred.pages.filter((page) => page !== '/ratings'),
+        pages: scope.deferred.pages.filter((page) => page !== '/dashboard'),
       },
     };
 
-    expect(await guardPage(requestFor('/ratings'), declared)).toBeNull();
+    expect(await guardPage(requestFor('/dashboard'), declared)).toBeNull();
     expect(await guardPage(requestFor('/search'), declared)).toEqual({ notFound: true });
   });
 });

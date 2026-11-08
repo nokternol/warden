@@ -254,7 +254,10 @@ since Sonarr can't produce a movie's tags and Radarr can't produce a series'.
 Three hand-listed `providers` entries match the provider catalog in
 [`docs/architecture/media-providers.md`](ref:path:docs/architecture/media-providers.md): `genres` (movie) and `imdbRating` are Radarr-only (no TMDB genres call or OMDB
 integration exists); `communityRating` (series) is Sonarr-only (Sonarr's `ratings` is a single
-aggregate, no TMDB key configured). `network`'s `TVMAZE` entry is deliberately unchanged — real and
+aggregate, no TMDB key configured). Both rating fields come from the record through
+[`contract/ratings.ts`](ref:path:contract/ratings.ts), and an unrated entry (Sonarr and Radarr send
+`{ votes: 0, value: 0 }`) leaves the field undefined, so no rating range matches an unrated title.
+`network`'s `TVMAZE` entry is deliberately unchanged — real and
 buildable, just not yet wired to an adapter.
 
 [`media.rules.procedures.ts`](ref:path:server/modules/media/media.rules.procedures.ts)'s

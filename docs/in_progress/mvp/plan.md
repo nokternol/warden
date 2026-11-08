@@ -51,12 +51,12 @@ code. Every path to them is blocked by the scope declaration.
 | Surface | Why it's deferred |
 |---|---|
 | Dashboard page | Automations plus first-run guidance is the MVP landing page (decision 3). |
-| Ratings page, media-page ratings panel, `/api/providers/ratings` | Ratings have two mechanisms (F10). C6 settles them to one before the MVP closes; the surface stays blocked unless C6's decision un-defers it. |
+| Media-page ratings panel | No MVP job reads per-title ratings; the browse-library view and a normalized rating are post-MVP. It reads the one ratings mechanism, `contract/ratings.ts` (C6). |
 | Search page, `/api/search/metadata` | A second way to find a title beside the title filter (F11). C7 decides its role and settles title lookup to one mechanism before the MVP closes; the surface stays blocked unless C7's decision un-defers it. |
 | `/api/providers/metadata` | No MVP consumer. |
 | `/api/app-settings` (the `appSettings` module, `settingsAwarePrecedence.ts`) | No UI and no consumer yet. It is the input to the post-MVP precedence work. |
 | Provider type TVMAZE | Not buildable through `ProviderFactory` yet (its API key is lost), so offering it is a reachable broken path (L1). |
-| Provider type OMDB | It feeds only the deferred ratings path. |
+| Provider type OMDB | No consumer until per-source ratings have an identity-keyed store (`docs/intent/media-ratings-provider.md`). |
 | Provider type TMDB | Not in the verification stack (decision 9). Login-page backdrops keep using the `TMDB_API_KEY` environment setting, which is separate from the provider type. |
 | Rules with no control or no live producer | For example, `certification` has no lookup today. C5's invariant lists them in the declaration. |
 
@@ -143,7 +143,7 @@ principles become these acceptance checks on every UI slice:
 | F7 | **"Source" means four things:** the `MediaSource` role, an automation's include/exclude `MediaQuerySource`, `MediaQuerySpec.sources`, and a rule's `sourceProviders`. | `mediaQueryEngine.ts:27`, `filterRegistry.ts`. **Healed by B6:** "source" keeps the `MediaSource` role only. An automation has included and excluded `queries` (`AutomationQuery`, table `automation_queries` via migration 0028), a query spec holds `clauses`, and a rule lists its `providers`. |
 | F8 | **System automations are called "Tasks"** on the System page, while "Task" means a provider action everywhere else. Stories add "New Task" and "Active Tasks" for automations, plus "Collections". | `pages/system`, `*.stories.tsx` |
 | F9 | **The client re-declares the provider catalogue.** `PROVIDER_REGISTRY` lists 8 of the 10 types with hand-written labels and `filterCapabilities` strings, while the server's enum, factory and roles are the real authority. | `src/lib/provider-registry.ts`. **Healed by C5:** the server's provider-type catalogue (`providerCatalogue.ts`) is projected at `/api/providers/types`, the client derives the add-provider list, card labels, API paths, filter data and order from it, and `provider-registry.ts` plus the form's and card's per-type maps are deleted. |
-| F10 | **Ratings have two mechanisms**: rating filters via enrichment, and an ad-hoc `/api/providers/ratings` aggregation feeding a separate page and panel. | `ratingsAggregation.ts`, `pages/ratings` |
+| F10 | **Ratings have two mechanisms**: rating filters via source fields of the normalized item, and an ad-hoc `/api/providers/ratings` aggregation feeding a separate page and panel. | `ratingsAggregation.ts`, `pages/ratings`. **Healed by C6:** `contract/ratings.ts` reads each title's Radarr/Sonarr ratings for both the rating filters and the deferred ratings panel; the aggregation, its route and the Ratings page are deleted. |
 | F11 | **Title lookup has two mechanisms**: the title filter, and the Search page's cross-provider metadata search. | `pages/search`, `media.search.*` |
 | F13 | **The rule descriptor leaks engine concerns to the client.** It is `Omit<MediaRule, 'predicate'>`, so `sourceField` and `sourceProviders` cross the wire, and the client's `groupsFor` derives section headings from providers. The client also re-declares `MediaRuleDescriptor` itself. The rule/filter split is load-bearing: precedence and production are engine concerns. | `filterRegistry.ts:57`, `MediaFilterBar/index.tsx:830`, `src/hooks/useMediaRules.ts:7`. **Healed by C2:** the descriptor is the contract's presentation allowlist, built by `toDescriptor`; headings come from each rule's `group`, and the client imports the type from `@contract/media`. |
 | F12 | **The client/server bridge is partial, so either side can grow alone.** 48 `defineRoute` routes, but only 21 declare a response schema and 5 server files share the client's schemas. The client hand-writes 43 `/api/...` URL strings, and 1 hook validates a response. MSW mocks are a third hand-kept copy. The dependency runs backwards (`server/` imports `src/lib/api/schemas.ts`), and the client imports server internals (`@server/modules/media/browseRangeKeys`). Nothing fails when a route is added on one side only. | `server/kernel/defineRoute.ts`, `src/lib/api/schemas.ts`, `src/hooks/*`, `tests/mocks/handlers/*`, `src/lib/mediaQueryAdapters.ts:31` |
@@ -642,7 +642,7 @@ names, so nothing is renamed twice.
 
 **C6 · One ratings mechanism** (after C5; decision 12; must merge before G1)
 - **Model:** Opus 5.5 (a design decision, then the heal it implies).
-- **Why:** F10. Rating filters (`imdbRating`, `communityRating`) run through enrichment, while
+- **Why:** F10. Rating filters (`imdbRating`, `communityRating`) read source fields of the normalized item, while
   `/api/providers/ratings` (`ratingsAggregation.ts`) is a separate, title-keyed, on-demand aggregation
   feeding the Ratings page and the Media page's ratings panel. The fracture ledger holds this open as
   *"Ratings — two mechanisms, one blocked"*. Blocking the second mechanism (S1) hid it but did not
@@ -664,7 +664,32 @@ names, so nothing is renamed twice.
     callers.
   - `ratingsAggregation.ts` logs with `console.warn` where every other server file uses the module
     logger.
-- **Behaviours:** written into this section once decision 12 is taken, in the slice's own PR.
+- **Decision 12 taken (owner, 2026-11-08): (a) now, (b) later.** The catalog is the one ratings
+  mechanism; a normalized rating over identity-keyed per-source values is the later direction
+  (`docs/intent/media-ratings-provider.md`). The `/ratings` page is deleted as a feature, an
+  explicit exception to decision 7; the panel stays deferred. Rating filters read source fields of
+  the normalized item (`normalizeMedia.ts`), not enrichment.
+- **Behaviours:**
+  - A movie's ratings list each source its Radarr record reports (IMDb, TMDB, Metacritic, Rotten
+    Tomatoes, Trakt), each with its label, value, scale and vote count when reported; a series lists
+    Sonarr's community rating. A source that is missing, non-numeric, or value 0 with 0 or missing
+    votes is absent (unrated).
+  - An unrated title is matched by no rating-range filter. So an include "rating at most 5" no longer
+    targets unrated titles, and an exclude "rating at most 5" no longer protects them; previewing a
+    Radarr delete over one unrated and one rated on-disk movie with include "on disk" and that
+    exclude counts 2, not 1. Rated titles match as before.
+  - The values the filters test equal the values the panel shows: both come from one reader,
+    `contract/ratings.ts` (`ratingsOf`).
+  - With the panel offered, clicking a movie or series card shows that title's ratings per source
+    without a request; a title with none says "No ratings".
+- **Expected end state:** `contract/ratings.ts` is the one ratings mechanism, read by
+  `normalizeMedia.ts` and the Media page. The raw `ratings` key passes through browse undeclared.
+  `contract/scope.ts` no longer lists `/api/providers/ratings` or `/ratings`; `mediaRatingsPanel`
+  and OMDB stay deferred with reasons that name the later per-source store.
+- **Deletes:** `ratingsAggregation.ts`, `keyResolver.ts`, the `ratings` procedure and contract route,
+  `AggregatedRatingsSchema`, `getRatings` on TMDB/OMDb/TVmaze with the methods and types only it
+  used, `NormalizedMovie.tmdbRating`, `RatingsForm`, `useRatings`, and the `/ratings` page (the
+  decision-7 exception above).
 - **Done when:** the ledger entry moves to Healed, `contract/scope.ts`'s ratings entries say why
   they remain (or are removed), and Post-MVP no longer lists ratings as an unresolved duplicate.
 
@@ -954,7 +979,7 @@ names, so nothing is renamed twice.
 | 9a | Overseerr vs Seerr | **Decided: one provider type, Seerr** (D3). Development continues against the NAS's current Overseerr, since the APIs match. The NAS upgrades to Seerr before G1, so acceptance verifies the offered type against the real target; the Seerr spec flagged its live compatibility as unverified. D3 built the single `SEERR` type, tested against mocks of both server kinds. |
 | 10 | Offered tasks | **Decided: all 32 offered**, each run once in G1 against a sacrificial item, so destructive ones are proven on throwaway media. The offered types declare 32 tasks, all wired, with parameterized ones backed by options routes. (D) marks destructive. **Radarr:** unmonitorMovie, triggerSearch, deleteMovieWithFiles (D), deleteMovieKeepFiles (D), refreshMovie, rescanMovie, renameMovies, refreshCollection, changeQualityProfile, addTag, removeTag. **Sonarr:** unmonitorSeries, triggerSearch, deleteSeriesWithFiles (D), deleteSeriesKeepFiles (D), refreshSeries, rescanSeries, renameSeries, changeQualityProfile, addTag, removeTag. **Plex:** deleteFromLibrary (D), refreshMetadata, markPlayed, markUnplayed. **Jellyfin:** deleteItem (D), refreshMetadata, markPlayed, markUnplayed, addToCollection, removeFromCollection. **Tautulli:** deleteWatchHistory (D). **Seerr:** none (enrichment only). |
 | 11 | Client/server contract mechanism | **Decided: oRPC contract-first** (C0). On the wire it stays plain HTTP/JSON at the same `/api/...` URLs via oRPC's OpenAPI handler; client and server ship in one image, so there is no client/server version skew to manage. Checked on npm 2026-10-03: oRPC 1.15.4 (released 2026-10-01, schema-agnostic, Zod 4 compatible); ts-rest 3.52.1 (last release 2025-06, peer `zod ^3`, incompatible with this repo's Zod 4.3); Zodios 10.9.6 (last release 2023-08, peer `zod ^3`, axios-based, unmaintained). The alternative is tightening the current bridge by hand (add method/path to the shared schemas, write our own typed client), which builds a homegrown second version of what oRPC already is. |
-| 12 | One ratings mechanism (C6) | **Open; the owner decides at the start of C6.** (a) The Ratings page and panel read rating values from enrichment, and `ratingsAggregation.ts` is retired as a mechanism; the surface stays deferred. (b) Ratings move to their own persisted, identity-keyed store (the `docs/intent/media-ratings-provider.md` shape), and rating filters read it. Larger, and that intent doc says its design is undecided. (c) The Ratings page and panel are retired as features (an explicit exception to decision 7) and rating filters stay on enrichment. |
+| 12 | One ratings mechanism (C6) | **Decided (owner, 2026-11-08): (a) now, (b) later.** The catalog is the one ratings mechanism: `contract/ratings.ts` reads each title's Radarr/Sonarr ratings for both the rating filters and the deferred Media-page panel, and `ratingsAggregation.ts` with its route is deleted. The Ratings page is retired as a feature, an explicit exception to decision 7, because its typed-title form would be a second title lookup and the panel answers a title's ratings. Later (post-MVP): one normalized product rating to sort by, computed from identity-keyed per-source values, with the raw values and sources still displayed (`docs/intent/media-ratings-provider.md`). Rejected: (c) retiring the panel too, which would lose the per-title display the owner wants for a browse-library view. |
 | 13 | One title lookup (C7) | **Open; the owner decides at the start of C7.** (a) Search is a distinct job, finding titles a provider knows that are not in the library, and is named for that job so it no longer reads as a second title filter; it stays deferred. (b) Search runs over the title filter's mechanism, so one lookup serves both. (c) Search is retired as a feature (an explicit exception to decision 7). |
 
 ## Post-MVP (parked, in order)
@@ -967,8 +992,9 @@ names, so nothing is renamed twice.
 3. Maintenance of soft-deleted `media_item` rows (retention or purge policy).
 4. Any provider type not offered in the MVP. After C2 and C5, adding one
    is a server-only change.
-5. Un-deferring each deferred surface. The duplicate mechanisms behind ratings and search are
-   settled inside the MVP (C6, C7), so un-deferring builds on what those slices decided.
+5. Un-deferring each deferred surface. Ratings are one mechanism (C6: the catalog, read by
+   `contract/ratings.ts`), and search is settled inside the MVP by C7, so un-deferring builds on what
+   those slices decided.
 6. A link from an automation's blocking problem to the query that needs fixing. The Automations page
    already lists each block with its reason and what clears it.
 7. `docs/intent/`: automation archive, realtime run state, ratings provider, inter-provider

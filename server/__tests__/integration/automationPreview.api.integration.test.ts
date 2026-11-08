@@ -26,6 +26,7 @@ describe('POST /api/automations/preview', () => {
   let client: ReturnType<typeof createApiClient>;
   let radarrId: number;
   let hasFileQueryId: number;
+  let lowImdbQueryId: number;
 
   beforeAll(async () => {
     const mockConfig = createMockConfig({
@@ -51,15 +52,19 @@ describe('POST /api/automations/preview', () => {
     });
     radarrId = radarr.id;
 
-    const hasFileQuery = await new MediaQueryService({
-      db,
-      filterReadiness: filterReadinessOver(db),
-    }).create({
+    const mediaQueries = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
+    const hasFileQuery = await mediaQueries.create({
       name: 'On disk',
       contentType: 'movie',
       filters: [{ ruleKey: 'hasFile', value: true }],
     });
     hasFileQueryId = hasFileQuery.id;
+    const lowImdbQuery = await mediaQueries.create({
+      name: 'IMDb rating at most 5',
+      contentType: 'movie',
+      filters: [{ ruleKey: 'imdbRating', value: { max: 5 } }],
+    });
+    lowImdbQueryId = lowImdbQuery.id;
 
     const app: Express = express();
     app.use(express.json());
@@ -97,6 +102,32 @@ describe('POST /api/automations/preview', () => {
       providerId: radarrId,
       taskId: 'deleteMovieWithFiles',
       queries: [{ queryId: hasFileQueryId, role: 'include' }],
+    });
+
+    expectSuccessResponse(res, { count: 2, contentType: 'movie' });
+  });
+
+  it('does not let a rating exclusion protect an unrated movie', async () => {
+    radarrHolds([
+      createRadarrMovie({
+        id: 1,
+        title: 'Unrated',
+        ratings: { imdb: { value: 0, votes: 0, type: 'user' } },
+      }),
+      createRadarrMovie({
+        id: 2,
+        title: 'Rated',
+        ratings: { imdb: { value: 8, votes: 900, type: 'user' } },
+      }),
+    ]);
+
+    const res = await client.post('/api/automations/preview', {
+      providerId: radarrId,
+      taskId: 'deleteMovieWithFiles',
+      queries: [
+        { queryId: hasFileQueryId, role: 'include' },
+        { queryId: lowImdbQueryId, role: 'exclude' },
+      ],
     });
 
     expectSuccessResponse(res, { count: 2, contentType: 'movie' });

@@ -14,34 +14,7 @@ const mockProvider: ProviderConfig = {
   settings: null,
 };
 
-const server = setupServer(
-  http.get('https://api.tvmaze.com/search/shows', ({ request }) => {
-    const url = new URL(request.url);
-    const query = url.searchParams.get('q');
-
-    if (query === 'Breaking Bad') {
-      return HttpResponse.json([
-        {
-          score: 0.95,
-          show: {
-            id: 169,
-            name: 'Breaking Bad',
-            type: 'Scripted',
-            language: 'English',
-            genres: ['Drama', 'Crime'],
-            status: 'Ended',
-            premiered: '2008-01-20',
-            rating: { average: 9.1 },
-            network: { name: 'AMC', country: { name: 'United States' } },
-            externals: { tvrage: 18164, thetvdb: 81189, imdb: 'tt0903747' },
-          },
-        },
-      ]);
-    }
-
-    return HttpResponse.json([]);
-  })
-);
+const server = setupServer();
 
 beforeAll(() => server.listen());
 afterEach(() => server.resetHandlers());
@@ -68,41 +41,5 @@ describe('TvMazeProvider.lookupByTvdbId', () => {
     const provider = new TvMazeProvider(mockProvider, log);
 
     expect(await provider.lookupByTvdbId(999999)).toBeNull();
-  });
-});
-
-describe('TvMazeProvider', () => {
-  it('should search for shows', async () => {
-    const provider = new TvMazeProvider(mockProvider, log);
-    const results = await provider.search('Breaking Bad');
-
-    expect(results).toHaveLength(1);
-    expect(results[0].show.name).toBe('Breaking Bad');
-  });
-
-  it('should get TV show ratings', async () => {
-    const provider = new TvMazeProvider(mockProvider, log);
-    const rating = await provider.getRatings('Breaking Bad', 2008);
-
-    expect(rating.source).toBe('tvmaze');
-    expect(rating.found).toBe(true);
-    expect(rating.rating).toBe(9.1);
-  });
-
-  it('should include tvMazeId, tvdbId, and imdbId when a show is found', async () => {
-    const provider = new TvMazeProvider(mockProvider, log);
-    const rating = await provider.getRatings('Breaking Bad', 2008);
-
-    expect(rating.tvMazeId).toBe(169);
-    expect(rating.tvdbId).toBe(81189);
-    expect(rating.imdbId).toBe('tt0903747');
-  });
-
-  it('should return found:false when not found', async () => {
-    const provider = new TvMazeProvider(mockProvider, log);
-    const rating = await provider.getRatings('Nonexistent Show');
-
-    expect(rating.source).toBe('tvmaze');
-    expect(rating.found).toBe(false);
   });
 });

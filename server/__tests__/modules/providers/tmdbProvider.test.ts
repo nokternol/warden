@@ -18,47 +18,6 @@ const mockProvider: ProviderConfig = {
 };
 
 const server = setupServer(
-  http.get('https://api.themoviedb.org/3/search/multi', ({ request }) => {
-    const url = new URL(request.url);
-    const query = url.searchParams.get('query');
-
-    if (query === 'Breaking Bad') {
-      return HttpResponse.json({
-        results: [
-          {
-            id: 1396,
-            name: 'Breaking Bad',
-            media_type: 'tv',
-            vote_average: 8.9,
-            vote_count: 5234,
-            popularity: 123.45,
-            first_air_date: '2008-01-20',
-            overview: 'A chemistry teacher...',
-          },
-        ],
-      });
-    }
-
-    if (query === 'The Matrix') {
-      return HttpResponse.json({
-        results: [
-          {
-            id: 603,
-            title: 'The Matrix',
-            media_type: 'movie',
-            vote_average: 8.7,
-            vote_count: 24512,
-            popularity: 98.21,
-            release_date: '1999-03-31',
-            overview: 'A hacker...',
-          },
-        ],
-      });
-    }
-
-    return HttpResponse.json({ results: [] });
-  }),
-
   http.get('https://api.themoviedb.org/3/movie/:id', () => {
     return HttpResponse.json({
       id: 603,
@@ -156,74 +115,6 @@ const server = setupServer(
 beforeAll(() => server.listen());
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
-
-describe('TmdbProvider', () => {
-  it('should search for media and return results', async () => {
-    const provider = new TmdbProvider(mockProvider, log);
-    const results = await provider.search('Breaking Bad');
-
-    expect(results).toHaveLength(1);
-    expect(results[0].name).toBe('Breaking Bad');
-    expect(results[0].media_type).toBe('tv');
-  });
-
-  it('should get TV show ratings', async () => {
-    const provider = new TmdbProvider(mockProvider, log);
-    const rating = await provider.getRatings('Breaking Bad', 2008);
-
-    expect(rating.source).toBe('tmdb');
-    expect(rating.found).toBe(true);
-    expect(rating.tvRating).toBe(8.9);
-    expect(rating.tvVotes).toBe(5234);
-    expect(rating.popularity).toBe(123.45);
-  });
-
-  it('should get movie ratings', async () => {
-    const provider = new TmdbProvider(mockProvider, log);
-    const rating = await provider.getRatings('The Matrix', 1999);
-
-    expect(rating.source).toBe('tmdb');
-    expect(rating.found).toBe(true);
-    expect(rating.movieRating).toBe(8.7);
-    expect(rating.movieVotes).toBe(24512);
-    expect(rating.popularity).toBe(98.21);
-  });
-
-  it('should return found:false when no results', async () => {
-    const provider = new TmdbProvider(mockProvider, log);
-    const rating = await provider.getRatings('NonexistentShow12345');
-
-    expect(rating.source).toBe('tmdb');
-    expect(rating.found).toBe(false);
-    expect(rating.movieRating).toBeUndefined();
-    expect(rating.tvRating).toBeUndefined();
-  });
-
-  it('should match by year when provided', async () => {
-    const provider = new TmdbProvider(mockProvider, log);
-    const rating = await provider.getRatings('Breaking Bad', 2008);
-
-    expect(rating.found).toBe(true);
-    expect(rating.tvRating).toBe(8.9);
-  });
-
-  it('should include tmdbId, imdbId, and mediaType:movie for movies', async () => {
-    const provider = new TmdbProvider(mockProvider, log);
-    const rating = await provider.getRatings('The Matrix', 1999);
-
-    expect(rating.tmdbId).toBe(603);
-    expect(rating.imdbId).toBe('tt0133093');
-    expect(rating.mediaType).toBe('movie');
-  });
-
-  it('should include tmdbId and mediaType:tv for TV shows', async () => {
-    const provider = new TmdbProvider(mockProvider, log);
-    const rating = await provider.getRatings('Breaking Bad', 2008);
-
-    expect(rating.tmdbId).toBe(1396);
-    expect(rating.mediaType).toBe('tv');
-  });
-});
 
 describe('TmdbProvider.getMovieDetailsEnriched', () => {
   it('returns certification "R" from US theatrical release_dates', async () => {

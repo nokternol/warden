@@ -3,24 +3,18 @@ import { type Scope, isOfferedProviderType, isOfferedTask } from '@contract/scop
 import { MetadataProviderType } from '@server/database/schema';
 import type { MetadataProvider } from '@server/database/schema';
 import { api } from '@server/kernel/api';
-import type { AppConfig } from '@server/kernel/config';
 import { ValidationError } from '@server/kernel/errors';
 import { getChildLogger } from '@server/kernel/logger';
 import { probeConnection } from './connectionProbe';
 import { JellyfinProvider } from './connections/jellyfinProvider';
-import { OmdbProvider } from './connections/omdbProvider';
 import { PlexProvider } from './connections/plexProvider';
 import { RadarrProvider } from './connections/radarrProvider';
 import { SeerrProvider } from './connections/seerrProvider';
 import { SonarrProvider } from './connections/sonarrProvider';
 import { TautulliProvider } from './connections/tautulliProvider';
-import { TmdbProvider } from './connections/tmdbProvider';
-import { TvMazeProvider } from './connections/tvmazeProvider';
-import { resolveApiKey } from './keyResolver';
 import { describeProviderTypes } from './providerCatalogue';
 import type { ProviderFactory } from './providerFactory';
 import type { ProviderSettingsService } from './providerSettingsService';
-import { aggregateRatings } from './ratingsAggregation';
 import { isMediaActuator } from './roles';
 import { readEnabledTaskIds } from './taskEnablement';
 
@@ -40,7 +34,6 @@ const _providerTypesAgree: ProviderTypesAgree = true;
 interface ProvidersCradle {
   providerSettingsService: ProviderSettingsService;
   providerFactory: ProviderFactory;
-  config: AppConfig;
   scope: Scope;
 }
 
@@ -112,7 +105,7 @@ function storedKeyFor(
  * connection probing, and provider capabilities.
  */
 export function createProvidersProcedures(cradle: ProvidersCradle) {
-  const { providerSettingsService, providerFactory, config, scope } = cradle;
+  const { providerSettingsService, providerFactory, scope } = cradle;
 
   /** Refuses a provider type the scope declaration defers. */
   function assertOfferedType(type: ProviderType): void {
@@ -294,87 +287,6 @@ export function createProvidersProcedures(cradle: ProvidersCradle) {
           return { type, data: { requests } };
         }
       }
-    }),
-
-    ratings: api.providers.ratings.handler(async ({ input }) => {
-      const { title, year, tmdbApiKey, omdbApiKey } = input;
-
-      const dbProviders = await providerSettingsService.findActiveByTypes([
-        MetadataProviderType.TMDB,
-        MetadataProviderType.OMDB,
-      ]);
-      const dbTmdbKey =
-        dbProviders.find((p) => p.type === MetadataProviderType.TMDB)?.apiKey ?? null;
-      const dbOmdbKey =
-        dbProviders.find((p) => p.type === MetadataProviderType.OMDB)?.apiKey ?? null;
-
-      const { key: resolvedTmdbKey } = resolveApiKey(
-        tmdbApiKey,
-        dbTmdbKey,
-        config.TMDB_API_KEY || undefined
-      );
-      const { key: resolvedOmdbKey } = resolveApiKey(omdbApiKey, dbOmdbKey, undefined);
-
-      log.debug('Fetching aggregated ratings', { title, year, hasTmdb: !!resolvedTmdbKey });
-
-      const [tmdbRating, omdbRating, tvmazeRating] = await Promise.all([
-        resolvedTmdbKey
-          ? (async () => {
-              try {
-                const provider = new TmdbProvider(
-                  {
-                    name: 'tmdb',
-                    url: 'https://api.themoviedb.org/3',
-                    apiKey: resolvedTmdbKey,
-                    settings: null,
-                  },
-                  log
-                );
-                return await provider.getRatings(title, year);
-              } catch (error) {
-                log.warn('TMDB fetch failed', { error });
-                return { source: 'tmdb' as const, found: false };
-              }
-            })()
-          : Promise.resolve(undefined),
-
-        resolvedOmdbKey
-          ? (async () => {
-              try {
-                const provider = new OmdbProvider(
-                  {
-                    name: 'omdb',
-                    url: 'https://www.omdbapi.com',
-                    apiKey: resolvedOmdbKey,
-                    settings: null,
-                  },
-                  log
-                );
-                return await provider.getRatings(title, year);
-              } catch (error) {
-                log.warn('OMDB fetch failed', { error });
-                return { source: 'omdb' as const, found: false };
-              }
-            })()
-          : Promise.resolve(undefined),
-
-        (async () => {
-          try {
-            const provider = new TvMazeProvider(
-              { name: 'tvmaze', url: 'https://api.tvmaze.com', apiKey: null, settings: null },
-              log
-            );
-            return await provider.getRatings(title, year);
-          } catch (error) {
-            log.warn('TVMaze fetch failed', { error });
-            return { source: 'tvmaze' as const, found: false };
-          }
-        })(),
-      ]);
-
-      const aggregated = aggregateRatings(title, year, tmdbRating, omdbRating, tvmazeRating);
-
-      return aggregated;
     }),
   };
 }

@@ -1,98 +1,61 @@
-# MediaRatingsProvider role
+# One normalized rating over per-source values
 
-**Status:** INTENT (future state, not built). Extracted from the per-provider decision sessions after ratings kept
-resurfacing scattered across Radarr, Sonarr, Plex, Jellyfin, TMDB, OMDB, and TVMaze's specs with
-inconsistent treatment — some folded into the shared multi-producer `EnrichmentFields` pattern used
-for genres/certification/studio, some kept provider-prefixed and separate, one deferred outright.
-This doc is the single place that inventory now lives; the per-provider specs point here instead of
-each carrying its own ratings-field definitions.
+**Status:** INTENT (future state, not built). This records the owner's direction for ratings after
+the catalog became Warden's one ratings mechanism (2026-11-08). It describes the problem, the
+direction and the inventory as the code stands. It is not a design.
 
-## Why ratings don't fit the shared-EnrichmentFields pattern
+## Where ratings stand
 
-Every other multi-producer field this map decided (`genres`, `certification`, `studio`, `network`,
-file-technical-metadata) works by picking one winning value per item via `contestedFieldPrecedence`
-— a single scalar wins, the losing producers' values are discarded. That's the right shape when
-"whichever source is most reliable" is genuinely the question. It's the wrong shape for ratings:
+A title's ratings are whatever its Radarr or Sonarr record reports. `contract/ratings.ts`
+(`ratingsOf`) is the one reader: it lists each source the record reports, with its label, its value
+on that source's fixed scale and its vote count, and it leaves an unrated entry (value 0 with zero or
+missing votes) out. Normalization takes the rating filters' `imdbRating` and `communityRating` from
+it, and the Media page's ratings panel shows the same list. Nothing is stored per source, nothing is
+normalized onto one scale, and nothing is averaged.
 
-- Different rating sources use **different, non-convertible scales** (IMDb 0–10, Rotten Tomatoes
-  0–100%, Metacritic 0–100, TMDB's own vote average 0–10 but a different underlying vote population
-  than IMDb's). Picking a single "winner" throws away real signal a blended/weighted view would keep.
-- The existing ad hoc precursor to this role, `ratingsAggregation.ts`'s `aggregateRatings()`, already
-  does something closer to the right shape — it **averages** TMDB/OMDB/TVMaze values rather than
-  picking one winner — but it's title-keyed (not item-identity-keyed), on-demand only (feeds one ad
-  hoc `/ratings` route + the `RatingsDisplay` client component), and not persisted anywhere. It's the
-  right instinct without the right home.
-- A future computed/blended rating (weighted by source reliability, vote count, recency) is
-  **genuinely owned by this product** even though every input is sourced elsewhere — that's a
-  different kind of artifact than "Radarr's `genres` value, chosen over Sonarr's because Radarr is
-  more reliable for movies."
+## The direction
 
-## Proposed shape (not designed in detail — this is intent, not a spec)
+The owner's direction: **one normalized product rating to sort by, computed from identity-keyed
+per-source values, with the raw values and their sources still displayed.**
 
-A `MediaRatingsProvider` role with its own persistence, distinct from both `NormalizedMovie`/
-`NormalizedSeries`'s scalar fields and the `media_enrichment` EAV table:
+- **Per-source values keyed by identity.** One value per (media identity, rating source), so the raw
+  values survive independently and can be grouped, weighted and recomputed. A title-keyed lookup
+  (search a provider by typed title and year) is not an acceptable input: it is ambiguous and ignores
+  Warden's identity model. Warden had one, and it was deleted for those reasons.
+- **One normalized rating Warden owns.** A computed rating (for example weighted by source
+  reliability, vote count or recency) is something this product owns even though every input comes
+  from elsewhere. That is what a "sort by rating" or a single rating filter would read.
+- **Raw values stay visible.** Wherever the normalized rating shows, the per-source values and their
+  sources stay available, each labelled by its own source. TMDB's vote average is not an IMDb score,
+  and a display that drops source labels would blur that.
 
-- One row per (media identity, source system, rating kind) — e.g. (item X, IMDb, `imdbRating`), (item
-  X, Rotten Tomatoes, `rottenTomatoesRating`), (item X, TMDB, `tmdbRating`) — not one row per item with
-  a single winning scalar. This is what "clearly keyed so they can be grouped, weighted, computed"
-  requires: the raw per-source values need to survive independently, not collapse into one field via
-  precedence the way genre/certification do.
-- A blending/computation step (weighted average, source-reliability weighting, vote-count weighting)
-  produces a derived "the product's own rating" — analogous to what `aggregateRatings()` already does
-  informally, but item-identity-keyed and persisted rather than title-keyed and on-demand.
-- Table shape, weighting algorithm, and whether/how it replaces `ratingsAggregation.ts` are **not
-  decided here** — genuinely untested territory per the session that raised this, "for much later."
-  This doc records the problem and the per-provider inventory, not the solution.
+Table shape, the weighting algorithm, which sources beyond Radarr and Sonarr feed it, and how a rating
+filter would read it are **not decided here**.
 
-## Explicitly out of scope for this role
+## Why ratings don't fit the shared EnrichmentFields pattern
 
-- **`certification`** (content rating board classification — PG-13, TV-MA, etc.) — a categorical
-  classification, not a blendable numeric score. Stays in the regular shared-`EnrichmentFields`
-  precedence pattern like `genres`/`studio`, unaffected by this doc.
-- **`awardWinner`/`oscarWinner`** (OMDB, boolean flags derived from regexing `Awards` text) —
-  award-signal booleans, not numeric ratings. Plausible future input to a blending algorithm's
-  weighting, but not itself a rating value; stays a regular OMDB `EnrichmentFields` entry.
-- **`BoxOffice`** (OMDB) — financial data, unrelated to ratings; already deferred as on-demand
-  item-detail metadata for OMDB for unrelated reasons.
+Other fields with several producers (`genres`, `certification`, `studio`, `network`) pick one winning
+value per item through `contestedFieldPrecedence`, and the losing values are discarded. That shape is
+wrong for ratings. The sources use different scales that cannot be converted into each other (IMDb
+0–10, Rotten Tomatoes 0–100%, Metacritic 0–100, TMDB 0–10 over a different vote population than
+IMDb's), so picking one winner throws away exactly the signal a blended rating needs.
 
-## Per-provider ratings inventory
+## Out of scope for this direction
 
-Consolidated from every provider spec's ratings-related fields. "Status" reflects each spec's
-decision at the time this doc was written, not a state this doc changes.
+- **`certification`** is a categorical classification (PG-13, TV-MA), not a numeric score. It stays
+  in the shared precedence pattern.
+- **Award flags and box office** (OMDb) are not ratings. Award signals might later weight a blend,
+  but they are not rating values.
 
-| Provider | Field(s) | Scale | Status |
+## Per-source inventory, as the code stands
+
+| Source | Values | Scale | State |
 |---|---|---|---|
-| Radarr | `imdbRating` | IMDb 0–10 | **Already live** — wired today, movie-only, `ruleRegistry.ts`'s `imdbRating` rule. |
-| Radarr | `imdbVotes` | vote count | Designed, not yet built. |
-| Radarr | `tmdbRating` | TMDB 0–10 | Declared on `NormalizedMovie` today but **orphaned/unpopulated** — no source writes it yet. Spec'd via Radarr's bundled `ratings.tmdb` pull, superseded as primary producer by TMDB's own direct call (see below). |
-| Radarr | `tmdbRatingVotes` | vote count | Spec'd, not yet built. |
-| Radarr | `metacriticRating` / `metacriticVotes` | Metacritic 0–100 | Designed, collision with OMDB's own Metacritic value. |
-| Radarr | `rottenTomatoesRating` / `rottenTomatoesVotes` | RT 0–100% | Spec'd, collision with OMDB's own RT value. |
-| Radarr | `traktRating` / `traktVotes` | Trakt scale (unconfirmed range) | Spec'd, no known collision. |
-| Sonarr | `communityRating` | Sonarr's own 0–10 | **Already live** — wired today, series-only, `ruleRegistry.ts`'s `communityRating` rule. |
-| Sonarr | `communityRatingVotes` | vote count | Designed, not yet built. |
-| Plex | `plexRating` / `plexAudienceRating` | Opaque — whatever the configured metadata agent supplies | Designed, kept provider-prefixed by design (scale/provenance too agent-dependent to merge into any specific-scale field). |
-| Jellyfin | `jellyfinCommunityRating` / `jellyfinCriticRating` | Opaque, same reasoning as Plex | Designed, kept provider-prefixed by design. |
-| TMDB | `tmdbRating` / `tmdbRatingVotes` | TMDB 0–10 | Designed — same underlying data as Radarr's bundled copy, TMDB's own direct API call decided as the higher-precedence producer of this field ("same-source dedup," not new redundancy). |
-| OMDB | `imdbRating` / `imdbVotes` | IMDb 0–10 | Designed — same named metric as Radarr's, two paths to the same concept. |
-| OMDB | `rottenTomatoesRating` / `rottenTomatoesVotes` | RT 0–100% | Spec'd, second producer alongside Radarr's bundled copy. |
-| OMDB | `metacriticRating` / `metacriticVotes` | Metacritic 0–100 | Spec'd, second producer alongside Radarr's bundled copy. Self-collision note: OMDB exposes the same number twice (`Ratings[]` entry and a separate top-level `Metascore` field) — only `Ratings[]` should ever be parsed. |
-| TVMaze | `rating.average` | TVMaze 0–10 | **Explicitly deferred, not spec'd as an `EnrichmentFields` entry** (the TVMaze decision). Already consumed by `ratingsAggregation.ts`'s blended average; that usage is unchanged by this doc. `TvMazeProvider`'s rating read site carries a JSDoc note pointing here, per the requirement that this intent survive `docs/in_progress/`'s eventual deletion. |
-
-## Naming-confusion risk, not just a field collision
-
-`tmdbRating`/`tmdbRatingVotes` is explicitly **not an IMDb number** despite three "rating" fields
-now circling the same conceptual space (Radarr/OMDB's shared `imdbRating`, TMDB's own vote average,
-Plex/Jellyfin's opaque agent-dependent ratings). TMDB's number comes from a different vote population
-than IMDb's. Whatever UI eventually surfaces a blended/computed rating from this role must not label
-TMDB's contribution as if it were an IMDb score — a real confusion risk, not just a naming
-housekeeping item, if source labeling is ever dropped or generalized away in a "Rating: X" display.
-
-## Relationship to `ratingsAggregation.ts`
-
-`aggregateRatings()` (`server/modules/providers/ratingsAggregation.ts`) already blends TMDB/OMDB/
-TVMaze ratings today — title-keyed, on-demand, simple unweighted average, feeding one ad hoc
-`/ratings` route and the `RatingsDisplay` client component. It is the closest existing thing to this
-role and is the most likely candidate to be superseded or absorbed by it eventually. Whether it gets
-replaced outright, kept as a lighter on-demand preview alongside a persisted `MediaRatingsProvider`,
-or something else — **not decided here**.
+| Radarr | IMDb, TMDB, Trakt (each with votes) | 0–10 | Read by `contract/ratings.ts`, not stored. IMDb feeds the `imdbRating` filter (movies). There is no `NormalizedMovie.tmdbRating`. |
+| Radarr | Rotten Tomatoes, Metacritic (votes reported as 0) | 0–100 | Read by `contract/ratings.ts`, not stored. No filter reads them. |
+| Sonarr | community rating (with votes) | 0–10 | Read by `contract/ratings.ts`, not stored. Feeds the `communityRating` filter (series). |
+| Plex | `rating` / `audienceRating` | Opaque, depends on the metadata agent | Not read. Its scale and provenance depend on the agent, so it would have to stay provider-labelled. |
+| Jellyfin | `CommunityRating` / `CriticRating` | Opaque, same reasoning as Plex | Not read. |
+| TMDB | `vote_average` / `vote_count` | 0–10 | Carried on the connection's `*Enriched` types; nothing reads it as a rating. TMDB is a deferred provider type. |
+| OMDb | IMDb, Rotten Tomatoes, Metacritic | as above | Not read. OMDB is a deferred provider type with no consumer. |
+| TVmaze | `rating.average` | 0–10 | Not read. Nothing consumes TVmaze ratings. |

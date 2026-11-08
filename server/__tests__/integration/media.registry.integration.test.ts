@@ -316,5 +316,31 @@ describe('Media browse — registry-delegated predicates', () => {
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Low']);
     });
+
+    it('browses a movie with its ratings unchanged, unlisted sources included', async () => {
+      const ratings = { imdb: { value: 4.5 }, letterboxd: { value: 3.9, votes: 120 } };
+      const client = clientWithMovies([{ ...ratedMovies[0], ratings }]);
+      const res = await client.get(browsePath('movie', [], { pageSize: 100 }));
+      const data = expectSuccessResponse(res);
+      expect(data.items.map((m: { ratings: unknown }) => m.ratings)).toEqual([ratings]);
+    });
+
+    it('does not match an unrated movie, which Radarr reports as zero votes and zero value', async () => {
+      const client = clientWithMovies([
+        ...ratedMovies,
+        {
+          ...ratedMovies[0],
+          id: 3,
+          tmdbId: 3,
+          title: 'Unrated',
+          ratings: { imdb: { value: 0, votes: 0 } },
+        },
+      ]);
+      const res = await client.get(
+        browsePath('movie', [{ ruleKey: 'imdbRating', value: { max: 5 } }], { pageSize: 100 })
+      );
+      const data = expectSuccessResponse(res);
+      expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Low']);
+    });
   });
 });

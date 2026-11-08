@@ -1,97 +1,72 @@
-import { useRatings } from '@app/hooks/useRatings';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import type { TitleRating } from '@contract/ratings';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { server } from '@tests/mocks/server';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import RatingsPanel from '../index';
 
-vi.mock('@app/hooks/useRatings');
+const ratings: TitleRating[] = [
+  { source: 'imdb', label: 'IMDb', value: 8.7, votes: 2100000, scale: 10 },
+  { source: 'metacritic', label: 'Metacritic', value: 73, scale: 100 },
+];
 
 describe('RatingsPanel', () => {
+  const requests: string[] = [];
+  const record = ({ request }: { request: Request }) => {
+    requests.push(request.url);
+  };
+
+  beforeEach(() => {
+    requests.length = 0;
+    server.events.on('request:start', record);
+  });
+
+  afterEach(() => {
+    server.events.removeListener('request:start', record);
+  });
+
   it('renders nothing when closed', () => {
-    vi.mocked(useRatings).mockReturnValue({
-      trigger: vi.fn(),
-      data: undefined,
-      error: undefined,
-      isLoading: false,
-    });
-    render(<RatingsPanel isOpen={false} onClose={() => {}} title="The Matrix" year={1999} />);
-    // Dialog (and all visible panel content) must be absent when closed
+    render(
+      <RatingsPanel
+        isOpen={false}
+        onClose={() => {}}
+        title="The Matrix"
+        year={1999}
+        ratings={ratings}
+      />
+    );
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('renders title and year when open', () => {
-    vi.mocked(useRatings).mockReturnValue({
-      trigger: vi.fn(),
-      data: undefined,
-      error: undefined,
-      isLoading: false,
-    });
-    render(<RatingsPanel isOpen={true} onClose={() => {}} title="The Matrix" year={1999} />);
-    expect(screen.getByText('The Matrix')).toBeInTheDocument();
-    expect(screen.getByText(/1999/)).toBeInTheDocument();
+  it('shows the title it was opened for, with that title’s ratings per source, without a request', async () => {
+    render(
+      <RatingsPanel
+        isOpen={true}
+        onClose={() => {}}
+        title="The Matrix"
+        year={1999}
+        ratings={ratings}
+      />
+    );
+
+    const dialog = screen.getByRole('dialog', { name: 'Ratings for The Matrix' });
+    expect(dialog).toHaveTextContent('1999');
+    expect(dialog).toHaveTextContent('IMDb');
+    expect(dialog).toHaveTextContent('8.7/10');
+    expect(dialog).toHaveTextContent('Metacritic');
+    expect(dialog).toHaveTextContent('73/100');
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(requests).toEqual([]);
   });
 
   it('calls onClose when close button clicked', () => {
-    vi.mocked(useRatings).mockReturnValue({
-      trigger: vi.fn(),
-      data: undefined,
-      error: undefined,
-      isLoading: false,
-    });
     const onClose = vi.fn();
-    render(<RatingsPanel isOpen={true} onClose={onClose} title="Breaking Bad" year={2008} />);
+    render(
+      <RatingsPanel isOpen={true} onClose={onClose} title="Breaking Bad" year={2008} ratings={[]} />
+    );
 
-    const closeButton = screen.getByRole('button', { name: /close/i });
-    fireEvent.click(closeButton);
+    fireEvent.click(screen.getByRole('button', { name: /close/i }));
 
     expect(onClose).toHaveBeenCalledOnce();
-  });
-
-  it('shows ratings after loading', async () => {
-    vi.mocked(useRatings).mockReturnValue({
-      trigger: vi.fn(),
-      data: undefined,
-      error: undefined,
-      isLoading: false,
-    });
-    render(<RatingsPanel isOpen={true} onClose={() => {}} title="Breaking Bad" year={2008} />);
-
-    await waitFor(() => {
-      // RatingsDisplay is present — title appears in multiple nodes (live region, panel h2, display h2)
-      expect(screen.getAllByText(/breaking bad/i).length).toBeGreaterThan(0);
-    });
-  });
-
-  it('renders Identity section with TMDB and IMDb IDs', () => {
-    vi.mocked(useRatings).mockReturnValue({
-      trigger: vi.fn(),
-      data: {
-        title: 'Test Movie',
-        year: 2020,
-        ids: {
-          tmdbId: 123,
-          imdbId: 'tt0111161',
-          tvdbId: undefined,
-          tvMazeId: undefined,
-        },
-        summary: {
-          averageRating: 8.5,
-          totalSources: 3,
-          foundSources: 3,
-        },
-      } as unknown as ReturnType<typeof useRatings>['data'],
-      error: undefined,
-      isLoading: false,
-    });
-
-    render(<RatingsPanel isOpen={true} onClose={() => {}} title="Test Movie" year={2020} />);
-
-    // Check for the Identity section
-    expect(screen.getByText('Identity')).toBeInTheDocument();
-    // Check for TMDB ID
-    expect(screen.getByText('TMDB')).toBeInTheDocument();
-    expect(screen.getByText('123')).toBeInTheDocument();
-    // Check for IMDb ID
-    expect(screen.getByText('IMDb')).toBeInTheDocument();
-    expect(screen.getByText('tt0111161')).toBeInTheDocument();
   });
 });

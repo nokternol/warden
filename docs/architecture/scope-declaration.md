@@ -17,10 +17,10 @@ kinds of deferred things:
   so it has no control) and `tmdbStatus` (produced only by TMDB).
 - **`tasks`** — provider tasks not offered for enablement or automation, each named by provider type
   and task id, because task ids are unique only within a type. None are deferred today.
-- **`procedures`** — contract route paths that answer 404: `/api/providers/ratings`,
-  `/api/providers/metadata`, `/api/search/metadata` and `/api/app-settings`. An entry is a path rather
+- **`procedures`** — contract route paths that answer 404: `/api/providers/metadata`,
+  `/api/search/metadata` and `/api/app-settings`. An entry is a path rather
   than a procedure name, so it covers every HTTP method there and one entry defers a whole resource.
-- **`pages`** — page URLs that answer 404 and leave the navigation: `/dashboard`, `/search`, `/ratings`.
+- **`pages`** — page URLs that answer 404 and leave the navigation: `/dashboard`, `/search`.
 - **`sections`** — parts of an offered page that do not render, each named by the id its guard asks
   about: `mediaRatingsPanel`.
 
