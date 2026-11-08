@@ -122,7 +122,7 @@ export default function RatingsPanel({ isOpen, onClose, title, year }: RatingsPa
               )}
               {data && !error && (
                 <div className="flex flex-col gap-6">
-                  <RatingsDisplay ratings={data} />
+                  <RatingsDisplay ratings={[]} />
                   {/* Identity Section */}
                   {(data.ids.tmdbId || data.ids.imdbId || data.ids.tvdbId || data.ids.tvMazeId) && (
                     <div className="border-t border-border pt-4">
