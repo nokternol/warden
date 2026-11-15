@@ -47,7 +47,11 @@ should do. It makes whatever they decide possible, safe and repeatable.
 4. **The services own the truth. Warden holds a copy for speed, never as the truth.** The owner's
    services are the record of what exists and what is known about it. Warden keeps a copy so it can
    answer quickly across services. That copy can be thrown away and rebuilt from the services at any
-   time, without losing anything the owner made.
+   time, without losing anything the owner made. There is one copy: the services' data, stored in
+   Warden's database and kept up to date with the services on the owner's schedule. Every part of
+   Warden answers from it. A cache serves that copy from memory, so the many reads and the
+   scheduled mass writes need no complex database indexing; the cache is never a second source of
+   answers.
 
 5. **Warden owns only what the owner makes in it:** their connections to services, their conditions,
    their automations and the history of what Warden did. These are the only things Warden must never
