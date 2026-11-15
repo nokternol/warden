@@ -42,32 +42,34 @@ export const contestedFieldPrecedence: ContestedFieldPrecedence = {
 };
 
 /**
- * Fail-fast guardrail hooked into `assertNoActiveConflict`'s call site
- * (provider create/update): for every contested field, every active
- * provider type that produces it must be covered by that field's
- * `contestedFieldPrecedence` order. An active producer left out would
- * silently default to an accident of ordering instead of the deliberate
- * trust judgment precedence is meant to encode — this makes the gap loud
- * at provider-activation time instead. Takes `precedence`/`fieldsByType`
- * as parameters (not the module's own constants) so it stays pure and
- * testable against synthetic data, not just today's fixed 2-provider set.
+ * Fail-fast guardrail hooked into `assertNoActiveConflict`'s call site (provider create/update):
+ * every enrichable fact more than one active provider type declares is contested, and every one
+ * of those types must be in that fact's `contestedFieldPrecedence` order. A fact with no order, or
+ * an active producer left out, would otherwise be decided by an accident of storage order instead
+ * of the deliberate trust judgment precedence encodes. `tags` is construction-only (each source
+ * builds its own instance's tags), so Radarr and Sonarr both declaring it contests nothing. Takes
+ * `precedence`/`fieldsByType` as parameters so it stays pure and testable against synthetic data.
  */
 export function assertContestedFieldsCovered(
   activeTypes: Set<MetadataProviderType>,
   precedence: ContestedFieldPrecedence,
   fieldsByType: Partial<Record<MetadataProviderType, readonly (keyof EnrichmentFields)[]>>
 ): void {
-  for (const [field, order] of Object.entries(precedence) as [
-    keyof EnrichmentFields,
-    readonly MetadataProviderType[],
-  ][]) {
-    for (const type of activeTypes) {
-      const producesField = (fieldsByType[type] ?? []).includes(field);
-      if (producesField && !order.includes(type)) {
-        throw new ValidationError(
-          `${type} produces the contested field "${field}" but is not covered by its contestedFieldPrecedence order — add it before activating this provider`
-        );
-      }
+  const producers = new Map<EnrichableField, MetadataProviderType[]>();
+  for (const type of activeTypes) {
+    for (const field of fieldsByType[type] ?? []) {
+      if (field === 'tags') continue;
+      producers.set(field, [...(producers.get(field) ?? []), type]);
+    }
+  }
+  for (const [field, types] of producers) {
+    if (types.length < 2) continue;
+    const order: readonly MetadataProviderType[] = precedence[field] ?? [];
+    const uncovered = types.find((type) => !order.includes(type));
+    if (uncovered) {
+      throw new ValidationError(
+        `${uncovered} produces the contested field "${field}" but is not covered by its contestedFieldPrecedence order — add it before activating this provider`
+      );
     }
   }
 }
