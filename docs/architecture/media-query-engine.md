@@ -29,7 +29,7 @@ builds the provider once, hands the instance to `evaluate`, and reuses the *same
 | Caller | Builds the provider via | Uses the result for |
 |---|---|---|
 | `AutomationExecutor.planRun` | `providerFactory.create(providerSettings)` | the run's target items and their actuator ids; `execute` passes the ids to `task.run` |
-| `GET /media-queries/:id/preview` | the over-rows binders over each active instance's rows from the source read cache's `readAll(contentType)` ([`sourceReadCache.ts`](ref:path:server/modules/media/sourceReadCache.ts)), read as it stands | `{ count }` in **titles**: the matches pooled across instances, de-duplicated by `titleKeyOf` (TMDB id for movies, TVDB id for series), the key browse groups by; rejects if any instance cannot be read |
+| `GET /media-queries/:id/preview` | `rowsSourceFor` over each active instance's read from the source read cache's `readAll(contentType)` ([`sourceReadCache.ts`](ref:path:server/modules/media/sourceReadCache.ts)), read as it stands | `{ count }` in **titles**: the matches pooled across instances, de-duplicated by `titleKeyOf` (TMDB id for movies, TVDB id for series), the key browse groups by; rejects if any instance cannot be read |
 | `media.browse.movie`/`media.browse.series` (`browseMovies`/`browseSeries` in `media.procedures.ts`) | the over-rows binders (`radarrRowsSource`/`sonarrRowsSource`) over the per-instance sublists read from the source read cache (`readEach`), pooled into one source; each read builds new items, each self-describing its `providerId` | id set → live display-grouping → sort/paginate |
 
 The browse adapter lets the procedure keep its multi-instance read (and per-instance `yearRange`/

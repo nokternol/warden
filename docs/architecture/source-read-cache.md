@@ -23,10 +23,12 @@ earlier page or preview. That is expected and is never a fault.
 - **Errors, too.** A failed read is cached like a successful one, so requests during an outage don't
   each wait out a dead upstream's timeout. The error carries the provider id and the instance name,
   and its message ("Couldn't be reached: …") is worded once, here.
-- **Never items.** Callers bind each instance's rows into items for every evaluation with the
-  over-rows binders `radarrRowsSource`/`sonarrRowsSource`
-  ([`sourceAdapters.ts`](ref:path:server/modules/media/sourceAdapters.ts)). Every read builds new
-  objects, so enrichment merged into one evaluation's items never reaches the cached rows or another
+- **Never items.** Callers bind each instance's read into a source for every evaluation with
+  `rowsSourceFor(contentType, read)`
+  ([`sourceAdapters.ts`](ref:path:server/modules/media/sourceAdapters.ts)), the one place a read's
+  rows are told apart by content type. It hands them to the over-rows binders
+  `radarrRowsSource`/`sonarrRowsSource`, which the Media page's browse also calls directly on its
+  per-instance sublists. Every read builds new objects, so enrichment merged into one evaluation's items never reaches the cached rows or another
   evaluation.
 - **Instances are chosen elsewhere.** `MediaSourceFactory.activeInstances`
   ([`mediaSourceFactory.ts`](ref:path:server/modules/media/mediaSourceFactory.ts)) stays the one place

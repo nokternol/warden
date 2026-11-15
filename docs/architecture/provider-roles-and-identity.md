@@ -219,8 +219,8 @@ source by the over-rows binders `radarrRowsSource`/`sonarrRowsSource`
 normalise the rows with their own `providerId` into new objects on every read, so every item pooled
 into `MediaQueryEngine.evaluate` self-describes which instance produced it, and enrichment merged into
 one request's items never reaches the cached rows or another request. The preview, pooled runs and a
-Radarr or Sonarr automation's own catalog bind the rows they read from the same cache with the same
-binders: one way builds a source. Raw-row recovery after matching
+Radarr or Sonarr automation's own catalog bind the reads they get from the same cache with
+`rowsSourceFor`, which hands them to the same binders: one way builds a source. Raw-row recovery after matching
 keys on `itemKey(item)` (`${providerId}:${externalId}`), so two instances' rows sharing a raw provider id
 are never conflated.
 
