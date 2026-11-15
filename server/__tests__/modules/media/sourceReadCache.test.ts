@@ -5,8 +5,11 @@ import { describe, expect, it } from 'vitest';
 
 const movie = (id: number, title: string) => ({ id, title }) as RadarrMovie;
 
-/** A Radarr instance whose connection answers `rows` (or throws it) and counts each upstream read. */
-const radarrInstance = (providerId: number, name: string, rows: RadarrMovie[] | Error) => {
+/**
+ * A Radarr instance whose connection answers `rows`, throws it, or (`'hang'`) never answers, and
+ * counts each upstream read.
+ */
+const radarrInstance = (providerId: number, name: string, rows: RadarrMovie[] | Error | 'hang') => {
   const instance = {
     providerId,
     name,
@@ -15,6 +18,7 @@ const radarrInstance = (providerId: number, name: string, rows: RadarrMovie[] | 
       getMovies: async () => {
         instance.reads++;
         if (rows instanceof Error) throw rows;
+        if (rows === 'hang') return new Promise<RadarrMovie[]>(() => {});
         return rows;
       },
     },
@@ -25,7 +29,10 @@ const radarrInstance = (providerId: number, name: string, rows: RadarrMovie[] | 
 const cacheOver = (instances: ReturnType<typeof radarrInstance>[]) =>
   new SourceReadCache({
     mediaSourceFactory: {
-      activeInstances: (async () => instances) as unknown as MediaSourceFactory['activeInstances'],
+      activeInstances: (async (contentType: string) =>
+        contentType === 'movie'
+          ? instances
+          : []) as unknown as MediaSourceFactory['activeInstances'],
     },
   });
 
@@ -65,5 +72,19 @@ describe('SourceReadCache.readAll', () => {
     await expect(cacheOver([down, up]).readAll('movie')).rejects.toThrow(
       "Radarr: Couldn't be reached: ECONNREFUSED"
     );
+  });
+});
+
+describe('SourceReadCache.readOne', () => {
+  it('reads only that instance, so a sibling that never answers neither delays nor fails it', async () => {
+    const sibling = radarrInstance(1, 'Radarr', 'hang');
+    const own = radarrInstance(2, 'Radarr 4k', [movie(20, 'Heat')]);
+
+    await expect(cacheOver([sibling, own]).readOne(2)).resolves.toEqual({
+      providerId: 2,
+      name: 'Radarr 4k',
+      rows: [movie(20, 'Heat')],
+    });
+    expect(sibling.reads).toBe(0);
   });
 });

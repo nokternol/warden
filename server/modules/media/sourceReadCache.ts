@@ -1,4 +1,4 @@
-import type { ContentType } from '@contract/schemas';
+import { type ContentType, ContentTypeSchema } from '@contract/schemas';
 import { MediaCache } from '@server/kernel/cache';
 import { getChildLogger } from '@server/kernel/logger';
 import type {
@@ -31,6 +31,11 @@ export interface SourceReadError {
 
 /** One instance's read: its rows, or why it could not be read. */
 type Read = { rows: unknown[] } | { error: string };
+
+/** A failed read as a caller's failure names it: the instance, then why. */
+function failure(instanceName: string, error: string): string {
+  return `${instanceName}: ${error}`;
+}
 
 /**
  * The cache of the latest read of each active Radarr/Sonarr instance: its rows, or why it could
@@ -76,9 +81,23 @@ export class SourceReadCache {
   async readAll<C extends ContentType>(contentType: C): Promise<SourceRead<C>[]> {
     const { reads, errors } = await this.readEach(contentType);
     if (errors.length > 0) {
-      throw new Error(errors.map((e) => `${e.provider}: ${e.error}`).join('; '));
+      throw new Error(errors.map((e) => failure(e.provider, e.error)).join('; '));
     }
     return reads;
+  }
+
+  /** One instance's rows, read without touching its siblings; rejects if it could not be read. */
+  async readOne(providerId: number): Promise<SourceRead<ContentType>> {
+    for (const contentType of ContentTypeSchema.options) {
+      const instances = await this.deps.mediaSourceFactory.activeInstances(contentType);
+      const instance = instances.find((i) => i.providerId === providerId);
+      if (instance) {
+        const read = await this.read(contentType, instance);
+        if ('error' in read) throw new Error(failure(instance.name, read.error));
+        return { providerId, name: instance.name, rows: read.rows as SourceRow[ContentType][] };
+      }
+    }
+    throw new Error(`Provider instance ${providerId} not found`);
   }
 
   /** One instance's latest read: its rows, or the message saying why it could not be read. */
