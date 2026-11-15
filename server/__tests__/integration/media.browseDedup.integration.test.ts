@@ -238,4 +238,24 @@ describe('Browse display dedup — multiple active Radarr instances', () => {
     expect(data.totalCount).toBe(2);
     expect(data.items.map((m: { sourceCount: number }) => m.sourceCount)).toEqual([1, 1]);
   });
+
+  it('names an unreadable instance and still shows the titles of the instances that answered', async () => {
+    server.use(
+      http.get(`${RADARR_URL}/api/v3/movie`, () => new HttpResponse(null, { status: 500 })),
+      http.get(`${RADARR_4K_URL}/api/v3/movie`, () =>
+        HttpResponse.json([
+          { id: 7, title: 'Heat', hasFile: true, monitored: true, tmdbId: 949, tags: [] },
+        ])
+      )
+    );
+
+    const data = expectSuccessResponse(
+      await client.get(browsePath('movie', [], { pageSize: 100 }))
+    );
+
+    expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Heat']);
+    expect(data.errors).toEqual([
+      { provider: 'Radarr', error: expect.stringContaining("Couldn't be reached") },
+    ]);
+  });
 });
