@@ -42,7 +42,9 @@ describe('recordSourceCopy', () => {
     const movie = createRadarrMovie({ id: 5, tmdbId: 105, title: 'Heat', year: 1995 });
     await new IdentityResolutionJob({
       db,
-      movieSources: [{ providerId: provider.id, provider: { getMovies: async () => [movie] } }],
+      movieSources: [
+        { providerId: provider.id, name: 'Radarr', provider: { getMovies: async () => [movie] } },
+      ],
     }).runForMovies();
     const [jobCopy] = await db.select({ id: mediaItems.id }).from(mediaItems);
 

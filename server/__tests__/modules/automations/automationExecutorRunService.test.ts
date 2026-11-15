@@ -241,6 +241,7 @@ describe('AutomationExecutor writes to automation_runs', () => {
         movieSources: [
           {
             providerId: provider.id,
+            name: 'Radarr',
             provider: {
               getMovies: async () => [createRadarrMovie({ id: 9, tmdbId: 109, title: 'Other' })],
             },

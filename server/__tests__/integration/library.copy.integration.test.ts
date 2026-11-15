@@ -10,6 +10,7 @@ import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createMediaProcedures } from '@server/modules/media';
+import { readRefreshRecords } from '@server/modules/providers';
 import { createMockConfig, createRadarrMovie } from '@tests/factories';
 import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import { refreshCatalog } from '@tests/helpers/library';
@@ -19,6 +20,7 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const RADARR_URL = 'http://localhost:7878';
+const RADARR_B_URL = 'http://localhost:7879';
 
 async function setUp() {
   for (const [key, value] of Object.entries(
@@ -44,7 +46,7 @@ async function setUp() {
   });
   app.use(serveApi({ media: createMediaProcedures(container.cradle).procedures }));
   app.use(errorHandlerMiddleware);
-  return { cradle: container.cradle, client: createApiClient(app), radarrId: radarr.id };
+  return { cradle: container.cradle, db, client: createApiClient(app), radarrId: radarr.id };
 }
 
 describe('the library copy', () => {
@@ -79,5 +81,43 @@ describe('the library copy', () => {
 
     expect(page.items.map((i) => i.title)).toEqual(['Heat']);
     expect(radarrReads).toBe(0);
+  });
+
+  it('records a failed Radarr instance, keeps its copies and refreshes the others', async () => {
+    const radarrB = await ctx.cradle.providerSettingsService.create({
+      type: MetadataProviderType.RADARR,
+      name: 'Radarr B',
+      url: `${RADARR_B_URL}/api/v3`,
+      apiKey: 'k',
+    });
+    server.use(
+      http.get(`${RADARR_URL}/api/v3/movie`, () =>
+        HttpResponse.json([createRadarrMovie({ id: 1, title: 'Heat', tmdbId: 949 })])
+      ),
+      http.get(`${RADARR_B_URL}/api/v3/movie`, () =>
+        HttpResponse.json([createRadarrMovie({ id: 7, title: 'Ronin', tmdbId: 8195 })])
+      )
+    );
+    await refreshCatalog(ctx.cradle);
+    server.use(
+      http.get(`${RADARR_B_URL}/api/v3/movie`, () => new HttpResponse(null, { status: 500 }))
+    );
+
+    await expect(ctx.cradle.systemTaskRunner.run('system:identity-resolution')).rejects.toThrow(
+      /Radarr B/
+    );
+    ctx.cradle.eventBus.emit('media:changed', {});
+
+    const records = await readRefreshRecords(ctx.db);
+    const catalogOf = (providerId: number) =>
+      records.find((r) => r.providerId === providerId && r.kind === 'catalog');
+    expect(catalogOf(ctx.radarrId)).toMatchObject({ failedAt: null, error: null });
+    expect(catalogOf(ctx.radarrId)?.refreshedAt).toEqual(expect.any(Number));
+    expect(catalogOf(radarrB.id)?.failedAt).toEqual(expect.any(Number));
+    expect(catalogOf(radarrB.id)?.error).toMatch(/500/);
+    const page = expectSuccessResponse(await ctx.client.get(browsePath('movie', []))) as {
+      items: { title: string }[];
+    };
+    expect(page.items.map((i) => i.title).sort()).toEqual(['Heat', 'Ronin']);
   });
 });

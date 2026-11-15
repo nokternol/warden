@@ -195,7 +195,7 @@ describe('IdentityResolutionJob', () => {
 
     const job = new IdentityResolutionJob({
       db,
-      movieSources: [{ providerId: radarrProviderId, provider: radarrProvider }],
+      movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarrProvider }],
     });
     await job.runForMovies();
 
@@ -222,8 +222,8 @@ describe('IdentityResolutionJob', () => {
     const job = new IdentityResolutionJob({
       db,
       movieSources: [
-        { providerId: radarrProviderId, provider: radarrA },
-        { providerId: radarr4kProviderId, provider: radarrB },
+        { providerId: radarrProviderId, name: 'Instance', provider: radarrA },
+        { providerId: radarr4kProviderId, name: 'Instance', provider: radarrB },
       ],
     });
     await job.runForMovies();
@@ -246,8 +246,8 @@ describe('IdentityResolutionJob', () => {
     const job = new IdentityResolutionJob({
       db,
       movieSources: [
-        { providerId: radarrProviderId, provider: radarrA },
-        { providerId: radarr4kProviderId, provider: radarrB },
+        { providerId: radarrProviderId, name: 'Instance', provider: radarrA },
+        { providerId: radarr4kProviderId, name: 'Instance', provider: radarrB },
       ],
     });
     await job.runForMovies();
@@ -271,13 +271,13 @@ describe('IdentityResolutionJob', () => {
     };
     await new IdentityResolutionJob({
       db,
-      movieSources: [{ providerId: radarrProviderId, provider: radarr }],
+      movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarr }],
     }).runForMovies();
 
     radarr.getMovies.mockResolvedValue([makeMovie({ id: 2, tmdbId: 200, title: 'Ronin' })]);
     await new IdentityResolutionJob({
       db,
-      movieSources: [{ providerId: radarrProviderId, provider: radarr }],
+      movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarr }],
     }).runForMovies();
 
     const items = await db.select().from(mediaItems);
@@ -294,7 +294,7 @@ describe('IdentityResolutionJob', () => {
     const radarr = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 1, tmdbId: 100 })]) };
     const job = new IdentityResolutionJob({
       db,
-      movieSources: [{ providerId: radarrProviderId, provider: radarr }],
+      movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarr }],
     });
     await job.runForMovies();
 
@@ -324,7 +324,7 @@ describe('IdentityResolutionJob', () => {
 
     await new IdentityResolutionJob({
       db,
-      movieSources: [{ providerId: radarrProviderId, provider: radarr }],
+      movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarr }],
     }).runForMovies();
     done = true;
 
@@ -336,7 +336,7 @@ describe('IdentityResolutionJob', () => {
     const radarr = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 1, tmdbId: 100 })]) };
     const job = new IdentityResolutionJob({
       db,
-      movieSources: [{ providerId: radarrProviderId, provider: radarr }],
+      movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarr }],
     });
     await job.runForMovies();
     radarr.getMovies.mockResolvedValueOnce([makeMovie({ id: 2, tmdbId: 200 })]);
@@ -359,8 +359,8 @@ describe('IdentityResolutionJob', () => {
     const job = new IdentityResolutionJob({
       db,
       movieSources: [
-        { providerId: radarrProviderId, provider: radarrA },
-        { providerId: radarr4kProviderId, provider: radarrB },
+        { providerId: radarrProviderId, name: 'Instance', provider: radarrA },
+        { providerId: radarr4kProviderId, name: 'Instance', provider: radarrB },
       ],
     });
     await job.runForMovies();
@@ -372,8 +372,8 @@ describe('IdentityResolutionJob', () => {
     const job2 = new IdentityResolutionJob({
       db,
       movieSources: [
-        { providerId: radarrProviderId, provider: radarrANowEmpty },
-        { providerId: radarr4kProviderId, provider: radarrB },
+        { providerId: radarrProviderId, name: 'Instance', provider: radarrANowEmpty },
+        { providerId: radarr4kProviderId, name: 'Instance', provider: radarrB },
       ],
     });
     await job2.runForMovies();
@@ -393,8 +393,8 @@ describe('IdentityResolutionJob', () => {
     await new IdentityResolutionJob({
       db,
       movieSources: [
-        { providerId: radarrProviderId, provider: radarrA },
-        { providerId: radarr4kProviderId, provider: radarrB },
+        { providerId: radarrProviderId, name: 'Instance', provider: radarrA },
+        { providerId: radarr4kProviderId, name: 'Instance', provider: radarrB },
       ],
     }).runForMovies();
     expect(await db.select().from(mediaIdentity)).toHaveLength(2);
@@ -402,7 +402,7 @@ describe('IdentityResolutionJob', () => {
     await db.delete(metadataProviders).where(eq(metadataProviders.id, radarrProviderId));
     await new IdentityResolutionJob({
       db,
-      movieSources: [{ providerId: radarr4kProviderId, provider: radarrB }],
+      movieSources: [{ providerId: radarr4kProviderId, name: 'Instance', provider: radarrB }],
     }).runForMovies();
 
     const groups = await db.select().from(mediaIdentity);
@@ -420,8 +420,8 @@ describe('IdentityResolutionJob', () => {
     const job = new IdentityResolutionJob({
       db,
       movieSources: [
-        { providerId: radarrProviderId, provider: radarrA },
-        { providerId: radarr4kProviderId, provider: radarrB },
+        { providerId: radarrProviderId, name: 'Instance', provider: radarrA },
+        { providerId: radarr4kProviderId, name: 'Instance', provider: radarrB },
       ],
     });
     await job.runForMovies();
@@ -432,8 +432,8 @@ describe('IdentityResolutionJob', () => {
     const job2 = new IdentityResolutionJob({
       db,
       movieSources: [
-        { providerId: radarrProviderId, provider: radarrAEmpty },
-        { providerId: radarr4kProviderId, provider: radarrB },
+        { providerId: radarrProviderId, name: 'Instance', provider: radarrAEmpty },
+        { providerId: radarr4kProviderId, name: 'Instance', provider: radarrB },
       ],
     });
     await job2.runForMovies();
@@ -477,7 +477,7 @@ describe('IdentityResolutionJob', () => {
 
     await new IdentityResolutionJob({
       db,
-      seriesSources: [{ providerId: sonarrProviderId, provider: sonarrProvider }],
+      seriesSources: [{ providerId: sonarrProviderId, name: 'Instance', provider: sonarrProvider }],
     }).runForSeries();
 
     const identities = await db.select().from(mediaIdentity);
@@ -492,7 +492,7 @@ describe('IdentityResolutionJob', () => {
 
     const job = new IdentityResolutionJob({
       db,
-      seriesSources: [{ providerId: sonarrProviderId, provider: sonarrProvider }],
+      seriesSources: [{ providerId: sonarrProviderId, name: 'Instance', provider: sonarrProvider }],
     });
     await job.runForSeries();
 
@@ -522,8 +522,8 @@ describe('IdentityResolutionJob', () => {
     const job = new IdentityResolutionJob({
       db,
       seriesSources: [
-        { providerId: sonarrProviderId, provider: sonarrA },
-        { providerId: sonarr4kProviderId, provider: sonarrB },
+        { providerId: sonarrProviderId, name: 'Instance', provider: sonarrA },
+        { providerId: sonarr4kProviderId, name: 'Instance', provider: sonarrB },
       ],
     });
     await job.runForSeries();
@@ -546,7 +546,7 @@ describe('IdentityResolutionJob', () => {
     };
     const job = new IdentityResolutionJob({
       db,
-      seriesSources: [{ providerId: sonarrProviderId, provider: sonarrA }],
+      seriesSources: [{ providerId: sonarrProviderId, name: 'Instance', provider: sonarrA }],
     });
     await job.runForSeries();
     expect(await db.select().from(mediaItems)).toHaveLength(2);
@@ -556,7 +556,7 @@ describe('IdentityResolutionJob', () => {
     };
     const job2 = new IdentityResolutionJob({
       db,
-      seriesSources: [{ providerId: sonarrProviderId, provider: sonarrAEmpty }],
+      seriesSources: [{ providerId: sonarrProviderId, name: 'Instance', provider: sonarrAEmpty }],
     });
     await job2.runForSeries();
 
@@ -635,7 +635,7 @@ describe('IdentityResolutionJob', () => {
 
     const job = new IdentityResolutionJob({
       db,
-      seriesSources: [{ providerId: sonarrProviderId, provider: sonarrProvider }],
+      seriesSources: [{ providerId: sonarrProviderId, name: 'Instance', provider: sonarrProvider }],
       tvMazeLookup,
       delay,
     });
@@ -657,7 +657,7 @@ describe('IdentityResolutionJob', () => {
 
     const job = new IdentityResolutionJob({
       db,
-      seriesSources: [{ providerId: sonarrProviderId, provider: sonarrProvider }],
+      seriesSources: [{ providerId: sonarrProviderId, name: 'Instance', provider: sonarrProvider }],
       tvMazeLookup,
     });
     await job.runForSeries();
@@ -677,7 +677,7 @@ describe('IdentityResolutionJob', () => {
 
     const job = new IdentityResolutionJob({
       db,
-      movieSources: [{ providerId: radarrProviderId, provider: radarrProvider }],
+      movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarrProvider }],
     });
 
     expect(await job.runForMovies()).toBe(2);
@@ -703,7 +703,7 @@ describe('IdentityResolutionJob', () => {
 
     const job = new IdentityResolutionJob({
       db,
-      seriesSources: [{ providerId: sonarrProviderId, provider: sonarrProvider }],
+      seriesSources: [{ providerId: sonarrProviderId, name: 'Instance', provider: sonarrProvider }],
     });
 
     expect(await job.runForSeries()).toBe(2);
@@ -722,7 +722,7 @@ describe('IdentityResolutionJob', () => {
 
     const job = new IdentityResolutionJob({
       db,
-      movieSources: [{ providerId: radarrProviderId, provider: radarrProvider }],
+      movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarrProvider }],
     });
     await job.runForMovies();
     await job.runForMovies();

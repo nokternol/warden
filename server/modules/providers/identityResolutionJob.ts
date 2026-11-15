@@ -8,6 +8,7 @@ import type { DrizzleDb } from '@server/kernel/db';
 import type { RadarrProvider } from './connections/radarrProvider';
 import type { SonarrProvider } from './connections/sonarrProvider';
 import { resolveGroup } from './groupResolver';
+import { failureMessage, recordRefreshFailed, recordRefreshed } from './providerRefresh';
 
 interface PlexBridgeProvider {
   getAllItems(): Promise<Array<{ ratingKey: string; type?: string; Guid?: { id: string }[] }>>;
@@ -29,9 +30,17 @@ const JELLYFIN_CONTENT_TYPE: Record<string, ContentType> = { Movie: 'movie', Ser
 interface Deps {
   db: DrizzleDb;
   /** One entry per active Radarr instance. Never collapsed to one. */
-  movieSources?: Array<{ providerId: number; provider: Pick<RadarrProvider, 'getMovies'> }>;
+  movieSources?: Array<{
+    providerId: number;
+    name: string;
+    provider: Pick<RadarrProvider, 'getMovies'>;
+  }>;
   /** One entry per active Sonarr instance. Never collapsed to one. */
-  seriesSources?: Array<{ providerId: number; provider: Pick<SonarrProvider, 'getSeries'> }>;
+  seriesSources?: Array<{
+    providerId: number;
+    name: string;
+    provider: Pick<SonarrProvider, 'getSeries'>;
+  }>;
   plexProvider?: PlexBridgeProvider;
   jellyfinProvider?: JellyfinBridgeProvider;
   tvMazeLookup?: TVMazeLookupProvider;
@@ -39,7 +48,33 @@ interface Deps {
 }
 
 export class IdentityResolutionJob {
+  private readonly failed: string[] = [];
+
   constructor(private deps: Deps) {}
+
+  /** The providers this run could not refresh, by name, in the order they failed. */
+  failedProviders(): string[] {
+    return [...this.failed];
+  }
+
+  /**
+   * Reads one provider for one kind of its data. A failed read is recorded and named among this
+   * run's failures, and answers undefined so the caller keeps what it held; a successful read is
+   * recorded once the caller has stored it.
+   */
+  private async readProvider<T>(
+    source: { providerId: number; name: string },
+    kind: 'catalog',
+    read: () => Promise<T>
+  ): Promise<T | undefined> {
+    try {
+      return await read();
+    } catch (err) {
+      this.failed.push(source.name);
+      await recordRefreshFailed(this.deps.db, source.providerId, kind, failureMessage(err));
+      return undefined;
+    }
+  }
 
   async runForPlex(): Promise<number> {
     if (!this.deps.plexProvider) return 0;
@@ -138,8 +173,10 @@ export class IdentityResolutionJob {
 
     let total = 0;
     let firstTVMazeCall = true;
-    for (const { providerId, provider } of sources) {
-      const series = await provider.getSeries();
+    for (const source of sources) {
+      const { providerId, provider } = source;
+      const series = await this.readProvider(source, 'catalog', () => provider.getSeries());
+      if (!series) continue;
       const now = Math.floor(Date.now() / 1000);
       const fetchedExternalIds: number[] = [];
       for (const s of series) {
@@ -170,6 +207,7 @@ export class IdentityResolutionJob {
         }
       }
       await this.markItemsLeftSource(providerId, fetchedExternalIds);
+      await recordRefreshed(this.deps.db, providerId, 'catalog');
       total += series.length;
     }
 
@@ -182,8 +220,10 @@ export class IdentityResolutionJob {
     if (sources.length === 0) return 0;
 
     let total = 0;
-    for (const { providerId, provider } of sources) {
-      const movies = await provider.getMovies();
+    for (const source of sources) {
+      const { providerId, provider } = source;
+      const movies = await this.readProvider(source, 'catalog', () => provider.getMovies());
+      if (!movies) continue;
       const now = Math.floor(Date.now() / 1000);
       const fetchedExternalIds: number[] = [];
       for (const movie of movies) {
@@ -198,6 +238,7 @@ export class IdentityResolutionJob {
         fetchedExternalIds.push(movie.id);
       }
       await this.markItemsLeftSource(providerId, fetchedExternalIds);
+      await recordRefreshed(this.deps.db, providerId, 'catalog');
       total += movies.length;
     }
 

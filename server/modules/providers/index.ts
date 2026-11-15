@@ -56,6 +56,10 @@ export type { TmdbService } from './tmdbService';
 // Identity resolution — the system job that stitches source identities, and
 // the write that records a copy the job has not seen yet.
 export type { IdentityJobFactory } from './identityJobFactory';
+// The library copy's refresh records: when each kind of each provider's data was last refreshed.
+export { readRefreshRecords } from './providerRefresh';
+export type { RefreshKind, RefreshRecord } from './providerRefresh';
+
 export { recordSourceCopy } from './sourceCopy';
 export type { SourceCopy } from './sourceCopy';
 

@@ -39,10 +39,18 @@ export class IdentityJobFactory implements IdentityJobFactoryLike {
     const instances = this.providerFactory.createInstances(providers, log);
     const movieSources = instances
       .filter((i) => i.provider instanceof RadarrProvider)
-      .map((i) => ({ providerId: i.settings.id, provider: i.provider as RadarrProvider }));
+      .map((i) => ({
+        providerId: i.settings.id,
+        name: i.settings.name,
+        provider: i.provider as RadarrProvider,
+      }));
     const seriesSources = instances
       .filter((i) => i.provider instanceof SonarrProvider)
-      .map((i) => ({ providerId: i.settings.id, provider: i.provider as SonarrProvider }));
+      .map((i) => ({
+        providerId: i.settings.id,
+        name: i.settings.name,
+        provider: i.provider as SonarrProvider,
+      }));
     const plex = instances.find((i) => i.provider instanceof PlexProvider);
     const jellyfin = instances.find((i) => i.provider instanceof JellyfinProvider);
     return new IdentityResolutionJob({
