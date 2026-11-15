@@ -10,6 +10,7 @@ const succeeded: AutomationRunDto = {
   status: 'success',
   itemCount: 5,
   error: null,
+  copy: null,
   createdAt: '2026-06-04T02:00:00.000Z',
 };
 

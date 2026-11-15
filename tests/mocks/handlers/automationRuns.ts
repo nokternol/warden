@@ -11,6 +11,7 @@ export const mockRuns: AutomationRunDto[] = [
     status: 'success',
     itemCount: 5,
     error: null,
+    copy: { asOf: 1780531200, stale: [] },
     createdAt: '2026-06-04T02:00:00.000Z',
   },
   {
@@ -21,6 +22,7 @@ export const mockRuns: AutomationRunDto[] = [
     status: 'error',
     itemCount: 0,
     error: 'Connection refused',
+    copy: null,
     createdAt: '2026-06-03T02:00:00.000Z',
   },
 ];

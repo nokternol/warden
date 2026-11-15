@@ -1,7 +1,21 @@
 import { z } from 'zod';
 import { base } from './base';
 import { ReadinessFindingSchema } from './readiness';
-import { type ContentType, ContentTypeSchema, FilterSchema, ProviderTypeSchema } from './schemas';
+import {
+  type ContentType,
+  ContentTypeSchema,
+  FilterSchema,
+  ProviderTypeSchema,
+  RefreshRecordSchema,
+} from './schemas';
+
+export {
+  type CopyFreshness,
+  type RefreshRecord,
+  CopyFreshnessSchema,
+  RefreshRecordSchema,
+  copyFreshness,
+} from './schemas';
 
 // ─── Browse query ───────────────────────────────────────────────────────────────
 
@@ -91,21 +105,6 @@ export const ManagedSeriesSchema = z.looseObject({
 
 /** A source instance whose library could not be fetched for this page. */
 const MediaErrorSchema = z.object({ provider: z.string(), error: z.string() });
-
-/**
- * When Warden last refreshed one kind of one provider's data, and whether the latest attempt
- * failed; times are unix seconds. A record with neither time is a provider never refreshed yet.
- */
-export const RefreshRecordSchema = z.object({
-  providerId: z.number(),
-  provider: z.string(),
-  kind: z.enum(['catalog', 'links', 'lists', 'facts']),
-  refreshedAt: z.number().nullable(),
-  failedAt: z.number().nullable(),
-  error: z.string().nullable(),
-});
-
-export type RefreshRecord = z.infer<typeof RefreshRecordSchema>;
 
 const browsePage = <T extends z.ZodType>(item: T) =>
   z.object({

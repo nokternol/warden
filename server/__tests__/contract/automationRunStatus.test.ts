@@ -12,6 +12,7 @@ const run = {
   ranAt: '2026-06-04T02:00:00.000Z',
   itemCount: null,
   error: 'Tags filter names Radarr instance 3, which is not an active provider',
+  copy: null,
   createdAt: '2026-06-04T02:00:00.000Z',
 };
 

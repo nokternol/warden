@@ -269,6 +269,13 @@ describe('the library copy', () => {
     expect(deleted).toEqual(['rk-heat']);
     const [run] = await ctx.cradle.automationRunService.listRuns({ automationId: automation.id });
     expect(run.status).toBe('success');
+    const refreshedAt = (await readRefreshRecords(ctx.db)).map(
+      (r) => r.refreshedAt ?? Number.POSITIVE_INFINITY
+    );
+    expect(run.copy).toEqual({
+      asOf: Math.min(...refreshedAt),
+      stale: [{ provider: 'Plex', kind: 'facts', failed: false }],
+    });
     const { data: items } = await ctx.cradle.automationRunService.listRunItems(run.id);
     expect(items).toEqual([expect.objectContaining({ title: 'Heat', deleted: false })]);
   });

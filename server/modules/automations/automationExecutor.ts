@@ -1,4 +1,5 @@
 import type { AutomationPreview, AutomationReadiness } from '@contract/automations';
+import { copyFreshness } from '@contract/media';
 import type { ReadinessFinding } from '@contract/readiness';
 import type { AutomationRunStatus, ContentType } from '@contract/schemas';
 import type { MetadataProvider, MetadataProviderType } from '../../database/schema';
@@ -17,6 +18,7 @@ import {
   getRule,
   isAddressedActuator,
   itemKey,
+  recordsFor,
 } from '../media';
 import type {
   FilterReadiness,
@@ -510,6 +512,7 @@ export class AutomationExecutor {
       );
     // An exclude protects the whole title, judged over every active instance's copies.
     const protectedTitles = await this.protectedTitles(copies, contentType, querySpecs);
+    const copy = copyFreshness(recordsFor(library, contentType));
     const unprotected = (candidates: LibraryCopy[]) =>
       candidates.filter((copy) => !protectedTitles.has(copy.mediaIdentityId));
 
@@ -521,7 +524,7 @@ export class AutomationExecutor {
       const targets = unprotected(matched);
       return {
         task,
-        targets: { contentType, mediaItemIds: targets.map((c) => c.mediaItemId) },
+        targets: { contentType, mediaItemIds: targets.map((c) => c.mediaItemId), copy },
         actuatorIds: targets.map((c) => c.record.id),
         poolSize: own.length,
         matchedCount: targets.length,
@@ -542,7 +545,7 @@ export class AutomationExecutor {
     const targets = unprotected(addressed);
     return {
       task,
-      targets: { contentType, mediaItemIds: targets.map((c) => c.mediaItemId) },
+      targets: { contentType, mediaItemIds: targets.map((c) => c.mediaItemId), copy },
       actuatorIds: [...new Set(targets.map((c) => actuatorIdOf(c, providerSettings.type)!))],
       poolSize: copies.length,
       matchedCount: addressed.length,

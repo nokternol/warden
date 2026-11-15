@@ -98,6 +98,7 @@ describe('what a row says', () => {
             status: 'skipped' as const,
             itemCount: null,
             error: 'Radarr is not an active provider',
+            copy: null,
             createdAt: '2026-01-02T00:00:00.000Z',
           },
         ],

@@ -195,6 +195,46 @@ export const ProviderSchema = z
 /** `skipped`: the automation was invalid when due, so it never ran; the run's `error` holds why. */
 export const AutomationRunStatusSchema = z.enum(['running', 'success', 'error', 'skipped']);
 
+/**
+ * When Warden last refreshed one kind of one provider's data, and whether the latest attempt
+ * failed; times are unix seconds. A record with neither time is a provider never refreshed yet.
+ */
+export const RefreshRecordSchema = z.object({
+  providerId: z.number(),
+  provider: z.string(),
+  kind: z.enum(['catalog', 'links', 'lists', 'facts']),
+  refreshedAt: z.number().nullable(),
+  failedAt: z.number().nullable(),
+  error: z.string().nullable(),
+});
+
+export type RefreshRecord = z.infer<typeof RefreshRecordSchema>;
+
+/** How current a copy is: its "As of" time, and which providers failed or never refreshed. */
+export const CopyFreshnessSchema = z.object({
+  /** The oldest last successful refresh among the copy's records; null when none succeeded. */
+  asOf: z.number().nullable(),
+  stale: z.array(
+    z.object({ provider: z.string(), kind: RefreshRecordSchema.shape.kind, failed: z.boolean() })
+  ),
+});
+
+export type CopyFreshness = z.infer<typeof CopyFreshnessSchema>;
+
+/**
+ * A copy's freshness from its refresh records: never fresher than its stalest successful
+ * refresh, naming each record whose latest refresh failed (`failed`) or never ran.
+ */
+export function copyFreshness(records: readonly RefreshRecord[]): CopyFreshness {
+  const refreshed = records.flatMap((r) => (r.refreshedAt === null ? [] : [r.refreshedAt]));
+  return {
+    asOf: refreshed.length > 0 ? Math.min(...refreshed) : null,
+    stale: records
+      .filter((r) => r.failedAt !== null || r.refreshedAt === null)
+      .map((r) => ({ provider: r.provider, kind: r.kind, failed: r.failedAt !== null })),
+  };
+}
+
 export const AutomationRunSchema = z
   .object({
     id: z.number(),
@@ -204,6 +244,8 @@ export const AutomationRunSchema = z
     status: AutomationRunStatusSchema,
     itemCount: z.number().nullable(),
     error: z.string().nullable(),
+    /** How current the library copy the run acted on was; null for a run that acted on none. */
+    copy: CopyFreshnessSchema.nullable(),
     createdAt: IsoDateSchema,
   })
   .strict();

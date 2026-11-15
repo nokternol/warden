@@ -1,4 +1,9 @@
-import type { AutomationRunStatus, ContentType, RunItemDto } from '@contract/schemas';
+import type {
+  AutomationRunStatus,
+  ContentType,
+  CopyFreshness,
+  RunItemDto,
+} from '@contract/schemas';
 import { asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import {
   automationRunItems,
@@ -17,6 +22,7 @@ export interface AutomationRunDto {
   status: AutomationRunStatus;
   itemCount: number | null;
   error: string | null;
+  copy: CopyFreshness | null;
   createdAt: Date;
 }
 
@@ -29,6 +35,8 @@ export interface RunItemPage {
 export interface RunTargets {
   contentType: ContentType;
   mediaItemIds: number[];
+  /** How current the copy those ids come from was. */
+  copy?: CopyFreshness;
 }
 
 export interface CreateRunData {
@@ -67,6 +75,8 @@ function rowToDto(row: {
   status: string;
   itemCount: number | null;
   error: string | null;
+  copyAsOf?: number | null;
+  copyStale?: string | null;
   createdAt: unknown;
 }): AutomationRunDto {
   return {
@@ -77,6 +87,10 @@ function rowToDto(row: {
     status: row.status as AutomationRunStatus,
     itemCount: row.itemCount ?? null,
     error: row.error ?? null,
+    copy:
+      row.copyStale == null
+        ? null
+        : { asOf: row.copyAsOf ?? null, stale: JSON.parse(row.copyStale) },
     createdAt: toDate(row.createdAt),
   };
 }
@@ -90,6 +104,8 @@ const RUN_COLUMNS = {
   status: automationRuns.status,
   itemCount: automationRuns.itemCount,
   error: automationRuns.error,
+  copyAsOf: automationRuns.copyAsOf,
+  copyStale: automationRuns.copyStale,
   createdAt: automationRuns.createdAt,
 };
 
@@ -115,6 +131,8 @@ export class AutomationRunService {
         itemCount: data.itemCount ?? null,
         error: data.error ?? null,
         kind: data.kind ?? 'user',
+        copyAsOf: data.targets?.copy?.asOf ?? null,
+        copyStale: data.targets?.copy ? JSON.stringify(data.targets.copy.stale) : null,
       })
       .returning();
     const [[row]] =
@@ -135,6 +153,8 @@ export class AutomationRunService {
       status: row.status,
       itemCount: row.itemCount ?? null,
       error: row.error ?? null,
+      copyAsOf: row.copyAsOf,
+      copyStale: row.copyStale,
       createdAt: row.createdAt,
     });
   }
