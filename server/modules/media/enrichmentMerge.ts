@@ -1,10 +1,49 @@
 import { and, eq, inArray } from 'drizzle-orm';
-import { mediaItems } from '../../database/schema';
+import { type MetadataProviderType, mediaItems, metadataProviders } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
-import type { EnrichmentQueries } from './enrichment/enrichment.queries';
+import type { EnrichableField } from './enrichment/enricher';
+import type { EnrichmentQueries, StoredFact } from './enrichment/enrichment.queries';
+import { contestedFieldPrecedence } from './enrichment/precedence';
+import type { EnrichmentFields } from './mediaFieldProvider';
 import { externalIdOf, itemKey } from './mediaItem';
 import type { NormalizedMovie } from './movie';
 import type { NormalizedSeries } from './series';
+
+/**
+ * Each title's facts, one value per fact, from the facts every provider reported. Where more than
+ * one provider reported a fact, `contestedFieldPrecedence` picks the value of the provider type
+ * ranked first; a fact one provider reported is kept as reported. Facts from a provider not in
+ * `typeOf` (an inactive one) are left out. Pure: the library cache applies it when it loads.
+ */
+export function resolveFacts(
+  facts: readonly StoredFact[],
+  typeOf: ReadonlyMap<number, MetadataProviderType>
+): Map<number, Partial<EnrichmentFields>> {
+  const rank = (field: keyof EnrichmentFields, providerId: number): number => {
+    const order: readonly MetadataProviderType[] =
+      contestedFieldPrecedence[field as EnrichableField] ?? [];
+    const position = order.indexOf(typeOf.get(providerId)!);
+    return position === -1 ? order.length : position;
+  };
+  const chosen = new Map<number, Map<keyof EnrichmentFields, StoredFact>>();
+  for (const fact of facts) {
+    if (!typeOf.has(fact.providerId)) continue;
+    const byField = chosen.get(fact.mediaIdentityId) ?? new Map();
+    const current = byField.get(fact.field);
+    if (!current || rank(fact.field, fact.providerId) < rank(fact.field, current.providerId)) {
+      byField.set(fact.field, fact);
+    }
+    chosen.set(fact.mediaIdentityId, byField);
+  }
+  return new Map(
+    [...chosen.entries()].map(([title, byField]) => [
+      title,
+      Object.fromEntries(
+        [...byField.values()].map((f) => [f.field, f.value])
+      ) as Partial<EnrichmentFields>,
+    ])
+  );
+}
 
 /**
  * Maps `media_enrichment` rows onto Normalized* items, joined through each item's
@@ -55,12 +94,14 @@ export async function mergeEnrichment<T extends NormalizedMovie | NormalizedSeri
   const groupIdByItemKey = new Map(
     mediaItemRows.map((row) => [`${row.providerId}:${row.externalId}`, row.mediaIdentityId])
   );
-  const fieldsByGroupId = new Map<number, Partial<Record<string, unknown>>>();
-  for (const fact of await enrichmentQueries.allFacts()) {
-    const fields = fieldsByGroupId.get(fact.mediaIdentityId) ?? {};
-    fields[fact.field] = fact.value;
-    fieldsByGroupId.set(fact.mediaIdentityId, fields);
-  }
+  const providers = await db
+    .select({ id: metadataProviders.id, type: metadataProviders.type })
+    .from(metadataProviders)
+    .where(eq(metadataProviders.isActive, true));
+  const fieldsByGroupId = resolveFacts(
+    await enrichmentQueries.allFacts(),
+    new Map(providers.map((p) => [p.id, p.type as MetadataProviderType]))
+  );
 
   for (const item of items) {
     const key = itemKey(item);

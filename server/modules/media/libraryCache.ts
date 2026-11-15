@@ -1,8 +1,6 @@
 import type { RefreshRecord } from '@contract/media';
 import type { ContentType } from '@contract/schemas';
 import {
-  enrichmentField,
-  mediaEnrichment,
   mediaIdentity,
   mediaItemPayload,
   mediaItems,
@@ -23,7 +21,8 @@ import {
   readRefreshRecords,
 } from '@server/modules/providers';
 import { and, eq } from 'drizzle-orm';
-import type { EnrichmentFields } from './mediaFieldProvider';
+import { EnrichmentQueries } from './enrichment/enrichment.queries';
+import { resolveFacts } from './enrichmentMerge';
 import { type MediaItem, externalIdOf } from './mediaItem';
 import type { MediaSource } from './mediaSource';
 import { normalizeRadarrMovie, normalizeSonarrSeries } from './normalizeMedia';
@@ -149,14 +148,7 @@ export class LibraryCache implements ProviderListsReader {
         .innerJoin(metadataProviders, eq(metadataProviders.id, mediaItems.providerId))
         .where(and(eq(mediaItems.deleted, false), eq(metadataProviders.isActive, true)))
         .orderBy(mediaItems.id),
-      db
-        .select({
-          mediaIdentityId: mediaEnrichment.mediaIdentityId,
-          key: enrichmentField.key,
-          value: mediaEnrichment.value,
-        })
-        .from(mediaEnrichment)
-        .innerJoin(enrichmentField, eq(enrichmentField.id, mediaEnrichment.fieldId)),
+      new EnrichmentQueries({ db }).allFacts(),
       db
         .select({
           id: metadataProviders.id,
@@ -170,12 +162,10 @@ export class LibraryCache implements ProviderListsReader {
       readProviderLists(db),
     ]);
 
-    const factsByTitle = new Map<number, Partial<EnrichmentFields>>();
-    for (const { mediaIdentityId, key, value } of factRows) {
-      const facts = factsByTitle.get(mediaIdentityId) ?? {};
-      (facts as Record<string, unknown>)[key] = JSON.parse(value);
-      factsByTitle.set(mediaIdentityId, facts);
-    }
+    const factsByTitle = resolveFacts(
+      factRows,
+      new Map(providers.map((p) => [p.id, p.type as MetadataProviderType]))
+    );
 
     const library: Library = {
       copies: { movie: [], series: [] },

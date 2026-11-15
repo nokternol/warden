@@ -1,8 +1,7 @@
 import { MetadataProviderType } from '../../../database/schema';
 import { ValidationError } from '../../../kernel/errors';
 import type { EnrichmentFields } from '../mediaFieldProvider';
-import type { MediaItem } from '../mediaItem';
-import type { EnrichableField, EnrichmentResult } from './enricher';
+import type { EnrichableField } from './enricher';
 
 export type { EnrichableField };
 
@@ -17,27 +16,29 @@ export type ContestedFieldPrecedence = Partial<{
   [K in keyof EnrichmentFields]: readonly [MetadataProviderType, ...MetadataProviderType[]];
 }>;
 
+/** Plex ranks before Jellyfin wherever both media servers report a fact. */
+const MEDIA_SERVERS = [MetadataProviderType.PLEX, MetadataProviderType.JELLYFIN] as const;
+
 /**
- * The enrichment precedence in force. Play count and last-watched are the only
- * fields with more than one real producer today — Tautulli, Plex, or Jellyfin —
- * and Tautulli wins (it tracks completed plays, not opens). Jellyfin is placed
- * after Plex as a fixed literal order. `applyPrimaryMediaServer` implements a settings-driven
- * Plex/Jellyfin swap, but nothing calls it, because the `primaryMediaServer` setting is deferred.
- * Plex-then-Jellyfin is a safe default until then (the same "arr-stack wins, media servers rank
- * lowest" reasoning already applied to Plex). Every other field has exactly
- * one producer and so carries through `resolvePrecedence` unlisted.
+ * The enrichment precedence in force: an order for every fact more than one enricher type
+ * declares (`fieldsByProviderType`). Play count and last-watched come from Tautulli first (it
+ * tracks completed plays, not opens), then Plex, then Jellyfin. The facts both media servers
+ * report take Plex's value before Jellyfin's, as a fixed order: `applyPrimaryMediaServer`
+ * implements a settings-driven swap, but nothing calls it while the `primaryMediaServer` setting
+ * is deferred. A fact one enricher type declares needs no entry: its value is kept as reported.
  */
 export const contestedFieldPrecedence: ContestedFieldPrecedence = {
-  playCount: [
-    MetadataProviderType.TAUTULLI,
-    MetadataProviderType.PLEX,
-    MetadataProviderType.JELLYFIN,
-  ],
-  lastWatchedAt: [
-    MetadataProviderType.TAUTULLI,
-    MetadataProviderType.PLEX,
-    MetadataProviderType.JELLYFIN,
-  ],
+  playCount: [MetadataProviderType.TAUTULLI, ...MEDIA_SERVERS],
+  lastWatchedAt: [MetadataProviderType.TAUTULLI, ...MEDIA_SERVERS],
+  studio: MEDIA_SERVERS,
+  runtimeMinutes: MEDIA_SERVERS,
+  fileSizeBytes: MEDIA_SERVERS,
+  releaseDate: MEDIA_SERVERS,
+  fileContainer: MEDIA_SERVERS,
+  videoCodec: MEDIA_SERVERS,
+  audioCodec: MEDIA_SERVERS,
+  fileResolution: MEDIA_SERVERS,
+  labels: MEDIA_SERVERS,
 };
 
 /**
@@ -69,54 +70,4 @@ export function assertContestedFieldsCovered(
       }
     }
   }
-}
-
-/** A stable identity for a canonical item across results — its cross-provider keys. */
-function identityKey(item: MediaItem): string {
-  return JSON.stringify(item._sourceIds);
-}
-
-/**
- * Merge every enricher's contributions into one canonical item set. Items are
- * grouped by identity across results; each contested field is taken from the
- * highest-precedence provider that set it. Fields with no entry (single
- * producer, nothing to order) carry their decorated value through unchanged.
- * Pure: the write-time replacement for read-time `??` precedence chains.
- */
-export function resolvePrecedence(
-  results: EnrichmentResult[],
-  precedence: ContestedFieldPrecedence
-): MediaItem[] {
-  const groups = new Map<
-    string,
-    { base: MediaItem; byProvider: Map<MetadataProviderType, MediaItem> }
-  >();
-  for (const { provider, items } of results) {
-    for (const item of items) {
-      const key = identityKey(item);
-      let group = groups.get(key);
-      if (!group) {
-        group = { base: item, byProvider: new Map() };
-        groups.set(key, group);
-      }
-      group.byProvider.set(provider, item);
-    }
-  }
-
-  return [...groups.values()].map(({ base, byProvider }) => {
-    const resolved: MediaItem = { ...base };
-    for (const [field, order] of Object.entries(precedence) as [
-      EnrichableField,
-      readonly MetadataProviderType[],
-    ][]) {
-      for (const provider of order) {
-        const contributor = byProvider.get(provider);
-        if (contributor && contributor[field] != null) {
-          (resolved as Record<EnrichableField, unknown>)[field] = contributor[field];
-          break;
-        }
-      }
-    }
-    return resolved;
-  });
 }
