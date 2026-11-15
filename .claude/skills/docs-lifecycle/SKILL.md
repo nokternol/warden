@@ -1,15 +1,37 @@
 ---
 name: docs-lifecycle
-description: "Move docs between the intent/, in_progress/, and architecture/ pots correctly — write fresh architecture content, never git-mv-and-retense. Use when closing an in_progress phase, promoting a shipped intent design, hitting a code/doc contradiction, closing a fracture-ledger entry to Healed, relocating/renaming/deleting a file or symbol that any doc references, changing the behavior of a file that any doc's ref:path: links to, or landing any change that might incidentally solve a docs/intent/ doc's stated problem."
+description: "Move docs between the intent/, in_progress/, and architecture/ pots correctly — write fresh architecture content, never git-mv-and-retense — while docs/north-star/ (the owner's target design) stays fixed and every doc is measured against it. Use when closing an in_progress phase, promoting a shipped intent design, hitting a code/doc contradiction, closing a fracture-ledger entry to Healed, relocating/renaming/deleting a file or symbol that any doc references, changing the behavior of a file that any doc's ref:path: links to, or landing any change that might incidentally solve a docs/intent/ doc's stated problem."
 ---
 
 # Docs lifecycle
 
-Three pots, mutually exclusive by status — never describe a built thing as intent:
+One fixed target, then three pots, mutually exclusive by status — never describe a built thing as intent:
+- **north-star** (`docs/north-star/`) — the owner's target design. Not a pot: nothing moves in or out
+  of it, and this skill never edits it. Every other doc is measured against it.
 - **intent** — aspirational, unbuilt, may be thin.
 - **in_progress** — staged plan, adjusted as it executes.
 - **architecture** — Explanation prose (why it exists, why built this way, decisions baked in),
   code-only `ref:path:`/`ref:label:` links, never doc-to-doc.
+
+## The north star is never brought up to date
+
+Architecture docs follow the code; the north star does not. When code and a north-star doc disagree,
+the code is wrong, whichever changed last.
+
+- **Never edit `docs/north-star/`** while closing a pot, healing a fracture, fixing a stale link or
+  following a relocation trigger. A relocation trigger that hits a north-star doc (a path it cites
+  moved) is reported to the owner, not fixed. Only the owner's explicit decision about the target
+  changes it.
+- **Writing architecture content for code that departs from the north star:** describe what the code
+  does, and say plainly that it departs, citing the north-star statement. Add or update the fracture
+  ledger's Open entry for the departure. Never write the departure as the design, and never write a
+  rationale that defends it.
+- **Healing a fracture means moving toward the north star.** Before flipping an entry to Healed,
+  check the healed shape against the relevant north-star doc. A heal whose shape contradicts it
+  (it unified two mechanisms by picking the one the north star rules out) is not healed: it stays
+  Open and the contradiction goes to the owner.
+- **A plan, intent doc or in_progress doc that contradicts the north star** is raised at the
+  checkpoint below, not built or promoted.
 
 ## Closing a pot
 
@@ -24,7 +46,11 @@ Three pots, mutually exclusive by status — never describe a built thing as int
 ## Checkpoint — ask the user, never resolve solo
 
 (a) bad plan → delete. (b) real remaining scope → reframe/trim to it. (c) code drifted from plan → new
-`in_progress` phase + Open fracture-ledger entry.
+`in_progress` phase + Open fracture-ledger entry. (d) code, plan or doc contradicts the north star →
+Open fracture-ledger entry citing the north-star statement; the fix moves toward the north star, or
+the owner changes the north star. Never resolved by editing the north star or by documenting the
+contradiction as design. If the north star is silent or ambiguous rather than contradicted, ask per
+`CLAUDE.md`'s *When work meets the north star*.
 
 ## Keeping a linked doc's content honest, not just its links
 

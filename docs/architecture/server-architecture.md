@@ -1,4 +1,4 @@
-# Server architecture North Star — full DDD feature modules
+# Server architecture — feature modules
 
 This is the design every server-side file now lives under. The
 server used to run three competing designs at once for "where does feature logic live" — a boilerplate

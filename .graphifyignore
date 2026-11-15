@@ -10,13 +10,17 @@
 # architecture. Ingesting any of these as if they were current-state facts
 # pollutes query/explain results with plans, prose, and self-referential
 # graphify commentary that hasn't been (or won't be) built. A query should
-# only ever reflect the current state of the system.
+# reflect the current state of the system, plus the one target it is measured
+# against: docs/north-star/ is the owner's target design, which outranks the
+# current-state docs, so it is graphed too and a query surfaces it beside the
+# code it governs.
 #
 # `docs/*` (no trailing slash) matches only docs' direct children as a glob,
 # so it never excludes the `docs/` directory itself - traversal continues and
 # the negation below can still re-include one child's subtree.
 docs/*
 !docs/architecture/
+!docs/north-star/
 
 # The `impeccable` design-critique skill's own generated report output
 # (timestamped critique markdown files) — tool-generated artifacts, not

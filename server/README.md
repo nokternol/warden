@@ -43,7 +43,7 @@ server/
 - [database/README.md](database/README.md) — Drizzle setup, schema, migrations
 - [modules/README.md](modules/README.md) — how modules implement API contract procedures, plus
   module-owned domain logic and container registration conventions
-- [../docs/architecture/server-architecture-north-star.md](../docs/architecture/server-architecture-north-star.md)
+- [../docs/architecture/server-architecture.md](../docs/architecture/server-architecture.md)
   — the target design this layout implements: module boundaries, the dependency direction graph, and the
   dependency-cruiser check that enforces both
 - `docs/architecture/` — the product model (`warden-core-model.md`), settled names (`VOCABULARY.md`),

@@ -30,15 +30,37 @@ Ladle story first, then in-place. (1) Create/update the component's `.stories.ts
 
 | Directory | What it means | How to treat it |
 |---|---|---|
+| `docs/north-star/` | The owner's purpose, intent, beliefs and constraints for Warden; never architecture | **Read first, before code, reviews or plans. The fact every change aligns on. Only the owner changes it.** |
 | `docs/in_progress/` | Active implementation plans | Read as current intent. Deleted when the phase ships. |
 | `docs/intent/` | Unbuilt architectural decisions | Read as future state, not current fact. Moved to `docs/architecture/` when implemented. |
-| `docs/architecture/` | Implemented patterns | Read as current fact. |
+| `docs/architecture/` | Implemented patterns | Read as current fact: what the code does now, not what it should do. |
+
+**`docs/north-star/` is the target; everything else is measured against it.** Rules (full text in `docs/north-star/README.md`):
+- **Never edit a north-star doc as part of a change**, a review, a plan or a docs update, including to match the code. Only the owner changes it, by an explicit decision about the target. If a change seems to need one edited, stop and ask.
+- **Code that contradicts the north star is a departure, not the design.** Record it in the fracture ledger's Open section, citing the north-star statement it departs from, and fix it toward the north star. An architecture doc describing a departure says it is one; it never presents it as the design.
+- **A fracture closes only toward the north star.** A fix, review finding or diagnosis whose remedy moves the code away from it is rejected, however clean it looks locally. Review findings and earlier agents' proposed fixes are symptoms to check against the north star, never conclusions.
+- **Where the north star is silent, ask the owner** before building on the answer. The decision is written into `docs/north-star/` by the owner first.
+
+**When work meets the north star: sort it, then ask in plain English.** Every skill that plans, diagnoses, specs, reviews or builds uses this one procedure. First sort what you found:
+1. **The work departs from a clear statement.** Not a question: the work changes, the target doesn't. Say which statement and what the work does instead.
+2. **The north star is silent** on something the work has to decide.
+3. **The north star is ambiguous:** two readings both fit, and they lead to different work.
+4. **The north star looks wrong:** following it would cause a real problem you can show.
+
+For 2–4, stop that part of the work and ask the owner, one question at a time, in everyday words with no code names:
+- **The situation:** what the work needs to decide, as the owner would see it in the product.
+- **What the north star says now:** quoted, or "nothing".
+- **Why it doesn't settle it:** for ambiguity, both readings and what each would mean for this work; for "looks wrong", the evidence.
+- **Options, each with what it would change,** and your recommendation with its reason.
+- **The exact sentence(s) you propose** to add to or change in the north star.
+
+The owner's answer is written into `docs/north-star/` in the wording they approved, before anything builds on it. Never apply it only to the work at hand, since the next piece of work would meet the same gap.
 
 **Do not treat `docs/intent/` or `docs/in_progress/` as descriptions of what is built.** When implementing something described in either folder, update the doc status as part of completion — delete `in_progress` files, move `intent` files to `docs/architecture/`.
 
 **`docs/intent/` is the input queue for future `in_progress/` plans — stale entries are dead weight, not harmless.** An intent doc whose stated problem gets solved (whether by the phase meant to solve it, or incidentally by unrelated work) must be deleted, not left marked done — every doc still sitting in `docs/intent/` reads as "still worth picking up" to whoever browses it next, and a solved-but-not-deleted entry wastes their attention or, worse, gets built again. When a change lands, check whether it happens to have solved an existing intent doc's problem even if that wasn't the doc being implemented — this bit a real doc in this repo (`filter-ui.md` said "delete when Phase 4 ships" in its own header, Phase 4 shipped, nobody deleted it).
 
-**`docs/architecture/` staying "current fact" is an ongoing duty, not a one-time promotion.** A resolvable `ref:path:`/`ref:label:` link is not proof a doc is accurate — the target can still exist while the behavior it describes changed underneath it, and a valid-but-stale link is worse than a dangling one because nothing flags it as suspect. Two triggers, both required:
+**`docs/architecture/` staying "current fact" is an ongoing duty, not a one-time promotion.** Keeping an architecture doc current means describing what the code does; if what it does departs from `docs/north-star/`, the doc names the departure rather than restating it as design. A resolvable `ref:path:`/`ref:label:` link is not proof a doc is accurate — the target can still exist while the behavior it describes changed underneath it, and a valid-but-stale link is worse than a dangling one because nothing flags it as suspect. Two triggers, both required:
 - **Relocating, renaming, or deleting** a file or symbol: `grep -rl <old-path-or-symbol> docs/` and fix or triage every hit, not just the docs the change's own plan already names as related.
 - **Editing the behavior of a file** without moving it: `grep -rl <path> docs/architecture/`; if any doc links to it via `ref:path:`, re-read that doc's surrounding prose against your change, not just its link target.
 

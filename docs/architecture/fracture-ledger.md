@@ -12,8 +12,12 @@ against what a plan document claims.
 
 A "fracture" here is Warden's recurring failure mode: one real-world process (task execution, rule
 matching) grows a second, renamed vocabulary at a boundary, so two designs answer one question and can
-disagree. Healing one replaces the second vocabulary with a derivation from the first authority; it never
-adds a translator between them (a translator *is* the fracture, persisted).
+disagree. Healing one replaces the second vocabulary with a derivation from the authority the north star
+([`docs/north-star/`](ref:path:docs/north-star/README.md)) names, which is not necessarily the one that
+came first or the one most code uses; it never adds a translator between them (a translator *is* the
+fracture, persisted). A heal that unifies on a shape the north star rules out is not a heal: it opens
+the next fracture. Code that departs from a north-star statement is recorded here as Open, citing that
+statement, whether or not a second vocabulary exists yet.
 
 Plan documents drift from what Stage N actually shipped, and `docs/in_progress/` is deliberately excluded
 from the graph (it's a plan, not fact) — so nothing forced a documented cross-check against the live tree
@@ -186,7 +190,7 @@ is graphed, dated, and verified against code, not inferred from a plan.
   direction the design doesn't declare. This is what keeps the fracture from reopening: the next
   boundary-crossing import fails at PR time instead of surviving to the next manual review, which is how
   Phases 4, 5, and 6 each found their own direction violations. Full design:
-  `docs/architecture/server-architecture-north-star.md`.
+  `docs/architecture/server-architecture.md`.
 
 ### North Star exception vs. shipped code — `providers → media` exception eliminated, doc didn't follow (recorded and healed 2026-07-10)
 
@@ -208,7 +212,7 @@ is graphed, dated, and verified against code, not inferred from a plan.
   now — verified directly against source." Anyone, human or a `graphify query`, trusting the Phase 4
   paragraph or any of the three docs above got a wrong file path and a design principle that no longer
   held.
-- **Healed by:** `docs/architecture/server-architecture-north-star.md` (promoted from `docs/intent/` in
+- **Healed by:** `docs/architecture/server-architecture.md` (promoted from `docs/intent/` in
   the same phase) now describes the shipped, exception-free state: `MediaSource`/`MediaEnricher` are
   media-owned role contracts (`modules/media/mediaSource.ts`, `modules/media/enrichment/enricher.ts`);
   provider connection classes implement nothing directly, they are bound to these roles by media-owned

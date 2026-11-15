@@ -1,6 +1,6 @@
 /**
- * Enforces the server-architecture North Star's module boundaries
- * (docs/architecture/server-architecture-north-star.md): a module's
+ * Enforces the server architecture's module boundaries
+ * (docs/architecture/server-architecture.md): a module's
  * internals are reachable only through its own index.ts, and cross-module
  * imports may only follow the declared direction graph. Both rule families
  * are deny-by-default — a module omitted from another's allow-list is
@@ -23,7 +23,7 @@ const MODULES = [
   'system',
 ];
 
-// The North Star's declared direction graph. A module may always import
+// The server architecture's declared direction graph. A module may always import
 // kernel; kernel imports no module. Anything not listed here for a module
 // is a forbidden cross-module target.
 const ALLOWED_TARGETS = {
@@ -43,12 +43,7 @@ const directionRules = MODULES.map((mod) => {
   return {
     name: `direction-${mod}`,
     severity: 'error',
-    comment:
-      `server/modules/${mod}/ may only cross into ` +
-      `[${(ALLOWED_TARGETS[mod] || []).join(', ') || 'kernel only'}] plus kernel, ` +
-      "per the North Star's declared direction graph (docs/architecture/server-architecture-north-star.md). " +
-      "Type-only imports are exempt — they're the sanctioned dependency-inversion pattern " +
-      '(system declares an interface, another module implements it by importing only the type).',
+    comment: `server/modules/${mod}/ may only cross into [${(ALLOWED_TARGETS[mod] || []).join(', ') || 'kernel only'}] plus kernel, per the server architecture's declared direction graph (docs/architecture/server-architecture.md). Type-only imports are exempt — they're the sanctioned dependency-inversion pattern (system declares an interface, another module implements it by importing only the type).`,
     from: { path: `^server/modules/${mod}/` },
     to: {
       path: `^server/modules/(${forbiddenTargets.join('|')})/`,
@@ -95,7 +90,15 @@ module.exports = {
         'through it.',
       from: { path: '^contract/' },
       to: {
-        dependencyTypes: ['npm', 'npm-dev', 'npm-peer', 'npm-optional', 'npm-no-pkg', 'npm-unknown', 'core'],
+        dependencyTypes: [
+          'npm',
+          'npm-dev',
+          'npm-peer',
+          'npm-optional',
+          'npm-no-pkg',
+          'npm-unknown',
+          'core',
+        ],
         pathNot: 'node_modules/(zod|@orpc/contract)/',
       },
     },
@@ -123,7 +126,7 @@ module.exports = {
       name: 'kernel-imports-no-module',
       severity: 'error',
       comment:
-        "The kernel is infrastructure with no domain meaning — it may not import any " +
+        'The kernel is infrastructure with no domain meaning — it may not import any ' +
         'feature module.',
       from: { path: '^server/kernel/' },
       to: { path: '^server/modules/' },
@@ -136,7 +139,7 @@ module.exports = {
     // node_modules is included (but not followed) so package imports can be checked.
     includeOnly: { path: '^(server|src|contract)/|node_modules/' },
     tsPreCompilationDeps: true,
-    tsConfig: { fileName: require('path').join(__dirname, 'server/tsconfig.json') },
+    tsConfig: { fileName: require('node:path').join(__dirname, 'server/tsconfig.json') },
     enhancedResolveOptions: {
       exportsFields: ['exports'],
       conditionNames: ['import', 'require', 'node', 'default'],
