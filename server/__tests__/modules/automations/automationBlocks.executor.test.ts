@@ -19,6 +19,7 @@ import { AutomationService } from '@server/modules/automations/automationService
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
+import { sourceReadCacheHolding, sourceReadCacheOver } from '@tests/helpers/sourceReadCache';
 import { eq } from 'drizzle-orm';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -61,6 +62,7 @@ describe('an automation whose filter has no data', () => {
       automationService,
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
+      sourceReadCache: sourceReadCacheOver(providerSettingsService),
       mediaQueryService,
       filterReadiness: filterReadinessOver(db),
       automationBlockService: blocks,

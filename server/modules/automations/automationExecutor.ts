@@ -12,7 +12,6 @@ import {
   automationAnswer,
   findingsFor,
   identifiesTitle,
-  mediaSourceFor,
   radarrRowsSource,
   resolveActuatorTargets,
   sonarrRowsSource,
@@ -23,7 +22,7 @@ import type {
   MediaItem,
   MediaQueryClause,
   MediaSource,
-  MediaSourceFactory,
+  SourceRead,
   SourceReadCache,
 } from '../media';
 import type { MediaQueryRecord, MediaQueryService } from '../mediaQueries';
@@ -33,8 +32,6 @@ import {
   ProviderFactory,
   type ProviderSettingsService,
   type RadarrMovie,
-  type RadarrProvider,
-  type SonarrProvider,
   type SonarrSeries,
   isMediaActuator,
   isMediaSourceType,
@@ -60,9 +57,8 @@ interface ExecutorDeps {
   providerFactory?: IProviderFactory;
   mediaQueryEngine?: MediaQueryEngine;
   enrichmentQueries?: EnrichmentQueries;
-  /** The owning-catalog sources a non-source actuator's query evaluates against. */
-  mediaSourceFactory?: Pick<MediaSourceFactory, 'sourcesFor'>;
-  sourceReadCache?: Pick<SourceReadCache, 'readOne'>;
+  /** The library every plan reads: an actuator's own instance, or every owning instance pooled. */
+  sourceReadCache: Pick<SourceReadCache, 'readOne' | 'readAll'>;
   db?: DrizzleDb;
   systemTaskRunner?: SystemTaskRunnerLike;
   eventBus?: DomainEventBus;
@@ -149,6 +145,13 @@ function counting(source: MediaSource): MediaSource & { count: () => number } {
   };
 }
 
+/** One instance's read, bound as a source whose every read builds new items from the rows. */
+function rowsSource(contentType: ContentType, { providerId, rows }: SourceRead<ContentType>) {
+  return contentType === 'movie'
+    ? radarrRowsSource(rows as RadarrMovie[], providerId)
+    : sonarrRowsSource(rows as SonarrSeries[], providerId);
+}
+
 /** "RADARR" as "Radarr". */
 function providerTypeName(type: string): string {
   return type.charAt(0) + type.slice(1).toLowerCase();
@@ -170,8 +173,7 @@ export class AutomationExecutor {
   private readonly mediaQueryEngine: MediaQueryEngine;
   private readonly filterReadiness: Pick<FilterReadiness, 'readFacts'>;
   private readonly automationBlockService: Pick<AutomationBlockService, 'reconcile'>;
-  private readonly mediaSourceFactory?: Pick<MediaSourceFactory, 'sourcesFor'>;
-  private readonly sourceReadCache?: Pick<SourceReadCache, 'readOne'>;
+  private readonly sourceReadCache: Pick<SourceReadCache, 'readOne' | 'readAll'>;
   private readonly db?: DrizzleDb;
   private readonly systemTaskRunner?: SystemTaskRunnerLike;
   private readonly eventBus?: DomainEventBus;
@@ -194,7 +196,6 @@ export class AutomationExecutor {
       });
     this.filterReadiness = deps.filterReadiness;
     this.automationBlockService = deps.automationBlockService;
-    this.mediaSourceFactory = deps.mediaSourceFactory;
     this.sourceReadCache = deps.sourceReadCache;
     this.db = deps.db;
     this.systemTaskRunner = deps.systemTaskRunner;
@@ -508,17 +509,9 @@ export class AutomationExecutor {
     if (isMediaSourceType(providerSettings.type)) {
       // Catalog-owning actuator: the query evaluates against its own catalog
       // and its native ids feed the task directly, one target per native id.
-      let source: MediaSource;
-      if (this.sourceReadCache) {
-        const { rows } = await this.sourceReadCache.readOne(providerSettings.id, read);
-        source =
-          contentType === 'movie'
-            ? radarrRowsSource(rows as RadarrMovie[], providerSettings.id)
-            : sonarrRowsSource(rows as SonarrSeries[], providerSettings.id);
-      } else {
-        source = mediaSourceFor(provider as RadarrProvider | SonarrProvider, providerSettings.id);
-      }
-      const mediaSource = counting(source);
+      const mediaSource = counting(
+        rowsSource(contentType, await this.sourceReadCache.readOne(providerSettings.id, read))
+      );
       const matched = await this.mediaQueryEngine.evaluate({
         source: mediaSource,
         contentType,
@@ -540,17 +533,19 @@ export class AutomationExecutor {
     // translate into the actuator's own addressing space through the identity
     // graph. Unstamped identities drop out — the task never receives an id it
     // cannot address.
-    if (!this.mediaSourceFactory || !this.db) {
+    if (!this.db) {
       throw new Error(
         `Task "${taskId}" on provider instance ${providerSettings.id} needs the owning-source catalog and identity graph to resolve ids`
       );
     }
-    const entries = await this.mediaSourceFactory.sourcesFor(contentType);
+    const sources = (await this.sourceReadCache.readAll(contentType, read)).map((r) =>
+      rowsSource(contentType, r)
+    );
     let fetched: ReturnType<MediaSource['getMediaItems']> | undefined;
     const pooled = counting({
       // Fetched once, so what a run excludes is judged on the same catalog as what it includes.
       getMediaItems: () => {
-        fetched ??= Promise.all(entries.map((e) => e.source.getMediaItems())).then((all) =>
+        fetched ??= Promise.all(sources.map((source) => source.getMediaItems())).then((all) =>
           all.flat()
         );
         return fetched;

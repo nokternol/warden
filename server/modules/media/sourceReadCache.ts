@@ -101,8 +101,11 @@ export class SourceReadCache {
   }
 
   /** Every active instance's rows; rejects, naming each instance and why, if any could not be read. */
-  async readAll<C extends ContentType>(contentType: C): Promise<SourceRead<C>[]> {
-    const { reads, errors } = await this.readEach(contentType);
+  async readAll<C extends ContentType>(
+    contentType: C,
+    opts?: ReadOptions
+  ): Promise<SourceRead<C>[]> {
+    const { reads, errors } = await this.readEach(contentType, opts);
     if (errors.length > 0) {
       throw new Error(errors.map((e) => failure(e.provider, e.error)).join('; '));
     }
