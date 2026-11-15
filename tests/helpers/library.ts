@@ -17,8 +17,11 @@ import {
   type ProviderSettingsService,
   type RadarrMovie,
   type RadarrProvider,
+  type RefreshKind,
   type SonarrProvider,
   type SonarrSeries,
+  readRefreshRecords,
+  recordRefreshed,
 } from '@server/modules/providers';
 import { CatalogRefreshJob } from '@server/modules/providers/catalogRefreshJob';
 import { and, eq } from 'drizzle-orm';
@@ -143,12 +146,40 @@ export function libraryCacheHolding(libraries: InstanceLibrary[]): LibraryCache 
   return refreshingOnFirstRead(db, () => refreshCopies(db, libraries));
 }
 
+/**
+ * Records every active media server's links and every active enricher's facts as refreshed now,
+ * where no record says otherwise, so a test's copy reads as fully refreshed.
+ */
+async function markOthersRefreshed(db: DrizzleDb): Promise<void> {
+  const records = await readRefreshRecords(db);
+  const providers = await db
+    .select()
+    .from(metadataProviders)
+    .where(eq(metadataProviders.isActive, true));
+  const kinds: Partial<Record<string, RefreshKind[]>> = {
+    PLEX: ['links', 'facts'],
+    JELLYFIN: ['links', 'facts'],
+    TAUTULLI: ['facts'],
+    SEERR: ['facts'],
+    TMDB: ['facts'],
+  };
+  for (const provider of providers) {
+    for (const kind of kinds[provider.type] ?? []) {
+      if (!records.some((r) => r.providerId === provider.id && r.kind === kind)) {
+        await recordRefreshed(db, provider.id, kind);
+      }
+    }
+  }
+}
+
 function refreshingOnFirstRead(db: DrizzleDb, refresh: () => Promise<void>): LibraryCache {
   const cache = new LibraryCache({ db, eventBus: new DomainEventBus() });
   const read = cache.read.bind(cache);
   let refreshed: Promise<void> | undefined;
   cache.read = async () => {
-    refreshed ??= refresh().then(() => cache.clear());
+    refreshed ??= refresh()
+      .then(() => markOthersRefreshed(db))
+      .then(() => cache.clear());
     await refreshed;
     return read();
   };

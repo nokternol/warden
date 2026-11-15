@@ -1,27 +1,37 @@
 import type { AutomationPreview, AutomationReadiness } from '@contract/automations';
 import type { ReadinessFinding } from '@contract/readiness';
 import type { AutomationRunStatus, ContentType } from '@contract/schemas';
-import type { MetadataProvider } from '../../database/schema';
+import type { MetadataProvider, MetadataProviderType } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
 import { ValidationError } from '../../kernel/errors';
 import type { DomainEventBus } from '../../kernel/eventBus';
 import { getChildLogger } from '../../kernel/logger';
 import {
+  ADDRESS_COLUMN_BY_TYPE,
+  MEDIA_SERVER_BY_COLUMN,
   MediaQueryEngine,
   actuatorIdOf,
   automationAnswer,
   copiesSource,
   findingsFor,
+  getRule,
   isAddressedActuator,
   itemKey,
 } from '../media';
-import type { FilterReadiness, LibraryCache, LibraryCopy, MediaQueryClause } from '../media';
+import type {
+  FilterReadiness,
+  Library,
+  LibraryCache,
+  LibraryCopy,
+  MediaQueryClause,
+} from '../media';
 import type { MediaQueryRecord, MediaQueryService } from '../mediaQueries';
 import {
   type ActuatorTask,
   type IProviderFactory,
   ProviderFactory,
   type ProviderSettingsService,
+  SOURCE_OWNER,
   isMediaActuator,
   isMediaSourceType,
   readEnabledTaskIds,
@@ -74,6 +84,8 @@ interface RunPlan {
   /** How many source copies the query was evaluated against, and how many it matched. */
   poolSize: number;
   matchedCount: number;
+  /** Each refresh a destructive run depends on that failed or never ran, as a reason not to act. */
+  unrefreshed: string[];
 }
 
 /** Below this many targets a destructive run is small enough to be its own limit. */
@@ -94,8 +106,51 @@ export function excessiveReach({
 }
 
 /** Why a planned run will not act, one line per reason; empty when it will. */
-function whyPlanWontRun(plan: Pick<RunPlan, 'task' | 'matchedCount' | 'poolSize'>) {
-  return [excessiveReach(plan)].filter((r): r is string => r !== undefined);
+function whyPlanWontRun(plan: Pick<RunPlan, 'task' | 'matchedCount' | 'poolSize' | 'unrefreshed'>) {
+  return [...plan.unrefreshed, excessiveReach(plan)].filter((r): r is string => r !== undefined);
+}
+
+/** A provider's data of one kind that a destructive run depends on. */
+interface Dependency {
+  providerId: number;
+  kind: 'catalog' | 'links' | 'facts';
+}
+
+const KIND_NOUN: Record<Dependency['kind'], string> = {
+  catalog: 'catalog',
+  links: 'links',
+  facts: 'facts',
+};
+
+/**
+ * Why a destructive run must not act on the copy: a provider it depends on failed its latest
+ * refresh, or has never refreshed, which is far more likely a fault than the owner's intent
+ * (north-star belief 7). One line per provider and kind; empty for a non-destructive task.
+ */
+function unrefreshedDependencies(
+  library: Library,
+  task: Pick<ActuatorTask, 'destructive'>,
+  dependencies: Dependency[]
+): string[] {
+  if (!task.destructive) return [];
+  const seen = new Set<string>();
+  return dependencies.flatMap(({ providerId, kind }) => {
+    const key = `${providerId}:${kind}`;
+    if (seen.has(key)) return [];
+    seen.add(key);
+    const name =
+      library.providers.find((p) => p.id === providerId)?.name ?? `Provider ${providerId}`;
+    const record = library.records.find((r) => r.providerId === providerId && r.kind === kind);
+    if (record?.failedAt != null) {
+      return [
+        `Not run: ${name}'s ${KIND_NOUN[kind]} refresh failed (${record.error ?? 'no answer'})`,
+      ];
+    }
+    if (record?.refreshedAt == null) {
+      return [`Not run: ${name}'s ${KIND_NOUN[kind]} is not refreshed yet`];
+    }
+    return [];
+  });
 }
 
 /** "RADARR" as "Radarr". */
@@ -439,7 +494,13 @@ export class AutomationExecutor {
       );
     }
 
-    const copies = (await this.libraryCache.read()).copies[contentType] as LibraryCopy[];
+    const library = await this.libraryCache.read();
+    const copies = library.copies[contentType] as LibraryCopy[];
+    const unrefreshed = unrefreshedDependencies(
+      library,
+      task,
+      this.dependencies(library, providerSettings, contentType, automationQueries)
+    );
 
     const included = (candidates: LibraryCopy[]) =>
       this.matching(
@@ -464,6 +525,7 @@ export class AutomationExecutor {
         actuatorIds: targets.map((c) => c.record.id),
         poolSize: own.length,
         matchedCount: targets.length,
+        unrefreshed,
       };
     }
 
@@ -484,7 +546,51 @@ export class AutomationExecutor {
       actuatorIds: [...new Set(targets.map((c) => actuatorIdOf(c, providerSettings.type)!))],
       poolSize: copies.length,
       matchedCount: addressed.length,
+      unrefreshed,
     };
+  }
+
+  /**
+   * The refreshes a run on `providerSettings` reads: the catalog of every instance whose copies
+   * it evaluates (a source run: its own, plus every other active instance of the content type
+   * when it has excluded queries; any other run: every active instance), the links of the media
+   * server whose ids it addresses, and for each rule its queries use, the facts of each active
+   * supplier and the links of the media server those facts attach through.
+   */
+  private dependencies(
+    library: Library,
+    providerSettings: MetadataProvider,
+    contentType: ContentType,
+    queries: LoadedQuery[]
+  ): Dependency[] {
+    const active = (type: MetadataProviderType) =>
+      library.providers.filter((p) => p.type === type).map((p) => p.id);
+    const linksOf = (type: MetadataProviderType): Dependency[] => {
+      const column = ADDRESS_COLUMN_BY_TYPE[type];
+      return column
+        ? active(MEDIA_SERVER_BY_COLUMN[column]).map((providerId) => ({
+            providerId,
+            kind: 'links' as const,
+          }))
+        : [];
+    };
+    const sourceType = SOURCE_OWNER[contentType];
+    const isSource = isMediaSourceType(providerSettings.type);
+    const evaluatesEveryInstance = !isSource || queries.some((q) => q.role === 'exclude');
+    const catalogs = (evaluatesEveryInstance ? active(sourceType) : [providerSettings.id]).map(
+      (providerId) => ({ providerId, kind: 'catalog' as const })
+    );
+    const rules = queries.flatMap(({ record }) =>
+      record.filters.flatMap(({ ruleKey }) => getRule(ruleKey, contentType) ?? [])
+    );
+    const suppliers = [...new Set(rules.flatMap((rule) => rule.providers))].filter(
+      (type) => !isMediaSourceType(type)
+    );
+    const facts = suppliers.flatMap((type) => [
+      ...active(type).map((providerId) => ({ providerId, kind: 'facts' as const })),
+      ...linksOf(type),
+    ]);
+    return [...catalogs, ...(isSource ? [] : linksOf(providerSettings.type)), ...facts];
   }
 
   /** The copies among `copies` that `clauses` select, by the one query evaluation. */
