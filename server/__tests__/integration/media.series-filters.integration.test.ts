@@ -34,7 +34,7 @@ import { and, eq } from 'drizzle-orm';
 import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 const mockUser = {
   id: 1,
@@ -77,18 +77,10 @@ function series(
 describe('Media browse — series registry predicates', () => {
   let cradle: import('@server/container').Cradle;
 
-  // Each build subscribes to the shared bus; dispose them so listeners don't pile up across tests.
-  const builtMedia: Array<{ dispose(): void }> = [];
   function buildMedia() {
     const media = createMediaProcedures(cradle);
-    builtMedia.push(media);
     return media;
   }
-  afterEach(() => {
-    for (const media of builtMedia.splice(0)) media.dispose();
-    // The container's one read cache outlives each test; each test sets its own upstream answers.
-    cradle.sourceReadCache.clear();
-  });
 
   beforeAll(async () => {
     const mockConfig = createMockConfig({

@@ -22,7 +22,7 @@ import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpe
 import { refreshCatalog } from '@tests/helpers/library';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { server } from '../../../tests/mocks/server';
 
 // ---------------------------------------------------------------------------
@@ -59,16 +59,10 @@ function makeRadarrMovie(title: string, id = 1) {
 describe('Provider mutation cache invalidation', () => {
   let cradle: ReturnType<typeof buildContainer>['cradle'];
 
-  // Each build subscribes to the shared bus; dispose them so listeners don't pile up across tests.
-  const builtMedia: Array<{ dispose(): void }> = [];
   function buildMedia() {
     const media = createMediaProcedures(cradle);
-    builtMedia.push(media);
     return media;
   }
-  afterEach(() => {
-    for (const media of builtMedia.splice(0)) media.dispose();
-  });
   let app: Express;
   let client: ReturnType<typeof createApiClient>;
   let providerId: number;

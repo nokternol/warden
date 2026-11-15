@@ -12,11 +12,13 @@ import { MetadataProviderType } from '@server/database/schema';
 import type { DrizzleDb } from '@server/kernel/db';
 import type { DomainEventBus } from '@server/kernel/eventBus';
 import {
+  type ProviderListsData,
   type RadarrMovie,
   type RefreshKind,
   SOURCE_OWNER,
   type SonarrSeries,
   type RefreshRecord as StoredRefreshRecord,
+  readProviderLists,
   readRefreshRecords,
 } from '@server/modules/providers';
 import { and, eq } from 'drizzle-orm';
@@ -48,6 +50,8 @@ export interface Library {
   providers: Array<{ id: number; name: string; type: MetadataProviderType }>;
   /** Every stored refresh record. */
   records: StoredRefreshRecord[];
+  /** Each active provider's stored setup lists, by provider id. */
+  lists: Map<number, ProviderListsData>;
 }
 
 /** The kinds of data each active provider type refreshes into the copy. */
@@ -122,7 +126,7 @@ export class LibraryCache {
 
   private async load(): Promise<Library> {
     const { db } = this.deps;
-    const [rows, factRows, providers, records] = await Promise.all([
+    const [rows, factRows, providers, records, lists] = await Promise.all([
       db
         .select({
           mediaItemId: mediaItems.id,
@@ -157,6 +161,7 @@ export class LibraryCache {
         .where(eq(metadataProviders.isActive, true))
         .orderBy(metadataProviders.id),
       readRefreshRecords(db),
+      readProviderLists(db),
     ]);
 
     const factsByTitle = new Map<number, Partial<EnrichmentFields>>();
@@ -170,6 +175,7 @@ export class LibraryCache {
       copies: { movie: [], series: [] },
       providers: providers.map((p) => ({ ...p, type: p.type as MetadataProviderType })),
       records,
+      lists,
     };
     for (const row of rows) {
       const record = JSON.parse(row.data);

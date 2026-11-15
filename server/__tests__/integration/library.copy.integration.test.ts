@@ -4,19 +4,21 @@
  */
 import { buildContainer } from '@server/container';
 import { MetadataProviderType } from '@server/database/schema';
+import { mediaItems } from '@server/database/schema';
 import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createMediaProcedures } from '@server/modules/media';
+import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.queries';
 import { readRefreshRecords } from '@server/modules/providers';
 import { createMockConfig, createRadarrMovie } from '@tests/factories';
 import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import { refreshCatalog } from '@tests/helpers/library';
 import { server } from '@tests/mocks/server';
 import express from 'express';
-import { http, HttpResponse } from 'msw';
+import { http, HttpResponse, passthrough } from 'msw';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const RADARR_URL = 'http://localhost:7878';
@@ -142,5 +144,52 @@ describe('the library copy', () => {
       failedAt: null,
       error: null,
     });
+  });
+
+  it('answers filter choices from the stored lists and facts, without reading any provider', async () => {
+    server.use(
+      http.get(`${RADARR_URL}/api/v3/movie`, () =>
+        HttpResponse.json([
+          createRadarrMovie({ id: 1, title: 'Heat', tmdbId: 949, genres: ['Crime'] }),
+        ])
+      ),
+      http.get(`${RADARR_URL}/api/v3/tag`, () => HttpResponse.json([{ id: 3, label: 'keep' }])),
+      http.get(`${RADARR_URL}/api/v3/qualityprofile`, () =>
+        HttpResponse.json([{ id: 4, name: 'HD' }])
+      )
+    );
+    await refreshCatalog(ctx.cradle);
+    const [copy] = await ctx.db.select().from(mediaItems);
+    await new EnrichmentQueries({ db: ctx.db }).replaceFields(copy.mediaIdentityId, {
+      studio: 'Warner Bros.',
+      videoCodec: 'hevc',
+      labels: ['4K', 'Favourite'],
+    });
+    ctx.cradle.eventBus.emit('media:changed', {});
+    let providerReads = 0;
+    server.use(
+      http.all('*', ({ request }) => {
+        if (new URL(request.url).hostname !== 'localhost') return passthrough();
+        providerReads++;
+        return HttpResponse.json([]);
+      })
+    );
+
+    const choices = async (path: string) =>
+      expectSuccessResponse(await ctx.client.get(`/api/media/${path}`));
+
+    expect(await choices('tags')).toEqual({
+      radarr: [{ id: 3, label: 'keep', providerId: ctx.radarrId, providerName: 'Radarr' }],
+      sonarr: [],
+    });
+    expect(await choices('quality-profiles')).toEqual({
+      radarr: [{ id: 4, name: 'HD', providerId: ctx.radarrId, providerName: 'Radarr' }],
+      sonarr: [],
+    });
+    expect(await choices('studio')).toEqual(['Warner Bros.']);
+    expect(await choices('video-codecs')).toEqual(['hevc']);
+    expect(await choices('labels')).toEqual(['4K', 'Favourite']);
+    expect(await choices('genres')).toEqual({ movies: ['Crime'], series: [] });
+    expect(providerReads).toBe(0);
   });
 });

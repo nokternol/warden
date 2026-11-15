@@ -27,7 +27,7 @@ import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -68,18 +68,10 @@ describe('Paginated Media API', () => {
   let unauthedClient: ReturnType<typeof createApiClient>;
   let cradle: ReturnType<typeof buildContainer>['cradle'];
 
-  // Each build subscribes to the shared bus; dispose them so listeners don't pile up across tests.
-  const builtMedia: Array<{ dispose(): void }> = [];
   function buildMedia() {
     const media = createMediaProcedures(cradle);
-    builtMedia.push(media);
     return media;
   }
-  afterEach(() => {
-    for (const media of builtMedia.splice(0)) media.dispose();
-    // The container's one read cache outlives each test; each test sets its own upstream answers.
-    cradle.sourceReadCache.clear();
-  });
 
   beforeAll(async () => {
     const mockConfig = createMockConfig({
