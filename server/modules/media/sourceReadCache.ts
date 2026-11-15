@@ -1,12 +1,15 @@
 import type { ContentType } from '@contract/schemas';
 import { MediaCache } from '@server/kernel/cache';
+import { getChildLogger } from '@server/kernel/logger';
 import type {
   RadarrMovie,
   RadarrProvider,
   SonarrProvider,
   SonarrSeries,
 } from '@server/modules/providers';
-import type { MediaSourceFactory } from './mediaSourceFactory';
+import type { MediaSourceFactory, SourceInstance } from './mediaSourceFactory';
+
+const log = getChildLogger('SourceReadCache');
 
 /** The raw row each content type's owning provider returns. */
 interface SourceRow {
@@ -26,6 +29,9 @@ export interface SourceReadError {
   error: string;
 }
 
+/** One instance's read: its rows, or why it could not be read. */
+type Read = { rows: unknown[] } | { error: string };
+
 /**
  * The cache of the latest read of each active Radarr/Sonarr instance: its rows, or why it could
  * not be read.
@@ -39,8 +45,9 @@ export interface SourceReadError {
  * act refreshes, and it acts on the read its refresh returned.
  */
 export class SourceReadCache {
-  /** Each instance's rows, keyed `<contentType>:<providerId>`. */
-  private readonly cache = new MediaCache<unknown[]>();
+  /** Each instance's read, keyed `<contentType>:<providerId>`. Errors are kept too, so asks
+   *  during an outage don't each wait out a timeout. */
+  private readonly cache = new MediaCache<Read>();
 
   constructor(
     private readonly deps: { mediaSourceFactory: Pick<MediaSourceFactory, 'activeInstances'> }
@@ -50,16 +57,35 @@ export class SourceReadCache {
     contentType: C
   ): Promise<{ reads: SourceRead<C>[]; errors: SourceReadError[] }> {
     const instances = await this.deps.mediaSourceFactory.activeInstances(contentType);
-    const reads = await Promise.all(
-      instances.map(async ({ providerId, name, provider }) => {
-        const rows = await this.cache.getOrFetch(`${contentType}:${providerId}`, () =>
-          contentType === 'movie'
-            ? (provider as RadarrProvider).getMovies()
-            : (provider as SonarrProvider).getSeries()
-        );
-        return { providerId, name, rows: rows as SourceRow[C][] };
+    const reads: SourceRead<C>[] = [];
+    const errors: SourceReadError[] = [];
+    await Promise.all(
+      instances.map(async (instance) => {
+        const { providerId, name } = instance;
+        const read = await this.read(contentType, instance);
+        if ('error' in read) errors.push({ providerId, provider: name, error: read.error });
+        else reads.push({ providerId, name, rows: read.rows as SourceRow[C][] });
       })
     );
-    return { reads, errors: [] };
+    return { reads, errors };
+  }
+
+  /** One instance's latest read: its rows, or the message saying why it could not be read. */
+  private read<C extends ContentType>(contentType: C, instance: SourceInstance<C>): Promise<Read> {
+    const { providerId, name, provider } = instance;
+    return this.cache.getOrFetch(`${contentType}:${providerId}`, async () => {
+      try {
+        const rows =
+          contentType === 'movie'
+            ? await (provider as RadarrProvider).getMovies()
+            : await (provider as SonarrProvider).getSeries();
+        return { rows };
+      } catch (err) {
+        log.warn('Source read failed', { provider: name, err });
+        return {
+          error: `Couldn't be reached: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        };
+      }
+    });
   }
 }

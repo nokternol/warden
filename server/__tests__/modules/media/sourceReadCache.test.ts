@@ -5,8 +5,8 @@ import { describe, expect, it } from 'vitest';
 
 const movie = (id: number, title: string) => ({ id, title }) as RadarrMovie;
 
-/** A Radarr instance whose connection answers `rows` and counts each upstream read. */
-const radarrInstance = (providerId: number, name: string, rows: RadarrMovie[]) => {
+/** A Radarr instance whose connection answers `rows` (or throws it) and counts each upstream read. */
+const radarrInstance = (providerId: number, name: string, rows: RadarrMovie[] | Error) => {
   const instance = {
     providerId,
     name,
@@ -14,6 +14,7 @@ const radarrInstance = (providerId: number, name: string, rows: RadarrMovie[]) =
     provider: {
       getMovies: async () => {
         instance.reads++;
+        if (rows instanceof Error) throw rows;
         return rows;
       },
     },
@@ -43,5 +44,15 @@ describe('SourceReadCache.readEach', () => {
     });
     expect(reads.find((r) => r.providerId === 2)?.name).toBe('Radarr 4k');
     expect([hd.reads, uhd.reads]).toEqual([1, 1]);
+  });
+
+  it('answers a failing instance with an error carrying its provider id and name, and still answers the others', async () => {
+    const down = radarrInstance(1, 'Radarr', new Error('ECONNREFUSED'));
+    const up = radarrInstance(2, 'Radarr 4k', [movie(20, 'Heat')]);
+
+    await expect(cacheOver([down, up]).readEach('movie')).resolves.toEqual({
+      reads: [{ providerId: 2, name: 'Radarr 4k', rows: [movie(20, 'Heat')] }],
+      errors: [{ providerId: 1, provider: 'Radarr', error: "Couldn't be reached: ECONNREFUSED" }],
+    });
   });
 });
