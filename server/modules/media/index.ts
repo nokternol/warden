@@ -35,7 +35,10 @@ export { normalizeRadarrMovie, normalizeSonarrSeries } from './normalizeMedia';
 // adapter that binds a source provider's own connection to it (a Radarr or
 // Sonarr automation's catalog).
 export type { MediaSource } from './mediaSource';
-export { mediaSourceFor } from './sourceAdapters';
+export { mediaSourceFor, radarrRowsSource, sonarrRowsSource } from './sourceAdapters';
+
+// The one way to ask what Radarr and Sonarr hold: each active instance's latest read, as raw rows.
+export type { SourceRead, SourceReadCache } from './sourceReadCache';
 
 // Owner-type policy: which provider type owns each content type, resolved to
 // a bound MediaSource.

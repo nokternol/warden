@@ -1,15 +1,22 @@
 import { api } from '@server/kernel/api';
-import { type MediaQueryEngine, type MediaSourceFactory, titleKeyOf } from '@server/modules/media';
+import {
+  type MediaQueryEngine,
+  type SourceReadCache,
+  radarrRowsSource,
+  sonarrRowsSource,
+  titleKeyOf,
+} from '@server/modules/media';
+import type { RadarrMovie, SonarrSeries } from '@server/modules/providers';
 import type { MediaQueryService } from './mediaQueryService';
 
 interface Cradle {
   mediaQueryService: MediaQueryService;
-  mediaSourceFactory: MediaSourceFactory;
   mediaQueryEngine: MediaQueryEngine;
+  sourceReadCache: Pick<SourceReadCache, 'readAll'>;
 }
 
 export function createMediaQueryProcedures(cradle: Cradle) {
-  const { mediaQueryService, mediaSourceFactory, mediaQueryEngine } = cradle;
+  const { mediaQueryService, mediaQueryEngine, sourceReadCache } = cradle;
 
   return api.mediaQueries.router({
     list: api.mediaQueries.list.handler(async () => mediaQueryService.list()),
@@ -29,12 +36,15 @@ export function createMediaQueryProcedures(cradle: Cradle) {
 
     preview: api.mediaQueries.preview.handler(async ({ input }) => {
       const query = await mediaQueryService.getById(input.id);
-      const entries = await mediaSourceFactory.sourcesFor(query.contentType);
+      const reads = await sourceReadCache.readAll(query.contentType);
 
       const matched = await Promise.all(
-        entries.map(({ source }) =>
+        reads.map(({ providerId, rows }) =>
           mediaQueryEngine.evaluate({
-            source,
+            source:
+              query.contentType === 'movie'
+                ? radarrRowsSource(rows as RadarrMovie[], providerId)
+                : sonarrRowsSource(rows as SonarrSeries[], providerId),
             contentType: query.contentType,
             clauses: [{ filters: query.filters, role: 'include' }],
           })
