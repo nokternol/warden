@@ -9,13 +9,10 @@ why it could not be read.
 
 ## Why one read
 
-Each feature used to read the library its own way, at its own moment. The Media page had a private
-60-second cache, query previews read live, automation previews and Run Now read live through the
-executor's planning, and runs read live per actuator kind. So a change to how the library is read had
-to be made in several places, and the same filters on the same data were not guaranteed to match the
-same titles. With one cache, the same filters on the same read match the same titles, whichever
-feature asks. An automation that acts later, on a library that has changed since, can still count
-differently from an earlier page or preview. That is expected and is never a fault.
+Every feature that reads the library reads it here, so a change to how the library is read is made in
+one place, and the same filters on the same read match the same titles, whichever feature asks. An
+automation that acts later, on a library that has changed since, can still count differently from an
+earlier page or preview. That is expected and is never a fault.
 
 ## What it holds and what it hands out
 

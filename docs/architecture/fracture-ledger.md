@@ -576,6 +576,9 @@ Earlier entries in this ledger use the names that were current when they healed 
   closed. A Radarr or Sonarr automation builds its own source from its provider's connection, through the
   same binder. The counts come from separate evaluations that share a key and a source builder, not
   from one match.
+- **Superseded in part (2026-11-15):** the read policy and source building described under "Different
+  on purpose" were replaced by one cached read of each instance; see "Library reads — one per feature"
+  below. The units and the scope difference still stand.
 
 ### Rule key and content type — two names kept (recorded 2026-11-01 — healed 2026-11-08, MVP slice B7)
 
@@ -615,8 +618,6 @@ Earlier entries in this ledger use the names that were current when they healed 
   stays a deferred provider type with no consumer. One normalized rating to sort by, computed from
   identity-keyed per-source values, is the later direction. It is not built.
 
-## Open
-
 ### Library reads — one per feature (recorded 2026-11-07 — healed 2026-11-15, MVP slice C10)
 
 - **Fracture:** each feature read the Radarr/Sonarr library in its own place, at its own moment, its
@@ -640,6 +641,8 @@ Earlier entries in this ledger use the names that were current when they healed 
   differently from an earlier page or preview. The identity resolution job still reads its own
   instances; that is the open "Source instance choice" entry below, and the follow-up issue for the
   recording side.
+
+## Open
 
 ### Title lookup — two mechanisms, one blocked (recorded 2026-11-01, MVP slice B4)
 
