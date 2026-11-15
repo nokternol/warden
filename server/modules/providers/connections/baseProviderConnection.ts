@@ -1,4 +1,4 @@
-import ky, { type KyInstance } from 'ky';
+import ky, { HTTPError, type KyInstance } from 'ky';
 import type { Logger } from 'winston';
 
 export interface ProviderConfig {
@@ -53,5 +53,18 @@ export abstract class BaseProviderConnection {
     this.log.debug(`Initialized ${this.constructor.name} for ${this.provider.name}`, {
       prefixUrl,
     });
+  }
+
+  /**
+   * Runs one delete, counting an answer of 404 as done: a run plans against the library copy, so
+   * the item may already be gone from the service, which is what the delete was for.
+   */
+  protected async deleteAlreadyGoneIsDone(remove: () => Promise<unknown>): Promise<void> {
+    try {
+      await remove();
+    } catch (err) {
+      if (err instanceof HTTPError && err.response.status === 404) return;
+      throw err;
+    }
   }
 }

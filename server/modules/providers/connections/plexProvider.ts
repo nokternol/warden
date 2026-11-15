@@ -116,7 +116,9 @@ export class PlexProvider extends BaseProviderConnection implements MediaActuato
   public async deleteFromLibrary(ratingKeys: string[]): Promise<void> {
     await Promise.all(
       ratingKeys.map((key) =>
-        this.client.delete(`library/metadata/${key}`, { headers: this.authHeader })
+        this.deleteAlreadyGoneIsDone(() =>
+          this.client.delete(`library/metadata/${key}`, { headers: this.authHeader })
+        )
       )
     );
   }

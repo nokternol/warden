@@ -271,3 +271,16 @@ describe('SonarrProvider — parameterized tasks', () => {
     }
   });
 });
+
+describe('SonarrProvider — deleting a series already gone', () => {
+  const provider = new SonarrProvider(mockConfig, logger);
+
+  it('counts a delete answered 404 as done, with or without files', async () => {
+    server.use(
+      http.delete(`${SONARR_BASE}/series/:id`, () => new HttpResponse(null, { status: 404 }))
+    );
+
+    await expect(provider.deleteSeries([4])).resolves.toBeUndefined();
+    await expect(provider.deleteSeriesKeepFiles([4])).resolves.toBeUndefined();
+  });
+});

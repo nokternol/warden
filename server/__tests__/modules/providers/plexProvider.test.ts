@@ -141,3 +141,18 @@ describe('PlexProvider — actuator tasks', () => {
     expect(calls).toEqual([{ key: '201', identifier: 'com.plexapp.plugins.library' }]);
   });
 });
+
+describe('PlexProvider — deleting an item already gone', () => {
+  const provider = new PlexProvider(mockConfig, logger);
+
+  it('counts a delete answered 404 as done', async () => {
+    server.use(
+      http.delete(
+        `${PLEX_URL}/library/metadata/:key`,
+        () => new HttpResponse(null, { status: 404 })
+      )
+    );
+
+    await expect(provider.deleteFromLibrary(['101'])).resolves.toBeUndefined();
+  });
+});

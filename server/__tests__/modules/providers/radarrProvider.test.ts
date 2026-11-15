@@ -261,3 +261,16 @@ describe('RadarrProvider — parameterized tasks', () => {
     }
   });
 });
+
+describe('RadarrProvider — deleting a movie already gone', () => {
+  const provider = new RadarrProvider(mockConfig, mockLogger);
+
+  it('counts a delete answered 404 as done, with or without files', async () => {
+    server.use(
+      http.delete(`${RADARR_BASE}/movie/:id`, () => new HttpResponse(null, { status: 404 }))
+    );
+
+    await expect(provider.deleteMovies([4])).resolves.toBeUndefined();
+    await expect(provider.deleteMoviesKeepFiles([4])).resolves.toBeUndefined();
+  });
+});

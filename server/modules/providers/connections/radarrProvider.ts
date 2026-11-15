@@ -257,11 +257,13 @@ export class RadarrProvider extends BaseProviderConnection implements MediaActua
   public async deleteMovies(movieIds: number[]): Promise<void> {
     await Promise.all(
       movieIds.map((id) =>
-        this.client
-          .delete(`movie/${id}`, {
-            searchParams: { ...this.apiParams, deleteFiles: 'true', addImportExclusion: 'false' },
-          })
-          .json()
+        this.deleteAlreadyGoneIsDone(() =>
+          this.client
+            .delete(`movie/${id}`, {
+              searchParams: { ...this.apiParams, deleteFiles: 'true', addImportExclusion: 'false' },
+            })
+            .json()
+        )
       )
     );
   }
@@ -269,11 +271,17 @@ export class RadarrProvider extends BaseProviderConnection implements MediaActua
   public async deleteMoviesKeepFiles(movieIds: number[]): Promise<void> {
     await Promise.all(
       movieIds.map((id) =>
-        this.client
-          .delete(`movie/${id}`, {
-            searchParams: { ...this.apiParams, deleteFiles: 'false', addImportExclusion: 'false' },
-          })
-          .json()
+        this.deleteAlreadyGoneIsDone(() =>
+          this.client
+            .delete(`movie/${id}`, {
+              searchParams: {
+                ...this.apiParams,
+                deleteFiles: 'false',
+                addImportExclusion: 'false',
+              },
+            })
+            .json()
+        )
       )
     );
   }

@@ -238,15 +238,17 @@ export class SonarrProvider extends BaseProviderConnection implements MediaActua
   public async deleteSeries(seriesIds: number[]): Promise<void> {
     await Promise.all(
       seriesIds.map((id) =>
-        this.client
-          .delete(`series/${id}`, {
-            searchParams: {
-              ...this.apiParams,
-              deleteFiles: 'true',
-              addImportListExclusion: 'false',
-            },
-          })
-          .json()
+        this.deleteAlreadyGoneIsDone(() =>
+          this.client
+            .delete(`series/${id}`, {
+              searchParams: {
+                ...this.apiParams,
+                deleteFiles: 'true',
+                addImportListExclusion: 'false',
+              },
+            })
+            .json()
+        )
       )
     );
   }
@@ -254,15 +256,17 @@ export class SonarrProvider extends BaseProviderConnection implements MediaActua
   public async deleteSeriesKeepFiles(seriesIds: number[]): Promise<void> {
     await Promise.all(
       seriesIds.map((id) =>
-        this.client
-          .delete(`series/${id}`, {
-            searchParams: {
-              ...this.apiParams,
-              deleteFiles: 'false',
-              addImportListExclusion: 'false',
-            },
-          })
-          .json()
+        this.deleteAlreadyGoneIsDone(() =>
+          this.client
+            .delete(`series/${id}`, {
+              searchParams: {
+                ...this.apiParams,
+                deleteFiles: 'false',
+                addImportListExclusion: 'false',
+              },
+            })
+            .json()
+        )
       )
     );
   }
