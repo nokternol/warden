@@ -12,9 +12,8 @@ import {
   automationAnswer,
   findingsFor,
   identifiesTitle,
-  radarrRowsSource,
   resolveActuatorTargets,
-  sonarrRowsSource,
+  rowsSourceFor,
   titleKeyOf,
 } from '../media';
 import type {
@@ -22,7 +21,6 @@ import type {
   MediaItem,
   MediaQueryClause,
   MediaSource,
-  SourceRead,
   SourceReadCache,
 } from '../media';
 import type { MediaQueryRecord, MediaQueryService } from '../mediaQueries';
@@ -31,8 +29,6 @@ import {
   type IProviderFactory,
   ProviderFactory,
   type ProviderSettingsService,
-  type RadarrMovie,
-  type SonarrSeries,
   isMediaActuator,
   isMediaSourceType,
   readEnabledTaskIds,
@@ -143,13 +139,6 @@ function counting(source: MediaSource): MediaSource & { count: () => number } {
     },
     count: () => count,
   };
-}
-
-/** One instance's read, bound as a source whose every read builds new items from the rows. */
-function rowsSource(contentType: ContentType, { providerId, rows }: SourceRead<ContentType>) {
-  return contentType === 'movie'
-    ? radarrRowsSource(rows as RadarrMovie[], providerId)
-    : sonarrRowsSource(rows as SonarrSeries[], providerId);
 }
 
 /** "RADARR" as "Radarr". */
@@ -514,7 +503,7 @@ export class AutomationExecutor {
       // Catalog-owning actuator: the query evaluates against its own catalog
       // and its native ids feed the task directly, one target per native id.
       const mediaSource = counting(
-        rowsSource(contentType, await this.sourceReadCache.readOne(providerSettings.id, read))
+        rowsSourceFor(contentType, await this.sourceReadCache.readOne(providerSettings.id, read))
       );
       const matched = await this.mediaQueryEngine.evaluate({
         source: mediaSource,
@@ -543,7 +532,7 @@ export class AutomationExecutor {
       );
     }
     const sources = (await this.sourceReadCache.readAll(contentType, read)).map((r) =>
-      rowsSource(contentType, r)
+      rowsSourceFor(contentType, r)
     );
     let fetched: ReturnType<MediaSource['getMediaItems']> | undefined;
     const pooled = counting({

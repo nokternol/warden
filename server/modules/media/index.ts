@@ -34,7 +34,7 @@ export { normalizeRadarrMovie, normalizeSonarrSeries } from './normalizeMedia';
 // The read role a media-owning provider plays for the query engine, and the
 // binders that turn an instance's Radarr or Sonarr rows into one.
 export type { MediaSource } from './mediaSource';
-export { radarrRowsSource, sonarrRowsSource } from './sourceAdapters';
+export { rowsSourceFor } from './sourceAdapters';
 
 // The one way to ask what Radarr and Sonarr hold: each active instance's latest read, as raw rows.
 export type { SourceRead, SourceReadCache } from './sourceReadCache';

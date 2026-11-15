@@ -2,11 +2,9 @@ import { api } from '@server/kernel/api';
 import {
   type MediaQueryEngine,
   type SourceReadCache,
-  radarrRowsSource,
-  sonarrRowsSource,
+  rowsSourceFor,
   titleKeyOf,
 } from '@server/modules/media';
-import type { RadarrMovie, SonarrSeries } from '@server/modules/providers';
 import type { MediaQueryService } from './mediaQueryService';
 
 interface Cradle {
@@ -39,12 +37,9 @@ export function createMediaQueryProcedures(cradle: Cradle) {
       const reads = await sourceReadCache.readAll(query.contentType);
 
       const matched = await Promise.all(
-        reads.map(({ providerId, rows }) =>
+        reads.map((read) =>
           mediaQueryEngine.evaluate({
-            source:
-              query.contentType === 'movie'
-                ? radarrRowsSource(rows as RadarrMovie[], providerId)
-                : sonarrRowsSource(rows as SonarrSeries[], providerId),
+            source: rowsSourceFor(query.contentType, read),
             contentType: query.contentType,
             clauses: [{ filters: query.filters, role: 'include' }],
           })

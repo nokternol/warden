@@ -1,4 +1,8 @@
-import { radarrRowsSource, sonarrRowsSource } from '@server/modules/media/sourceAdapters';
+import {
+  radarrRowsSource,
+  rowsSourceFor,
+  sonarrRowsSource,
+} from '@server/modules/media/sourceAdapters';
 import type { RadarrMovie } from '@server/modules/providers/connections/radarrProvider';
 import type { SonarrSeries } from '@server/modules/providers/connections/sonarrProvider';
 import { describe, expect, it } from 'vitest';
@@ -48,5 +52,18 @@ describe('the over-rows binders', () => {
       expect(second._sourceIds.providerId).toBe(5);
       expect(source.idOf(second)).toBe(1);
     }
+  });
+});
+
+describe('rowsSourceFor', () => {
+  it("binds one instance's read with its content type's binder, so items carry that instance and native id", async () => {
+    const movies = rowsSourceFor('movie', { providerId: 5, name: 'Radarr', rows: [movie] });
+    const shows = rowsSourceFor('series', { providerId: 6, name: 'Sonarr', rows: [series] });
+
+    const [m] = await movies.getMediaItems();
+    const [s] = await shows.getMediaItems();
+
+    expect([m?.title, m?._sourceIds.providerId, movies.idOf(m!)]).toEqual(['The Matrix', 5, 1]);
+    expect([s?.title, s?._sourceIds.providerId, shows.idOf(s!)]).toEqual(['Breaking Bad', 6, 1]);
   });
 });
