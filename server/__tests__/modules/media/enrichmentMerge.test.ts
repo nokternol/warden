@@ -9,6 +9,7 @@ import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.queries';
 import { mergeEnrichment } from '@server/modules/media/enrichmentMerge';
 import type { NormalizedMovie } from '@server/modules/media/movie';
+import { seedFacts } from '@tests/helpers/library';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const testConfig: AppConfig = {
@@ -56,7 +57,7 @@ describe('mergeEnrichment', () => {
     await db
       .insert(mediaItems)
       .values({ providerId: radarrId, externalId: 1, mediaIdentityId: identity.id });
-    await queries.replaceFields(identity.id, {
+    await seedFacts(db, identity.id, {
       playCount: 3,
       seerrRequestStatus: 2,
       seerrHasIssue: true,
@@ -115,7 +116,7 @@ describe('mergeEnrichment', () => {
       { providerId: radarrId, externalId: 1, mediaIdentityId: identity.id },
       { providerId: radarr4kId, externalId: 99, mediaIdentityId: identity.id },
     ]);
-    await queries.replaceFields(identity.id, { playCount: 4 });
+    await seedFacts(db, identity.id, { playCount: 4 });
 
     const items = [movie(radarrId, 1, 'SD copy'), movie(radarr4kId, 99, '4k copy')];
     await mergeEnrichment(db, queries, items);
@@ -134,8 +135,8 @@ describe('mergeEnrichment', () => {
       { providerId: radarrId, externalId: 1, mediaIdentityId: identityA.id },
       { providerId: radarr4kId, externalId: 1, mediaIdentityId: identityB.id },
     ]);
-    await queries.replaceFields(identityA.id, { playCount: 1 });
-    await queries.replaceFields(identityB.id, { playCount: 9 });
+    await seedFacts(db, identityA.id, { playCount: 1 });
+    await seedFacts(db, identityB.id, { playCount: 9 });
 
     const items = [movie(radarrId, 1, 'A'), movie(radarr4kId, 1, 'B')];
     await mergeEnrichment(db, queries, items);

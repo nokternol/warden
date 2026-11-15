@@ -9,6 +9,7 @@ import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.queries';
 import { resetMediaData } from '@server/modules/media/mediaReset';
+import { seedFacts } from '@tests/helpers/library';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const testConfig: AppConfig = {
@@ -43,7 +44,7 @@ describe('resetMediaData', () => {
     await db
       .insert(mediaItems)
       .values({ providerId: radarrId, externalId: 1, mediaIdentityId: identity.id });
-    await new EnrichmentQueries({ db }).replaceFields(identity.id, { playCount: 3 });
+    await seedFacts(db, identity.id, { playCount: 3 });
 
     const result = await resetMediaData(db);
 

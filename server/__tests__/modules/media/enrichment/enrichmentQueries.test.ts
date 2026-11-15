@@ -1,4 +1,9 @@
-import { enrichmentField, mediaIdentity } from '@server/database/schema';
+import {
+  MetadataProviderType,
+  enrichmentField,
+  mediaIdentity,
+  metadataProviders,
+} from '@server/database/schema';
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.queries';
@@ -20,92 +25,81 @@ const testConfig: AppConfig = {
 };
 
 describe('EnrichmentQueries', () => {
+  let tautulliId: number;
+  let plexId: number;
+
   beforeEach(async () => {
     await initializeDatabase(testConfig);
+    [{ id: tautulliId }, { id: plexId }] = await getDb()
+      .insert(metadataProviders)
+      .values([
+        { type: MetadataProviderType.TAUTULLI, name: 'Tautulli', url: 'http://t' },
+        { type: MetadataProviderType.PLEX, name: 'Plex', url: 'http://p' },
+      ])
+      .returning({ id: metadataProviders.id });
   });
 
   afterEach(async () => {
     await _resetDatabase();
   });
 
-  it('round-trips a written field value with its correct type', async () => {
-    const db = getDb();
-    const [identity] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
-    const queries = new EnrichmentQueries({ db });
+  async function title() {
+    const [row] = await getDb().insert(mediaIdentity).values({ contentType: 'movie' }).returning();
+    return row.id;
+  }
 
-    await queries.replaceFields(identity.id, { playCount: 3 });
-    const result = await queries.getByIdentityIds([identity.id]);
+  it('round-trips each fact with its type and the provider that reported it', async () => {
+    const id = await title();
+    const queries = new EnrichmentQueries({ db: getDb() });
 
-    expect(result.get(identity.id)).toEqual({ playCount: 3 });
+    await queries.replaceProviderFacts(
+      tautulliId,
+      new Map([[id, { playCount: 3, tmdbStatus: 'In "Production"' }]])
+    );
+
+    expect(await queries.allFacts()).toEqual([
+      { mediaIdentityId: id, providerId: tautulliId, field: 'playCount', value: 3 },
+      {
+        mediaIdentityId: id,
+        providerId: tautulliId,
+        field: 'tmdbStatus',
+        value: 'In "Production"',
+      },
+    ]);
   });
 
-  it('returns only the fields actually written for an identity, no null-padding for absent ones', async () => {
-    const db = getDb();
-    const [identity] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
-    const queries = new EnrichmentQueries({ db });
+  it("replaces only that provider's facts, dropping titles and fields it no longer reports", async () => {
+    const a = await title();
+    const b = await title();
+    const queries = new EnrichmentQueries({ db: getDb() });
+    await queries.replaceProviderFacts(
+      tautulliId,
+      new Map([
+        [a, { playCount: 1 }],
+        [b, { playCount: 2 }],
+      ])
+    );
+    await queries.replaceProviderFacts(plexId, new Map([[a, { playCount: 7 }]]));
 
-    await queries.replaceFields(identity.id, { playCount: 3, tmdbStatus: 'Released' });
-    const result = await queries.getByIdentityIds([identity.id]);
+    await queries.replaceProviderFacts(tautulliId, new Map([[b, { playCount: 4 }]]));
 
-    expect(Object.keys(result.get(identity.id)!).sort()).toEqual(['playCount', 'tmdbStatus']);
-  });
-
-  it('fully replaces prior fields — a field omitted from a later call is gone, not stale', async () => {
-    const db = getDb();
-    const [identity] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
-    const queries = new EnrichmentQueries({ db });
-
-    await queries.replaceFields(identity.id, { playCount: 3, tmdbStatus: 'Released' });
-    await queries.replaceFields(identity.id, { playCount: 5 });
-    const result = await queries.getByIdentityIds([identity.id]);
-
-    expect(result.get(identity.id)).toEqual({ playCount: 5 });
-  });
-
-  it('batches across multiple identity ids without cross-contaminating rows', async () => {
-    const db = getDb();
-    const [identityA] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
-    const [identityB] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
-    const queries = new EnrichmentQueries({ db });
-
-    await queries.replaceFields(identityA.id, { playCount: 1 });
-    await queries.replaceFields(identityB.id, { playCount: 9, tmdbStatus: 'Released' });
-    const result = await queries.getByIdentityIds([identityA.id, identityB.id]);
-
-    expect(result.get(identityA.id)).toEqual({ playCount: 1 });
-    expect(result.get(identityB.id)).toEqual({ playCount: 9, tmdbStatus: 'Released' });
-  });
-
-  it('returns no entry for an identity with zero enrichment rows', async () => {
-    const db = getDb();
-    const [identity] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
-    const queries = new EnrichmentQueries({ db });
-
-    const result = await queries.getByIdentityIds([identity.id]);
-
-    expect(result.has(identity.id)).toBe(false);
-  });
-
-  it('round-trips a string value containing an embedded quote without double-encoding it', async () => {
-    const db = getDb();
-    const [identity] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
-    const queries = new EnrichmentQueries({ db });
-
-    await queries.replaceFields(identity.id, { tmdbStatus: 'In "Production"' });
-    const result = await queries.getByIdentityIds([identity.id]);
-
-    expect(result.get(identity.id)).toEqual({ tmdbStatus: 'In "Production"' });
+    expect(await queries.allFacts()).toEqual(
+      expect.arrayContaining([
+        { mediaIdentityId: a, providerId: plexId, field: 'playCount', value: 7 },
+        { mediaIdentityId: b, providerId: tautulliId, field: 'playCount', value: 4 },
+      ])
+    );
+    expect(await queries.allFacts()).toHaveLength(2);
   });
 
   it('throws when a field key has no seeded enrichment_field row (migration/EnrichmentFields drift)', async () => {
-    const db = getDb();
-    const [identity] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
-    const queries = new EnrichmentQueries({ db });
+    const id = await title();
+    const queries = new EnrichmentQueries({ db: getDb() });
     // Simulates seed drift: a key EnrichmentFields declares but the migration never seeded.
-    await db.delete(enrichmentField).where(eq(enrichmentField.key, 'tmdbStatus'));
+    await getDb().delete(enrichmentField).where(eq(enrichmentField.key, 'tmdbStatus'));
 
-    await expect(queries.replaceFields(identity.id, { tmdbStatus: 'Released' })).rejects.toThrow(
-      /tmdbStatus/
-    );
+    await expect(
+      queries.replaceProviderFacts(tautulliId, new Map([[id, { tmdbStatus: 'Released' }]]))
+    ).rejects.toThrow(/tmdbStatus/);
   });
 });

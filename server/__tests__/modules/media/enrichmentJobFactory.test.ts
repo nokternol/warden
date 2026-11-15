@@ -71,8 +71,10 @@ describe('EnrichmentJobFactory', () => {
     const job = await makeFactory().create();
     await job.run();
 
-    const fields = await new EnrichmentQueries({ db }).getByIdentityIds([identity.id]);
-    expect(fields.get(identity.id)?.playCount).toBe(1);
+    const facts = await new EnrichmentQueries({ db }).allFacts();
+    expect(facts).toContainEqual(
+      expect.objectContaining({ mediaIdentityId: identity.id, field: 'playCount', value: 1 })
+    );
   });
 
   it('wires the active Jellyfin provider so the job persists isFavorite', async () => {
@@ -102,8 +104,10 @@ describe('EnrichmentJobFactory', () => {
     const job = await makeFactory().create();
     await job.run();
 
-    const fields = await new EnrichmentQueries({ db }).getByIdentityIds([identity.id]);
-    expect(fields.get(identity.id)?.isFavorite).toBe(true);
+    const facts = await new EnrichmentQueries({ db }).allFacts();
+    expect(facts).toContainEqual(
+      expect.objectContaining({ mediaIdentityId: identity.id, field: 'isFavorite', value: true })
+    );
   });
 
   it('returns a runnable job when no enrichment providers are active', async () => {

@@ -24,7 +24,7 @@ function makeCatalogRefreshJob(counts?: {
 }
 
 function makeEnrichmentJob(count = 0): EnrichmentJobLike {
-  return { run: vi.fn(async () => count) };
+  return { run: vi.fn(async () => count), failedProviders: vi.fn(() => []) };
 }
 
 function factoryReturning<T>(job: T): { create: ReturnType<typeof vi.fn> } {

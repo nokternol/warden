@@ -55,9 +55,12 @@ export async function mergeEnrichment<T extends NormalizedMovie | NormalizedSeri
   const groupIdByItemKey = new Map(
     mediaItemRows.map((row) => [`${row.providerId}:${row.externalId}`, row.mediaIdentityId])
   );
-  const fieldsByGroupId = await enrichmentQueries.getByIdentityIds(
-    mediaItemRows.map((row) => row.mediaIdentityId)
-  );
+  const fieldsByGroupId = new Map<number, Partial<Record<string, unknown>>>();
+  for (const fact of await enrichmentQueries.allFacts()) {
+    const fields = fieldsByGroupId.get(fact.mediaIdentityId) ?? {};
+    fields[fact.field] = fact.value;
+    fieldsByGroupId.set(fact.mediaIdentityId, fields);
+  }
 
   for (const item of items) {
     const key = itemKey(item);

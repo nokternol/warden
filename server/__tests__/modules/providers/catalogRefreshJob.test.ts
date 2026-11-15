@@ -893,26 +893,6 @@ describe('CatalogRefreshJob', () => {
       expect(series[0].plexRatingKey).toBe('45669');
     });
 
-    it('queues a newly linked title for enrichment, so its Plex data arrives on the next run', async () => {
-      serveCapturedPlex();
-      const db = getDb();
-      await db
-        .insert(mediaIdentity)
-        .values({ contentType: 'movie', tmdbId: 584, enrichedAt: 1_700_000_000 });
-      const plexProvider = new PlexProvider(
-        { name: 'Plex', url: PLEX_URL, apiKey: 'token', settings: {} },
-        getChildLogger('test')
-      );
-
-      await new CatalogRefreshJob({
-        db,
-        plexSource: { providerId: plexProviderId, name: 'Plex', provider: plexProvider },
-      }).runForPlex();
-
-      const [movie] = await db.select().from(mediaIdentity);
-      expect(movie.enrichedAt).toBeNull();
-    });
-
     it('leaves a title already linked to the same Plex item untouched', async () => {
       serveCapturedPlex();
       const db = getDb();
@@ -920,7 +900,6 @@ describe('CatalogRefreshJob', () => {
         contentType: 'movie',
         tmdbId: 584,
         plexRatingKey: '408',
-        enrichedAt: 1_700_000_000,
       });
       const plexProvider = new PlexProvider(
         { name: 'Plex', url: PLEX_URL, apiKey: 'token', settings: {} },
@@ -933,7 +912,7 @@ describe('CatalogRefreshJob', () => {
       }).runForPlex();
 
       const [movie] = await db.select().from(mediaIdentity);
-      expect(movie.enrichedAt).toBe(1_700_000_000);
+      expect(movie.plexRatingKey).toBe('408');
       expect(changed).toBe(0);
     });
   });

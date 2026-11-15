@@ -37,6 +37,7 @@ import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryServic
 import { PlexProvider, ProviderSettingsService } from '@server/modules/providers';
 import { CatalogRefreshJob } from '@server/modules/providers/catalogRefreshJob';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
+import { seedFacts } from '@tests/helpers/library';
 import { sourceReadCacheHolding, sourceReadCacheOver } from '@tests/helpers/sourceReadCache';
 import { desc, eq } from 'drizzle-orm';
 import { http, HttpResponse } from 'msw';
@@ -59,7 +60,6 @@ const testConfig: AppConfig = {
 };
 
 const RADARR_URL = 'http://localhost:7878';
-const NOW = Math.floor(Date.now() / 1000);
 
 describe('filter readiness, as automations see it', () => {
   let automationService: AutomationService;
@@ -311,7 +311,7 @@ describe('filter readiness, as automations see it', () => {
         .insert(mediaIdentity)
         .values({ contentType: 'movie' })
         .returning();
-      await new EnrichmentQueries({ db }).replaceFields(identity.id, { playCount: 1 });
+      await seedFacts(db, identity.id, { playCount: 1 });
       const include = await mediaQueryService.create({
         name: 'All',
         contentType: 'movie',
@@ -509,93 +509,6 @@ describe('a non-source actuator whose query names a source instance', () => {
       `Tags filter names Sonarr instance ${sonarr.id}, which is not a Radarr provider`
     );
     expect(deleteFromLibrary).not.toHaveBeenCalled();
-  });
-});
-
-describe('what "the latest enrichment run succeeded" does and does not say', () => {
-  let queries: EnrichmentQueries;
-
-  beforeEach(async () => {
-    await initializeDatabase(testConfig);
-    queries = new EnrichmentQueries({ db: getDb() });
-  });
-
-  afterEach(async () => {
-    await _resetDatabase();
-  });
-
-  function enricher(provider: MetadataProviderType, fields: Partial<MediaItem>): MediaEnricher {
-    return {
-      enrich: vi.fn(async (items: MediaItem[]) => ({
-        provider,
-        items: items.map((item) => ({ ...item, ...fields }) as MediaItem),
-      })),
-    };
-  }
-
-  it('fails the whole run when one enricher fails, writing nothing from the enrichers that answered', async () => {
-    const db = getDb();
-    const [identity] = await db
-      .insert(mediaIdentity)
-      .values({ contentType: 'movie', tmdbId: 1, enrichedAt: NOW - 2 * 86400 })
-      .returning();
-    const plex = enricher(MetadataProviderType.PLEX, { playCount: 3 });
-    const seerr: MediaEnricher = {
-      enrich: vi.fn(async () => {
-        throw new Error('Seerr unreachable');
-      }),
-    };
-
-    await expect(
-      new EnrichmentJob({ db, enrichmentQueries: queries, enrichers: [plex, seerr] }).run()
-    ).rejects.toThrow('Seerr unreachable');
-
-    expect(await queries.getByIdentityIds([identity.id])).toEqual(new Map());
-    const [after] = await db.select().from(mediaIdentity).where(eq(mediaIdentity.id, identity.id));
-    expect(after.enrichedAt).toBe(NOW - 2 * 86400);
-  });
-
-  it("drops a title's stored fields that a write does not repeat", async () => {
-    // So an enrichment run that carried on past a failed enricher would erase that
-    // enricher's earlier values rather than keep them.
-    const db = getDb();
-    const [identity] = await db
-      .insert(mediaIdentity)
-      .values({ contentType: 'movie', tmdbId: 1 })
-      .returning();
-    await queries.replaceFields(identity.id, { playCount: 3, seerrRequestStatus: 2 });
-
-    await queries.replaceFields(identity.id, { playCount: 4 });
-
-    expect((await queries.getByIdentityIds([identity.id])).get(identity.id)).toEqual({
-      playCount: 4,
-    });
-  });
-
-  it('does not re-read titles enriched within a day when a provider is connected after that run', async () => {
-    const db = getDb();
-    const bus = new DomainEventBus();
-    const providerSettingsService = new ProviderSettingsService({ db, eventBus: bus });
-    const enrichedAt = NOW - 3600;
-    await db.insert(mediaIdentity).values({ contentType: 'movie', tmdbId: 1, enrichedAt });
-
-    await providerSettingsService.create({
-      type: MetadataProviderType.TAUTULLI,
-      name: 'Tautulli',
-      url: 'http://localhost:8181',
-      apiKey: 'k',
-    });
-    const tautulli = enricher(MetadataProviderType.TAUTULLI, { playCount: 5 });
-    const enriched = await new EnrichmentJob({
-      db,
-      enrichmentQueries: queries,
-      enrichers: [tautulli],
-    }).run();
-
-    expect(enriched).toBe(0);
-    expect(tautulli.enrich).not.toHaveBeenCalled();
-    const [after] = await db.select().from(mediaIdentity);
-    expect(after.enrichedAt).toBe(enrichedAt);
   });
 });
 

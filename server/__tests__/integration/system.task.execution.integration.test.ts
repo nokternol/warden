@@ -44,12 +44,7 @@ describe('system task execution via container — system:enrichment', () => {
     await closeDatabase();
   });
 
-  it('executes the seeded system:enrichment automation and marks the identity enriched', async () => {
-    const [identity] = await db
-      .insert(mediaIdentity)
-      .values({ contentType: 'movie', tmdbId: 603, resolvedAt: 0 })
-      .returning();
-
+  it('executes the seeded system:enrichment automation as a successful run', async () => {
     const [enrichmentAutomation] = await db
       .select({ id: automations.id })
       .from(automations)
@@ -57,11 +52,11 @@ describe('system task execution via container — system:enrichment', () => {
 
     await container.cradle.automationExecutor.execute(enrichmentAutomation.id);
 
-    const [updated] = await db
-      .select()
-      .from(mediaIdentity)
-      .where(eq(mediaIdentity.id, identity.id));
-    expect(updated.enrichedAt).not.toBeNull();
+    const [run] = await container.cradle.automationRunService.listRuns({
+      automationId: enrichmentAutomation.id,
+      limit: 1,
+    });
+    expect(run.status).toBe('success');
   });
 
   it('resolves an active Seerr provider so enrichment writes a non-null seerrRequestStatus', async () => {
@@ -99,7 +94,13 @@ describe('system task execution via container — system:enrichment', () => {
 
     await container.cradle.automationExecutor.execute(enrichmentAutomation.id);
 
-    const fields = await new EnrichmentQueries({ db }).getByIdentityIds([identity.id]);
-    expect(fields.get(identity.id)?.seerrRequestStatus).toBe(2);
+    const facts = await new EnrichmentQueries({ db }).allFacts();
+    expect(facts).toContainEqual(
+      expect.objectContaining({
+        mediaIdentityId: identity.id,
+        field: 'seerrRequestStatus',
+        value: 2,
+      })
+    );
   });
 });

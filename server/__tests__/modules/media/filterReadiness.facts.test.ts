@@ -9,6 +9,7 @@ import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.queries';
 import { FilterReadiness } from '@server/modules/media/filterReadiness';
 import { ProviderSettingsService } from '@server/modules/providers';
+import { seedFacts } from '@tests/helpers/library';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const testConfig: AppConfig = {
@@ -44,7 +45,7 @@ describe('FilterReadiness.readFacts', () => {
       ])
       .returning();
     const [movie] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
-    await new EnrichmentQueries({ db }).replaceFields(movie.id, { playCount: 2, labels: ['x'] });
+    await seedFacts(db, movie.id, { playCount: 2, labels: ['x'] });
 
     const facts = await new FilterReadiness({
       providerSettingsService: new ProviderSettingsService({ db }),

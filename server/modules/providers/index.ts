@@ -57,7 +57,12 @@ export type { TmdbService } from './tmdbService';
 // the write that records a copy the job has not seen yet.
 export type { CatalogRefreshJobFactory } from './catalogRefreshJobFactory';
 // The library copy's refresh records: when each kind of each provider's data was last refreshed.
-export { readRefreshRecords } from './providerRefresh';
+export {
+  failureMessage,
+  readRefreshRecords,
+  recordRefreshFailed,
+  recordRefreshed,
+} from './providerRefresh';
 export type { RefreshKind, RefreshRecord } from './providerRefresh';
 // Each provider's stored setup lists, part of the library copy.
 export { readProviderLists } from './providerLists';

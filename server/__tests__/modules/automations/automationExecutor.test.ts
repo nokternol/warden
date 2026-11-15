@@ -33,6 +33,7 @@ import {
 } from '@server/modules/providers';
 import type { ProviderConfig } from '@server/modules/providers/connections/baseProviderConnection';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
+import { seedFacts } from '@tests/helpers/library';
 import { sourceReadCacheHolding, sourceReadCacheOver } from '@tests/helpers/sourceReadCache';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -1025,7 +1026,7 @@ describe('AutomationExecutor', () => {
       await db
         .insert(mediaItems)
         .values({ providerId: provider.id, externalId: 1, mediaIdentityId: identity.id });
-      await new EnrichmentQueries({ db }).replaceFields(identity.id, { playCount: 3 });
+      await seedFacts(db, identity.id, { playCount: 3 });
 
       const unmonitored: number[] = [];
       const mockRadarr = radarrSource(movies, {
@@ -1069,7 +1070,7 @@ describe('AutomationExecutor', () => {
         .insert(mediaIdentity)
         .values({ contentType: valuesHeldBy })
         .returning();
-      await new EnrichmentQueries({ db }).replaceFields(identity.id, { playCount: 3 });
+      await seedFacts(db, identity.id, { playCount: 3 });
       const query = await mediaQueryService.create({
         name: 'Unwatched',
         contentType: 'movie',
@@ -1144,7 +1145,7 @@ describe('AutomationExecutor', () => {
       await db
         .insert(mediaItems)
         .values({ providerId: provider.id, externalId: 10, mediaIdentityId: id10.id });
-      await new EnrichmentQueries({ db }).replaceFields(id10.id, {
+      await seedFacts(db, id10.id, {
         lastWatchedAt: new Date(tenDaysAgoUnix * 1000).toISOString(),
       });
 
@@ -1153,7 +1154,7 @@ describe('AutomationExecutor', () => {
       await db
         .insert(mediaItems)
         .values({ providerId: provider.id, externalId: 11, mediaIdentityId: id11.id });
-      await new EnrichmentQueries({ db }).replaceFields(id11.id, {
+      await seedFacts(db, id11.id, {
         lastWatchedAt: new Date(twoDaysAgoUnix * 1000).toISOString(),
       });
 
@@ -1216,7 +1217,7 @@ describe('AutomationExecutor', () => {
       await db
         .insert(mediaItems)
         .values({ providerId: provider.id, externalId: 1, mediaIdentityId: identity.id });
-      await new EnrichmentQueries({ db }).replaceFields(identity.id, { playCount: 5 });
+      await seedFacts(db, identity.id, { playCount: 5 });
 
       const unmonitored: number[] = [];
       const mockSonarr = sonarrSource(seriesList, {

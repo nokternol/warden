@@ -10,6 +10,8 @@ export interface CatalogRefreshJobLike {
 
 export interface EnrichmentJobLike {
   run(): Promise<number>;
+  /** The enrichers the run could not read, by name. */
+  failedProviders(): string[];
 }
 
 export interface CatalogRefreshJobFactoryLike {
@@ -48,7 +50,10 @@ export class SystemTaskRunner {
     }
     if (taskId === 'system:enrichment') {
       const job = await this.enrichmentJobFactory.create();
-      return await job.run();
+      const count = await job.run();
+      const failed = job.failedProviders();
+      if (failed.length > 0) throw new Error(`Could not refresh ${failed.join(', ')}`);
+      return count;
     }
     throw new Error(`Task "${taskId}" is not yet implemented`);
   }

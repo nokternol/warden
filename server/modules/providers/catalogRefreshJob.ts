@@ -145,9 +145,8 @@ export class CatalogRefreshJob {
    * Stamp an actuator-addressing id (`plexRatingKey` / `jellyfinItemId`) onto identities
    * matching `column = id`, scoped by `contentType` when known (an unscoped match could otherwise
    * cross the movie/tv id namespaces — a TMDB movie id and a TMDB tv id with the same
-   * number are different titles). Only rows whose id is new or different are written, and those
-   * have `enrichedAt` cleared so the next enrichment run reads the newly linked server's data
-   * rather than waiting out the staleness window. Returns rows actually changed.
+   * number are different titles). Only rows whose id is new or different are written. Returns rows
+   * actually changed.
    */
   private async stampIdentity(
     set: { plexRatingKey: string } | { jellyfinItemId: string },
@@ -161,7 +160,7 @@ export class CatalogRefreshJob {
         : [mediaIdentity.jellyfinItemId, set.jellyfinItemId];
     const result = await this.deps.db
       .update(mediaIdentity)
-      .set({ ...set, enrichedAt: null })
+      .set(set)
       .where(
         and(
           eq(column, id),

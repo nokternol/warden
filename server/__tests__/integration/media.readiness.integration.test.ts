@@ -21,6 +21,7 @@ import { createMediaProcedures } from '@server/modules/media';
 import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.queries';
 import { createMockConfig, createRadarrMovie } from '@tests/factories';
 import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
+import { seedFacts } from '@tests/helpers/library';
 import { server } from '@tests/mocks/server';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import { http, HttpResponse } from 'msw';
@@ -115,7 +116,7 @@ describe('Media browse — filter readiness', () => {
       .insert(mediaIdentity)
       .values({ contentType: 'movie', tmdbId: 1 })
       .returning();
-    await new EnrichmentQueries({ db: getDb() }).replaceFields(identity.id, { playCount: 1 });
+    await seedFacts(getDb(), identity.id, { playCount: 1 });
 
     const res = await client.get(browsePath('movie', [{ ruleKey: 'watched', value: true }]));
 

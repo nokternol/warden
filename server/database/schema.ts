@@ -285,9 +285,6 @@ export const mediaIdentity = sqliteTable(
     title: text('title'),
     year: integer('year'),
     resolvedAt: integer('resolvedAt'),
-    /** Last time EnrichmentJob resolved this identity's fields — one per identity,
-     *  not per field (mirrors mediaItems.resolvedAt's precedent). */
-    enrichedAt: integer('enrichedAt'),
   },
   (table) => [
     uniqueIndex('ux_media_identity_movie_tmdb')
@@ -372,10 +369,11 @@ export type EnrichmentField = typeof enrichmentField.$inferSelect;
 export type NewEnrichmentField = typeof enrichmentField.$inferInsert;
 
 // ---------------------------------------------------------------------------
-// mediaEnrichment — one row per (identity, field) fact present. A field's
-// existence is a data fact (a row), not a schema fact (a column) — sparse by
-// construction for an attribute set whose membership varies by configured
-// provider.
+// mediaEnrichment — one row per (identity, field, provider) fact present, as
+// that provider reported it. A field's existence is a data fact (a row), not a
+// schema fact (a column) — sparse by construction for an attribute set whose
+// membership varies by configured provider. Where several providers report a
+// field, precedence picks one value when the library cache loads.
 // ---------------------------------------------------------------------------
 export const mediaEnrichment = sqliteTable(
   'media_enrichment',
@@ -387,11 +385,20 @@ export const mediaEnrichment = sqliteTable(
     fieldId: integer('fieldId')
       .notNull()
       .references(() => enrichmentField.id, { onDelete: 'cascade' }),
+    /** The provider that reported the fact. */
+    providerId: integer('providerId')
+      .notNull()
+      .references(() => metadataProviders.id, { onDelete: 'cascade' }),
     /** JSON-encoded: number | string | boolean. */
     value: text('value').notNull(),
   },
   (table) => [
-    uniqueIndex('ux_media_enrichment_identity_field').on(table.mediaIdentityId, table.fieldId),
+    uniqueIndex('ux_media_enrichment_identity_field_provider').on(
+      table.mediaIdentityId,
+      table.fieldId,
+      table.providerId
+    ),
+    index('idx_media_enrichment_provider').on(table.providerId),
   ]
 );
 

@@ -15,7 +15,7 @@ import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.q
 import { readRefreshRecords } from '@server/modules/providers';
 import { createMockConfig, createRadarrMovie } from '@tests/factories';
 import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
-import { refreshCatalog } from '@tests/helpers/library';
+import { refreshCatalog, seedFacts } from '@tests/helpers/library';
 import { server } from '@tests/mocks/server';
 import express from 'express';
 import { http, HttpResponse, passthrough } from 'msw';
@@ -160,7 +160,7 @@ describe('the library copy', () => {
     );
     await refreshCatalog(ctx.cradle);
     const [copy] = await ctx.db.select().from(mediaItems);
-    await new EnrichmentQueries({ db: ctx.db }).replaceFields(copy.mediaIdentityId, {
+    await seedFacts(ctx.db, copy.mediaIdentityId, {
       studio: 'Warner Bros.',
       videoCodec: 'hevc',
       labels: ['4K', 'Favourite'],

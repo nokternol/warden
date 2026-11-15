@@ -28,7 +28,7 @@ import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.q
 import type { EnrichmentFields } from '@server/modules/media/mediaFieldProvider';
 import { createMockConfig } from '@tests/factories';
 import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
-import { refreshCatalog } from '@tests/helpers/library';
+import { refreshCatalog, seedFacts } from '@tests/helpers/library';
 import { server } from '@tests/mocks/server';
 import { and, eq } from 'drizzle-orm';
 import express, { type Express } from 'express';
@@ -143,7 +143,7 @@ describe('Media browse — series registry predicates', () => {
       .from(mediaItems)
       .where(and(eq(mediaItems.providerId, sonarr.id), eq(mediaItems.externalId, sourceId)));
     const identity = { id: copy.mediaIdentityId };
-    await new EnrichmentQueries({ db }).replaceFields(identity.id, fields);
+    await seedFacts(db, identity.id, fields);
     cradle.eventBus.emit('media:changed', {});
   }
 
