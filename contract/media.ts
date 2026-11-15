@@ -92,6 +92,21 @@ export const ManagedSeriesSchema = z.looseObject({
 /** A source instance whose library could not be fetched for this page. */
 const MediaErrorSchema = z.object({ provider: z.string(), error: z.string() });
 
+/**
+ * When Warden last refreshed one kind of one provider's data, and whether the latest attempt
+ * failed; times are unix seconds. A record with neither time is a provider never refreshed yet.
+ */
+export const RefreshRecordSchema = z.object({
+  providerId: z.number(),
+  provider: z.string(),
+  kind: z.enum(['catalog', 'links', 'lists', 'facts']),
+  refreshedAt: z.number().nullable(),
+  failedAt: z.number().nullable(),
+  error: z.string().nullable(),
+});
+
+export type RefreshRecord = z.infer<typeof RefreshRecordSchema>;
+
 const browsePage = <T extends z.ZodType>(item: T) =>
   z.object({
     items: z.array(item),
@@ -100,6 +115,8 @@ const browsePage = <T extends z.ZodType>(item: T) =>
     pageSize: z.number(),
     yearRange: z.object({ min: z.number().nullable(), max: z.number().nullable() }),
     errors: z.array(MediaErrorSchema),
+    /** The refresh records of the copy the page answers from: how current it is, and what failed. */
+    records: z.array(RefreshRecordSchema),
     /** Every reason the page's filters cannot be trusted, from filter readiness. */
     findings: z.array(ReadinessFindingSchema),
     /** What the Media page does with them. */

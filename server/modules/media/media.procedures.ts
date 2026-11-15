@@ -24,7 +24,7 @@ import {
   isMediaSourceType,
 } from '@server/modules/providers';
 import { type FilterReadiness, filterAnswer, findingsFor } from './filterReadiness';
-import type { LibraryCache, LibraryCopy } from './libraryCache';
+import { type LibraryCache, type LibraryCopy, recordsFor } from './libraryCache';
 import { paginateItems } from './media.pagination';
 import { sortMedia } from './media.sort';
 import { resolutionTier } from './mediaFieldProvider';
@@ -275,7 +275,8 @@ export function createMediaProcedures(cradle: MediaCradle) {
     filters: Filter[],
     view: BrowseView
   ) {
-    const copies = (await cradle.libraryCache.read()).copies[contentType] as LibraryCopy<C>[];
+    const library = await cradle.libraryCache.read();
+    const copies = library.copies[contentType] as LibraryCopy<C>[];
     const yearRange = computeYearRange(copies.map((c) => c.record));
     const matched = await mediaQueryEngine.evaluate({
       source: copiesSource(copies),
@@ -302,6 +303,7 @@ export function createMediaProcedures(cradle: MediaCradle) {
       ...paginateItems(groupByTitle(sorted), { page: view.page, pageSize: view.pageSize }),
       yearRange,
       errors: [] as MediaError[],
+      records: recordsFor(library, contentType),
       ...(await readiness(filters, contentType)),
     };
   }

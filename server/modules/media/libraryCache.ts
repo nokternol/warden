@@ -1,3 +1,4 @@
+import type { RefreshRecord } from '@contract/media';
 import type { ContentType } from '@contract/schemas';
 import {
   enrichmentField,
@@ -7,9 +8,17 @@ import {
   mediaItems,
   metadataProviders,
 } from '@server/database/schema';
+import { MetadataProviderType } from '@server/database/schema';
 import type { DrizzleDb } from '@server/kernel/db';
 import type { DomainEventBus } from '@server/kernel/eventBus';
-import type { RadarrMovie, SonarrSeries } from '@server/modules/providers';
+import {
+  type RadarrMovie,
+  type RefreshKind,
+  SOURCE_OWNER,
+  type SonarrSeries,
+  type RefreshRecord as StoredRefreshRecord,
+  readRefreshRecords,
+} from '@server/modules/providers';
 import { and, eq } from 'drizzle-orm';
 import type { EnrichmentFields } from './mediaFieldProvider';
 import type { MediaItem } from './mediaItem';
@@ -34,6 +43,47 @@ export interface LibraryCopy<C extends ContentType = ContentType> {
 /** The in-memory copy of the library, as one load read it from the database. */
 export interface Library {
   copies: { [C in ContentType]: LibraryCopy<C>[] };
+  /** Every active provider. */
+  providers: Array<{ id: number; name: string; type: MetadataProviderType }>;
+  /** Every stored refresh record. */
+  records: StoredRefreshRecord[];
+}
+
+/** The kinds of data each active provider type refreshes into the copy. */
+const REFRESHED_KINDS: Partial<Record<MetadataProviderType, RefreshKind[]>> = {
+  [MetadataProviderType.RADARR]: ['catalog', 'lists'],
+  [MetadataProviderType.SONARR]: ['catalog', 'lists'],
+  [MetadataProviderType.PLEX]: ['links', 'facts'],
+  [MetadataProviderType.JELLYFIN]: ['links', 'facts'],
+  [MetadataProviderType.TAUTULLI]: ['facts'],
+  [MetadataProviderType.SEERR]: ['facts'],
+  [MetadataProviderType.TMDB]: ['facts'],
+};
+
+/**
+ * The refresh records a view of `contentType` answers from: the catalog and lists of each active
+ * instance owning it, and the links and facts of every active media server and enricher. A kind
+ * never refreshed has a record with neither time, so it reads as not refreshed yet.
+ */
+export function recordsFor(library: Library, contentType: ContentType): RefreshRecord[] {
+  const owner = SOURCE_OWNER[contentType];
+  return library.providers.flatMap((provider) => {
+    const isSource =
+      provider.type === MetadataProviderType.RADARR ||
+      provider.type === MetadataProviderType.SONARR;
+    if (isSource && provider.type !== owner) return [];
+    return (REFRESHED_KINDS[provider.type] ?? []).map((kind) => {
+      const stored = library.records.find((r) => r.providerId === provider.id && r.kind === kind);
+      return {
+        providerId: provider.id,
+        provider: provider.name,
+        kind,
+        refreshedAt: stored?.refreshedAt ?? null,
+        failedAt: stored?.failedAt ?? null,
+        error: stored?.error ?? null,
+      };
+    });
+  });
 }
 
 /**
@@ -71,7 +121,7 @@ export class LibraryCache {
 
   private async load(): Promise<Library> {
     const { db } = this.deps;
-    const [rows, factRows] = await Promise.all([
+    const [rows, factRows, providers, records] = await Promise.all([
       db
         .select({
           mediaItemId: mediaItems.id,
@@ -96,6 +146,16 @@ export class LibraryCache {
         })
         .from(mediaEnrichment)
         .innerJoin(enrichmentField, eq(enrichmentField.id, mediaEnrichment.fieldId)),
+      db
+        .select({
+          id: metadataProviders.id,
+          name: metadataProviders.name,
+          type: metadataProviders.type,
+        })
+        .from(metadataProviders)
+        .where(eq(metadataProviders.isActive, true))
+        .orderBy(metadataProviders.id),
+      readRefreshRecords(db),
     ]);
 
     const factsByTitle = new Map<number, Partial<EnrichmentFields>>();
@@ -105,7 +165,11 @@ export class LibraryCache {
       factsByTitle.set(mediaIdentityId, facts);
     }
 
-    const library: Library = { copies: { movie: [], series: [] } };
+    const library: Library = {
+      copies: { movie: [], series: [] },
+      providers: providers.map((p) => ({ ...p, type: p.type as MetadataProviderType })),
+      records,
+    };
     for (const row of rows) {
       const record = JSON.parse(row.data);
       const item =

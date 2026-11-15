@@ -37,6 +37,7 @@ const EMPTY_PAGE = {
   pageSize: 48,
   yearRange: { min: null, max: null },
   errors: [],
+  records: [],
   findings: [],
   mediaPage: 'clear' as const,
 };
@@ -64,6 +65,7 @@ describe('MediaPage browse encoding', () => {
           contentType: 'movie' as const,
           filters: body.filters,
           health: {
+            records: [],
             findings: [],
             queryList: 'clear' as const,
           },

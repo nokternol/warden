@@ -15,6 +15,7 @@ const EMPTY_PAGE = {
   pageSize: 48,
   yearRange: { min: null, max: null },
   errors: [],
+  records: [],
   findings: [],
   mediaPage: 'clear' as const,
 };
@@ -121,6 +122,7 @@ describe('usePaginatedMedia', () => {
           ],
           totalCount: 2,
           errors: page === 1 ? [] : [{ provider: 'Radarr Main', error: 'Timed out' }],
+          records: [],
           findings: [],
           mediaPage: 'clear' as const,
         };

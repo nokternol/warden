@@ -117,7 +117,30 @@ describe('the library copy', () => {
     expect(catalogOf(radarrB.id)?.error).toMatch(/500/);
     const page = expectSuccessResponse(await ctx.client.get(browsePath('movie', []))) as {
       items: { title: string }[];
+      records: Array<{ provider: string; kind: string; error: string | null }>;
     };
     expect(page.items.map((i) => i.title).sort()).toEqual(['Heat', 'Ronin']);
+    expect(page.records).toContainEqual(
+      expect.objectContaining({
+        provider: 'Radarr B',
+        kind: 'catalog',
+        error: expect.stringMatching(/500/),
+      })
+    );
+  });
+
+  it('says a provider the catalog refresh has never read is not refreshed yet', async () => {
+    const page = expectSuccessResponse(await ctx.client.get(browsePath('movie', []))) as {
+      records: unknown[];
+    };
+
+    expect(page.records).toContainEqual({
+      providerId: ctx.radarrId,
+      provider: 'Radarr',
+      kind: 'catalog',
+      refreshedAt: null,
+      failedAt: null,
+      error: null,
+    });
   });
 });

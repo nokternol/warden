@@ -24,6 +24,7 @@ const EMPTY_PAGE = {
   pageSize: 48,
   yearRange: { min: null, max: null },
   errors: [],
+  records: [],
   findings: [],
   mediaPage: 'clear' as const,
 };
@@ -181,6 +182,7 @@ describe('MediaPage filter readiness', () => {
       mockProcedure(contract.media.browse.movie, () => ({
         ...EMPTY_PAGE,
         errors: [{ provider: 'Radarr Main', error: "Couldn't be reached: timed out" }],
+        records: [],
         findings: [
           {
             id: 'no-data::watched:2',

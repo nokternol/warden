@@ -29,6 +29,7 @@ function pageOf<T>(items: T[]) {
     pageSize: 48,
     yearRange: { min: 1999, max: 1999 },
     errors: [],
+    records: [],
     findings: [],
     mediaPage: 'clear' as const,
   };
