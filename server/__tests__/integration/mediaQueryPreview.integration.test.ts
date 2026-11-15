@@ -1,10 +1,17 @@
 import { buildContainer } from '@server/container';
-import { MetadataProviderType } from '@server/database/schema';
+import {
+  MetadataProviderType,
+  mediaIdentity,
+  mediaItems,
+  metadataProviders,
+} from '@server/database/schema';
 import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
-import { closeDatabase, initializeDatabase } from '@server/kernel/db';
+import { closeDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
+import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.queries';
+import { resetMediaData } from '@server/modules/media/mediaReset';
 import { createMediaQueryProcedures } from '@server/modules/mediaQueries';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { createMockConfig } from '@tests/factories';
@@ -12,6 +19,7 @@ import { createRadarrMovie } from '@tests/factories';
 import { createApiClient, expectErrorResponse, expectSuccessResponse } from '@tests/helpers/api';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { server } from '@tests/mocks/server';
+import { eq } from 'drizzle-orm';
 import express, { type Express } from 'express';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
@@ -143,5 +151,45 @@ describe('GET /api/media-queries/:id/preview', () => {
     const readsByFirstPreview = reads;
     await preview();
     expect(reads).toBe(readsByFirstPreview);
+  });
+
+  it('enrichment merged into one preview never appears in the next, even after a reset, with no re-read', async () => {
+    let reads = 0;
+    server.use(
+      http.get(`${RADARR_URL}/api/v3/movie`, () => {
+        reads++;
+        return HttpResponse.json([createRadarrMovie({ id: 1, title: 'Requested' })]);
+      })
+    );
+    const db = getDb();
+    const [radarr] = await db
+      .select({ id: metadataProviders.id })
+      .from(metadataProviders)
+      .where(eq(metadataProviders.type, MetadataProviderType.RADARR));
+    const [identity] = await db
+      .insert(mediaIdentity)
+      .values({ contentType: 'movie', enrichedAt: Math.floor(Date.now() / 1000) })
+      .returning();
+    await db
+      .insert(mediaItems)
+      .values({ providerId: radarr.id, externalId: 1, mediaIdentityId: identity.id });
+    await new EnrichmentQueries({ db }).replaceFields(identity.id, { seerrRequestStatus: 2 });
+    const requested = await mediaQueryService.create({
+      name: 'Requested',
+      contentType: 'movie',
+      filters: [{ ruleKey: 'seerrRequestStatus', value: 2 }],
+    });
+    const preview = async () =>
+      expectSuccessResponse(await client.get(`/api/media-queries/${requested.id}/preview`)).count;
+
+    const before = await preview();
+    const readsByFirstPreview = reads;
+    await resetMediaData(db);
+
+    expect({ before, after: await preview(), reads }).toEqual({
+      before: 1,
+      after: 0,
+      reads: readsByFirstPreview,
+    });
   });
 });
