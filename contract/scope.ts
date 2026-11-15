@@ -56,8 +56,6 @@ export const scope: Scope = {
     ],
     tasks: [],
     procedures: [
-      // No MVP consumer.
-      '/api/providers/metadata',
       // A second way to find a title beside the title filter.
       '/api/search/metadata',
       // No UI and no consumer yet: the input to the post-MVP precedence work.

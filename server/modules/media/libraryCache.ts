@@ -13,6 +13,7 @@ import type { DrizzleDb } from '@server/kernel/db';
 import type { DomainEventBus } from '@server/kernel/eventBus';
 import {
   type ProviderListsData,
+  type ProviderListsReader,
   type RadarrMovie,
   type RefreshKind,
   SOURCE_OWNER,
@@ -98,7 +99,7 @@ export function recordsFor(library: Library, contentType: ContentType): RefreshR
  * joined, changed or left). It has no time-based expiry: the copy changes only when the catalog
  * refresh or the enrichment job writes it.
  */
-export class LibraryCache {
+export class LibraryCache implements ProviderListsReader {
   private loading: Promise<Library> | null = null;
 
   constructor(private readonly deps: { db: DrizzleDb; eventBus: DomainEventBus }) {
@@ -122,6 +123,11 @@ export class LibraryCache {
       });
     }
     return this.loading;
+  }
+
+  /** One provider's stored lists, as the loaded copy holds them. */
+  async listsOf(providerId: number): Promise<ProviderListsData | undefined> {
+    return (await this.read()).lists.get(providerId);
   }
 
   private async load(): Promise<Library> {
