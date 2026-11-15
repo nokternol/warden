@@ -13,6 +13,7 @@ import { PlexProvider } from '@server/modules/providers/connections/plexProvider
 import type { RadarrMovie } from '@server/modules/providers/connections/radarrProvider';
 import type { SonarrSeries } from '@server/modules/providers/connections/sonarrProvider';
 import { IdentityResolutionJob } from '@server/modules/providers/identityResolutionJob';
+import { readRefreshRecords } from '@server/modules/providers/providerRefresh';
 import { server } from '@tests/mocks/server';
 import { eq } from 'drizzle-orm';
 import { http, HttpResponse } from 'msw';
@@ -70,6 +71,8 @@ describe('IdentityResolutionJob', () => {
   let radarr4kProviderId: number;
   let sonarrProviderId: number;
   let sonarr4kProviderId: number;
+  let plexProviderId: number;
+  let jellyfinProviderId: number;
 
   beforeEach(async () => {
     await initializeDatabase(testConfig);
@@ -90,6 +93,14 @@ describe('IdentityResolutionJob', () => {
       .insert(metadataProviders)
       .values({ type: MetadataProviderType.SONARR, name: 'Sonarr 4k', url: 'http://sonarr4k' })
       .returning({ id: metadataProviders.id });
+    [{ id: plexProviderId }] = await db
+      .insert(metadataProviders)
+      .values({ type: MetadataProviderType.PLEX, name: 'Plex', url: 'http://plex' })
+      .returning({ id: metadataProviders.id });
+    [{ id: jellyfinProviderId }] = await db
+      .insert(metadataProviders)
+      .values({ type: MetadataProviderType.JELLYFIN, name: 'Jellyfin', url: 'http://jellyfin' })
+      .returning({ id: metadataProviders.id });
   });
 
   afterEach(async () => {
@@ -106,11 +117,47 @@ describe('IdentityResolutionJob', () => {
         .mockResolvedValue([{ ratingKey: 'plex-key-42', Guid: [{ id: 'tmdb://100' }] }]),
     };
 
-    const job = new IdentityResolutionJob({ db, plexProvider });
+    const job = new IdentityResolutionJob({
+      db,
+      plexSource: { providerId: plexProviderId, name: 'Plex', provider: plexProvider },
+    });
     await job.runForPlex();
 
     const rows = await db.select().from(mediaIdentity);
     expect(rows[0].plexRatingKey).toBe('plex-key-42');
+  });
+
+  it('clears a Plex link whose item Plex no longer lists, and keeps links when Plex fails', async () => {
+    const db = getDb();
+    const plexId = plexProviderId;
+    await db.insert(mediaIdentity).values([
+      { contentType: 'movie', tmdbId: 100 },
+      { contentType: 'movie', tmdbId: 101 },
+    ]);
+    const plex = {
+      getAllItems: vi.fn().mockResolvedValue([
+        { ratingKey: 'a', Guid: [{ id: 'tmdb://100' }] },
+        { ratingKey: 'b', Guid: [{ id: 'tmdb://101' }] },
+      ]),
+    };
+    const plexSource = { providerId: plexId, name: 'Plex', provider: plex };
+    await new IdentityResolutionJob({ db, plexSource }).runForPlex();
+
+    plex.getAllItems.mockResolvedValue([{ ratingKey: 'a', Guid: [{ id: 'tmdb://100' }] }]);
+    await new IdentityResolutionJob({ db, plexSource }).runForPlex();
+    const afterRemoval = await db.select().from(mediaIdentity).orderBy(mediaIdentity.tmdbId);
+    expect(afterRemoval.map((r) => r.plexRatingKey)).toEqual(['a', null]);
+
+    plex.getAllItems.mockRejectedValue(new Error('Plex is down'));
+    const failing = new IdentityResolutionJob({ db, plexSource });
+    await failing.runForPlex();
+    const afterFailure = await db.select().from(mediaIdentity).orderBy(mediaIdentity.tmdbId);
+    expect(afterFailure.map((r) => r.plexRatingKey)).toEqual(['a', null]);
+    expect(failing.failedProviders()).toEqual(['Plex']);
+    const records = await readRefreshRecords(db);
+    expect(records).toEqual([
+      expect.objectContaining({ providerId: plexId, kind: 'links', error: 'Plex is down' }),
+    ]);
   });
 
   it('runForJellyfin sets jellyfinItemId where a Jellyfin ProviderIds.Tmdb matches, content-type-scoped', async () => {
@@ -124,7 +171,14 @@ describe('IdentityResolutionJob', () => {
         .mockResolvedValue([{ Id: 'jf-42', Type: 'Movie', ProviderIds: { Tmdb: '100' } }]),
     };
 
-    const job = new IdentityResolutionJob({ db, jellyfinProvider });
+    const job = new IdentityResolutionJob({
+      db,
+      jellyfinSource: {
+        providerId: jellyfinProviderId,
+        name: 'Jellyfin',
+        provider: jellyfinProvider,
+      },
+    });
     await job.runForJellyfin();
 
     const movies = await db
@@ -149,7 +203,14 @@ describe('IdentityResolutionJob', () => {
         .mockResolvedValue([{ Id: 'jf-show', Type: 'Series', ProviderIds: { Tvdb: '200' } }]),
     };
 
-    const job = new IdentityResolutionJob({ db, jellyfinProvider });
+    const job = new IdentityResolutionJob({
+      db,
+      jellyfinSource: {
+        providerId: jellyfinProviderId,
+        name: 'Jellyfin',
+        provider: jellyfinProvider,
+      },
+    });
     await job.runForJellyfin();
 
     const rows = await db.select().from(mediaIdentity);
@@ -169,7 +230,14 @@ describe('IdentityResolutionJob', () => {
       ]),
     };
 
-    const job = new IdentityResolutionJob({ db, jellyfinProvider });
+    const job = new IdentityResolutionJob({
+      db,
+      jellyfinSource: {
+        providerId: jellyfinProviderId,
+        name: 'Jellyfin',
+        provider: jellyfinProvider,
+      },
+    });
     expect(await job.runForJellyfin()).toBe(1);
   });
 
@@ -184,7 +252,10 @@ describe('IdentityResolutionJob', () => {
       ]),
     };
 
-    const job = new IdentityResolutionJob({ db, plexProvider });
+    const job = new IdentityResolutionJob({
+      db,
+      plexSource: { providerId: plexProviderId, name: 'Plex', provider: plexProvider },
+    });
 
     expect(await job.runForPlex()).toBe(1);
   });
@@ -581,7 +652,10 @@ describe('IdentityResolutionJob', () => {
         ]),
     };
 
-    const job = new IdentityResolutionJob({ db, plexProvider });
+    const job = new IdentityResolutionJob({
+      db,
+      plexSource: { providerId: plexProviderId, name: 'Plex', provider: plexProvider },
+    });
     await job.runForPlex();
 
     const [row] = await db.select().from(mediaIdentity).where(eq(mediaIdentity.id, seriesGroup.id));
@@ -607,7 +681,10 @@ describe('IdentityResolutionJob', () => {
         ]),
     };
 
-    const job = new IdentityResolutionJob({ db, plexProvider });
+    const job = new IdentityResolutionJob({
+      db,
+      plexSource: { providerId: plexProviderId, name: 'Plex', provider: plexProvider },
+    });
     await job.runForPlex();
 
     const [movieRow] = await db
@@ -768,7 +845,10 @@ describe('IdentityResolutionJob', () => {
         getChildLogger('test')
       );
 
-      await new IdentityResolutionJob({ db, plexProvider }).runForPlex();
+      await new IdentityResolutionJob({
+        db,
+        plexSource: { providerId: plexProviderId, name: 'Plex', provider: plexProvider },
+      }).runForPlex();
 
       const movie = await db
         .select()
@@ -793,7 +873,10 @@ describe('IdentityResolutionJob', () => {
         getChildLogger('test')
       );
 
-      await new IdentityResolutionJob({ db, plexProvider }).runForPlex();
+      await new IdentityResolutionJob({
+        db,
+        plexSource: { providerId: plexProviderId, name: 'Plex', provider: plexProvider },
+      }).runForPlex();
 
       const [movie] = await db.select().from(mediaIdentity);
       expect(movie.enrichedAt).toBeNull();
@@ -813,7 +896,10 @@ describe('IdentityResolutionJob', () => {
         getChildLogger('test')
       );
 
-      const changed = await new IdentityResolutionJob({ db, plexProvider }).runForPlex();
+      const changed = await new IdentityResolutionJob({
+        db,
+        plexSource: { providerId: plexProviderId, name: 'Plex', provider: plexProvider },
+      }).runForPlex();
 
       const [movie] = await db.select().from(mediaIdentity);
       expect(movie.enrichedAt).toBe(1_700_000_000);

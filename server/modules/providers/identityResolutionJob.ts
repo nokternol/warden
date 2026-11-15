@@ -1,4 +1,4 @@
-import { and, eq, isNull, ne, notInArray, or } from 'drizzle-orm';
+import { and, eq, isNotNull, isNull, ne, notInArray, or } from 'drizzle-orm';
 import { yieldToEventLoop } from '../../kernel/yieldToEventLoop';
 
 const defaultDelay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -41,8 +41,10 @@ interface Deps {
     name: string;
     provider: Pick<SonarrProvider, 'getSeries'>;
   }>;
-  plexProvider?: PlexBridgeProvider;
-  jellyfinProvider?: JellyfinBridgeProvider;
+  /** The active Plex server whose items titles link to. */
+  plexSource?: { providerId: number; name: string; provider: PlexBridgeProvider };
+  /** The active Jellyfin server whose items titles link to. */
+  jellyfinSource?: { providerId: number; name: string; provider: JellyfinBridgeProvider };
   tvMazeLookup?: TVMazeLookupProvider;
   delay?: (ms: number) => Promise<void>;
 }
@@ -64,7 +66,7 @@ export class IdentityResolutionJob {
    */
   private async readProvider<T>(
     source: { providerId: number; name: string },
-    kind: 'catalog',
+    kind: 'catalog' | 'links',
     read: () => Promise<T>
   ): Promise<T | undefined> {
     try {
@@ -77,8 +79,10 @@ export class IdentityResolutionJob {
   }
 
   async runForPlex(): Promise<number> {
-    if (!this.deps.plexProvider) return 0;
-    const items = await this.deps.plexProvider.getAllItems();
+    const source = this.deps.plexSource;
+    if (!source) return 0;
+    const items = await this.readProvider(source, 'links', () => source.provider.getAllItems());
+    if (!items) return 0;
     let changed = 0;
     for (const item of items) {
       await yieldToEventLoop();
@@ -103,8 +107,27 @@ export class IdentityResolutionJob {
         }
       }
     }
-
+    await this.clearLinksNotListed(
+      'plexRatingKey',
+      items.map((item) => item.ratingKey)
+    );
+    await recordRefreshed(this.deps.db, source.providerId, 'links');
     return changed;
+  }
+
+  /**
+   * Clears a media server's id from every title whose item that server no longer lists: a
+   * successful answer is the server's truth, so an id it does not list addresses nothing.
+   */
+  private async clearLinksNotListed(
+    field: 'plexRatingKey' | 'jellyfinItemId',
+    listed: string[]
+  ): Promise<void> {
+    const column = mediaIdentity[field];
+    await this.deps.db
+      .update(mediaIdentity)
+      .set({ [field]: null })
+      .where(and(isNotNull(column), notInArray(column, listed)));
   }
 
   /**
@@ -139,8 +162,10 @@ export class IdentityResolutionJob {
   }
 
   async runForJellyfin(): Promise<number> {
-    if (!this.deps.jellyfinProvider) return 0;
-    const items = await this.deps.jellyfinProvider.getAllItems();
+    const source = this.deps.jellyfinSource;
+    if (!source) return 0;
+    const items = await this.readProvider(source, 'links', () => source.provider.getAllItems());
+    if (!items) return 0;
     let changed = 0;
     for (const item of items) {
       await yieldToEventLoop();
@@ -163,7 +188,11 @@ export class IdentityResolutionJob {
         );
       }
     }
-
+    await this.clearLinksNotListed(
+      'jellyfinItemId',
+      items.map((item) => item.Id)
+    );
+    await recordRefreshed(this.deps.db, source.providerId, 'links');
     return changed;
   }
 

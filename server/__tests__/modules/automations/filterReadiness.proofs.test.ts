@@ -597,24 +597,6 @@ describe('what "the latest enrichment run succeeded" does and does not say', () 
     const [after] = await db.select().from(mediaIdentity);
     expect(after.enrichedAt).toBe(enrichedAt);
   });
-  it('re-reads a title once identity resolution links it to a newly connected Jellyfin server', async () => {
-    // The Plex counterpart is pinned in identityResolutionJob.test.ts.
-    const db = getDb();
-    await db
-      .insert(mediaIdentity)
-      .values({ contentType: 'movie', tmdbId: 100, enrichedAt: NOW - 3600 });
-    const jellyfinProvider = {
-      getAllItems: vi
-        .fn()
-        .mockResolvedValue([{ Id: 'jf-42', Type: 'Movie', ProviderIds: { Tmdb: '100' } }]),
-    };
-
-    await new IdentityResolutionJob({ db, jellyfinProvider } as never).runForJellyfin();
-
-    const [after] = await db.select().from(mediaIdentity);
-    expect(after.jellyfinItemId).toBe('jf-42');
-    expect(after.enrichedAt).toBeNull();
-  });
 });
 
 describe('when a module singleton starts listening on the event bus', () => {

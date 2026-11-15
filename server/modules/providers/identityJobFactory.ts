@@ -57,8 +57,16 @@ export class IdentityJobFactory implements IdentityJobFactoryLike {
       db: this.db,
       movieSources,
       seriesSources,
-      plexProvider: plex?.provider as PlexProvider | undefined,
-      jellyfinProvider: jellyfin?.provider as JellyfinProvider | undefined,
+      plexSource: plex && {
+        providerId: plex.settings.id,
+        name: plex.settings.name,
+        provider: plex.provider as PlexProvider,
+      },
+      jellyfinSource: jellyfin && {
+        providerId: jellyfin.settings.id,
+        name: jellyfin.settings.name,
+        provider: jellyfin.provider as JellyfinProvider,
+      },
       tvMazeLookup: this.providerFactory.createTvMaze(log),
     });
   }
