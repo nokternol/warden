@@ -247,4 +247,34 @@ describe('Browse display dedup — multiple active Radarr instances', () => {
     expect(data.totalCount).toBe(2);
     expect(data.items.map((m: { sourceCount: number }) => m.sourceCount)).toEqual([1, 1]);
   });
+
+  it('shows copies the catalog refresh grouped as one title as one row, by the same rule everywhere', async () => {
+    // No TMDB id, so only the refresh's grouping rule (here, the shared IMDb id) joins them.
+    const row = (id: number) => ({
+      id,
+      title: 'Imported Without TMDB',
+      year: 2001,
+      hasFile: true,
+      monitored: true,
+      tmdbId: 0,
+      imdbId: 'tt0123456',
+      profileId: 1,
+      qualityProfileId: 1,
+      tags: [],
+      folderName: `/m/${id}`,
+      path: `/m/${id}`,
+    });
+    server.use(
+      http.get(`${RADARR_URL}/api/v3/movie`, () => HttpResponse.json([row(1)])),
+      http.get(`${RADARR_4K_URL}/api/v3/movie`, () => HttpResponse.json([row(2)]))
+    );
+
+    await refreshCatalog(libraryCradle);
+    const data = expectSuccessResponse(
+      await client.get(browsePath('movie', [], { pageSize: 100 }))
+    );
+
+    expect(data.totalCount).toBe(1);
+    expect(data.items[0].sourceProviderIds.sort()).toEqual([radarrId, radarr4kId].sort());
+  });
 });

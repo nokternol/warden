@@ -28,13 +28,12 @@ import type { LibraryCache, LibraryCopy } from './libraryCache';
 import { paginateItems } from './media.pagination';
 import { sortMedia } from './media.sort';
 import { resolutionTier } from './mediaFieldProvider';
-import { itemKey, rawItemKey, titleKey } from './mediaItem';
+import { externalIdOf, itemKey } from './mediaItem';
 import type { MediaQueryEngine } from './mediaQueryEngine';
 import { resetMediaData } from './mediaReset';
 import type { MediaSource } from './mediaSource';
 import { sourceOwnership } from './mediaSourceFactory';
 import { type Filter, type NormalizedMovie, type NormalizedSeries, getRule } from './ruleRegistry';
-import { radarrRowsSource, sonarrRowsSource } from './sourceAdapters';
 
 const log = getChildLogger('MediaProcedures');
 
@@ -98,51 +97,33 @@ type DecoratedProfile = RadarrProfile & {
   providerName: string;
 };
 
-/** A raw provider row carrying which instance it came from — internal grouping state only. */
-type Attributed<T> = T & { providerId: number };
-
 /**
- * Groups matched raw rows into titles by `titleKey` (the native primary id, or `providerId:id`
- * when it is missing or not positive), computed live per request — no DB join, no dependency on
- * the identity job having run. The identity graph (`resolveGroup`) also falls back to the imdb id
- * and to title and year when no primary id exists; browse does not, so a copy without a primary
- * id is its own title here even when the identity graph joins it to another.
- * Filter semantics are ANY: grouping happens after engine matching, so a title appears if
- * at least one of its copies matched. The representative is the first matched copy in the
- * current sort order; `sourceCount`/`sourceProviderIds` are additive — with one instance
- * every group is a singleton, so the row is byte-identical apart from these two fields.
+ * Groups matched copies into titles by the title group the catalog refresh recorded, so browse
+ * says a copy belongs to a title by the same rule as every other feature. Filter semantics are
+ * ANY: grouping happens after matching, so a title appears if at least one of its copies matched.
+ * The representative is the first matched copy in the current sort order.
  */
-function groupByTitle<T extends { id: number }>(
-  sorted: Attributed<T>[],
-  primaryIdOf: (row: T) => number | null | undefined
-): Array<T & { sourceCount: number; sourceProviderIds: number[] }> {
-  const groups = new Map<string, Attributed<T>[]>();
-  for (const row of sorted) {
-    const key = titleKey(row.providerId, row.id, primaryIdOf(row));
-    const copies = groups.get(key);
-    if (copies) copies.push(row);
-    else groups.set(key, [row]);
+function groupByTitle<R>(
+  sorted: Array<{ copy: LibraryCopy; record: R }>
+): Array<R & { sourceCount: number; sourceProviderIds: number[] }> {
+  const groups = new Map<number, Array<{ copy: LibraryCopy; record: R }>>();
+  for (const entry of sorted) {
+    const copies = groups.get(entry.copy.mediaIdentityId);
+    if (copies) copies.push(entry);
+    else groups.set(entry.copy.mediaIdentityId, [entry]);
   }
-  return [...groups.values()].map((copies) => {
-    const { providerId: _providerId, ...representative } = copies[0];
-    return {
-      ...representative,
-      sourceCount: copies.length,
-      sourceProviderIds: copies.map((c) => c.providerId),
-    } as unknown as T & { sourceCount: number; sourceProviderIds: number[] };
-  });
+  return [...groups.values()].map((copies) => ({
+    ...copies[0].record,
+    sourceCount: copies.length,
+    sourceProviderIds: copies.map((c) => c.copy.providerId),
+  }));
 }
 
-/**
- * One source over every instance's cached rows, so browse matches its pooled catalog in one pass.
- * Each read builds new items from the rows (see `radarrRowsSource`), so no enrichment merged by one
- * request survives into the next. The pooled sources share one content type, so any of them reads
- * an item's native id.
- */
-function pooled(sources: MediaSource[]): MediaSource {
+/** A source over library copies already loaded: the query engine reads their items. */
+function copiesSource(copies: LibraryCopy[]): MediaSource {
   return {
-    getMediaItems: async () => (await Promise.all(sources.map((s) => s.getMediaItems()))).flat(),
-    idOf: (item) => sources[0]?.idOf(item),
+    getMediaItems: async () => copies.map((c) => c.item),
+    idOf: externalIdOf,
   };
 }
 
@@ -288,61 +269,40 @@ export function createMediaProcedures(cradle: MediaCradle) {
     return { findings, mediaPage: filterAnswer(findings).mediaPage };
   }
 
-  /** One page of the movies matching `filters`, grouped by TMDB id across instances. */
-  async function browseMovies(filters: Filter[], view: BrowseView) {
-    const { sublists, errors } = await getMovies();
-    const all = sublists.flatMap((s) => s.movies);
-
-    const yearRange = computeYearRange(all);
+  /** One page of the titles of `contentType` whose copies match `filters`. */
+  async function browse<C extends ContentType>(
+    contentType: C,
+    filters: Filter[],
+    view: BrowseView
+  ) {
+    const copies = (await cradle.libraryCache.read()).copies[contentType] as LibraryCopy<C>[];
+    const yearRange = computeYearRange(copies.map((c) => c.record));
     const matched = await mediaQueryEngine.evaluate({
-      source: pooled(
-        sublists.map(({ providerId, movies }) => radarrRowsSource(movies, providerId))
-      ),
-      contentType: 'movie',
+      source: copiesSource(copies),
+      contentType,
       clauses: [{ filters, role: 'include' }],
     });
     const matchedKeys = new Set(matched.map((m) => itemKey(m)));
-    const matchedRaw: Attributed<RadarrMovie>[] = sublists.flatMap(({ providerId, movies }) =>
-      movies
-        .filter((m) => matchedKeys.has(rawItemKey(providerId, m.id)))
-        .map((m) => ({ ...m, providerId }))
+    const entries = copies
+      .filter((copy) => matchedKeys.has(itemKey(copy.item)))
+      .map((copy) => {
+        const { title, sortTitle, year } = copy.record as {
+          title: string;
+          sortTitle?: string;
+          year?: number;
+        };
+        return { copy, record: copy.record, title, sortTitle, year };
+      });
+    const sorted = sortMedia(entries, view.sort, (e) =>
+      contentType === 'movie'
+        ? (e.record as RadarrMovie).hasFile
+        : (e.record as SonarrSeries).monitored
     );
-    const sorted = sortMedia(matchedRaw, view.sort, (m) => m.hasFile);
-    const grouped = groupByTitle(sorted, (m) => m.tmdbId);
     return {
-      ...paginateItems(grouped, { page: view.page, pageSize: view.pageSize }),
+      ...paginateItems(groupByTitle(sorted), { page: view.page, pageSize: view.pageSize }),
       yearRange,
-      errors,
-      ...(await readiness(filters, 'movie')),
-    };
-  }
-
-  /** One page of the series matching `filters`, grouped by TVDB id across instances. */
-  async function browseSeries(filters: Filter[], view: BrowseView) {
-    const { sublists, errors } = await getSeries();
-    const all = sublists.flatMap((s) => s.series);
-
-    const yearRange = computeYearRange(all);
-    const matched = await mediaQueryEngine.evaluate({
-      source: pooled(
-        sublists.map(({ providerId, series }) => sonarrRowsSource(series, providerId))
-      ),
-      contentType: 'series',
-      clauses: [{ filters, role: 'include' }],
-    });
-    const matchedKeys = new Set(matched.map((s) => itemKey(s)));
-    const matchedRaw: Attributed<SonarrSeries>[] = sublists.flatMap(({ providerId, series }) =>
-      series
-        .filter((s) => matchedKeys.has(rawItemKey(providerId, s.id)))
-        .map((s) => ({ ...s, providerId }))
-    );
-    const sorted = sortMedia(matchedRaw, view.sort, (s) => s.monitored);
-    const grouped = groupByTitle(sorted, (s) => s.tvdbId);
-    return {
-      ...paginateItems(grouped, { page: view.page, pageSize: view.pageSize }),
-      yearRange,
-      errors,
-      ...(await readiness(filters, 'series')),
+      errors: [] as MediaError[],
+      ...(await readiness(filters, contentType)),
     };
   }
 
@@ -393,10 +353,10 @@ export function createMediaProcedures(cradle: MediaCradle) {
   const procedures = {
     browse: {
       movie: api.media.browse.movie.handler(({ input: { filters = [], ...view } }) =>
-        browseMovies(filters, view)
+        browse('movie', filters, view)
       ),
       series: api.media.browse.series.handler(({ input: { filters = [], ...view } }) =>
-        browseSeries(filters, view)
+        browse('series', filters, view)
       ),
     },
 
