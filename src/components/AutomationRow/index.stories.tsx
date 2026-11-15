@@ -1,10 +1,6 @@
 import RowTable from '@app/components/RowTable';
 import type { AutomationDto } from '@app/hooks/useAutomations';
-import type { AutomationReadiness } from '@contract/automations';
-import { contract } from '@contract/index';
 import type { Story } from '@ladle/react';
-import { worker } from '@tests/mocks/browser';
-import { mockProcedure } from '@tests/mocks/contract';
 import { useEffect } from 'react';
 import AutomationRow, { AUTOMATION_COLUMNS } from './index';
 
@@ -124,44 +120,13 @@ AutomationRowLastRunFailed.storyName = 'Last run failed (states the reason)';
 
 /**
  * The library's latest read counts 100 movies; a read started now counts 214. Opening Run Now
- * (the lightning icon) asks for a fresh count, so the confirmation states 214.
+ * (the lightning icon) asks for a fresh count, so the confirmation states 214. The answers are the
+ * `runNowFreshCount` set in `tests/mocks/stories.ts`.
  */
-function answerReadiness() {
-  const readiness = (count: number): AutomationReadiness => ({
-    schedule: 'runs',
-    runNow: 'runs',
-    blocks: { needsFix: [], awaitingSignOff: [], signedOff: [] },
-    problems: [],
-    count,
-    contentType: 'movie',
-  });
-  worker.use(
-    mockProcedure(contract.providers.tasks, () => [
-      {
-        providerId: 1,
-        type: 'RADARR',
-        tasks: [
-          {
-            id: 'deleteMovieWithFiles',
-            label: 'Delete movie + files',
-            destructive: true,
-            enabled: true,
-          },
-        ],
-      },
-    ]),
-    mockProcedure(contract.automations.readiness, ({ request }) =>
-      readiness(new URL(request.url).searchParams.get('fresh') === 'true' ? 214 : 100)
-    )
-  );
-}
-
-export const AutomationRowRunNowFreshCount: Story = () => {
-  answerReadiness();
-  return (
-    <Frame>
-      <AutomationRow automation={automation} onToggle={noop} onDelete={noop} onRun={resolves} />
-    </Frame>
-  );
-};
+export const AutomationRowRunNowFreshCount: Story = () => (
+  <Frame>
+    <AutomationRow automation={automation} onToggle={noop} onDelete={noop} onRun={resolves} />
+  </Frame>
+);
 AutomationRowRunNowFreshCount.storyName = 'Run Now counts on a fresh read (open it: 214, not 100)';
+AutomationRowRunNowFreshCount.meta = { mocks: 'runNowFreshCount' };
