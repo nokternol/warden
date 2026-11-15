@@ -95,14 +95,15 @@ export class PlexProvider extends BaseProviderConnection implements MediaActuato
     return resp.MediaContainer.Directory;
   }
 
+  /** One section's items; Plex omits `Metadata` from a section with none, which is an empty list. */
   public async getLibraryContents(libraryKey: string): Promise<PlexMediaItem[]> {
     const resp = await this.client
       .get(`library/sections/${libraryKey}/all`, {
         headers: this.authHeader,
         searchParams: { includeGuids: 1 },
       })
-      .json<{ MediaContainer: { Metadata: PlexMediaItem[] } }>();
-    return resp.MediaContainer.Metadata;
+      .json<{ MediaContainer: { Metadata?: PlexMediaItem[] } }>();
+    return resp.MediaContainer.Metadata ?? [];
   }
 
   public async getAllItems(): Promise<PlexMediaItem[]> {

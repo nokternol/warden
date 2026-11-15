@@ -49,6 +49,15 @@ describe('PlexProvider', () => {
     expect(items[0].viewCount).toBe(3);
     expect(items[0].lastViewedAt).toBe(1700000000);
   });
+
+  it('reads a section whose answer has no Metadata as an empty section', async () => {
+    server.use(
+      http.get(`${PLEX_URL}/library/sections/3/all`, () =>
+        HttpResponse.json({ MediaContainer: { size: 0 } })
+      )
+    );
+    expect(await provider.getLibraryContents('3')).toEqual([]);
+  });
 });
 
 describe('PlexProvider — actuator tasks', () => {
