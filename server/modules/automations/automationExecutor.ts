@@ -421,9 +421,11 @@ export class AutomationExecutor {
 
   /**
    * What a Run Now of this automation would do, and why, before anything runs. The findings are
-   * answered even when counting the targets fails, so a broken source cannot hide them.
+   * answered even when counting the targets fails, so a broken source cannot hide them. The count
+   * uses the library's latest read, or with `fresh` a read that starts now, so the count a user
+   * confirms comes from the read their confirmation started.
    */
-  async readiness(automationId: number): Promise<AutomationReadiness> {
+  async readiness(automationId: number, opts?: { fresh?: boolean }): Promise<AutomationReadiness> {
     const automation = await this.automationService.getById(automationId);
     if (!automation.provider) {
       throw new Error(`Automation ${automationId} has no provider`);
@@ -436,7 +438,9 @@ export class AutomationExecutor {
       queries
     );
     const answer = automationAnswer(findings, signedOff);
-    const counted = await this.planRun(automation.taskId, providerSettings, queries).then(
+    const counted = await this.planRun(automation.taskId, providerSettings, queries, {
+      refresh: opts?.fresh,
+    }).then(
       (plan) => {
         // A run skipped after planning says so here, so Run Now does not confirm a run that won't act.
         problems.push(...whyPlanWontRun(plan));
