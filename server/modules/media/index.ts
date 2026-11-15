@@ -32,13 +32,15 @@ export type { NormalizedSeries } from './series';
 export { normalizeRadarrMovie, normalizeSonarrSeries } from './normalizeMedia';
 
 // The read role a media-owning provider plays for the query engine, and the
-// adapter that binds a source provider's own connection to it (a Radarr or
-// Sonarr automation's catalog).
+// binders that turn an instance's Radarr or Sonarr rows into one.
 export type { MediaSource } from './mediaSource';
-export { mediaSourceFor } from './sourceAdapters';
+export { rowsSourceFor } from './sourceAdapters';
 
-// Owner-type policy: which provider type owns each content type, resolved to
-// a bound MediaSource.
+// The one way to ask what Radarr and Sonarr hold: each active instance's latest read, as raw rows.
+export type { SourceRead, SourceReadCache } from './sourceReadCache';
+
+// Owner-type policy: which provider type owns each content type, and its
+// active instances.
 export { sourceOwnership } from './mediaSourceFactory';
 export type { MediaSourceDescriptor, MediaSourceFactory } from './mediaSourceFactory';
 

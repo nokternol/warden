@@ -7,6 +7,7 @@ import { useAutomationReadiness } from '@app/hooks/useAutomationReadiness';
 import { useLatestRun } from '@app/hooks/useAutomationRuns';
 import type { AutomationDto } from '@app/hooks/useAutomations';
 import { tasksForProvider, useProviderTasks } from '@app/hooks/useProviderTasks';
+import { api } from '@app/lib/api/client';
 import { RUN_STATUS } from '@app/lib/runStatus';
 import { cn } from '@app/lib/utils/cn';
 import { relativeTime, safeHumanSchedule } from '@app/lib/utils/time';
@@ -78,23 +79,37 @@ function LastRun({ automation }: { automation: AutomationDto }) {
 
 /**
  * The readiness a Run Now confirmation may show: only the answer to the read that opening it (or
- * Retry) started. Until that read answers nothing is confirmable, and if it fails no earlier answer
- * is shown. Each read gets an id, so one from an earlier open settling late cannot end a newer one.
+ * Retry) started. That read asks for a fresh count of the library, and its answer replaces the
+ * row's readiness in place, under the row's own key, without fetching it again. Until it answers
+ * nothing is confirmable, and if it fails no earlier answer is shown. Each read gets an id, so one
+ * from an earlier open settling late cannot end a newer one.
  */
-function useCheckOnOpen(readiness: ReturnType<typeof useAutomationReadiness>) {
+function useCheckOnOpen(
+  automationId: number,
+  readiness: ReturnType<typeof useAutomationReadiness>
+) {
   const checkId = useRef(0);
   const [checking, setChecking] = useState(false);
+  const [failed, setFailed] = useState(false);
   const recheck = () => {
     const id = ++checkId.current;
     setChecking(true);
-    void readiness.mutate().finally(() => {
-      if (checkId.current === id) setChecking(false);
-    });
+    setFailed(false);
+    void (async () => {
+      try {
+        const answer = await api.automations.readiness({ id: automationId, fresh: true });
+        if (checkId.current === id) await readiness.mutate(answer, { revalidate: false });
+      } catch {
+        if (checkId.current === id) setFailed(true);
+      } finally {
+        if (checkId.current === id) setChecking(false);
+      }
+    })();
   };
   return {
     recheck,
-    checked: !checking && !readiness.error ? readiness.data : undefined,
-    failed: !checking && Boolean(readiness.error),
+    checked: !checking && !failed ? readiness.data : undefined,
+    failed: !checking && failed,
   };
 }
 
@@ -139,7 +154,7 @@ function Root({
   // Run Now asks first unless the check has answered that it simply runs.
   const needsRunCheck =
     needsRunConfirmation || (isUserAutomation && readiness.data?.runNow !== 'runs');
-  const runCheck = useCheckOnOpen(readiness);
+  const runCheck = useCheckOnOpen(automation.id, readiness);
   const extraQueries = automation.queries.length - 1;
 
   const run = async (consentedFindings?: string[]) => {

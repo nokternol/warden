@@ -1,40 +1,8 @@
-import {
-  type RadarrMovie,
-  RadarrProvider,
-  type SonarrProvider,
-  type SonarrSeries,
-} from '../providers';
+import type { ContentType } from '@contract/schemas';
+import type { RadarrMovie, SonarrSeries } from '../providers';
 import type { MediaSource } from './mediaSource';
 import { normalizeRadarrMovie, normalizeSonarrSeries } from './normalizeMedia';
-
-/** A source over a Radarr connection: each read fetches the library, then binds it as rows. */
-export function radarrMediaSource(radarr: RadarrProvider, providerId: number): MediaSource {
-  const { idOf } = radarrRowsSource([], providerId);
-  return {
-    getMediaItems: async () =>
-      radarrRowsSource(await radarr.getMovies(), providerId).getMediaItems(),
-    idOf,
-  };
-}
-
-/** A source over a Sonarr connection: each read fetches the library, then binds it as rows. */
-export function sonarrMediaSource(sonarr: SonarrProvider, providerId: number): MediaSource {
-  const { idOf } = sonarrRowsSource([], providerId);
-  return {
-    getMediaItems: async () =>
-      sonarrRowsSource(await sonarr.getSeries(), providerId).getMediaItems(),
-    idOf,
-  };
-}
-
-export function mediaSourceFor(
-  provider: RadarrProvider | SonarrProvider,
-  providerId: number
-): MediaSource {
-  return provider instanceof RadarrProvider
-    ? radarrMediaSource(provider, providerId)
-    : sonarrMediaSource(provider, providerId);
-}
+import type { SourceRead } from './sourceReadCache';
 
 /**
  * A source over Radarr rows already read. Every `getMediaItems()` normalises the rows into new
@@ -53,4 +21,17 @@ export function sonarrRowsSource(rows: SonarrSeries[], providerId: number): Medi
     getMediaItems: async () => rows.map((s) => normalizeSonarrSeries(s, providerId)),
     idOf: (item) => (item._sourceIds as { sonarr?: number }).sonarr,
   };
+}
+
+/**
+ * One instance's read from the `SourceReadCache`, bound with its content type's binder: Radarr rows
+ * for movies, Sonarr rows for series. The one place a read's rows are told apart by content type.
+ */
+export function rowsSourceFor(
+  contentType: ContentType,
+  { providerId, rows }: SourceRead<ContentType>
+): MediaSource {
+  return contentType === 'movie'
+    ? radarrRowsSource(rows as RadarrMovie[], providerId)
+    : sonarrRowsSource(rows as SonarrSeries[], providerId);
 }

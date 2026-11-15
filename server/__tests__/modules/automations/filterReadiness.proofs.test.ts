@@ -37,6 +37,7 @@ import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryServic
 import { PlexProvider, ProviderSettingsService } from '@server/modules/providers';
 import { IdentityResolutionJob } from '@server/modules/providers/identityResolutionJob';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
+import { sourceReadCacheHolding, sourceReadCacheOver } from '@tests/helpers/sourceReadCache';
 import { desc, eq } from 'drizzle-orm';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -77,6 +78,7 @@ describe('filter readiness, as automations see it', () => {
       automationService,
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
+      sourceReadCache: sourceReadCacheOver(providerSettingsService),
       mediaQueryService,
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),
@@ -403,18 +405,14 @@ describe('a non-source actuator whose query names a source instance', () => {
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(db),
       providerFactory: { create: () => plexInstance },
-      mediaSourceFactory: {
-        sourcesFor: async () => [
-          {
-            providerId: radarr.id,
-            name: 'Radarr',
-            source: {
-              getMediaItems: async () => items as unknown as MediaItem[],
-              idOf: (item: MediaItem) => (item._sourceIds as { radarr?: number }).radarr,
-            },
-          },
-        ],
-      },
+      sourceReadCache: sourceReadCacheHolding([
+        {
+          providerId: radarr.id,
+          rows: [1, 2].map((n) =>
+            createRadarrMovie({ id: n, tmdbId: n * 100, title: `Movie ${n}`, tags: [7] })
+          ),
+        },
+      ]),
       db,
     });
     return {

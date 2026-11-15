@@ -135,7 +135,15 @@ export const automations = {
    */
   readiness: base
     .route({ method: 'GET', path: '/api/automations/{id}/readiness' })
-    .input(z.object({ id: IdSchema }))
+    .input(
+      z.object({
+        id: IdSchema,
+        /** Count on a read of the library that starts now, not the latest read. */
+        fresh: z
+          .union([z.boolean(), z.enum(['true', 'false']).transform((v) => v === 'true')])
+          .optional(),
+      })
+    )
     .output(AutomationReadinessSchema),
 
   /**

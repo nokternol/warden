@@ -10,10 +10,11 @@ import { AutomationBlockService } from '@server/modules/automations/automationBl
 import { AutomationExecutor } from '@server/modules/automations/automationExecutor';
 import { AutomationRunService } from '@server/modules/automations/automationRunService';
 import { AutomationService } from '@server/modules/automations/automationService';
-import type { MediaItem } from '@server/modules/media';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { PlexProvider, ProviderSettingsService } from '@server/modules/providers';
+import { createRadarrMovie } from '@tests/factories';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
+import { sourceReadCacheHolding } from '@tests/helpers/sourceReadCache';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const testConfig: AppConfig = {
@@ -99,11 +100,6 @@ describe('exclude protection for a non-source actuator', () => {
       apiKey: 'plex-token',
       settings: { enabledTasks: ['deleteFromLibrary'] },
     });
-    const items = copies.map((c) => ({
-      _sourceIds: { radarr: c.radarrId, providerId: c.providerId, tmdb: c.tmdb },
-      title: c.title,
-      tags: c.keep ? [KEEP_TAG] : [],
-    }));
     const plexInstance = new PlexProvider(
       { name: 'Plex', url: 'http://localhost:32400', apiKey: 'plex-token', settings: {} },
       getChildLogger('excludeProtection')
@@ -119,18 +115,21 @@ describe('exclude protection for a non-source actuator', () => {
       automationBlockService: new AutomationBlockService({ db }),
       filterReadiness: filterReadinessOver(db),
       providerFactory: { create: () => plexInstance },
-      mediaSourceFactory: {
-        sourcesFor: async () => [
-          {
-            providerId: copies[0].providerId,
-            name: 'Radarr',
-            source: {
-              getMediaItems: async () => items as unknown as MediaItem[],
-              idOf: () => undefined,
-            },
-          },
-        ],
-      },
+      sourceReadCache: sourceReadCacheHolding(
+        [...new Set(copies.map((c) => c.providerId))].map((providerId) => ({
+          providerId,
+          rows: copies
+            .filter((c) => c.providerId === providerId)
+            .map((c) =>
+              createRadarrMovie({
+                id: c.radarrId,
+                tmdbId: c.tmdb,
+                title: c.title,
+                tags: c.keep ? [KEEP_TAG] : [],
+              })
+            ),
+        }))
+      ),
       db,
     });
     const everything = await mediaQueryService.create({

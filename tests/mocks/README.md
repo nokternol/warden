@@ -23,6 +23,7 @@ mocks/
     jellyfin.ts   # Jellyfin API mocks (outbound)
     seerr.ts      # Seerr API mocks, served as an Overseerr and a Seerr server (outbound)
   browser.ts      # MSW browser worker (Cypress, Ladle)
+  stories.ts      # Named per-story handler sets; a story sets `meta = { mocks: '<name>' }` and Ladle applies it
   server.ts       # MSW Node server (Vitest — both client and server tests)
 ```
 

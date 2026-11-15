@@ -117,3 +117,16 @@ export const AutomationRowLastRunFailed: Story = () => (
   </Frame>
 );
 AutomationRowLastRunFailed.storyName = 'Last run failed (states the reason)';
+
+/**
+ * The library's latest read counts 100 movies; a read started now counts 214. Opening Run Now
+ * (the lightning icon) asks for a fresh count, so the confirmation states 214. The answers are the
+ * `runNowFreshCount` set in `tests/mocks/stories.ts`.
+ */
+export const AutomationRowRunNowFreshCount: Story = () => (
+  <Frame>
+    <AutomationRow automation={automation} onToggle={noop} onDelete={noop} onRun={resolves} />
+  </Frame>
+);
+AutomationRowRunNowFreshCount.storyName = 'Run Now counts on a fresh read (open it: 214, not 100)';
+AutomationRowRunNowFreshCount.meta = { mocks: 'runNowFreshCount' };

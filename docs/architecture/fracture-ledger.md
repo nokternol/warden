@@ -576,6 +576,9 @@ Earlier entries in this ledger use the names that were current when they healed 
   closed. A Radarr or Sonarr automation builds its own source from its provider's connection, through the
   same binder. The counts come from separate evaluations that share a key and a source builder, not
   from one match.
+- **Superseded in part (2026-11-15):** the read policy and source building described under "Different
+  on purpose" were replaced by one cached read of each instance; see "Library reads — one per feature"
+  below. The units and the scope difference still stand.
 
 ### Rule key and content type — two names kept (recorded 2026-11-01 — healed 2026-11-08, MVP slice B7)
 
@@ -614,6 +617,30 @@ Earlier entries in this ledger use the names that were current when they healed 
 - **Different on purpose:** the panel stays deferred, because no MVP job reads per-title ratings. OMDB
   stays a deferred provider type with no consumer. One normalized rating to sort by, computed from
   identity-keyed per-source values, is the later direction. It is not built.
+
+### Library reads — one per feature (recorded 2026-11-07 — healed 2026-11-15, MVP slice C10)
+
+- **Fracture:** each feature read the Radarr/Sonarr library in its own place, at its own moment, its
+  own way. The Media page read behind a private 60-second cache refreshed only when a request arrived;
+  a query preview read live; an automation's preview and Run Now's count read live through its
+  planning; a Radarr or Sonarr automation read its own instance live when it ran; a Plex, Jellyfin or
+  Tautulli automation read every instance live when it ran. The "Catalog reads and counts" entry above
+  recorded this as "read policy differs by consumer".
+- **How it misled:** a change to how the library is read had to be made in several places, and the same
+  filters on the same data were not guaranteed to match the same titles. Run Now's count came from a
+  read the row started when it appeared, not from the confirmation.
+- **Healed by:** one singleton in the media module, the source read cache, holds each active instance's
+  latest read (its rows, or why it could not be read) and is the only way features read the library.
+  Three reads carry the failure rules: every instance with errors (the Media page), every instance or a
+  failure (query previews and Plex/Jellyfin/Tautulli automations), one instance or a failure
+  (Radarr/Sonarr automations). Pages and previews read as it stands. A run refreshes right before it
+  plans and plans on that read, and Run Now's confirmation and retry count on a read they start
+  (`fresh`). The connection-bound source adapters, `MediaSourceFactory.sourcesFor`, the Media page's
+  private movie and series caches and the executor's optional source dependency are deleted.
+- **Different on purpose:** an automation acting later, on a library that has changed since, counts
+  differently from an earlier page or preview. The identity resolution job still reads its own
+  instances; that is the open "Source instance choice" entry below, and the follow-up issue for the
+  recording side.
 
 ## Open
 

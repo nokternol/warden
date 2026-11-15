@@ -176,9 +176,13 @@ describe('Run Now on an automation row', () => {
     updatedAt: '2024-01-01T00:00:00Z',
   });
 
+  /** Each check's `fresh` query field, in the order the checks were asked. */
+  let freshAsked: Array<string | null> = [];
+
   /** Answers the row's checks in turn: the first is the read at mount, the rest follow it. */
   function answerChecks(...answers: Array<'fail' | { count: number; wait?: number }>) {
     let call = 0;
+    freshAsked = [];
     server.use(
       mockProcedure(contract.providers.tasks, () => [
         {
@@ -191,7 +195,8 @@ describe('Run Now on an automation row', () => {
       ])
     );
     server.use(
-      mockProcedure(contract.automations.readiness, async () => {
+      mockProcedure(contract.automations.readiness, async ({ request }) => {
+        freshAsked.push(new URL(request.url).searchParams.get('fresh'));
         const answer = answers[Math.min(call++, answers.length - 1)];
         if (answer === 'fail') throw new Error('unreachable');
         if (answer.wait) await delay(answer.wait);
@@ -229,5 +234,16 @@ describe('Run Now on an automation row', () => {
     expect(screen.queryByText(/will affect 100 movies/)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Run now' })).toBeDisabled();
+  });
+
+  it("asks for a fresh count on open and on Retry, writing each answer into the row's readiness without refetching it", async () => {
+    const checksMade = answerChecks({ count: 100 }, 'fail', { count: 214 });
+    await openRunNow(103, checksMade);
+    await screen.findByText("Couldn't check this automation.");
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByText('Delete movie will affect 214 movies.')).toBeInTheDocument();
+    expect(freshAsked).toEqual([null, 'true', 'true']);
   });
 });

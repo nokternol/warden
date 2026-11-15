@@ -8,21 +8,12 @@ import {
   SOURCE_OWNER,
   type SonarrProvider,
 } from '@server/modules/providers';
-import type { MediaSource } from './mediaSource';
-import { mediaSourceFor } from './sourceAdapters';
 
 const log = getChildLogger('MediaSourceFactory');
 
 interface Deps {
   providerSettingsService: ProviderSettingsService;
   providerFactory: IProviderFactory;
-}
-
-/** One active instance owning a content type, bound as a `MediaSource`. */
-export interface MediaSourceEntry {
-  providerId: number;
-  name: string;
-  source: MediaSource;
 }
 
 /** The connection each content type's owning provider type exposes. */
@@ -43,8 +34,8 @@ export class MediaSourceFactory {
 
   /**
    * Every active instance owning `contentType` (by `SOURCE_OWNER`), each with its connection built.
-   * The one place the catalog's source instances are chosen: browse, the saved-query preview and
-   * pooled runs all read through it. Never collapsed to one.
+   * The one place the catalog's source instances are chosen: `SourceReadCache` reads each one it
+   * returns. Never collapsed to one.
    */
   async activeInstances<C extends ContentType>(contentType: C): Promise<SourceInstance<C>[]> {
     const settingsList = await this.deps.providerSettingsService.findActiveByTypes([
@@ -54,16 +45,6 @@ export class MediaSourceFactory {
       providerId: settings.id,
       name: settings.name,
       provider: this.deps.providerFactory.create(settings, log) as SourceConnection[C],
-    }));
-  }
-
-  /** One entry per active instance owning `contentType`. Never collapsed to one. */
-  async sourcesFor(contentType: ContentType): Promise<MediaSourceEntry[]> {
-    const instances = await this.activeInstances(contentType);
-    return instances.map(({ providerId, name, provider }) => ({
-      providerId,
-      name,
-      source: mediaSourceFor(provider, providerId),
     }));
   }
 }

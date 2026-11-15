@@ -17,6 +17,7 @@ import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryServic
 import { ProviderSettingsService } from '@server/modules/providers';
 import { IdentityResolutionJob } from '@server/modules/providers/identityResolutionJob';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
+import { sourceReadCacheHolding, sourceReadCacheOver } from '@tests/helpers/sourceReadCache';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createRadarrMovie } from '../../../../tests/factories';
@@ -56,6 +57,7 @@ describe('AutomationExecutor writes to automation_runs', () => {
       automationService,
       automationRunService,
       providerSettingsService,
+      sourceReadCache: sourceReadCacheOver(providerSettingsService),
       mediaQueryService,
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),

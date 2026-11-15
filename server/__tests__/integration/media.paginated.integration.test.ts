@@ -75,6 +75,8 @@ describe('Paginated Media API', () => {
   }
   afterEach(() => {
     for (const media of builtMedia.splice(0)) media.dispose();
+    // The container's one read cache outlives each test; each test sets its own upstream answers.
+    cradle.sourceReadCache.clear();
   });
 
   beforeAll(async () => {

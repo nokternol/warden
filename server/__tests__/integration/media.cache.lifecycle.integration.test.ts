@@ -74,6 +74,8 @@ describe('MediaHandler cache lifecycle', () => {
   }
   afterEach(() => {
     for (const media of builtMedia.splice(0)) media.dispose();
+    // The container's one read cache outlives each test; each test sets its own upstream answers.
+    cradle.sourceReadCache.clear();
   });
 
   beforeAll(async () => {
@@ -152,31 +154,28 @@ describe('MediaHandler cache lifecycle', () => {
     expect(calls).toEqual({ radarr: 1, sonarr: 1 });
   });
 
-  it('two createMediaProcedures() instances have independent caches', async () => {
-    // Arrange: each successive Radarr call returns a different film title so we
-    // can detect whether handler B read from handler A's cache or fetched independently.
-    let radarrCallCount = 0;
+  it('browse and the row-derived lookups share one upstream read, across procedures instances', async () => {
+    const calls = { radarr: 0, sonarr: 0 };
     server.use(
       http.get('http://localhost:7878/api/v3/movie', () => {
-        radarrCallCount++;
-        const title = radarrCallCount === 1 ? 'The Matrix' : 'Inception';
-        return HttpResponse.json([makeRadarrMovie(title, radarrCallCount)]);
+        calls.radarr++;
+        return HttpResponse.json([makeRadarrMovie('Inception')]);
+      }),
+      http.get('http://localhost:8989/api/v3/series', () => {
+        calls.sonarr++;
+        return HttpResponse.json([createSonarrSeries({ title: 'Dark' })]);
       })
     );
+    const browsing = createApiClient(buildAuthedApp(serveApi({ media: buildMedia().procedures })));
+    const lookingUp = createApiClient(buildAuthedApp(serveApi({ media: buildMedia().procedures })));
 
-    const routesA = serveApi({ media: buildMedia().procedures });
-    const routesB = serveApi({ media: buildMedia().procedures });
-    const clientA = createApiClient(buildAuthedApp(routesA));
-    const clientB = createApiClient(buildAuthedApp(routesB));
+    await browsing.get(browsePath('movie'));
+    await browsing.get(browsePath('series'));
+    for (const lookup of ['genres', 'networks', 'release-groups', 'collection-names']) {
+      expectSuccessResponse(await lookingUp.get(`/api/media/${lookup}`));
+    }
 
-    const resA = await clientA.get(browsePath('movie'));
-    expect(expectSuccessResponse(resA).items[0].title).toBe('The Matrix');
-    expect(radarrCallCount).toBe(1);
-
-    // Handler B must NOT read from handler A's cache; it must do its own fetch.
-    const resB = await clientB.get(browsePath('movie'));
-    expect(expectSuccessResponse(resB).items[0].title).toBe('Inception');
-    expect(radarrCallCount).toBe(2);
+    expect(calls).toEqual({ radarr: 1, sonarr: 1 });
   });
 
   it('media:changed on the bus makes the next browse refetch from Radarr', async () => {
@@ -197,22 +196,23 @@ describe('MediaHandler cache lifecycle', () => {
     expect(radarrCallCount).toBe(2);
   });
 
-  it("after dispose(), media:changed no longer clears that instance's caches", async () => {
-    let radarrCallCount = 0;
+  it("after dispose(), media:changed no longer clears that instance's lookup caches", async () => {
+    let tagCalls = 0;
     server.use(
-      http.get('http://localhost:7878/api/v3/movie', () => {
-        radarrCallCount++;
-        return HttpResponse.json([makeRadarrMovie('Inception')]);
-      })
+      http.get('http://localhost:7878/api/v3/tag', () => {
+        tagCalls++;
+        return HttpResponse.json([{ id: 1, label: 'action' }]);
+      }),
+      http.get('http://localhost:8989/api/v3/tag', () => HttpResponse.json([]))
     );
     const media = buildMedia();
     const client = createApiClient(buildAuthedApp(serveApi({ media: media.procedures })));
 
-    await client.get(browsePath('movie'));
+    await client.get('/api/media/tags');
     media.dispose();
     cradle.eventBus.emit('media:changed', {});
-    await client.get(browsePath('movie'));
+    await client.get('/api/media/tags');
 
-    expect(radarrCallCount).toBe(1);
+    expect(tagCalls).toBe(1);
   });
 });

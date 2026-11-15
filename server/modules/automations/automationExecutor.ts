@@ -12,8 +12,8 @@ import {
   automationAnswer,
   findingsFor,
   identifiesTitle,
-  mediaSourceFor,
   resolveActuatorTargets,
+  rowsSourceFor,
   titleKeyOf,
 } from '../media';
 import type {
@@ -21,7 +21,7 @@ import type {
   MediaItem,
   MediaQueryClause,
   MediaSource,
-  MediaSourceFactory,
+  SourceReadCache,
 } from '../media';
 import type { MediaQueryRecord, MediaQueryService } from '../mediaQueries';
 import {
@@ -29,8 +29,6 @@ import {
   type IProviderFactory,
   ProviderFactory,
   type ProviderSettingsService,
-  type RadarrProvider,
-  type SonarrProvider,
   isMediaActuator,
   isMediaSourceType,
   readEnabledTaskIds,
@@ -55,8 +53,8 @@ interface ExecutorDeps {
   providerFactory?: IProviderFactory;
   mediaQueryEngine?: MediaQueryEngine;
   enrichmentQueries?: EnrichmentQueries;
-  /** The owning-catalog sources a non-source actuator's query evaluates against. */
-  mediaSourceFactory?: Pick<MediaSourceFactory, 'sourcesFor'>;
+  /** The library every plan reads: an actuator's own instance, or every owning instance pooled. */
+  sourceReadCache: Pick<SourceReadCache, 'readOne' | 'readAll'>;
   db?: DrizzleDb;
   systemTaskRunner?: SystemTaskRunnerLike;
   eventBus?: DomainEventBus;
@@ -90,6 +88,9 @@ interface RunPlan {
    */
   unresolvedExcludes: string[];
 }
+
+/** How a plan reads the library from `SourceReadCache`. */
+type SourceReadOptions = Parameters<SourceReadCache['readOne']>[1];
 
 /** Below this many targets a destructive run is small enough to be its own limit. */
 const REACH_CHECK_MIN_ITEMS = 20;
@@ -161,7 +162,7 @@ export class AutomationExecutor {
   private readonly mediaQueryEngine: MediaQueryEngine;
   private readonly filterReadiness: Pick<FilterReadiness, 'readFacts'>;
   private readonly automationBlockService: Pick<AutomationBlockService, 'reconcile'>;
-  private readonly mediaSourceFactory?: Pick<MediaSourceFactory, 'sourcesFor'>;
+  private readonly sourceReadCache: Pick<SourceReadCache, 'readOne' | 'readAll'>;
   private readonly db?: DrizzleDb;
   private readonly systemTaskRunner?: SystemTaskRunnerLike;
   private readonly eventBus?: DomainEventBus;
@@ -184,7 +185,7 @@ export class AutomationExecutor {
       });
     this.filterReadiness = deps.filterReadiness;
     this.automationBlockService = deps.automationBlockService;
-    this.mediaSourceFactory = deps.mediaSourceFactory;
+    this.sourceReadCache = deps.sourceReadCache;
     this.db = deps.db;
     this.systemTaskRunner = deps.systemTaskRunner;
     this.eventBus = deps.eventBus;
@@ -269,7 +270,10 @@ export class AutomationExecutor {
           }
           return;
         }
-        const plan = await this.planRun(current.taskId, providerSettings, queries);
+        // Planned on a read that starts now, so the run acts on the library as it is.
+        const plan = await this.planRun(current.taskId, providerSettings, queries, {
+          refresh: true,
+        });
         targets = plan.targets;
         itemCount = targets.items.length;
         const notRun = whyPlanWontRun(plan);
@@ -406,9 +410,11 @@ export class AutomationExecutor {
 
   /**
    * What a Run Now of this automation would do, and why, before anything runs. The findings are
-   * answered even when counting the targets fails, so a broken source cannot hide them.
+   * answered even when counting the targets fails, so a broken source cannot hide them. The count
+   * uses the library's latest read, or with `fresh` a read that starts now, so the count a user
+   * confirms comes from the read their confirmation started.
    */
-  async readiness(automationId: number): Promise<AutomationReadiness> {
+  async readiness(automationId: number, opts?: { fresh?: boolean }): Promise<AutomationReadiness> {
     const automation = await this.automationService.getById(automationId);
     if (!automation.provider) {
       throw new Error(`Automation ${automationId} has no provider`);
@@ -421,7 +427,9 @@ export class AutomationExecutor {
       queries
     );
     const answer = automationAnswer(findings, signedOff);
-    const counted = await this.planRun(automation.taskId, providerSettings, queries).then(
+    const counted = await this.planRun(automation.taskId, providerSettings, queries, {
+      refresh: opts?.fresh,
+    }).then(
       (plan) => {
         // A run skipped after planning says so here, so Run Now does not confirm a run that won't act.
         problems.push(...whyPlanWontRun(plan));
@@ -463,12 +471,14 @@ export class AutomationExecutor {
   /**
    * Decides what a user run acts on: the enabled task, the catalog items the
    * query targets, and those items in the actuator's own id space. Running the
-   * task is the caller's step, so the targets are known even if the task fails.
+   * task is the caller's step, so the targets are known even if the task fails. `read` says how
+   * the library is read: as it stands, or refreshed so the plan is made on a read that starts now.
    */
   private async planRun(
     taskId: string,
     providerSettings: MetadataProvider,
-    automationQueries: LoadedQuery[]
+    automationQueries: LoadedQuery[],
+    read?: SourceReadOptions
   ): Promise<RunPlan> {
     const contentType = automationQueries[0].record.contentType;
     const querySpecs = automationQueries.map(({ record, role }) => ({
@@ -493,7 +503,7 @@ export class AutomationExecutor {
       // Catalog-owning actuator: the query evaluates against its own catalog
       // and its native ids feed the task directly, one target per native id.
       const mediaSource = counting(
-        mediaSourceFor(provider as RadarrProvider | SonarrProvider, providerSettings.id)
+        rowsSourceFor(contentType, await this.sourceReadCache.readOne(providerSettings.id, read))
       );
       const matched = await this.mediaQueryEngine.evaluate({
         source: mediaSource,
@@ -516,17 +526,19 @@ export class AutomationExecutor {
     // translate into the actuator's own addressing space through the identity
     // graph. Unstamped identities drop out — the task never receives an id it
     // cannot address.
-    if (!this.mediaSourceFactory || !this.db) {
+    if (!this.db) {
       throw new Error(
         `Task "${taskId}" on provider instance ${providerSettings.id} needs the owning-source catalog and identity graph to resolve ids`
       );
     }
-    const entries = await this.mediaSourceFactory.sourcesFor(contentType);
+    const sources = (await this.sourceReadCache.readAll(contentType, read)).map((r) =>
+      rowsSourceFor(contentType, r)
+    );
     let fetched: ReturnType<MediaSource['getMediaItems']> | undefined;
     const pooled = counting({
       // Fetched once, so what a run excludes is judged on the same catalog as what it includes.
       getMediaItems: () => {
-        fetched ??= Promise.all(entries.map((e) => e.source.getMediaItems())).then((all) =>
+        fetched ??= Promise.all(sources.map((source) => source.getMediaItems())).then((all) =>
           all.flat()
         );
         return fetched;

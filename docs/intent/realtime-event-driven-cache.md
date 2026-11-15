@@ -23,8 +23,8 @@ executor happens, and something outside it needs to react.* Today neither reacti
   underlying data changed.
 
 The domain event bus (`media:changed`, `run:started`, `run:completed`) exists precisely to drive both of
-these. `media:changed` already has a consumer: the media procedures clear their upstream-fetch caches on
-it (and on `provider:changed`). The enrichment cache will sit beside them on the same event. Nothing
+these. `media:changed` already has a consumer: the media procedures and the source read cache clear their
+upstream-fetch caches on it (and on `provider:changed`). The enrichment cache will sit beside them on the same event. Nothing
 consumes the run lifecycle events yet. When the enrichment cache lands,
 `media.cache.enrichmentFresh.integration.test.ts` fails by design: it pins that browse reads enrichment
 fresh, and its header names the senders (`media.reset`, the system jobs) that must then send

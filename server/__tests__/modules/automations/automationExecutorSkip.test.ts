@@ -22,6 +22,7 @@ import type { Filter } from '@server/modules/media/ruleRegistry';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
+import { sourceReadCacheHolding, sourceReadCacheOver } from '@tests/helpers/sourceReadCache';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRadarrMovie } from '../../../../tests/factories';
@@ -60,6 +61,7 @@ describe('AutomationExecutor — invalid automations', () => {
       automationService,
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
+      sourceReadCache: sourceReadCacheOver(providerSettingsService),
       mediaQueryService,
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),
@@ -209,6 +211,7 @@ describe('AutomationExecutor — invalid automations', () => {
       automationService,
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
+      sourceReadCache: sourceReadCacheOver(providerSettingsService),
       mediaQueryService,
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),
