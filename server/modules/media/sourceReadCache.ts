@@ -1,5 +1,6 @@
 import { type ContentType, ContentTypeSchema } from '@contract/schemas';
 import { MediaCache } from '@server/kernel/cache';
+import type { DomainEventBus } from '@server/kernel/eventBus';
 import { getChildLogger } from '@server/kernel/logger';
 import type {
   RadarrMovie,
@@ -53,7 +54,8 @@ function failure(instanceName: string, error: string): string {
  * Instances are chosen by `MediaSourceFactory.activeInstances`; each instance's read is kept in a
  * private `MediaCache` under its own key, so it is held for the cache's TTL (60 s) and concurrent
  * asks share one upstream fetch. It hands out raw rows, never items: callers bind rows into items
- * for each evaluation.
+ * for each evaluation. It clears itself on `media:changed` and `provider:changed`; a media reset
+ * leaves it alone, since a reset changes nothing upstream.
  *
  * A feature that needs to know what the library holds asks this cache. Only a feature about to
  * act refreshes, and it acts on the read its refresh returned.
@@ -64,8 +66,19 @@ export class SourceReadCache {
   private readonly cache = new MediaCache<Read>();
 
   constructor(
-    private readonly deps: { mediaSourceFactory: Pick<MediaSourceFactory, 'activeInstances'> }
-  ) {}
+    private readonly deps: {
+      mediaSourceFactory: Pick<MediaSourceFactory, 'activeInstances'>;
+      eventBus: DomainEventBus;
+    }
+  ) {
+    deps.eventBus.on('media:changed', () => this.clear());
+    deps.eventBus.on('provider:changed', () => this.clear());
+  }
+
+  /** Drops every instance's read, so the next ask of each reads it again. */
+  clear(): void {
+    this.cache.clear();
+  }
 
   /** Every active instance of `contentType`: the rows of each that answered, and an error for each
    *  that could not be read. Never fails; no active instance is an empty answer. */

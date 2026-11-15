@@ -1,3 +1,4 @@
+import { DomainEventBus } from '@server/kernel/eventBus';
 import type { MediaSourceFactory } from '@server/modules/media/mediaSourceFactory';
 import { SourceReadCache } from '@server/modules/media/sourceReadCache';
 import type { RadarrMovie } from '@server/modules/providers';
@@ -27,8 +28,12 @@ const radarrInstance = (providerId: number, name: string, rows: RadarrMovie[] | 
   return instance;
 };
 
-const cacheOver = (instances: ReturnType<typeof radarrInstance>[]) =>
+const cacheOver = (
+  instances: ReturnType<typeof radarrInstance>[],
+  eventBus = new DomainEventBus()
+) =>
   new SourceReadCache({
+    eventBus,
     mediaSourceFactory: {
       activeInstances: (async (contentType: string) =>
         contentType === 'movie'
@@ -106,5 +111,24 @@ describe('SourceReadCache refresh', () => {
     const { reads } = await cache.readEach('movie', { refresh: true });
 
     expect(reads[0].rows).toEqual([movie(10, 'Alien'), movie(11, 'Aliens')]);
+  });
+});
+
+describe('SourceReadCache clearing', () => {
+  it.each([
+    ['media:changed', (bus: DomainEventBus) => bus.emit('media:changed', {})],
+    ['provider:changed', (bus: DomainEventBus) => bus.emit('provider:changed', {})],
+    ['clear()', (_bus: DomainEventBus, cache: SourceReadCache) => cache.clear()],
+  ] as const)('%s makes the next read fresh', async (_name, clearIt) => {
+    const radarr = radarrInstance(1, 'Radarr', [movie(10, 'Alien')]);
+    const bus = new DomainEventBus();
+    const cache = cacheOver([radarr], bus);
+    await cache.readEach('movie');
+
+    radarr.rows = [movie(11, 'Aliens')];
+    clearIt(bus, cache);
+    const { reads } = await cache.readEach('movie');
+
+    expect(reads[0].rows).toEqual([movie(11, 'Aliens')]);
   });
 });
