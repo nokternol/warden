@@ -218,4 +218,58 @@ describe('the library copy', () => {
       sonarr: [],
     });
   });
+
+  it('a Plex run addresses a title re-added to Radarr after the next catalog refresh', async () => {
+    const PLEX_URL = 'http://localhost:32400';
+    const plex = await ctx.cradle.providerSettingsService.create({
+      type: MetadataProviderType.PLEX,
+      name: 'Plex',
+      url: PLEX_URL,
+      apiKey: 'token',
+      settings: { enabledTasks: ['deleteFromLibrary'] },
+    });
+    const deleted: string[] = [];
+    let radarr = [createRadarrMovie({ id: 1, title: 'Heat', tmdbId: 949 })];
+    server.use(
+      http.get(`${RADARR_URL}/api/v3/movie`, () => HttpResponse.json(radarr)),
+      http.get(`${PLEX_URL}/library/sections`, () =>
+        HttpResponse.json({ MediaContainer: { Directory: [{ key: '1', type: 'movie' }] } })
+      ),
+      http.get(`${PLEX_URL}/library/sections/1/all`, () =>
+        HttpResponse.json({
+          MediaContainer: {
+            Metadata: [{ ratingKey: 'rk-heat', type: 'movie', Guid: [{ id: 'tmdb://949' }] }],
+          },
+        })
+      ),
+      http.delete(`${PLEX_URL}/library/metadata/:key`, ({ params }) => {
+        deleted.push(String(params.key));
+        return new HttpResponse(null, { status: 200 });
+      })
+    );
+    const query = await ctx.cradle.mediaQueryService.create({
+      name: 'Everything',
+      contentType: 'movie',
+      filters: [],
+    });
+    const automation = await ctx.cradle.automationService.create({
+      name: 'Delete from Plex',
+      queries: [{ queryId: query.id, role: 'include' }],
+      providerId: plex.id,
+      taskId: 'deleteFromLibrary',
+      schedule: '0 * * * *',
+    });
+
+    radarr = [];
+    await refreshCatalog(ctx.cradle);
+    radarr = [createRadarrMovie({ id: 2, title: 'Heat', tmdbId: 949 })];
+    await refreshCatalog(ctx.cradle);
+    await ctx.cradle.automationExecutor.execute(automation.id);
+
+    expect(deleted).toEqual(['rk-heat']);
+    const [run] = await ctx.cradle.automationRunService.listRuns({ automationId: automation.id });
+    expect(run.status).toBe('success');
+    const { data: items } = await ctx.cradle.automationRunService.listRunItems(run.id);
+    expect(items).toEqual([expect.objectContaining({ title: 'Heat', deleted: false })]);
+  });
 });
