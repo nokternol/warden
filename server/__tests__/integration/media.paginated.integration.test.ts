@@ -22,6 +22,7 @@ import {
   expectErrorResponse,
   expectSuccessResponse,
 } from '@tests/helpers/api';
+import { refreshCatalog } from '@tests/helpers/library';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
@@ -59,6 +60,7 @@ const mockUser = {
 
 // ─── Suite ────────────────────────────────────────────────────────────────────
 
+let libraryCradle: import('@server/container').Cradle;
 describe('Paginated Media API', () => {
   let authedApp: Express;
   let unauthedApp: Express;
@@ -92,6 +94,7 @@ describe('Paginated Media API', () => {
     const config = loadConfig();
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
+    libraryCradle = container.cradle;
     cradle = container.cradle;
     const { providerSettingsService } = cradle;
 
@@ -137,10 +140,11 @@ describe('Paginated Media API', () => {
   // Override Radarr to return 5 movies before each test so the cache is
   // populated with predictable data. vitest.server.ts resets handlers in
   // afterEach, so we re-apply here.
-  beforeEach(() => {
+  beforeEach(async () => {
     server.use(
       http.get('http://localhost:7878/api/v3/movie', () => HttpResponse.json(makeMovies(5)))
     );
+    await refreshCatalog(libraryCradle);
   });
 
   // ─── /api/media/movie ───────────────────────────────────────────────────────
@@ -264,45 +268,6 @@ describe('Paginated Media API', () => {
       app.use(errorHandlerMiddleware);
       return createApiClient(app);
     }
-
-    it('GET /api/media/movie includes errors when Radarr returns 500', async () => {
-      server.use(
-        http.get(
-          'http://localhost:7878/api/v3/movie',
-          () => new HttpResponse(null, { status: 500 })
-        )
-      );
-
-      const client = buildErrorClient(serveApi({ media: buildMedia().procedures }));
-      const res = await client.get(browsePath('movie'));
-      const data = expectSuccessResponse(res);
-
-      expect(data.items).toEqual([]);
-      expect(data.totalCount).toBe(0);
-      expect(Array.isArray(data.errors)).toBe(true);
-      expect(data.errors).toHaveLength(1);
-      expect(data.errors[0]).toMatchObject({ provider: 'Radarr' });
-      expect(data.errors[0].error).toMatch(/^Couldn't be reached: /);
-    });
-
-    it('GET /api/media/series includes errors when Sonarr returns 500', async () => {
-      server.use(
-        http.get(
-          'http://localhost:8989/api/v3/series',
-          () => new HttpResponse(null, { status: 500 })
-        )
-      );
-
-      const client = buildErrorClient(serveApi({ media: buildMedia().procedures }));
-      const res = await client.get(browsePath('series'));
-      const data = expectSuccessResponse(res);
-
-      expect(data.items).toEqual([]);
-      expect(data.totalCount).toBe(0);
-      expect(Array.isArray(data.errors)).toBe(true);
-      expect(data.errors).toHaveLength(1);
-      expect(data.errors[0]).toMatchObject({ provider: 'Sonarr' });
-    });
 
     it('GET /api/media/movie has errors: [] when Radarr is healthy', async () => {
       server.use(

@@ -26,8 +26,9 @@ import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.q
 import type { EnrichmentFields } from '@server/modules/media/mediaFieldProvider';
 import { createMockConfig } from '@tests/factories';
 import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
+import { refreshCatalog } from '@tests/helpers/library';
 import { server } from '@tests/mocks/server';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { http, HttpResponse } from 'msw';
@@ -90,16 +91,17 @@ async function seedEnrichment(sourceId: number, fields: Partial<EnrichmentFields
     .select({ id: metadataProviders.id })
     .from(metadataProviders)
     .where(eq(metadataProviders.type, MetadataProviderType.RADARR));
-  const [identity] = await db
-    .insert(mediaIdentity)
-    .values({ contentType: 'movie', enrichedAt: Math.floor(Date.now() / 1000) })
-    .returning();
-  await db
-    .insert(mediaItems)
-    .values({ providerId: radarr.id, externalId: sourceId, mediaIdentityId: identity.id });
+  // The catalog refresh recorded the copy; its facts attach to the title it grouped it into.
+  const [copy] = await db
+    .select({ mediaIdentityId: mediaItems.mediaIdentityId })
+    .from(mediaItems)
+    .where(and(eq(mediaItems.providerId, radarr.id), eq(mediaItems.externalId, sourceId)));
+  const identity = { id: copy.mediaIdentityId };
   await new EnrichmentQueries({ db }).replaceFields(identity.id, fields);
+  libraryCradle.eventBus.emit('media:changed', {});
 }
 
+let libraryCradle: import('@server/container').Cradle;
 describe('Media browse — enriched predicates', () => {
   let client: ReturnType<typeof createApiClient>;
 
@@ -115,6 +117,7 @@ describe('Media browse — enriched predicates', () => {
     const config = loadConfig();
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
+    libraryCradle = container.cradle;
     await container.cradle.providerSettingsService.create({
       type: MetadataProviderType.RADARR,
       name: 'Radarr',
@@ -144,6 +147,7 @@ describe('Media browse — enriched predicates', () => {
     const db = getDb();
     await db.delete(mediaEnrichment);
     await db.delete(mediaIdentity);
+    await refreshCatalog(libraryCradle);
   });
 
   describe('seerrRequestStatus', () => {

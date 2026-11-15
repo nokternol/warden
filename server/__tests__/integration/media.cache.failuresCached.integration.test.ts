@@ -109,35 +109,6 @@ describe('failed upstream fetches are cached until the expiry', () => {
     await closeDatabase();
   });
 
-  it('Radarr movies: the browse after recovery still shows the error and no titles', async () => {
-    const radarr = flakyUpstream(() => [
-      {
-        id: 1,
-        title: 'Inception',
-        hasFile: true,
-        monitored: true,
-        tmdbId: 27205,
-        qualityProfileId: 1,
-        tags: [],
-        path: '/movies/Inception',
-      },
-    ]);
-    server.use(http.get(`${RADARR}/movie`, radarr.respond));
-    freshClient();
-
-    const failed = expectSuccessResponse(await client.get(browsePath('movie')));
-    expect(failed.errors.length).toBeGreaterThan(0);
-    expect(failed.totalCount).toBe(0);
-    const requestsForOneFetch = radarr.state.requests;
-
-    radarr.recover();
-    const afterRecovery = expectSuccessResponse(await client.get(browsePath('movie')));
-
-    expect(afterRecovery.errors.length).toBeGreaterThan(0);
-    expect(afterRecovery.totalCount).toBe(0);
-    expect(radarr.state.requests).toBe(requestsForOneFetch);
-  }, 15_000);
-
   it('Radarr tags: the lookup after recovery is still empty', async () => {
     const radarr = flakyUpstream(() => [{ id: 1, label: 'kids' }]);
     server.use(http.get(`${RADARR}/tag`, radarr.respond));

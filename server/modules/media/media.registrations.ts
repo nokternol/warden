@@ -3,6 +3,7 @@ import { ActiveFieldSetCache } from './activeFieldSet';
 import { EnrichmentQueries } from './enrichment/enrichment.queries';
 import { EnrichmentJobFactory } from './enrichmentJobFactory';
 import { FilterReadiness } from './filterReadiness';
+import { LibraryCache } from './libraryCache';
 import { MediaQueryEngine } from './mediaQueryEngine';
 import { MediaSourceFactory } from './mediaSourceFactory';
 import { SourceReadCache } from './sourceReadCache';
@@ -20,6 +21,7 @@ export interface MediaCradle {
   activeFieldSetCache: ActiveFieldSetCache;
   filterReadiness: FilterReadiness;
   sourceReadCache: SourceReadCache;
+  libraryCache: LibraryCache;
 }
 
 /**
@@ -38,6 +40,7 @@ export function registerMediaDependencies<TCradle extends MediaCradle>(
     activeFieldSetCache: asClass(ActiveFieldSetCache).singleton(),
     filterReadiness: asClass(FilterReadiness).singleton(),
     sourceReadCache: asClass(SourceReadCache).singleton(),
+    libraryCache: asClass(LibraryCache).singleton(),
   };
   // TCradle extends MediaCradle, so the slice's keys and resolver types
   // are a subset of the app pair type.

@@ -24,6 +24,7 @@ import {
   isMediaSourceType,
 } from '@server/modules/providers';
 import { type FilterReadiness, filterAnswer, findingsFor } from './filterReadiness';
+import type { LibraryCache, LibraryCopy } from './libraryCache';
 import { paginateItems } from './media.pagination';
 import { sortMedia } from './media.sort';
 import { resolutionTier } from './mediaFieldProvider';
@@ -34,7 +35,6 @@ import type { MediaSource } from './mediaSource';
 import { sourceOwnership } from './mediaSourceFactory';
 import { type Filter, type NormalizedMovie, type NormalizedSeries, getRule } from './ruleRegistry';
 import { radarrRowsSource, sonarrRowsSource } from './sourceAdapters';
-import type { SourceReadCache, SourceReadError } from './sourceReadCache';
 
 const log = getChildLogger('MediaProcedures');
 
@@ -62,7 +62,7 @@ interface MediaCradle {
   mediaQueryEngine: MediaQueryEngine;
   eventBus: DomainEventBus;
   filterReadiness: Pick<FilterReadiness, 'readFacts'>;
-  sourceReadCache: Pick<SourceReadCache, 'readEach'>;
+  libraryCache: Pick<LibraryCache, 'read'>;
   db?: DrizzleDb;
 }
 
@@ -80,13 +80,11 @@ export interface MediaError {
 
 interface MovieSublist {
   providerId: number;
-  providerName: string;
   movies: RadarrMovie[];
 }
 
 interface SeriesSublist {
   providerId: number;
-  providerName: string;
   series: SonarrSeries[];
 }
 
@@ -148,9 +146,15 @@ function pooled(sources: MediaSource[]): MediaSource {
   };
 }
 
-/** A provider that could not be read, as the Media page names it: its name and the message. */
-function asMediaError({ provider, error }: SourceReadError): MediaError {
-  return { provider, error };
+/** Copies split by the instance holding them, in the order the library lists them. */
+function byInstance<C extends ContentType>(copies: LibraryCopy<C>[]) {
+  const sublists = new Map<number, LibraryCopy<C>['record'][]>();
+  for (const { providerId, record } of copies) {
+    const records = sublists.get(providerId) ?? [];
+    records.push(record);
+    sublists.set(providerId, records);
+  }
+  return [...sublists.entries()].map(([providerId, records]) => ({ providerId, records }));
 }
 
 export function createMediaProcedures(cradle: MediaCradle) {
@@ -180,29 +184,27 @@ export function createMediaProcedures(cradle: MediaCradle) {
   const plexItemsCache = new MediaCache<PlexMediaItem[]>();
   const jellyfinItemsCache = new MediaCache<JellyfinItem[]>();
 
-  /** One active Radarr instance's library, kept separate so browse can attribute copies. */
+  /** Each active Radarr instance's copies, kept separate so browse can attribute them. */
   async function getMovies(): Promise<{ sublists: MovieSublist[]; errors: MediaError[] }> {
-    const { reads, errors } = await cradle.sourceReadCache.readEach('movie');
+    const { copies } = await cradle.libraryCache.read();
     return {
-      sublists: reads.map(({ providerId, name, rows }) => ({
+      sublists: byInstance(copies.movie).map(({ providerId, records }) => ({
         providerId,
-        providerName: name,
-        movies: rows,
+        movies: records,
       })),
-      errors: errors.map(asMediaError),
+      errors: [],
     };
   }
 
-  /** One active Sonarr instance's library, kept separate so browse can attribute copies. */
+  /** Each active Sonarr instance's copies, kept separate so browse can attribute them. */
   async function getSeries(): Promise<{ sublists: SeriesSublist[]; errors: MediaError[] }> {
-    const { reads, errors } = await cradle.sourceReadCache.readEach('series');
+    const { copies } = await cradle.libraryCache.read();
     return {
-      sublists: reads.map(({ providerId, name, rows }) => ({
+      sublists: byInstance(copies.series).map(({ providerId, records }) => ({
         providerId,
-        providerName: name,
-        series: rows,
+        series: records,
       })),
-      errors: errors.map(asMediaError),
+      errors: [],
     };
   }
 

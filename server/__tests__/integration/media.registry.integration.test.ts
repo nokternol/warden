@@ -17,6 +17,7 @@ import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createMediaProcedures } from '@server/modules/media';
 import { createMockConfig } from '@tests/factories';
 import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
+import { refreshCatalog } from '@tests/helpers/library';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
@@ -118,8 +119,9 @@ describe('Media browse — registry-delegated predicates', () => {
   });
 
   // Fresh routes per call → isolated MediaCache, so each test owns its movie fixture.
-  function clientWithMovies(movies: unknown[]): ReturnType<typeof createApiClient> {
+  async function clientWithMovies(movies: unknown[]): Promise<ReturnType<typeof createApiClient>> {
     server.use(http.get('http://localhost:7878/api/v3/movie', () => HttpResponse.json(movies)));
+    await refreshCatalog(cradle);
     const app: Express = express();
     app.use(express.json());
     app.use(requestIdMiddleware);
@@ -137,7 +139,7 @@ describe('Media browse — registry-delegated predicates', () => {
 
   describe('certification (previously stripped by the browse schema)', () => {
     it('returns only movies whose certification matches (case-insensitive)', async () => {
-      const client = clientWithMovies(REG_MOVIES);
+      const client = await clientWithMovies(REG_MOVIES);
       const res = await client.get(
         browsePath('movie', [{ ruleKey: 'certification', value: 'PG-13' }], { pageSize: 100 })
       );
@@ -150,7 +152,7 @@ describe('Media browse — registry-delegated predicates', () => {
 
   describe('addedDaysAgoGte', () => {
     it('returns only movies added at least N days ago', async () => {
-      const client = clientWithMovies([
+      const client = await clientWithMovies([
         {
           id: 1,
           title: 'Old',
@@ -186,7 +188,7 @@ describe('Media browse — registry-delegated predicates', () => {
     });
 
     it('returns only movies added at most N days ago', async () => {
-      const client = clientWithMovies([
+      const client = await clientWithMovies([
         {
           id: 1,
           title: 'Old',
@@ -253,7 +255,7 @@ describe('Media browse — registry-delegated predicates', () => {
     ];
 
     it('returns only movies at least N GB on disk', async () => {
-      const client = clientWithMovies(sizedMovies);
+      const client = await clientWithMovies(sizedMovies);
       const res = await client.get(
         browsePath('movie', [{ ruleKey: 'sizeOnDiskGb', value: { min: 10 } }], { pageSize: 100 })
       );
@@ -262,7 +264,7 @@ describe('Media browse — registry-delegated predicates', () => {
     });
 
     it('returns only movies at most N GB on disk', async () => {
-      const client = clientWithMovies(sizedMovies);
+      const client = await clientWithMovies(sizedMovies);
       const res = await client.get(
         browsePath('movie', [{ ruleKey: 'sizeOnDiskGb', value: { max: 10 } }], { pageSize: 100 })
       );
@@ -302,7 +304,7 @@ describe('Media browse — registry-delegated predicates', () => {
     ];
 
     it('returns only movies with IMDB rating at least N', async () => {
-      const client = clientWithMovies(ratedMovies);
+      const client = await clientWithMovies(ratedMovies);
       const res = await client.get(
         browsePath('movie', [{ ruleKey: 'imdbRating', value: { min: 7 } }], { pageSize: 100 })
       );
@@ -311,7 +313,7 @@ describe('Media browse — registry-delegated predicates', () => {
     });
 
     it('returns only movies with IMDB rating at most N', async () => {
-      const client = clientWithMovies(ratedMovies);
+      const client = await clientWithMovies(ratedMovies);
       const res = await client.get(
         browsePath('movie', [{ ruleKey: 'imdbRating', value: { max: 7 } }], { pageSize: 100 })
       );
@@ -321,14 +323,14 @@ describe('Media browse — registry-delegated predicates', () => {
 
     it('browses a movie with its ratings unchanged, unlisted sources included', async () => {
       const ratings = { imdb: { value: 4.5 }, letterboxd: { value: 3.9, votes: 120 } };
-      const client = clientWithMovies([{ ...ratedMovies[0], ratings }]);
+      const client = await clientWithMovies([{ ...ratedMovies[0], ratings }]);
       const res = await client.get(browsePath('movie', [], { pageSize: 100 }));
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { ratings: unknown }) => m.ratings)).toEqual([ratings]);
     });
 
     it('does not match an unrated movie, which Radarr reports as zero votes and zero value', async () => {
-      const client = clientWithMovies([
+      const client = await clientWithMovies([
         ...ratedMovies,
         {
           ...ratedMovies[0],

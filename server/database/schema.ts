@@ -397,3 +397,52 @@ export const mediaEnrichment = sqliteTable(
 
 export type MediaEnrichment = typeof mediaEnrichment.$inferSelect;
 export type NewMediaEnrichment = typeof mediaEnrichment.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// mediaItemPayload — the provider's own record of one copy, as last refreshed.
+// Kept apart from `media_item` so the copy's identity rows stay narrow; the
+// in-memory library cache, not database indexes, serves reads over it.
+// ---------------------------------------------------------------------------
+export const mediaItemPayload = sqliteTable('media_item_payload', {
+  mediaItemId: integer('mediaItemId')
+    .primaryKey()
+    .references(() => mediaItems.id, { onDelete: 'cascade' }),
+  /** JSON: the provider's record of the copy (a Radarr movie, a Sonarr series). */
+  data: text('data').notNull(),
+});
+
+// ---------------------------------------------------------------------------
+// providerRefresh — when Warden last refreshed one kind of one provider's data,
+// and whether the latest attempt failed.
+// ---------------------------------------------------------------------------
+export const providerRefresh = sqliteTable(
+  'provider_refresh',
+  {
+    providerId: integer('providerId')
+      .notNull()
+      .references(() => metadataProviders.id, { onDelete: 'cascade' }),
+    /** 'catalog' | 'links' | 'lists' | 'facts' */
+    kind: text('kind').notNull(),
+    /** Unix seconds of the last successful refresh; null until one succeeds. */
+    refreshedAt: integer('refreshedAt'),
+    /** Unix seconds of the latest attempt, when it failed; cleared on success. */
+    failedAt: integer('failedAt'),
+    error: text('error'),
+  },
+  (table) => [primaryKey({ columns: [table.providerId, table.kind] })]
+);
+
+export type ProviderRefreshRow = typeof providerRefresh.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// providerLists — one provider's setup lists (tags, quality profiles, root
+// folders, language profiles), part of the disposable copy rather than the
+// owner's configuration in `metadata_provider`.
+// ---------------------------------------------------------------------------
+export const providerLists = sqliteTable('provider_lists', {
+  providerId: integer('providerId')
+    .primaryKey()
+    .references(() => metadataProviders.id, { onDelete: 'cascade' }),
+  /** JSON: `{ tags?, qualityProfiles?, rootFolders?, languageProfiles? }`. */
+  data: text('data').notNull(),
+});

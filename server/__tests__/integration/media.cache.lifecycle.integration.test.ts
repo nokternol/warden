@@ -47,19 +47,6 @@ function buildAuthedApp(routes: ReturnType<typeof serveApi>): Express {
   return app;
 }
 
-function makeRadarrMovie(title: string, id = 1) {
-  return {
-    id,
-    title,
-    hasFile: true,
-    monitored: true,
-    tmdbId: 603,
-    qualityProfileId: 1,
-    tags: [],
-    path: `/movies/${title}`,
-  };
-}
-
 // --------------------------------------------------------------------------
 
 describe('MediaHandler cache lifecycle', () => {
@@ -104,96 +91,6 @@ describe('MediaHandler cache lifecycle', () => {
 
   afterAll(async () => {
     await closeDatabase();
-  });
-
-  it('two concurrent GET /api/media/movie requests coalesce into one Radarr call', async () => {
-    let radarrCallCount = 0;
-    server.use(
-      http.get('http://localhost:7878/api/v3/movie', async () => {
-        radarrCallCount++;
-        // artificial delay so the second request always arrives while the first is in-flight
-        await new Promise((resolve) => setTimeout(resolve, 30));
-        return HttpResponse.json([makeRadarrMovie('Inception')]);
-      })
-    );
-
-    const routes = serveApi({ media: buildMedia().procedures });
-    const client = createApiClient(buildAuthedApp(routes));
-
-    const [res1, res2] = await Promise.all([
-      client.get(browsePath('movie')),
-      client.get(browsePath('movie')),
-    ]);
-
-    expect(radarrCallCount).toBe(1);
-    expect(expectSuccessResponse(res1).items).toHaveLength(1);
-    expect(expectSuccessResponse(res2).items).toHaveLength(1);
-  });
-
-  it('serves a second browse page from the cached rows, with no second upstream request', async () => {
-    const calls = { radarr: 0, sonarr: 0 };
-    server.use(
-      http.get('http://localhost:7878/api/v3/movie', () => {
-        calls.radarr++;
-        return HttpResponse.json([makeRadarrMovie('Inception')]);
-      }),
-      http.get('http://localhost:8989/api/v3/series', () => {
-        calls.sonarr++;
-        return HttpResponse.json([createSonarrSeries({ title: 'Dark' })]);
-      })
-    );
-    const client = createApiClient(buildAuthedApp(serveApi({ media: buildMedia().procedures })));
-
-    for (const type of ['movie', 'series'] as const) {
-      const first = expectSuccessResponse(await client.get(browsePath(type)));
-      const second = expectSuccessResponse(await client.get(browsePath(type)));
-      expect(second.items).toEqual(first.items);
-      expect(second.items).toHaveLength(1);
-    }
-
-    expect(calls).toEqual({ radarr: 1, sonarr: 1 });
-  });
-
-  it('browse and the row-derived lookups share one upstream read, across procedures instances', async () => {
-    const calls = { radarr: 0, sonarr: 0 };
-    server.use(
-      http.get('http://localhost:7878/api/v3/movie', () => {
-        calls.radarr++;
-        return HttpResponse.json([makeRadarrMovie('Inception')]);
-      }),
-      http.get('http://localhost:8989/api/v3/series', () => {
-        calls.sonarr++;
-        return HttpResponse.json([createSonarrSeries({ title: 'Dark' })]);
-      })
-    );
-    const browsing = createApiClient(buildAuthedApp(serveApi({ media: buildMedia().procedures })));
-    const lookingUp = createApiClient(buildAuthedApp(serveApi({ media: buildMedia().procedures })));
-
-    await browsing.get(browsePath('movie'));
-    await browsing.get(browsePath('series'));
-    for (const lookup of ['genres', 'networks', 'release-groups', 'collection-names']) {
-      expectSuccessResponse(await lookingUp.get(`/api/media/${lookup}`));
-    }
-
-    expect(calls).toEqual({ radarr: 1, sonarr: 1 });
-  });
-
-  it('media:changed on the bus makes the next browse refetch from Radarr', async () => {
-    let radarrCallCount = 0;
-    server.use(
-      http.get('http://localhost:7878/api/v3/movie', () => {
-        radarrCallCount++;
-        return HttpResponse.json([makeRadarrMovie('Inception')]);
-      })
-    );
-    const routes = serveApi({ media: buildMedia().procedures });
-    const client = createApiClient(buildAuthedApp(routes));
-
-    await client.get(browsePath('movie'));
-    cradle.eventBus.emit('media:changed', {});
-    await client.get(browsePath('movie'));
-
-    expect(radarrCallCount).toBe(2);
   });
 
   it("after dispose(), media:changed no longer clears that instance's lookup caches", async () => {

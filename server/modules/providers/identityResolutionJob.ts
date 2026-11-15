@@ -3,7 +3,7 @@ import { yieldToEventLoop } from '../../kernel/yieldToEventLoop';
 
 const defaultDelay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 import type { ContentType } from '@contract/schemas';
-import { mediaIdentity, mediaItems } from '@server/database/schema';
+import { mediaIdentity, mediaItemPayload, mediaItems } from '@server/database/schema';
 import type { DrizzleDb } from '@server/kernel/db';
 import type { RadarrProvider } from './connections/radarrProvider';
 import type { SonarrProvider } from './connections/sonarrProvider';
@@ -152,7 +152,7 @@ export class IdentityResolutionJob {
           title: s.title,
           year: s.year,
         });
-        await this.upsertMediaItem(providerId, s.id, identityId, now);
+        await this.upsertMediaItem(providerId, s.id, identityId, now, s);
         fetchedExternalIds.push(s.id);
 
         if (!s.tvMazeId && this.deps.tvMazeLookup && s.tvdbId) {
@@ -194,7 +194,7 @@ export class IdentityResolutionJob {
           title: movie.title,
           year: movie.year,
         });
-        await this.upsertMediaItem(providerId, movie.id, identityId, now);
+        await this.upsertMediaItem(providerId, movie.id, identityId, now, movie);
         fetchedExternalIds.push(movie.id);
       }
       await this.markItemsLeftSource(providerId, fetchedExternalIds);
@@ -206,22 +206,30 @@ export class IdentityResolutionJob {
   }
 
   /**
-   * Upsert a `media_item` row for one instance's copy, keyed `(providerId, externalId)`.
-   * The instance lists the item, so any deleted mark from an earlier absence clears.
+   * Upsert a `media_item` row for one instance's copy, keyed `(providerId, externalId)`, and store
+   * the provider's record of it as the copy's payload. The instance lists the item, so any deleted
+   * mark from an earlier absence clears.
    */
   private async upsertMediaItem(
     providerId: number,
     externalId: number,
     mediaIdentityId: number,
-    resolvedAt: number
+    resolvedAt: number,
+    record: unknown
   ): Promise<void> {
-    await this.deps.db
+    const [{ id }] = await this.deps.db
       .insert(mediaItems)
       .values({ providerId, externalId, mediaIdentityId, resolvedAt })
       .onConflictDoUpdate({
         target: [mediaItems.providerId, mediaItems.externalId],
         set: { mediaIdentityId, resolvedAt, deleted: false },
-      });
+      })
+      .returning({ id: mediaItems.id });
+    const data = JSON.stringify(record);
+    await this.deps.db
+      .insert(mediaItemPayload)
+      .values({ mediaItemId: id, data })
+      .onConflictDoUpdate({ target: mediaItemPayload.mediaItemId, set: { data } });
   }
 
   /**

@@ -28,8 +28,9 @@ import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.q
 import type { EnrichmentFields } from '@server/modules/media/mediaFieldProvider';
 import { createMockConfig } from '@tests/factories';
 import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
+import { refreshCatalog } from '@tests/helpers/library';
 import { server } from '@tests/mocks/server';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { http, HttpResponse } from 'msw';
@@ -121,8 +122,9 @@ describe('Media browse — series registry predicates', () => {
   });
 
   // Fresh routes per call → isolated MediaCache.
-  function clientWithSeries(list: unknown[]): ReturnType<typeof createApiClient> {
+  async function clientWithSeries(list: unknown[]): Promise<ReturnType<typeof createApiClient>> {
     server.use(http.get('http://localhost:8989/api/v3/series', () => HttpResponse.json(list)));
+    await refreshCatalog(cradle);
     const app: Express = express();
     app.use(express.json());
     app.use(requestIdMiddleware);
@@ -144,19 +146,18 @@ describe('Media browse — series registry predicates', () => {
       .select({ id: metadataProviders.id })
       .from(metadataProviders)
       .where(eq(metadataProviders.type, MetadataProviderType.SONARR));
-    const [identity] = await db
-      .insert(mediaIdentity)
-      .values({ contentType: 'series', enrichedAt: Math.floor(Date.now() / 1000) })
-      .returning();
-    await db
-      .insert(mediaItems)
-      .values({ providerId: sonarr.id, externalId: sourceId, mediaIdentityId: identity.id });
+    const [copy] = await db
+      .select({ mediaIdentityId: mediaItems.mediaIdentityId })
+      .from(mediaItems)
+      .where(and(eq(mediaItems.providerId, sonarr.id), eq(mediaItems.externalId, sourceId)));
+    const identity = { id: copy.mediaIdentityId };
     await new EnrichmentQueries({ db }).replaceFields(identity.id, fields);
+    cradle.eventBus.emit('media:changed', {});
   }
 
   describe('certification', () => {
     it('returns only series whose certification matches', async () => {
-      const client = clientWithSeries([
+      const client = await clientWithSeries([
         series(1, 'TV-MA Show', { certification: 'TV-MA' }),
         series(2, 'TV-14 Show', { certification: 'TV-14' }),
       ]);
@@ -174,7 +175,7 @@ describe('Media browse — series registry predicates', () => {
       series(2, 'New', { added: daysAgoIso(2) }),
     ];
     it('filters by added at least N days ago', async () => {
-      const client = clientWithSeries(list);
+      const client = await clientWithSeries(list);
       const res = await client.get(
         browsePath('series', [{ ruleKey: 'addedDaysAgo', value: { min: 7 } }], { pageSize: 100 })
       );
@@ -183,7 +184,7 @@ describe('Media browse — series registry predicates', () => {
       ]);
     });
     it('filters by added at most N days ago', async () => {
-      const client = clientWithSeries(list);
+      const client = await clientWithSeries(list);
       const res = await client.get(
         browsePath('series', [{ ruleKey: 'addedDaysAgo', value: { max: 7 } }], { pageSize: 100 })
       );
@@ -199,7 +200,7 @@ describe('Media browse — series registry predicates', () => {
       series(2, 'Large', { statistics: { sizeOnDisk: 50 * GB } }),
     ];
     it('filters by at least N GB', async () => {
-      const client = clientWithSeries(list);
+      const client = await clientWithSeries(list);
       const res = await client.get(
         browsePath('series', [{ ruleKey: 'sizeOnDiskGb', value: { min: 10 } }], { pageSize: 100 })
       );
@@ -208,7 +209,7 @@ describe('Media browse — series registry predicates', () => {
       ]);
     });
     it('filters by at most N GB', async () => {
-      const client = clientWithSeries(list);
+      const client = await clientWithSeries(list);
       const res = await client.get(
         browsePath('series', [{ ruleKey: 'sizeOnDiskGb', value: { max: 10 } }], { pageSize: 100 })
       );
@@ -224,7 +225,7 @@ describe('Media browse — series registry predicates', () => {
       series(2, 'High', { ratings: { votes: 100, value: 8.5 } }),
     ];
     it('filters by community rating at least N', async () => {
-      const client = clientWithSeries(list);
+      const client = await clientWithSeries(list);
       const res = await client.get(
         browsePath('series', [{ ruleKey: 'communityRating', value: { min: 7 } }], { pageSize: 100 })
       );
@@ -233,7 +234,7 @@ describe('Media browse — series registry predicates', () => {
       ]);
     });
     it('filters by community rating at most N', async () => {
-      const client = clientWithSeries(list);
+      const client = await clientWithSeries(list);
       const res = await client.get(
         browsePath('series', [{ ruleKey: 'communityRating', value: { max: 7 } }], { pageSize: 100 })
       );
@@ -242,7 +243,7 @@ describe('Media browse — series registry predicates', () => {
       ]);
     });
     it('does not match an unrated series, which Sonarr reports as zero votes and zero value', async () => {
-      const client = clientWithSeries([
+      const client = await clientWithSeries([
         ...list,
         series(3, 'Unrated', { ratings: { votes: 0, value: 0 } }),
       ]);
@@ -257,7 +258,7 @@ describe('Media browse — series registry predicates', () => {
 
   describe('ended', () => {
     it('filters to ended series', async () => {
-      const client = clientWithSeries([
+      const client = await clientWithSeries([
         series(1, 'Ended', { ended: true }),
         series(2, 'Running', { ended: false }),
       ]);
@@ -276,7 +277,7 @@ describe('Media browse — series registry predicates', () => {
       series(2, 'FreshAir', { previousAiring: daysAgoIso(3) }),
     ];
     it('filters by last aired at least N days ago', async () => {
-      const client = clientWithSeries(list);
+      const client = await clientWithSeries(list);
       const res = await client.get(
         browsePath('series', [{ ruleKey: 'lastAiredDaysAgo', value: { min: 30 } }], {
           pageSize: 100,
@@ -287,7 +288,7 @@ describe('Media browse — series registry predicates', () => {
       ]);
     });
     it('filters by last aired at most N days ago', async () => {
-      const client = clientWithSeries(list);
+      const client = await clientWithSeries(list);
       const res = await client.get(
         browsePath('series', [{ ruleKey: 'lastAiredDaysAgo', value: { max: 30 } }], {
           pageSize: 100,
@@ -305,7 +306,7 @@ describe('Media browse — series registry predicates', () => {
       series(2, 'Complete', { statistics: { sizeOnDisk: 0, percentOfEpisodes: 100 } }),
     ];
     it('filters by episode completion at least N%', async () => {
-      const client = clientWithSeries(list);
+      const client = await clientWithSeries(list);
       const res = await client.get(
         browsePath('series', [{ ruleKey: 'episodePercentage', value: { min: 90 } }], {
           pageSize: 100,
@@ -316,7 +317,7 @@ describe('Media browse — series registry predicates', () => {
       ]);
     });
     it('filters by episode completion at most N%', async () => {
-      const client = clientWithSeries(list);
+      const client = await clientWithSeries(list);
       const res = await client.get(
         browsePath('series', [{ ruleKey: 'episodePercentage', value: { max: 90 } }], {
           pageSize: 100,
@@ -330,7 +331,7 @@ describe('Media browse — series registry predicates', () => {
 
   describe('enriched predicates (seerr / tmdbStatus / lastWatched) on series', () => {
     it('seerrRequestStatus narrows by merged SONARR enrichment', async () => {
-      const client = clientWithSeries([series(1, 'Requested', {}), series(2, 'Other', {})]);
+      const client = await clientWithSeries([series(1, 'Requested', {}), series(2, 'Other', {})]);
       await seedEnrichment(1, { seerrRequestStatus: 2 });
       await seedEnrichment(2, { seerrRequestStatus: 1 });
       const res = await client.get(
@@ -342,7 +343,10 @@ describe('Media browse — series registry predicates', () => {
     });
 
     it('tmdbStatus narrows by merged SONARR enrichment', async () => {
-      const client = clientWithSeries([series(1, 'Ended TV', {}), series(2, 'Returning TV', {})]);
+      const client = await clientWithSeries([
+        series(1, 'Ended TV', {}),
+        series(2, 'Returning TV', {}),
+      ]);
       await seedEnrichment(1, { tmdbStatus: 'Ended' });
       await seedEnrichment(2, { tmdbStatus: 'Returning Series' });
       const res = await client.get(
@@ -354,7 +358,7 @@ describe('Media browse — series registry predicates', () => {
     });
 
     it('returns 0 series when an enriched filter has no enrichment data', async () => {
-      const client = clientWithSeries([series(1, 'A', {}), series(2, 'B', {})]);
+      const client = await clientWithSeries([series(1, 'A', {}), series(2, 'B', {})]);
       const res = await client.get(
         browsePath('series', [{ ruleKey: 'seerrRequestStatus', value: 2 }], { pageSize: 100 })
       );
@@ -364,7 +368,7 @@ describe('Media browse — series registry predicates', () => {
 
   describe('tautulliWatched (migrated to enrichment playCount)', () => {
     it('returns only series with enriched playCount > 0 when tautulliWatched=true', async () => {
-      const client = clientWithSeries([series(1, 'Watched', {}), series(2, 'Unwatched', {})]);
+      const client = await clientWithSeries([series(1, 'Watched', {}), series(2, 'Unwatched', {})]);
       await seedEnrichment(1, { playCount: 5 });
       await seedEnrichment(2, { playCount: 0 });
       const res = await client.get(
