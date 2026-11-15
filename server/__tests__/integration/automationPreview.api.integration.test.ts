@@ -10,6 +10,7 @@ import { closeDatabase, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createAutomationProcedures } from '@server/modules/automations';
+import { createMediaQueryProcedures } from '@server/modules/mediaQueries';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
 import { createMockConfig, createRadarrMovie } from '@tests/factories';
@@ -18,7 +19,7 @@ import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, describe, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const RADARR_URL = 'http://localhost:7878/api/v3';
 
@@ -27,6 +28,7 @@ describe('POST /api/automations/preview', () => {
   let radarrId: number;
   let hasFileQueryId: number;
   let lowImdbQueryId: number;
+  let cradle: ReturnType<typeof buildContainer>['cradle'];
 
   beforeAll(async () => {
     const mockConfig = createMockConfig({
@@ -42,6 +44,7 @@ describe('POST /api/automations/preview', () => {
     const config = loadConfig();
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
+    cradle = container.cradle;
 
     const radarr = await new ProviderSettingsService({ db }).create({
       type: MetadataProviderType.RADARR,
@@ -73,7 +76,12 @@ describe('POST /api/automations/preview', () => {
       req.user = { id: 1 } as unknown as NonNullable<typeof req.user>;
       next();
     });
-    app.use(serveApi({ automations: createAutomationProcedures(container.cradle) }));
+    app.use(
+      serveApi({
+        automations: createAutomationProcedures(container.cradle),
+        mediaQueries: createMediaQueryProcedures(container.cradle),
+      })
+    );
     app.use(errorHandlerMiddleware);
 
     client = createApiClient(app);
@@ -81,6 +89,8 @@ describe('POST /api/automations/preview', () => {
 
   afterEach(() => {
     server.resetHandlers();
+    // The container's one read cache outlives each test; each test sets its own upstream answers.
+    cradle.sourceReadCache.clear();
   });
 
   afterAll(async () => {
@@ -161,5 +171,35 @@ describe('POST /api/automations/preview', () => {
     });
 
     expectErrorResponse(res, 400, 'VALIDATION_ERROR');
+  });
+
+  it("given one read, a query preview and an automation's planning match the same titles", async () => {
+    let reads = 0;
+    server.use(
+      http.get(`${RADARR_URL}/movie`, () => {
+        reads++;
+        return HttpResponse.json([
+          createRadarrMovie({ id: 1, title: 'Alien', hasFile: true }),
+          createRadarrMovie({ id: 2, title: 'Brazil', hasFile: false }),
+          createRadarrMovie({ id: 3, title: 'Heat', hasFile: true }),
+        ]);
+      })
+    );
+
+    const queryPreview = expectSuccessResponse(
+      await client.get(`/api/media-queries/${hasFileQueryId}/preview`)
+    );
+    const automationPreview = expectSuccessResponse(
+      await client.post('/api/automations/preview', {
+        providerId: radarrId,
+        taskId: 'deleteMovieWithFiles',
+        queries: [{ queryId: hasFileQueryId, role: 'include' }],
+      })
+    );
+
+    expect({ reads, automation: automationPreview.count }).toEqual({
+      reads: 1,
+      automation: queryPreview.count,
+    });
   });
 });

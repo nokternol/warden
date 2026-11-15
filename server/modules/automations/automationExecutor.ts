@@ -13,7 +13,9 @@ import {
   findingsFor,
   identifiesTitle,
   mediaSourceFor,
+  radarrRowsSource,
   resolveActuatorTargets,
+  sonarrRowsSource,
   titleKeyOf,
 } from '../media';
 import type {
@@ -22,6 +24,7 @@ import type {
   MediaQueryClause,
   MediaSource,
   MediaSourceFactory,
+  SourceReadCache,
 } from '../media';
 import type { MediaQueryRecord, MediaQueryService } from '../mediaQueries';
 import {
@@ -29,8 +32,10 @@ import {
   type IProviderFactory,
   ProviderFactory,
   type ProviderSettingsService,
+  type RadarrMovie,
   type RadarrProvider,
   type SonarrProvider,
+  type SonarrSeries,
   isMediaActuator,
   isMediaSourceType,
   readEnabledTaskIds,
@@ -57,6 +62,7 @@ interface ExecutorDeps {
   enrichmentQueries?: EnrichmentQueries;
   /** The owning-catalog sources a non-source actuator's query evaluates against. */
   mediaSourceFactory?: Pick<MediaSourceFactory, 'sourcesFor'>;
+  sourceReadCache?: Pick<SourceReadCache, 'readOne'>;
   db?: DrizzleDb;
   systemTaskRunner?: SystemTaskRunnerLike;
   eventBus?: DomainEventBus;
@@ -162,6 +168,7 @@ export class AutomationExecutor {
   private readonly filterReadiness: Pick<FilterReadiness, 'readFacts'>;
   private readonly automationBlockService: Pick<AutomationBlockService, 'reconcile'>;
   private readonly mediaSourceFactory?: Pick<MediaSourceFactory, 'sourcesFor'>;
+  private readonly sourceReadCache?: Pick<SourceReadCache, 'readOne'>;
   private readonly db?: DrizzleDb;
   private readonly systemTaskRunner?: SystemTaskRunnerLike;
   private readonly eventBus?: DomainEventBus;
@@ -185,6 +192,7 @@ export class AutomationExecutor {
     this.filterReadiness = deps.filterReadiness;
     this.automationBlockService = deps.automationBlockService;
     this.mediaSourceFactory = deps.mediaSourceFactory;
+    this.sourceReadCache = deps.sourceReadCache;
     this.db = deps.db;
     this.systemTaskRunner = deps.systemTaskRunner;
     this.eventBus = deps.eventBus;
@@ -492,9 +500,17 @@ export class AutomationExecutor {
     if (isMediaSourceType(providerSettings.type)) {
       // Catalog-owning actuator: the query evaluates against its own catalog
       // and its native ids feed the task directly, one target per native id.
-      const mediaSource = counting(
-        mediaSourceFor(provider as RadarrProvider | SonarrProvider, providerSettings.id)
-      );
+      let source: MediaSource;
+      if (this.sourceReadCache) {
+        const { rows } = await this.sourceReadCache.readOne(providerSettings.id);
+        source =
+          contentType === 'movie'
+            ? radarrRowsSource(rows as RadarrMovie[], providerSettings.id)
+            : sonarrRowsSource(rows as SonarrSeries[], providerSettings.id);
+      } else {
+        source = mediaSourceFor(provider as RadarrProvider | SonarrProvider, providerSettings.id);
+      }
+      const mediaSource = counting(source);
       const matched = await this.mediaQueryEngine.evaluate({
         source: mediaSource,
         contentType,
