@@ -1,7 +1,7 @@
 # Providers module
 
-The providers feature module — the first module converged on the North Star design
-(`docs/architecture/server-architecture-north-star.md`): it owns everything for the provider domain, from
+The providers feature module — the first module converged on the server architecture design
+(`docs/architecture/server-architecture.md`): it owns everything for the provider domain, from
 HTTP transport down to the system job, and exposes it through one crafted public interface.
 
 ## Layout
