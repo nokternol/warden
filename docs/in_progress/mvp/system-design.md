@@ -20,9 +20,9 @@ The graded map of the current code that this design answers is posted on #251.
   the database and replaced when a refresh lands. It is the only thing features read.
 - **Staleness is shown, not fought.** Every view that shows library data says when the copy was
   last refreshed, and which services failed their last refresh.
-- **A failed or empty answer is not news.** A refresh whose service failed, or answered with nothing
-  where it held titles before, keeps the last good data for that service and records the failure.
-  It never marks that service's titles removed.
+- **Warden believes what a service answers** (north-star belief 6). A successful answer, even an
+  empty one, is the service's truth. An error or no answer is a failure: the refresh keeps the last
+  good data for that service and records the failure.
 - **Condition (owner):** the Media page must stay fast. The first build step measures it on a
   library of the owner's size; if the cache cannot keep it fast, that goes back to the owner.
 
@@ -42,8 +42,9 @@ per-lookup caches in the media procedures.
 - **Each service declares once which facts it supplies.** The fact list, the refresh's write, the
   rules that read a fact and the services a rule depends on all follow from that one declaration.
 - **Filter choices come from the stored facts,** read from the cache, never from a live service.
-- **Contested facts** (supplied by more than one service, such as play count) keep the existing
-  precedence rule, applied once, when the refresh writes.
+- **Facts are stored per provider,** as each provider reported them. Where more than one provider
+  supplies a fact (play count; studio and file details when Plex and Jellyfin are both active),
+  precedence picks one value when the cache loads.
 
 ## 4. Providers (beliefs 2, 8, 10)
 
@@ -66,9 +67,9 @@ per-lookup caches in the media procedures.
   demand for fresh data.
 - **One step to see what an automation would act on now:** its includes minus its excludes, from
   the copy, whenever the owner chooses. Viewing it is never required.
-- **Guards against Warden's own faults stay:** a destructive run does not act when a service it
-  depends on failed its last refresh, or when it would reach at least 20 titles and more than half
-  the library.
+- **A destructive run does not act when a service it depends on failed its last refresh.** Nothing
+  skips a run because of how much it would affect (north-star belief 7): an automation whose
+  destructive action would affect a large share of the library is flagged for review instead.
 - **Run history** records what each run targeted, with title and year, and outlives the copy.
 
 ## 6. Reading the catalog (beliefs 3, 8)
