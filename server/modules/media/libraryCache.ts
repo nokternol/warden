@@ -21,7 +21,8 @@ import {
 } from '@server/modules/providers';
 import { and, eq } from 'drizzle-orm';
 import type { EnrichmentFields } from './mediaFieldProvider';
-import type { MediaItem } from './mediaItem';
+import { type MediaItem, externalIdOf } from './mediaItem';
+import type { MediaSource } from './mediaSource';
 import { normalizeRadarrMovie, normalizeSonarrSeries } from './normalizeMedia';
 
 /** The provider's own record of a copy, by the content type its provider owns. */
@@ -191,4 +192,12 @@ export class LibraryCache {
     }
     return library;
   }
+}
+
+/** A source over library copies already loaded: the query engine reads their items. */
+export function copiesSource(copies: LibraryCopy[]): MediaSource {
+  return {
+    getMediaItems: async () => copies.map((c) => c.item),
+    idOf: externalIdOf,
+  };
 }

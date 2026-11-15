@@ -1,20 +1,20 @@
 import { api } from '@server/kernel/api';
 import {
+  type LibraryCache,
   type MediaQueryEngine,
-  type SourceReadCache,
-  rowsSourceFor,
-  titleKeyOf,
+  copiesSource,
+  recordsFor,
 } from '@server/modules/media';
 import type { MediaQueryService } from './mediaQueryService';
 
 interface Cradle {
   mediaQueryService: MediaQueryService;
   mediaQueryEngine: MediaQueryEngine;
-  sourceReadCache: Pick<SourceReadCache, 'readAll'>;
+  libraryCache: Pick<LibraryCache, 'read'>;
 }
 
 export function createMediaQueryProcedures(cradle: Cradle) {
-  const { mediaQueryService, mediaQueryEngine, sourceReadCache } = cradle;
+  const { mediaQueryService, mediaQueryEngine, libraryCache } = cradle;
 
   return api.mediaQueries.router({
     list: api.mediaQueries.list.handler(async () => mediaQueryService.list()),
@@ -34,19 +34,18 @@ export function createMediaQueryProcedures(cradle: Cradle) {
 
     preview: api.mediaQueries.preview.handler(async ({ input }) => {
       const query = await mediaQueryService.getById(input.id);
-      const reads = await sourceReadCache.readAll(query.contentType);
-
-      const matched = await Promise.all(
-        reads.map((read) =>
-          mediaQueryEngine.evaluate({
-            source: rowsSourceFor(query.contentType, read),
+      const library = await libraryCache.read();
+      const copies = library.copies[query.contentType];
+      const matched = new Set(
+        (
+          await mediaQueryEngine.evaluate({
+            source: copiesSource(copies),
             contentType: query.contentType,
             clauses: [{ filters: query.filters, role: 'include' }],
           })
-        )
+        ).map((item) => item._sourceIds.identity)
       );
-      const titles = new Set(matched.flat().map((item) => titleKeyOf(item, query.contentType)));
-      return { count: titles.size };
+      return { count: matched.size, records: recordsFor(library, query.contentType) };
     }),
   });
 }

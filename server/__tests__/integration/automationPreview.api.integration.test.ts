@@ -16,6 +16,7 @@ import { ProviderSettingsService } from '@server/modules/providers';
 import { createMockConfig, createRadarrMovie } from '@tests/factories';
 import { createApiClient, expectErrorResponse, expectSuccessResponse } from '@tests/helpers/api';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
+import { refreshCatalog } from '@tests/helpers/library';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import { http, HttpResponse } from 'msw';
@@ -173,11 +174,9 @@ describe('POST /api/automations/preview', () => {
     expectErrorResponse(res, 400, 'VALIDATION_ERROR');
   });
 
-  it("given one read, a query preview and an automation's planning match the same titles", async () => {
-    let reads = 0;
+  it("a query preview and an automation's planning match the same titles", async () => {
     server.use(
       http.get(`${RADARR_URL}/movie`, () => {
-        reads++;
         return HttpResponse.json([
           createRadarrMovie({ id: 1, title: 'Alien', hasFile: true }),
           createRadarrMovie({ id: 2, title: 'Brazil', hasFile: false }),
@@ -186,6 +185,7 @@ describe('POST /api/automations/preview', () => {
       })
     );
 
+    await refreshCatalog(cradle);
     const queryPreview = expectSuccessResponse(
       await client.get(`/api/media-queries/${hasFileQueryId}/preview`)
     );
@@ -197,10 +197,7 @@ describe('POST /api/automations/preview', () => {
       })
     );
 
-    expect({ reads, automation: automationPreview.count }).toEqual({
-      reads: 1,
-      automation: queryPreview.count,
-    });
+    expect(automationPreview.count).toBe(queryPreview.count);
   });
 
   it('readiness with fresh re-reads the library; without it, reads it as it stands', async () => {

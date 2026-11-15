@@ -24,11 +24,11 @@ import {
   isMediaSourceType,
 } from '@server/modules/providers';
 import { type FilterReadiness, filterAnswer, findingsFor } from './filterReadiness';
-import { type LibraryCache, type LibraryCopy, recordsFor } from './libraryCache';
+import { type LibraryCache, type LibraryCopy, copiesSource, recordsFor } from './libraryCache';
 import { paginateItems } from './media.pagination';
 import { sortMedia } from './media.sort';
 import { resolutionTier } from './mediaFieldProvider';
-import { externalIdOf, itemKey } from './mediaItem';
+import { itemKey } from './mediaItem';
 import type { MediaQueryEngine } from './mediaQueryEngine';
 import { resetMediaData } from './mediaReset';
 import type { MediaSource } from './mediaSource';
@@ -117,14 +117,6 @@ function groupByTitle<R>(
     sourceCount: copies.length,
     sourceProviderIds: copies.map((c) => c.copy.providerId),
   }));
-}
-
-/** A source over library copies already loaded: the query engine reads their items. */
-function copiesSource(copies: LibraryCopy[]): MediaSource {
-  return {
-    getMediaItems: async () => copies.map((c) => c.item),
-    idOf: externalIdOf,
-  };
 }
 
 /** Copies split by the instance holding them, in the order the library lists them. */

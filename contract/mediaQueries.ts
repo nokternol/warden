@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { base } from './base';
+import { RefreshRecordSchema } from './media';
 import { IdSchema, MediaQueryRecordSchema, MediaQueryValueSchema } from './schemas';
 
 export const mediaQueries = {
@@ -18,12 +19,11 @@ export const mediaQueries = {
     .output(z.null()),
 
   /**
-   * How many titles the query matches now, read live from every active source instance of its
-   * content type. Copies sharing a provider id (TMDB for movies, TVDB for series) are one title.
-   * Rejects when any instance cannot be read, so a count is never quietly short.
+   * How many titles the query matches in the library copy, counting the copies the catalog refresh
+   * grouped into one title once, with the refresh records saying how current that copy is.
    */
   preview: base
     .route({ method: 'GET', path: '/api/media-queries/{id}/preview' })
     .input(z.object({ id: IdSchema }))
-    .output(z.object({ count: z.number() })),
+    .output(z.object({ count: z.number(), records: z.array(RefreshRecordSchema) })),
 };

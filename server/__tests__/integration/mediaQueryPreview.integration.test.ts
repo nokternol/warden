@@ -18,6 +18,7 @@ import { createMockConfig } from '@tests/factories';
 import { createRadarrMovie } from '@tests/factories';
 import { createApiClient, expectErrorResponse, expectSuccessResponse } from '@tests/helpers/api';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
+import { refreshCatalog } from '@tests/helpers/library';
 import { server } from '@tests/mocks/server';
 import { eq } from 'drizzle-orm';
 import express, { type Express } from 'express';
@@ -88,13 +89,10 @@ describe('GET /api/media-queries/:id/preview', () => {
     await closeDatabase();
   });
 
-  // The container's one read cache outlives each test; each test sets its own upstream answers.
-  afterEach(() => cradle.sourceReadCache.clear());
-
-  it('returns { count } for a known query id', async () => {
+  it('returns { count, records } for a known query id', async () => {
     const res = await client.get(`/api/media-queries/${seededQueryId}/preview`);
     const data = expectSuccessResponse(res);
-    expect(data).toEqual({ count: expect.any(Number) });
+    expect(data).toEqual({ count: expect.any(Number), records: expect.any(Array) });
   });
 
   it('returns 404 for an unknown query id', async () => {
@@ -102,7 +100,7 @@ describe('GET /api/media-queries/:id/preview', () => {
     expectErrorResponse(res, 404);
   });
 
-  it('returns the engine match count for the query against the active instance', async () => {
+  it('counts the titles the last catalog refresh stored, without reading Radarr', async () => {
     server.use(
       http.get(`${RADARR_URL}/api/v3/movie`, () =>
         HttpResponse.json([
@@ -111,10 +109,24 @@ describe('GET /api/media-queries/:id/preview', () => {
         ])
       )
     );
+    await refreshCatalog(cradle);
+    let radarrReads = 0;
+    server.use(
+      http.get(`${RADARR_URL}/api/v3/*`, () => {
+        radarrReads++;
+        return HttpResponse.json([]);
+      })
+    );
 
-    const res = await client.get(`/api/media-queries/${filteredQueryId}/preview`);
-    const data = expectSuccessResponse(res);
-    expect(data).toEqual({ count: 1 });
+    const data = expectSuccessResponse(
+      await client.get(`/api/media-queries/${filteredQueryId}/preview`)
+    );
+
+    expect(data.count).toBe(1);
+    expect(data.records).toContainEqual(
+      expect.objectContaining({ provider: 'Radarr', kind: 'catalog', error: null })
+    );
+    expect(radarrReads).toBe(0);
   });
 
   it('returns { count: 0 } when no instance is active', async () => {
@@ -125,71 +137,6 @@ describe('GET /api/media-queries/:id/preview', () => {
     });
 
     const res = await client.get(`/api/media-queries/${noInstanceQuery.id}/preview`);
-    const data = expectSuccessResponse(res);
-    expect(data).toEqual({ count: 0 });
-  });
-
-  it("answers from the instance's latest read: an unreadable Radarr fails the preview, naming it, without a second upstream read inside the TTL", async () => {
-    let reads = 0;
-    server.use(
-      http.get(`${RADARR_URL}/api/v3/movie`, () => {
-        reads++;
-        return new HttpResponse(null, { status: 500 });
-      })
-    );
-
-    const preview = async () => {
-      const error = expectErrorResponse(
-        await client.get(`/api/media-queries/${filteredQueryId}/preview`),
-        500
-      );
-      expect(error.message).toContain("Radarr: Couldn't be reached");
-    };
-
-    await preview();
-    // One read may make several attempts (the HTTP client retries a 500); a second preview makes none.
-    const readsByFirstPreview = reads;
-    await preview();
-    expect(reads).toBe(readsByFirstPreview);
-  });
-
-  it('enrichment merged into one preview never appears in the next, even after a reset, with no re-read', async () => {
-    let reads = 0;
-    server.use(
-      http.get(`${RADARR_URL}/api/v3/movie`, () => {
-        reads++;
-        return HttpResponse.json([createRadarrMovie({ id: 1, title: 'Requested' })]);
-      })
-    );
-    const db = getDb();
-    const [radarr] = await db
-      .select({ id: metadataProviders.id })
-      .from(metadataProviders)
-      .where(eq(metadataProviders.type, MetadataProviderType.RADARR));
-    const [identity] = await db
-      .insert(mediaIdentity)
-      .values({ contentType: 'movie', enrichedAt: Math.floor(Date.now() / 1000) })
-      .returning();
-    await db
-      .insert(mediaItems)
-      .values({ providerId: radarr.id, externalId: 1, mediaIdentityId: identity.id });
-    await new EnrichmentQueries({ db }).replaceFields(identity.id, { seerrRequestStatus: 2 });
-    const requested = await mediaQueryService.create({
-      name: 'Requested',
-      contentType: 'movie',
-      filters: [{ ruleKey: 'seerrRequestStatus', value: 2 }],
-    });
-    const preview = async () =>
-      expectSuccessResponse(await client.get(`/api/media-queries/${requested.id}/preview`)).count;
-
-    const before = await preview();
-    const readsByFirstPreview = reads;
-    await resetMediaData(db);
-
-    expect({ before, after: await preview(), reads }).toEqual({
-      before: 1,
-      after: 0,
-      reads: readsByFirstPreview,
-    });
+    expect(expectSuccessResponse(res).count).toBe(0);
   });
 });

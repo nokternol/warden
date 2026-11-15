@@ -39,6 +39,10 @@ export { rowsSourceFor } from './sourceAdapters';
 // The one way to ask what Radarr and Sonarr hold: each active instance's latest read, as raw rows.
 export type { SourceRead, SourceReadCache } from './sourceReadCache';
 
+// The in-memory copy of the library every feature reads, and the records saying how current it is.
+export { copiesSource, recordsFor } from './libraryCache';
+export type { Library, LibraryCache, LibraryCopy } from './libraryCache';
+
 // Owner-type policy: which provider type owns each content type, and its
 // active instances.
 export { sourceOwnership } from './mediaSourceFactory';
