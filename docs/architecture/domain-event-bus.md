@@ -111,7 +111,9 @@ The event bus is the only route by which Warden's own changes clear a cache. The
 | `provider:changed` | `ProviderSettingsService` create, update or delete | A provider's library joining, changing or leaving |
 | 60s expiry | Always | Changes Warden can't see: edits made in Radarr's own UI, upstream background commands finishing, an upstream service recovering by itself |
 
-The media procedures' caches clear on both events. `ActiveFieldSetCache`, which has no expiry, clears
+The media procedures' caches and the source read cache
+([`SourceReadCache`](ref:path:server/modules/media/sourceReadCache.ts)), which holds each Radarr/Sonarr
+instance's latest read, clear on both events; a media reset leaves the source read cache alone. `ActiveFieldSetCache`, which has no expiry, clears
 on `provider:changed`. Both caches guard against an in-flight fetch: a fetch that started before an
 invalidation still answers its own callers but never writes its result back, so the old data can't
 reappear (`MediaCache.invalidate` bumps a per-key generation; `ActiveFieldSetCache` keeps one counter).

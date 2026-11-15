@@ -94,8 +94,7 @@ only a fully watched row (`watched_status === 1`) with a stored id counts, and i
 is the last-played timestamp — so a play count from Tautulli means completed viewings, not opens
 ([`mediaFieldProvider.ts`](ref:path:server/modules/media/mediaFieldProvider.ts)).
 
-The source binders (`radarrRowsSource`/`sonarrRowsSource`, which the connection-bound
-`radarrMediaSource`/`sonarrMediaSource` delegate to,
+The source binders (`radarrRowsSource`/`sonarrRowsSource`,
 [`sourceAdapters.ts`](ref:path:server/modules/media/sourceAdapters.ts)) and the five
 `MediaEnricher` adapters
 ([`enrichment/enricherAdapters.ts`](ref:path:server/modules/media/enrichment/enricherAdapters.ts))
