@@ -648,6 +648,17 @@ Earlier entries in this ledger use the names that were current when they healed 
 
 ## Open
 
+### Library copies — a live 60-second read beside the database (recorded 2026-11-15)
+
+- **Fracture:** north-star belief 4 says Warden holds one copy of the library, in its database,
+  refreshed on the owner's schedule. Features read a second copy instead: the 60-second live read of
+  Radarr/Sonarr (`server/modules/media/sourceReadCache.ts`), while title grouping and facts come from
+  the database. The two disagree until the next refresh, and the workarounds for that gap (the Media
+  page's own title grouping, runs recording copies, the unresolved-exclude skip, live Plex/Jellyfin
+  filter choices) are departures too. The "Library reads" entry above, marked healed, unified the
+  features on the live read: a heal toward the wrong authority.
+- **Heals by:** the "One copy of the library" slice (#252), per `docs/in_progress/mvp/system-design.md`.
+
 ### Title lookup — two mechanisms, one blocked (recorded 2026-11-01, MVP slice B4)
 
 - **Fracture:** the title filter and the Search page's cross-provider metadata search both look up a
