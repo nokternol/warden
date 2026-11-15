@@ -31,9 +31,10 @@ import { itemKey, rawItemKey, titleKey } from './mediaItem';
 import type { MediaQueryEngine } from './mediaQueryEngine';
 import { resetMediaData } from './mediaReset';
 import type { MediaSource } from './mediaSource';
-import { MediaSourceFactory, sourceOwnership } from './mediaSourceFactory';
+import { sourceOwnership } from './mediaSourceFactory';
 import { type Filter, type NormalizedMovie, type NormalizedSeries, getRule } from './ruleRegistry';
 import { radarrRowsSource, sonarrRowsSource } from './sourceAdapters';
+import type { SourceReadCache, SourceReadError } from './sourceReadCache';
 
 const log = getChildLogger('MediaProcedures');
 
@@ -61,6 +62,7 @@ interface MediaCradle {
   mediaQueryEngine: MediaQueryEngine;
   eventBus: DomainEventBus;
   filterReadiness: Pick<FilterReadiness, 'readFacts'>;
+  sourceReadCache: Pick<SourceReadCache, 'readEach'>;
   db?: DrizzleDb;
 }
 
@@ -146,23 +148,16 @@ function pooled(sources: MediaSource[]): MediaSource {
   };
 }
 
-/** A provider that could not be read; the message is shown as written beside its name. */
-function toMediaError(providerName: string, err: unknown): MediaError {
-  return {
-    provider: providerName,
-    error: `Couldn't be reached: ${err instanceof Error ? err.message : 'Unknown error'}`,
-  };
+/** A provider that could not be read, as the Media page names it: its name and the message. */
+function asMediaError({ provider, error }: SourceReadError): MediaError {
+  return { provider, error };
 }
 
 export function createMediaProcedures(cradle: MediaCradle) {
   const { providerSettingsService, mediaQueryEngine } = cradle;
   const factory = cradle.providerFactory ?? new ProviderFactory();
-  // Built from this cradle, so a test's injected provider factory reaches browse's reads too.
-  const sources = new MediaSourceFactory({ providerSettingsService, providerFactory: factory });
 
   // Caches are owned by this factory invocation — same inputs produce isolated state.
-  const moviesCache = new MediaCache<{ sublists: MovieSublist[]; errors: MediaError[] }>();
-  const seriesCache = new MediaCache<{ sublists: SeriesSublist[]; errors: MediaError[] }>();
   const tagsCache = new MediaCache<{
     radarr: DecoratedTag[];
     sonarr: DecoratedTag[];
@@ -187,42 +182,28 @@ export function createMediaProcedures(cradle: MediaCradle) {
 
   /** One active Radarr instance's library, kept separate so browse can attribute copies. */
   async function getMovies(): Promise<{ sublists: MovieSublist[]; errors: MediaError[] }> {
-    return moviesCache.getOrFetch('movies', async () => {
-      const errors: MediaError[] = [];
-      const sublists: MovieSublist[] = [];
-      await Promise.all(
-        (await sources.activeInstances('movie')).map(async ({ providerId, name, provider }) => {
-          try {
-            const movies = await provider.getMovies();
-            sublists.push({ providerId, providerName: name, movies });
-          } catch (err) {
-            log.warn('Radarr fetch failed', { provider: name, err });
-            errors.push(toMediaError(name, err));
-          }
-        })
-      );
-      return { sublists, errors };
-    });
+    const { reads, errors } = await cradle.sourceReadCache.readEach('movie');
+    return {
+      sublists: reads.map(({ providerId, name, rows }) => ({
+        providerId,
+        providerName: name,
+        movies: rows,
+      })),
+      errors: errors.map(asMediaError),
+    };
   }
 
   /** One active Sonarr instance's library, kept separate so browse can attribute copies. */
   async function getSeries(): Promise<{ sublists: SeriesSublist[]; errors: MediaError[] }> {
-    return seriesCache.getOrFetch('series', async () => {
-      const errors: MediaError[] = [];
-      const sublists: SeriesSublist[] = [];
-      await Promise.all(
-        (await sources.activeInstances('series')).map(async ({ providerId, name, provider }) => {
-          try {
-            const series = await provider.getSeries();
-            sublists.push({ providerId, providerName: name, series });
-          } catch (err) {
-            log.warn('Sonarr fetch failed', { provider: name, err });
-            errors.push(toMediaError(name, err));
-          }
-        })
-      );
-      return { sublists, errors };
-    });
+    const { reads, errors } = await cradle.sourceReadCache.readEach('series');
+    return {
+      sublists: reads.map(({ providerId, name, rows }) => ({
+        providerId,
+        providerName: name,
+        series: rows,
+      })),
+      errors: errors.map(asMediaError),
+    };
   }
 
   /** Every active Plex instance's flattened library — shared by every Plex-sourced
@@ -375,10 +356,10 @@ export function createMediaProcedures(cradle: MediaCradle) {
    * A failed provider fetch is cached as a partial or empty result (an error entry, or an
    * empty list) until the expiry or a provider edit, so requests during an outage don't each
    * wait on the dead upstream (`media.cache.failuresCached.integration.test.ts`).
+   * The Radarr and Sonarr libraries themselves are not here: they are read through
+   * `SourceReadCache`, which clears itself on the same events.
    */
   const caches: Array<{ clear(): void }> = [
-    moviesCache,
-    seriesCache,
     tagsCache,
     qualityProfilesCache,
     languageProfilesCache,
