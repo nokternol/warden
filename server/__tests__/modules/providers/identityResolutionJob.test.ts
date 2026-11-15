@@ -289,7 +289,7 @@ describe('IdentityResolutionJob', () => {
     expect(groups.map((g) => g.title)).toContain('Heat');
   });
 
-  it('treats an empty answer from a source as a fault, keeping its library', async () => {
+  it("believes a source's successful empty answer, marking its copies removed", async () => {
     const db = getDb();
     const radarr = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 1, tmdbId: 100 })]) };
     const job = new IdentityResolutionJob({
@@ -302,7 +302,8 @@ describe('IdentityResolutionJob', () => {
     await job.runForMovies();
 
     const items = await db.select().from(mediaItems);
-    expect(items.map((i) => i.deleted)).toEqual([false]);
+    expect(items.map((i) => i.deleted)).toEqual([true]);
+    expect(job.failedProviders()).toEqual([]);
   });
 
   it('lets requests run while it works through a library', async () => {

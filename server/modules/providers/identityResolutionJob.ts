@@ -274,15 +274,14 @@ export class IdentityResolutionJob {
   }
 
   /**
-   * Soft-deletes this instance's `media_item` rows whose externalId is no longer
-   * in its fetched set. The row stays so run history still resolves its title.
+   * Soft-deletes this instance's `media_item` rows whose externalId is no longer in its fetched
+   * set; a successful empty answer removes them all, since Warden believes what a provider answers.
+   * The row stays so run history still resolves its title.
    */
   private async markItemsLeftSource(
     providerId: number,
     fetchedExternalIds: number[]
   ): Promise<void> {
-    // An empty answer is far likelier to be a provider fault than a library emptied overnight.
-    if (fetchedExternalIds.length === 0) return;
     await this.deps.db
       .update(mediaItems)
       .set({ deleted: true })
