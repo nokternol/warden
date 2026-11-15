@@ -20,7 +20,7 @@ import { createMockConfig } from '@tests/factories';
 import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { http, HttpResponse } from 'msw';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { server } from '../../../tests/mocks/server';
 
 const RADARR = 'http://localhost:7878/api/v3';
@@ -53,6 +53,9 @@ describe('media caches after an automation run', () => {
   afterAll(async () => {
     await closeDatabase();
   });
+
+  // The container's one read cache outlives each test; each test sets its own upstream answers.
+  afterEach(() => cradle.sourceReadCache.clear());
 
   it('an unmonitor run makes the next browse refetch and show the titles unmonitored', async () => {
     // A stateful Radarr: PUT /movie/:id stores the edit, GET /movie serves the current state.
@@ -128,5 +131,56 @@ describe('media caches after an automation run', () => {
     expect(after.items[0].monitored).toBe(false);
 
     media.dispose();
+  }, 15_000);
+
+  it("a title added to Radarr after the library was read, just before a run, is among the run's targets", async () => {
+    const RADARR_4K = 'http://localhost:7879/api/v3';
+    const movie = (id: number, title: string) => ({
+      id,
+      title,
+      hasFile: true,
+      monitored: true,
+      tmdbId: 1000 + id,
+      qualityProfileId: 1,
+      tags: [],
+      path: `/movies/${title}`,
+    });
+    let library = [movie(1, 'Alien')];
+    const unmonitored: number[] = [];
+    server.use(
+      http.get(`${RADARR_4K}/movie`, () => HttpResponse.json(library)),
+      http.put(`${RADARR_4K}/movie/:id`, async ({ params, request }) => {
+        unmonitored.push(Number(params.id));
+        return HttpResponse.json({
+          ...movie(Number(params.id), 'x'),
+          ...((await request.json()) as object),
+        });
+      })
+    );
+    const provider = await cradle.providerSettingsService.create({
+      type: MetadataProviderType.RADARR,
+      name: 'Radarr 4k',
+      url: RADARR_4K,
+      apiKey: 'fake-key',
+      settings: { enabledTasks: ['unmonitorMovie'] },
+    });
+    const query = await cradle.mediaQueryService.create({
+      name: 'Everything in 4k',
+      contentType: 'movie',
+      filters: [],
+    });
+    const automation = await cradle.automationService.create({
+      name: 'Unmonitor everything in 4k',
+      queries: [{ queryId: query.id, role: 'include' }],
+      providerId: provider.id,
+      taskId: 'unmonitorMovie',
+      schedule: '0 * * * *',
+    });
+    await cradle.sourceReadCache.readOne(provider.id);
+
+    library = [movie(1, 'Alien'), movie(2, 'Arrival')];
+    await cradle.automationExecutor.execute(automation.id);
+
+    expect(unmonitored.sort()).toEqual([1, 2]);
   }, 15_000);
 });

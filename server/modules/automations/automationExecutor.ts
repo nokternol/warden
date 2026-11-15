@@ -97,6 +97,9 @@ interface RunPlan {
   unresolvedExcludes: string[];
 }
 
+/** How a plan reads the library from `SourceReadCache`. */
+type SourceReadOptions = Parameters<SourceReadCache['readOne']>[1];
+
 /** Below this many targets a destructive run is small enough to be its own limit. */
 const REACH_CHECK_MIN_ITEMS = 20;
 
@@ -277,7 +280,10 @@ export class AutomationExecutor {
           }
           return;
         }
-        const plan = await this.planRun(current.taskId, providerSettings, queries);
+        // Planned on a read that starts now, so the run acts on the library as it is.
+        const plan = await this.planRun(current.taskId, providerSettings, queries, {
+          refresh: true,
+        });
         targets = plan.targets;
         itemCount = targets.items.length;
         const notRun = whyPlanWontRun(plan);
@@ -471,12 +477,14 @@ export class AutomationExecutor {
   /**
    * Decides what a user run acts on: the enabled task, the catalog items the
    * query targets, and those items in the actuator's own id space. Running the
-   * task is the caller's step, so the targets are known even if the task fails.
+   * task is the caller's step, so the targets are known even if the task fails. `read` says how
+   * the library is read: as it stands, or refreshed so the plan is made on a read that starts now.
    */
   private async planRun(
     taskId: string,
     providerSettings: MetadataProvider,
-    automationQueries: LoadedQuery[]
+    automationQueries: LoadedQuery[],
+    read?: SourceReadOptions
   ): Promise<RunPlan> {
     const contentType = automationQueries[0].record.contentType;
     const querySpecs = automationQueries.map(({ record, role }) => ({
@@ -502,7 +510,7 @@ export class AutomationExecutor {
       // and its native ids feed the task directly, one target per native id.
       let source: MediaSource;
       if (this.sourceReadCache) {
-        const { rows } = await this.sourceReadCache.readOne(providerSettings.id);
+        const { rows } = await this.sourceReadCache.readOne(providerSettings.id, read);
         source =
           contentType === 'movie'
             ? radarrRowsSource(rows as RadarrMovie[], providerSettings.id)

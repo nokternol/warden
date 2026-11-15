@@ -111,12 +111,12 @@ export class SourceReadCache {
 
   /** One instance's rows, read without touching its siblings; rejects if it could not be read or
    *  is not an active provider. */
-  async readOne(providerId: number): Promise<SourceRead<ContentType>> {
+  async readOne(providerId: number, opts?: ReadOptions): Promise<SourceRead<ContentType>> {
     for (const contentType of ContentTypeSchema.options) {
       const instances = await this.deps.mediaSourceFactory.activeInstances(contentType);
       const instance = instances.find((i) => i.providerId === providerId);
       if (instance) {
-        const read = await this.read(contentType, instance);
+        const read = await this.read(contentType, instance, opts);
         if ('error' in read) throw new Error(failure(instance.name, read.error));
         return { providerId, name: instance.name, rows: read.rows as SourceRow[ContentType][] };
       }
