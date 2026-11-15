@@ -340,10 +340,10 @@ export class AutomationExecutor {
       );
     }
     const facts = await this.filterReadiness.readFacts();
-    const findings = automationQueries.flatMap(({ queryId, record }) =>
+    const findings = automationQueries.flatMap(({ queryId, role, record }) =>
       findingsFor(
         facts,
-        { queryId, contentType: record.contentType, filters: record.filters },
+        { queryId, role, contentType: record.contentType, filters: record.filters },
         { id: automationProvider.id, type: automationProvider.type }
       )
     );
@@ -441,11 +441,23 @@ export class AutomationExecutor {
 
     const copies = (await this.libraryCache.read()).copies[contentType] as LibraryCopy[];
 
+    const included = (candidates: LibraryCopy[]) =>
+      this.matching(
+        candidates,
+        contentType,
+        querySpecs.filter((spec) => spec.role === 'include')
+      );
+    // An exclude protects the whole title, judged over every active instance's copies.
+    const protectedTitles = await this.protectedTitles(copies, contentType, querySpecs);
+    const unprotected = (candidates: LibraryCopy[]) =>
+      candidates.filter((copy) => !protectedTitles.has(copy.mediaIdentityId));
+
     if (isMediaSourceType(providerSettings.type)) {
-      // Catalog-owning actuator: the queries evaluate against its own copies and their native ids
-      // feed the task directly, one target per native id.
+      // Catalog-owning actuator: the included queries evaluate against its own copies and their
+      // native ids feed the task directly, one target per native id.
       const own = copies.filter((copy) => copy.providerId === providerSettings.id);
-      const targets = await this.matching(own, contentType, querySpecs);
+      const matched = await included(own);
+      const targets = unprotected(matched);
       return {
         task,
         targets: { contentType, mediaItemIds: targets.map((c) => c.mediaItemId) },
@@ -455,23 +467,17 @@ export class AutomationExecutor {
       };
     }
 
-    // Non-source actuator: it owns no catalog, so the queries evaluate against every active
-    // source instance's copies, and matched copies reach the actuator by the media-server id the
-    // catalog refresh linked to their title. A title not linked drops out: the task never
-    // receives an id it cannot address. An exclude protects the whole title.
+    // Non-source actuator: it owns no catalog, so the included queries evaluate against every
+    // active source instance's copies, and matched copies reach the actuator by the media-server
+    // id the catalog refresh linked to their title. A title not linked drops out: the task never
+    // receives an id it cannot address.
     if (!isAddressedActuator(providerSettings.type)) {
       throw new Error(`Provider type "${providerSettings.type}" has no actuator addressing space`);
     }
-    const included = await this.matching(
-      copies,
-      contentType,
-      querySpecs.filter((spec) => spec.role === 'include')
-    );
-    const protectedTitles = await this.protectedTitles(copies, contentType, querySpecs);
-    const addressed = included.filter(
+    const addressed = (await included(copies)).filter(
       (copy) => actuatorIdOf(copy, providerSettings.type) !== undefined
     );
-    const targets = addressed.filter((copy) => !protectedTitles.has(copy.mediaIdentityId));
+    const targets = unprotected(addressed);
     return {
       task,
       targets: { contentType, mediaItemIds: targets.map((c) => c.mediaItemId) },

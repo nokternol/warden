@@ -79,6 +79,8 @@ export interface FilterList {
   queryId?: number;
   contentType: ContentType;
   filters: readonly Filter[];
+  /** How an automation uses the query; an excluded query protects titles on any instance. */
+  role?: 'include' | 'exclude';
 }
 
 /** The provider an automation acts through. */
@@ -245,10 +247,16 @@ function instanceFindings(
       ),
     ];
   }
-  // A source automation acts on its own catalog only, so a value naming another instance
-  // matches nothing there; any other actuator acts on the pooled catalogs of every source.
+  // A source automation's included queries select from its own catalog only, so a value naming
+  // another instance matches nothing there; its excluded queries protect titles through every
+  // instance's copies, and any other actuator acts on the pooled catalogs of every source.
   const automation = judging.automationProvider;
-  if (!automation || !isMediaSourceType(automation.type) || automation.id === providerId) {
+  if (
+    !automation ||
+    !isMediaSourceType(automation.type) ||
+    automation.id === providerId ||
+    judging.list.role === 'exclude'
+  ) {
     return [];
   }
   return [
