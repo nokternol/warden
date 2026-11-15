@@ -8,6 +8,7 @@ import {
   ContentTypeSchema,
   IdSchema,
   QueryIntSchema,
+  RefreshRecordSchema,
   RunItemSchema,
   emptyToUndefined,
 } from './schemas';
@@ -65,6 +66,8 @@ const AutomationPreviewSchema = z.object({
   /** How many items a run would hand the task now. */
   count: z.number().int().nonnegative(),
   contentType: ContentTypeSchema,
+  /** The refresh records of the copy the count comes from. */
+  records: z.array(RefreshRecordSchema),
 });
 
 export type AutomationPreview = z.infer<typeof AutomationPreviewSchema>;
@@ -84,6 +87,8 @@ const AutomationReadinessSchema = z.object({
   count: z.number().int().nonnegative().nullable(),
   countError: z.string().optional(),
   contentType: ContentTypeSchema,
+  /** The refresh records of the copy the count comes from. */
+  records: z.array(RefreshRecordSchema),
 });
 
 export type AutomationReadiness = z.infer<typeof AutomationReadinessSchema>;

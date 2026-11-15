@@ -38,6 +38,7 @@ const readiness = (over: Partial<AutomationReadiness>): AutomationReadiness => (
   problems: [],
   count: 214,
   contentType: 'movie',
+  records: [],
   ...over,
 });
 

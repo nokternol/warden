@@ -34,7 +34,11 @@ export default function RunCheck({
   const radius = blastRadius({
     data:
       readiness && readiness.count !== null
-        ? { count: readiness.count, contentType: readiness.contentType }
+        ? {
+            count: readiness.count,
+            contentType: readiness.contentType,
+            records: readiness.records,
+          }
         : undefined,
     error: readiness?.countError !== undefined ? new Error(readiness.countError) : undefined,
   });

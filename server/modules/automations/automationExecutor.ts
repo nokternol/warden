@@ -1,5 +1,5 @@
 import type { AutomationPreview, AutomationReadiness } from '@contract/automations';
-import { copyFreshness } from '@contract/media';
+import { type RefreshRecord, copyFreshness } from '@contract/media';
 import type { ReadinessFinding } from '@contract/readiness';
 import type { AutomationRunStatus, ContentType } from '@contract/schemas';
 import type { MetadataProvider, MetadataProviderType } from '../../database/schema';
@@ -88,6 +88,8 @@ interface RunPlan {
   matchedCount: number;
   /** Each refresh a destructive run depends on that failed or never ran, as a reason not to act. */
   unrefreshed: string[];
+  /** The refresh records of the copy the plan was made from. */
+  records: RefreshRecord[];
 }
 
 /** Below this many targets a destructive run is small enough to be its own limit. */
@@ -432,11 +434,15 @@ export class AutomationExecutor {
       (plan) => {
         // A run skipped after planning says so here, so Run Now does not confirm a run that won't act.
         problems.push(...whyPlanWontRun(plan));
-        return { count: plan.actuatorIds.length };
+        return { count: plan.actuatorIds.length, records: plan.records };
       },
-      (err: unknown) => ({
+      async (err: unknown) => ({
         count: null,
         countError: err instanceof Error ? err.message : 'Unknown error',
+        records: recordsFor(
+          await this.libraryCache.read(),
+          queries[0]?.record.contentType ?? 'movie'
+        ),
       })
     );
     return {
@@ -464,7 +470,11 @@ export class AutomationExecutor {
       providerSettings,
       await this.loadQueries(draft.queries)
     );
-    return { count: plan.actuatorIds.length, contentType: plan.targets.contentType };
+    return {
+      count: plan.actuatorIds.length,
+      contentType: plan.targets.contentType,
+      records: plan.records,
+    };
   }
 
   /**
@@ -512,7 +522,8 @@ export class AutomationExecutor {
       );
     // An exclude protects the whole title, judged over every active instance's copies.
     const protectedTitles = await this.protectedTitles(copies, contentType, querySpecs);
-    const copy = copyFreshness(recordsFor(library, contentType));
+    const records = recordsFor(library, contentType);
+    const copy = copyFreshness(records);
     const unprotected = (candidates: LibraryCopy[]) =>
       candidates.filter((copy) => !protectedTitles.has(copy.mediaIdentityId));
 
@@ -529,6 +540,7 @@ export class AutomationExecutor {
         poolSize: own.length,
         matchedCount: targets.length,
         unrefreshed,
+        records,
       };
     }
 
@@ -550,6 +562,7 @@ export class AutomationExecutor {
       poolSize: copies.length,
       matchedCount: addressed.length,
       unrefreshed,
+      records,
     };
   }
 

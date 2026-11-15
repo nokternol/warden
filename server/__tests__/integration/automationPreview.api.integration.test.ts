@@ -114,7 +114,13 @@ describe('POST /api/automations/preview', () => {
       queries: [{ queryId: hasFileQueryId, role: 'include' }],
     });
 
-    expectSuccessResponse(res, { count: 2, contentType: 'movie' });
+    expect(expectSuccessResponse(res)).toEqual({
+      count: 2,
+      contentType: 'movie',
+      records: expect.arrayContaining([
+        expect.objectContaining({ providerId: radarrId, kind: 'catalog', error: null }),
+      ]),
+    });
   });
 
   it('does not let a rating exclusion protect an unrated movie', async () => {
@@ -140,7 +146,7 @@ describe('POST /api/automations/preview', () => {
       ],
     });
 
-    expectSuccessResponse(res, { count: 2, contentType: 'movie' });
+    expect(expectSuccessResponse(res)).toMatchObject({ count: 2, contentType: 'movie' });
   });
 
   it('answers 404 for an unknown provider', async () => {

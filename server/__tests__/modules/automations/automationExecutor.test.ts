@@ -1409,7 +1409,7 @@ describe('AutomationExecutor', () => {
         ],
       });
 
-      expect(preview).toEqual({ count: 1, contentType: 'movie' });
+      expect(preview).toMatchObject({ count: 1, contentType: 'movie' });
     });
 
     it('counts the union of two included queries, as a run does', async () => {
@@ -1967,7 +1967,7 @@ describe('non-source actuators — id translation through the identity graph', (
       queries: [{ queryId: query.id, role: 'include' }],
     });
 
-    expect(preview).toEqual({ count: 2, contentType: 'movie' }); // movie 3 has no Plex key
+    expect(preview).toMatchObject({ count: 2, contentType: 'movie' }); // movie 3 has no Plex key
   });
 
   it('Tautulli rides the Plex addressing space end to end', async () => {
