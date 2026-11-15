@@ -89,7 +89,7 @@ describe('filter readiness, as automations see it', () => {
       http.get(`${RADARR_URL}/api/v3/movie`, () =>
         HttpResponse.json([createRadarrMovie({ id: 1, title: 'The Matrix', tags: [1] })])
       ),
-      http.put(`${RADARR_URL}/api/v3/movie/:id`, () => {
+      http.put(`${RADARR_URL}/api/v3/movie/editor`, () => {
         unmonitorCalls += 1;
         return HttpResponse.json({ id: 1, monitored: false });
       })

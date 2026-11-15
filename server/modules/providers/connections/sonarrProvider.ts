@@ -189,19 +189,15 @@ export class SonarrProvider extends BaseProviderConnection implements MediaActua
       .json<SonarrSeries[]>();
   }
 
+  /** Unmonitors the series in one editor request; nothing is read from Sonarr first. */
   public async unmonitorSeries(seriesIds: number[]): Promise<void> {
-    const all = await this.getSeries();
-    const targets = all.filter((s) => seriesIds.includes(s.id));
-    await Promise.all(
-      targets.map((s) =>
-        this.client
-          .put(`series/${s.id}`, {
-            searchParams: this.apiParams,
-            json: { ...s, monitored: false },
-          })
-          .json()
-      )
-    );
+    if (seriesIds.length === 0) return;
+    await this.client
+      .put('series/editor', {
+        searchParams: this.apiParams,
+        json: { seriesIds, monitored: false },
+      })
+      .json();
   }
 
   public async triggerSeriesSearch(seriesIds: number[]): Promise<void> {

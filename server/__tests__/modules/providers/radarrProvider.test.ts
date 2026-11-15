@@ -152,49 +152,24 @@ describe('RadarrProvider — task methods', () => {
     expect(commandBody).toEqual({ name: 'RefreshCollections' });
   });
 
-  it('unmonitorMovies sends PUT /movie/{id} with monitored:false for each ID', async () => {
-    const putBodies: Array<{ id: number; monitored: boolean }> = [];
+  it('unmonitorMovies sends one editor request with monitored:false, reading no library', async () => {
+    const editorBodies: unknown[] = [];
+    let libraryReads = 0;
     server.use(
-      http.get(`${RADARR_BASE}/movie`, () =>
-        HttpResponse.json([
-          {
-            id: 1,
-            title: 'Movie A',
-            monitored: true,
-            hasFile: true,
-            tags: [],
-            qualityProfileId: 1,
-            profileId: 1,
-            tmdbId: 1,
-            folderName: '',
-            path: '',
-          },
-          {
-            id: 2,
-            title: 'Movie B',
-            monitored: true,
-            hasFile: true,
-            tags: [],
-            qualityProfileId: 1,
-            profileId: 1,
-            tmdbId: 2,
-            folderName: '',
-            path: '',
-          },
-        ])
-      ),
-      http.put(`${RADARR_BASE}/movie/:id`, async ({ params, request }) => {
-        const body = (await request.json()) as { monitored: boolean };
-        putBodies.push({ id: Number(params.id), monitored: body.monitored });
-        return HttpResponse.json({ id: Number(params.id) });
+      http.get(`${RADARR_BASE}/movie`, () => {
+        libraryReads++;
+        return HttpResponse.json([]);
+      }),
+      http.put(`${RADARR_BASE}/movie/editor`, async ({ request }) => {
+        editorBodies.push(await request.json());
+        return HttpResponse.json([]);
       })
     );
 
     await provider.unmonitorMovies([1, 2]);
 
-    expect(putBodies).toHaveLength(2);
-    expect(putBodies.every((b) => b.monitored === false)).toBe(true);
-    expect(putBodies.map((b) => b.id)).toEqual(expect.arrayContaining([1, 2]));
+    expect(editorBodies).toEqual([{ movieIds: [1, 2], monitored: false }]);
+    expect(libraryReads).toBe(0);
   });
 });
 

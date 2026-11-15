@@ -73,7 +73,7 @@ describe('AutomationExecutor writes to automation_runs', () => {
     const movies = [createRadarrMovie({ id: 1, title: 'The Matrix', year: 1999, hasFile: true })];
     server.use(
       http.get(`${RADARR_URL}/api/v3/movie`, () => HttpResponse.json(movies)),
-      http.put(`${RADARR_URL}/api/v3/movie/:id`, () =>
+      http.put(`${RADARR_URL}/api/v3/movie/editor`, () =>
         HttpResponse.json({ id: 1, monitored: false })
       )
     );
@@ -184,7 +184,7 @@ describe('AutomationExecutor writes to automation_runs', () => {
     function serveRadarr(movies: ReturnType<typeof createRadarrMovie>[]) {
       server.use(
         http.get(`${RADARR_URL}/api/v3/movie`, () => HttpResponse.json(movies)),
-        http.put(`${RADARR_URL}/api/v3/movie/:id`, () => HttpResponse.json({}))
+        http.put(`${RADARR_URL}/api/v3/movie/editor`, () => HttpResponse.json({}))
       );
     }
 
@@ -259,7 +259,7 @@ describe('AutomationExecutor writes to automation_runs', () => {
         http.get(`${RADARR_URL}/api/v3/movie`, () =>
           HttpResponse.json([createRadarrMovie({ id: 4, tmdbId: 104, title: 'Alien' })])
         ),
-        http.put(`${RADARR_URL}/api/v3/movie/:id`, () => new HttpResponse(null, { status: 400 }))
+        http.put(`${RADARR_URL}/api/v3/movie/editor`, () => new HttpResponse(null, { status: 400 }))
       );
       const { automation } = await seedRadarrAutomation();
 

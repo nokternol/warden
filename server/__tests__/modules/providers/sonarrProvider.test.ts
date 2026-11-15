@@ -160,51 +160,24 @@ describe('SonarrProvider — task methods', () => {
     expect(commandBody).toEqual({ name: 'RenameSeries', seriesIds: [4, 5] });
   });
 
-  it('unmonitorSeries sends PUT /series/{id} with monitored:false for each ID', async () => {
-    const putBodies: Array<{ id: number; monitored: boolean }> = [];
+  it('unmonitorSeries sends one editor request with monitored:false, reading no library', async () => {
+    const editorBodies: unknown[] = [];
+    let libraryReads = 0;
     server.use(
-      http.get(`${SONARR_BASE}/series`, () =>
-        HttpResponse.json([
-          {
-            id: 1,
-            title: 'Show A',
-            monitored: true,
-            status: 'ended',
-            tvdbId: 1,
-            profileId: 1,
-            qualityProfileId: 1,
-            languageProfileId: 1,
-            tags: [],
-            path: '/tv/A',
-            seasons: [],
-          },
-          {
-            id: 2,
-            title: 'Show B',
-            monitored: true,
-            status: 'ended',
-            tvdbId: 2,
-            profileId: 1,
-            qualityProfileId: 1,
-            languageProfileId: 1,
-            tags: [],
-            path: '/tv/B',
-            seasons: [],
-          },
-        ])
-      ),
-      http.put(`${SONARR_BASE}/series/:id`, async ({ params, request }) => {
-        const body = (await request.json()) as { monitored: boolean };
-        putBodies.push({ id: Number(params.id), monitored: body.monitored });
-        return HttpResponse.json({ id: Number(params.id) });
+      http.get(`${SONARR_BASE}/series`, () => {
+        libraryReads++;
+        return HttpResponse.json([]);
+      }),
+      http.put(`${SONARR_BASE}/series/editor`, async ({ request }) => {
+        editorBodies.push(await request.json());
+        return HttpResponse.json([]);
       })
     );
 
     await provider.unmonitorSeries([1, 2]);
 
-    expect(putBodies).toHaveLength(2);
-    expect(putBodies.every((b) => b.monitored === false)).toBe(true);
-    expect(putBodies.map((b) => b.id)).toEqual(expect.arrayContaining([1, 2]));
+    expect(editorBodies).toEqual([{ seriesIds: [1, 2], monitored: false }]);
+    expect(libraryReads).toBe(0);
   });
 });
 

@@ -72,7 +72,7 @@ describe('AutomationExecutor — invalid automations', () => {
       http.get(`${RADARR_URL}/api/v3/movie`, () =>
         HttpResponse.json([createRadarrMovie({ id: 1, title: 'The Matrix', tags: [1] })])
       ),
-      http.put(`${RADARR_URL}/api/v3/movie/:id`, () => {
+      http.put(`${RADARR_URL}/api/v3/movie/editor`, () => {
         unmonitorCalls += 1;
         return HttpResponse.json({ id: 1, monitored: false });
       })
@@ -401,7 +401,7 @@ describe('AutomationExecutor — invalid automations', () => {
       const radarr = await seedRadarr('Radarr');
       const automation = await seedAutomationOver(radarr.id, []);
       server.use(
-        http.put(`${RADARR_URL}/api/v3/movie/:id`, async () => {
+        http.put(`${RADARR_URL}/api/v3/movie/editor`, async () => {
           const [run] = await getDb().select().from(automationRuns);
           statusDuringTask = run?.status;
           return HttpResponse.json({ id: 1, monitored: false });
@@ -441,7 +441,7 @@ describe('AutomationExecutor — invalid automations', () => {
       let active = 0;
       let mostAtOnce = 0;
       server.use(
-        http.put(`${RADARR_URL}/api/v3/movie/:id`, async () => {
+        http.put(`${RADARR_URL}/api/v3/movie/editor`, async () => {
           active += 1;
           mostAtOnce = Math.max(mostAtOnce, active);
           await new Promise((resolve) => setTimeout(resolve, 20));

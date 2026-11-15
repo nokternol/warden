@@ -334,7 +334,7 @@ describe('AutomationExecutor', () => {
   // ─── RADARR: unmonitorMovie ───────────────────────────────────────────────
 
   describe('RADARR — unmonitorMovie', () => {
-    it('sends PUT /movie/{id} with monitored:false for each matched movie', async () => {
+    it('unmonitors each matched movie through the editor endpoint', async () => {
       const monitoredMovies = [
         createRadarrMovie({ id: 1, title: 'The Matrix', year: 1999, hasFile: true }),
         createRadarrMovie({ id: 2, title: 'Interstellar', year: 2014, hasFile: true }),
@@ -343,10 +343,10 @@ describe('AutomationExecutor', () => {
       const unmonitored: number[] = [];
       server.use(
         http.get(`${RADARR_URL}/api/v3/movie`, () => HttpResponse.json(monitoredMovies)),
-        http.put(`${RADARR_URL}/api/v3/movie/:id`, async ({ params, request }) => {
-          const body = (await request.json()) as { monitored: boolean };
-          if (body.monitored === false) unmonitored.push(Number(params.id));
-          return HttpResponse.json({ id: Number(params.id), monitored: false });
+        http.put(`${RADARR_URL}/api/v3/movie/editor`, async ({ request }) => {
+          const body = (await request.json()) as { movieIds: number[]; monitored: boolean };
+          if (body.monitored === false) unmonitored.push(...body.movieIds);
+          return HttpResponse.json([]);
         })
       );
 
@@ -373,9 +373,10 @@ describe('AutomationExecutor', () => {
       const unmonitored: number[] = [];
       server.use(
         http.get(`${RADARR_URL}/api/v3/movie`, () => HttpResponse.json(movies)),
-        http.put(`${RADARR_URL}/api/v3/movie/:id`, async ({ params }) => {
-          unmonitored.push(Number(params.id));
-          return HttpResponse.json({ id: Number(params.id), monitored: false });
+        http.put(`${RADARR_URL}/api/v3/movie/editor`, async ({ request }) => {
+          const body = (await request.json()) as { movieIds: number[]; monitored: boolean };
+          if (body.monitored === false) unmonitored.push(...body.movieIds);
+          return HttpResponse.json([]);
         })
       );
 
@@ -401,9 +402,10 @@ describe('AutomationExecutor', () => {
       const unmonitored: number[] = [];
       server.use(
         http.get(`${RADARR_URL}/api/v3/movie`, () => HttpResponse.json(movies)),
-        http.put(`${RADARR_URL}/api/v3/movie/:id`, async ({ params }) => {
-          unmonitored.push(Number(params.id));
-          return HttpResponse.json({ id: Number(params.id), monitored: false });
+        http.put(`${RADARR_URL}/api/v3/movie/editor`, async ({ request }) => {
+          const body = (await request.json()) as { movieIds: number[]; monitored: boolean };
+          if (body.monitored === false) unmonitored.push(...body.movieIds);
+          return HttpResponse.json([]);
         })
       );
 
@@ -425,9 +427,7 @@ describe('AutomationExecutor', () => {
 
       server.use(
         http.get(`${RADARR_URL}/api/v3/movie`, () => HttpResponse.json(movies)),
-        http.put(`${RADARR_URL}/api/v3/movie/:id`, () =>
-          HttpResponse.json({ id: 1, monitored: false })
-        )
+        http.put(`${RADARR_URL}/api/v3/movie/editor`, () => HttpResponse.json([]))
       );
 
       const provider = await seedRadarrProvider(providerSettingsService);
@@ -479,9 +479,7 @@ describe('AutomationExecutor', () => {
           movieEndpointHit = true;
           return HttpResponse.json([createRadarrMovie({ id: 1, title: 'A', hasFile: true })]);
         }),
-        http.put(`${RADARR_URL}/api/v3/movie/:id`, () =>
-          HttpResponse.json({ id: 1, monitored: false })
-        )
+        http.put(`${RADARR_URL}/api/v3/movie/editor`, () => HttpResponse.json([]))
       );
 
       const provider = await seedRadarrProvider(providerSettingsService);
@@ -562,7 +560,7 @@ describe('AutomationExecutor', () => {
   // ─── SONARR: unmonitorSeries ──────────────────────────────────────────────
 
   describe('SONARR — unmonitorSeries', () => {
-    it('sends PUT /series/{id} with monitored:false for each matched series', async () => {
+    it('unmonitors each matched series through the editor endpoint', async () => {
       const seriesList = [
         createSonarrSeries({ id: 1, title: 'Breaking Bad', year: 2008, status: 'ended' }),
         createSonarrSeries({ id: 2, title: 'The Wire', year: 2002, status: 'ended' }),
@@ -571,10 +569,10 @@ describe('AutomationExecutor', () => {
       const unmonitored: number[] = [];
       server.use(
         http.get(`${SONARR_URL}/api/v3/series`, () => HttpResponse.json(seriesList)),
-        http.put(`${SONARR_URL}/api/v3/series/:id`, async ({ params, request }) => {
-          const body = (await request.json()) as { monitored: boolean };
-          if (body.monitored === false) unmonitored.push(Number(params.id));
-          return HttpResponse.json({ id: Number(params.id), monitored: false });
+        http.put(`${SONARR_URL}/api/v3/series/editor`, async ({ request }) => {
+          const body = (await request.json()) as { seriesIds: number[]; monitored: boolean };
+          if (body.monitored === false) unmonitored.push(...body.seriesIds);
+          return HttpResponse.json([]);
         })
       );
 
@@ -601,9 +599,10 @@ describe('AutomationExecutor', () => {
       const unmonitored: number[] = [];
       server.use(
         http.get(`${SONARR_URL}/api/v3/series`, () => HttpResponse.json(seriesList)),
-        http.put(`${SONARR_URL}/api/v3/series/:id`, async ({ params }) => {
-          unmonitored.push(Number(params.id));
-          return HttpResponse.json({ id: Number(params.id), monitored: false });
+        http.put(`${SONARR_URL}/api/v3/series/editor`, async ({ request }) => {
+          const body = (await request.json()) as { seriesIds: number[]; monitored: boolean };
+          if (body.monitored === false) unmonitored.push(...body.seriesIds);
+          return HttpResponse.json([]);
         })
       );
 
@@ -633,9 +632,10 @@ describe('AutomationExecutor', () => {
       const unmonitored: number[] = [];
       server.use(
         http.get(`${SONARR_URL}/api/v3/series`, () => HttpResponse.json(seriesList)),
-        http.put(`${SONARR_URL}/api/v3/series/:id`, async ({ params }) => {
-          unmonitored.push(Number(params.id));
-          return HttpResponse.json({ id: Number(params.id), monitored: false });
+        http.put(`${SONARR_URL}/api/v3/series/editor`, async ({ request }) => {
+          const body = (await request.json()) as { seriesIds: number[]; monitored: boolean };
+          if (body.monitored === false) unmonitored.push(...body.seriesIds);
+          return HttpResponse.json([]);
         })
       );
 
@@ -663,9 +663,7 @@ describe('AutomationExecutor', () => {
 
       server.use(
         http.get(`${SONARR_URL}/api/v3/series`, () => HttpResponse.json(seriesList)),
-        http.put(`${SONARR_URL}/api/v3/series/:id`, () =>
-          HttpResponse.json({ id: 1, monitored: false })
-        )
+        http.put(`${SONARR_URL}/api/v3/series/editor`, () => HttpResponse.json([]))
       );
 
       const provider = await seedSonarrProvider(providerSettingsService);
