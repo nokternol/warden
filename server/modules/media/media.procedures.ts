@@ -2,6 +2,7 @@ import type { ContentType } from '@contract/schemas';
 import { MetadataProviderType } from '@server/database/schema';
 import { api } from '@server/kernel/api';
 import type { DrizzleDb } from '@server/kernel/db';
+import type { DomainEventBus } from '@server/kernel/eventBus';
 import { getChildLogger } from '@server/kernel/logger';
 import type {
   ProviderListsData,
@@ -46,6 +47,7 @@ function computeYearRange(items: Array<{ year?: number }>): {
 interface MediaCradle {
   providerSettingsService: ProviderSettingsService;
   mediaQueryEngine: MediaQueryEngine;
+  eventBus: DomainEventBus;
   filterReadiness: Pick<FilterReadiness, 'readFacts'>;
   libraryCache: Pick<LibraryCache, 'read'>;
   db?: DrizzleDb;
@@ -252,6 +254,7 @@ export function createMediaProcedures(cradle: MediaCradle) {
       }
       const result = await resetMediaData(cradle.db);
       log.warn('Media data reset', { deletedIdentities: result.deletedIdentities });
+      cradle.eventBus.emit('media:changed', {});
       return result;
     }),
   };

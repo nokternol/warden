@@ -192,4 +192,30 @@ describe('the library copy', () => {
     expect(await choices('genres')).toEqual({ movies: ['Crime'], series: [] });
     expect(providerReads).toBe(0);
   });
+
+  it('after a media reset shows no titles and says the copy is not refreshed yet', async () => {
+    server.use(
+      http.get(`${RADARR_URL}/api/v3/movie`, () =>
+        HttpResponse.json([createRadarrMovie({ id: 1, title: 'Heat', tmdbId: 949 })])
+      )
+    );
+    await refreshCatalog(ctx.cradle);
+    expect(expectSuccessResponse(await ctx.client.get(browsePath('movie', []))).items).toHaveLength(
+      1
+    );
+
+    expectSuccessResponse(await ctx.client.delete('/api/media/reset'));
+
+    const page = expectSuccessResponse(await ctx.client.get(browsePath('movie', []))) as {
+      items: unknown[];
+      records: Array<{ refreshedAt: number | null; failedAt: number | null }>;
+    };
+    expect(page.items).toEqual([]);
+    expect(page.records.length).toBeGreaterThan(0);
+    expect(page.records.every((r) => r.refreshedAt === null && r.failedAt === null)).toBe(true);
+    expect(expectSuccessResponse(await ctx.client.get('/api/media/tags'))).toEqual({
+      radarr: [],
+      sonarr: [],
+    });
+  });
 });
