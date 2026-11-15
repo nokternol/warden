@@ -53,6 +53,8 @@ export class SourceReadCache {
     private readonly deps: { mediaSourceFactory: Pick<MediaSourceFactory, 'activeInstances'> }
   ) {}
 
+  /** Every active instance of `contentType`: the rows of each that answered, and an error for each
+   *  that could not be read. Never fails; no active instance is an empty answer. */
   async readEach<C extends ContentType>(
     contentType: C
   ): Promise<{ reads: SourceRead<C>[]; errors: SourceReadError[] }> {
@@ -68,6 +70,15 @@ export class SourceReadCache {
       })
     );
     return { reads, errors };
+  }
+
+  /** Every active instance's rows; rejects, naming each instance and why, if any could not be read. */
+  async readAll<C extends ContentType>(contentType: C): Promise<SourceRead<C>[]> {
+    const { reads, errors } = await this.readEach(contentType);
+    if (errors.length > 0) {
+      throw new Error(errors.map((e) => `${e.provider}: ${e.error}`).join('; '));
+    }
+    return reads;
   }
 
   /** One instance's latest read: its rows, or the message saying why it could not be read. */

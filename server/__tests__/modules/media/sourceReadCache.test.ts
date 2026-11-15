@@ -56,3 +56,14 @@ describe('SourceReadCache.readEach', () => {
     });
   });
 });
+
+describe('SourceReadCache.readAll', () => {
+  it('rejects, naming the instance and why, when any instance failed', async () => {
+    const down = radarrInstance(1, 'Radarr', new Error('ECONNREFUSED'));
+    const up = radarrInstance(2, 'Radarr 4k', [movie(20, 'Heat')]);
+
+    await expect(cacheOver([down, up]).readAll('movie')).rejects.toThrow(
+      "Radarr: Couldn't be reached: ECONNREFUSED"
+    );
+  });
+});
