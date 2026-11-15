@@ -87,4 +87,10 @@ describe('SourceReadCache.readOne', () => {
     });
     expect(sibling.reads).toBe(0);
   });
+
+  it('rejects with "not an active provider" for an id no active instance has', async () => {
+    const cache = cacheOver([radarrInstance(1, 'Radarr', [movie(10, 'Alien')])]);
+
+    await expect(cache.readOne(9)).rejects.toThrow('Provider instance 9 is not an active provider');
+  });
 });

@@ -86,7 +86,8 @@ export class SourceReadCache {
     return reads;
   }
 
-  /** One instance's rows, read without touching its siblings; rejects if it could not be read. */
+  /** One instance's rows, read without touching its siblings; rejects if it could not be read or
+   *  is not an active provider. */
   async readOne(providerId: number): Promise<SourceRead<ContentType>> {
     for (const contentType of ContentTypeSchema.options) {
       const instances = await this.deps.mediaSourceFactory.activeInstances(contentType);
@@ -97,7 +98,7 @@ export class SourceReadCache {
         return { providerId, name: instance.name, rows: read.rows as SourceRow[ContentType][] };
       }
     }
-    throw new Error(`Provider instance ${providerId} not found`);
+    throw new Error(`Provider instance ${providerId} is not an active provider`);
   }
 
   /** One instance's latest read: its rows, or the message saying why it could not be read. */
