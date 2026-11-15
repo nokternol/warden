@@ -1,9 +1,9 @@
 import { getChildLogger } from '@server/kernel/logger';
 import type { ProviderConfig } from '@server/modules/providers/connections/baseProviderConnection';
 import { TvMazeProvider } from '@server/modules/providers/connections/tvmazeProvider';
+import { server } from '@tests/mocks/server';
 import { http, HttpResponse } from 'msw';
-import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 const log = getChildLogger('TestTvMazeProvider');
 
@@ -13,12 +13,6 @@ const mockProvider: ProviderConfig = {
   apiKey: '',
   settings: null,
 };
-
-const server = setupServer();
-
-beforeAll(() => server.listen());
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
 
 describe('TvMazeProvider.lookupByTvdbId', () => {
   it('resolves a TVmaze id from a thetvdb lookup', async () => {

@@ -17,6 +17,17 @@ export const READINESS_KINDS = [
 
 export type ReadinessKind = (typeof READINESS_KINDS)[number];
 
+/**
+ * Findings that say how complete the data is rather than that a filter cannot work. They never
+ * stop a schedule or Run Now and leave the query list clear; screens show them only through the
+ * copy's "As of" line, which names the provider.
+ */
+export const INFORMATIONAL_KINDS: readonly ReadinessKind[] = ['data-incomplete'];
+
+export function isInformational(finding: Pick<ReadinessFinding, 'kind'>): boolean {
+  return INFORMATIONAL_KINDS.includes(finding.kind);
+}
+
 export const ReadinessFindingSchema = z
   .object({
     /** Deterministic from the facts that make the finding, so the same problem keeps its id. */
@@ -131,8 +142,8 @@ export function describeFinding(description: FindingDescription): {
       };
     case 'data-incomplete':
       return {
-        message: `${description.ruleLabel} filter's data has not finished loading`,
-        clears: 'Clears when an enrichment run next succeeds.',
+        message: `${description.ruleLabel} filter's data is incomplete: a provider that supplies it has not refreshed`,
+        clears: 'Clears when that provider next refreshes successfully.',
       };
     case 'no-data':
       return {

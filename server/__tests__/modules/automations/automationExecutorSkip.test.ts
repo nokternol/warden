@@ -256,7 +256,7 @@ describe('AutomationExecutor — invalid automations', () => {
         createRadarrMovie({ id: i + 1, title: `T${i}`, tags: [1] })
       );
 
-    it('will not filter on play history that has not been loaded, since none reads as unwatched', async () => {
+    it('runs a non-destructive automation on play history before any enrichment has run', async () => {
       const radarr = await seedRadarr('Radarr');
       await providerSettingsService.create({
         type: MetadataProviderType.TAUTULLI,
@@ -271,9 +271,7 @@ describe('AutomationExecutor — invalid automations', () => {
       await executor.execute(automation.id);
 
       const [run] = await getDb().select().from(automationRuns);
-      expect(run.status).toBe('skipped');
-      expect(run.error).toMatch(/has not finished loading/);
-      expect(unmonitorCalls).toBe(0);
+      expect(run.status).toBe('success');
     });
 
     it('will not filter on play history when nothing connected can supply it', async () => {
@@ -289,7 +287,7 @@ describe('AutomationExecutor — invalid automations', () => {
       expect(run.error).toMatch(/needs a .* provider, and none is active/);
     });
 
-    it('will not exclude on play history that has not been loaded, since nothing would be protected', async () => {
+    it('runs a non-destructive automation excluding on play history before any enrichment has run', async () => {
       const radarr = await seedRadarr('Radarr');
       await providerSettingsService.create({
         type: MetadataProviderType.TAUTULLI,
@@ -321,8 +319,7 @@ describe('AutomationExecutor — invalid automations', () => {
       await executor.execute(automation.id);
 
       const [run] = await getDb().select().from(automationRuns);
-      expect(run.status).toBe('skipped');
-      expect(unmonitorCalls).toBe(0);
+      expect(run.status).toBe('success');
     });
 
     it('still filters on fields a source supplies itself, with no enrichment loaded', async () => {

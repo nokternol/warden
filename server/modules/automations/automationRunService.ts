@@ -187,17 +187,6 @@ export class AutomationRunService {
       .where(eq(automationRuns.status, 'running'));
   }
 
-  async latestStatusOfTask(taskId: string): Promise<AutomationRunStatus | undefined> {
-    const [row] = await this.db
-      .select({ status: automationRuns.status })
-      .from(automationRuns)
-      .innerJoin(automations, eq(automationRuns.automationId, automations.id))
-      .where(eq(automations.taskId, taskId))
-      .orderBy(desc(automationRuns.id))
-      .limit(1);
-    return row?.status as AutomationRunStatus | undefined;
-  }
-
   async countRuns(opts: Pick<ListRunsOptions, 'automationId'> = {}): Promise<number> {
     return this.db.$count(
       automationRuns,

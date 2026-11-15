@@ -69,8 +69,8 @@ describe('describeFinding', () => {
     ],
     [
       { kind: 'data-incomplete', ruleLabel: 'Watched' },
-      "Watched filter's data has not finished loading",
-      /enrichment run next succeeds/,
+      "Watched filter's data is incomplete: a provider that supplies it has not refreshed",
+      /next refreshes successfully/,
     ],
     [
       { kind: 'no-data', ruleLabel: 'Seerr request status', contentType: 'movie' },

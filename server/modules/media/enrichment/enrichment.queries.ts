@@ -1,6 +1,5 @@
-import type { ContentType } from '@contract/schemas';
 import { eq } from 'drizzle-orm';
-import { enrichmentField, mediaEnrichment, mediaIdentity } from '../../../database/schema';
+import { enrichmentField, mediaEnrichment } from '../../../database/schema';
 import type { DrizzleDb } from '../../../kernel/db';
 import type { EnrichmentFields } from '../mediaFieldProvider';
 
@@ -41,23 +40,6 @@ export class EnrichmentQueries {
       field: row.field as keyof EnrichmentFields,
       value: JSON.parse(row.value),
     }));
-  }
-
-  /** The fields at least one title of each content type holds a value for, in one query. */
-  async fieldsWithValues(): Promise<Record<ContentType, Set<keyof EnrichmentFields>>> {
-    const rows = await this.deps.db
-      .selectDistinct({ contentType: mediaIdentity.contentType, key: enrichmentField.key })
-      .from(mediaEnrichment)
-      .innerJoin(enrichmentField, eq(enrichmentField.id, mediaEnrichment.fieldId))
-      .innerJoin(mediaIdentity, eq(mediaIdentity.id, mediaEnrichment.mediaIdentityId));
-    const fields: Record<ContentType, Set<keyof EnrichmentFields>> = {
-      movie: new Set(),
-      series: new Set(),
-    };
-    for (const { contentType, key } of rows) {
-      fields[contentType]?.add(key as keyof EnrichmentFields);
-    }
-    return fields;
   }
 
   /**

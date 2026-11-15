@@ -81,7 +81,6 @@ export type {
   AutomationAnswer,
   AutomationBlocks,
   AutomationProvider,
-  EnrichmentOutcomeSource,
   FilterAnswer,
   FilterList,
   FilterReadiness,

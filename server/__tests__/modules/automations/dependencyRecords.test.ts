@@ -228,6 +228,49 @@ describe('runs and the refresh records they depend on', () => {
     expect(run.error).toMatch(/Radarr B/);
   });
 
+  it('skips a destructive run whose excluded query uses a Seerr rule while Seerr has no facts yet', async () => {
+    await providerSettingsService.create({
+      type: MetadataProviderType.SEERR,
+      name: 'Seerr',
+      url: 'http://localhost:5055',
+      apiKey: 'k',
+    });
+    const { connection, deleteMovies } = radarrConnection();
+
+    const { run, acted } = await runOnce({
+      providerId: radarrA,
+      connection,
+      act: deleteMovies,
+      taskId: 'deleteMovieWithFiles',
+      exclude: [{ ruleKey: 'seerrRequestStatus', value: 2 }],
+    });
+
+    expect(acted).toBe(false);
+    expect(run.error).toMatch(/Seerr/);
+    expect(run.error).toMatch(/facts/);
+  });
+
+  it("runs a non-destructive automation on last-watched while Tautulli's facts refresh failed", async () => {
+    const { id: tautulli } = await providerSettingsService.create({
+      type: MetadataProviderType.TAUTULLI,
+      name: 'Tautulli',
+      url: 'http://localhost:8181',
+      apiKey: 'k',
+    });
+    await recordRefreshFailed(getDb(), tautulli, 'facts', 'Tautulli timed out');
+    const { connection, search } = radarrConnection();
+
+    const { run } = await runOnce({
+      providerId: radarrA,
+      connection,
+      act: search,
+      taskId: 'triggerSearch',
+      include: [{ ruleKey: 'lastWatchedDaysAgo', value: { min: 30 } }],
+    });
+
+    expect(run.status).toBe('success');
+  });
+
   it('skips a destructive run that depends on a provider never refreshed', async () => {
     await getDb().delete(automationRuns);
     await providerSettingsService.create({

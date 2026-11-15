@@ -983,8 +983,7 @@ describe('AutomationExecutor', () => {
         filterReadiness: {
           readFacts: async () => ({
             providers: [{ id: 1, type: MetadataProviderType.RADARR, isActive: true }],
-            latestEnrichment: 'success',
-            fieldsWithValues: { movie: new Set(), series: new Set() },
+            factsRecords: [],
           }),
         },
         providerSettingsService: mockProviderSettingsService as unknown as ProviderSettingsService,
@@ -1105,19 +1104,6 @@ describe('AutomationExecutor', () => {
       });
       return run;
     }
-
-    it('skips while the latest enrichment run did not finish cleanly', async () => {
-      await markEnrichmentLoaded(providerSettingsService, 'error');
-      const run = await watchedAutomation();
-      expect(run.status).toBe('skipped');
-      expect(run.error).toMatch(/has not finished loading/);
-    });
-
-    it('skips when only another content type has values', async () => {
-      await markEnrichmentLoaded(providerSettingsService);
-      const run = await watchedAutomation('series');
-      expect(run.status).toBe('skipped');
-    });
 
     it('runs once enrichment has finished and values exist', async () => {
       await markEnrichmentLoaded(providerSettingsService);

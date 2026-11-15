@@ -133,21 +133,6 @@ describe('filter readiness, as automations see it', () => {
     return run;
   }
 
-  /** The enrichment system job, with one finished run of `status`. */
-  async function enrichmentRan(status: 'success' | 'error') {
-    const db = getDb();
-    const [job] = await db
-      .insert(automations)
-      .values({
-        name: 'Enrichment',
-        kind: 'system',
-        taskId: 'system:enrichment',
-        schedule: '0 * * * *',
-      })
-      .returning();
-    await db.insert(automationRuns).values({ automationId: job.id, status, kind: 'system' });
-  }
-
   describe('safety pins', () => {
     it('refuses to save a query on a rule the scope declaration defers', async () => {
       // `tmdbStatus` is produced only by TMDB, which the scope declaration defers.
@@ -291,49 +276,6 @@ describe('filter readiness, as automations see it', () => {
         filters: [],
       });
       expect(query.health.findings.map((f) => f.kind)).toEqual(['no-library']);
-    });
-  });
-
-  describe('a filter whose field holds no value', () => {
-    it('blocks a scheduled run using a Seerr filter while no title holds Seerr data, saying so rather than that data is loading', async () => {
-      // A library where nobody has requested anything through Seerr is a legitimate state;
-      // nothing distinguishes it from data that failed to load, so only a user can accept it.
-      const radarr = await seedRadarr();
-      await providerSettingsService.create({
-        type: MetadataProviderType.SEERR,
-        name: 'Seerr',
-        url: 'http://localhost:5055',
-        apiKey: 'k',
-      });
-      await enrichmentRan('success');
-      const db = getDb();
-      const [identity] = await db
-        .insert(mediaIdentity)
-        .values({ contentType: 'movie' })
-        .returning();
-      await seedFacts(db, identity.id, { playCount: 1 });
-      const include = await mediaQueryService.create({
-        name: 'All',
-        contentType: 'movie',
-        filters: [],
-      });
-      const exclude = await mediaQueryService.create({
-        name: 'Requested',
-        contentType: 'movie',
-        filters: [{ ruleKey: 'seerrRequestStatus', value: 2 }],
-      });
-      const automation = await automationOver(radarr.id, [
-        { id: include.id, role: 'include' },
-        { id: exclude.id, role: 'exclude' },
-      ]);
-
-      await executor.execute(automation.id);
-
-      const run = await latestRun();
-      expect(run.status).toBe('skipped');
-      expect(run.error).toBe(
-        'Seerr request status filter has no data: no movie holds a value for it'
-      );
     });
   });
 });
