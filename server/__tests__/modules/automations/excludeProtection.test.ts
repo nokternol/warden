@@ -14,7 +14,7 @@ import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryServic
 import { PlexProvider, ProviderSettingsService } from '@server/modules/providers';
 import { createRadarrMovie } from '@tests/factories';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
-import { sourceReadCacheHolding } from '@tests/helpers/sourceReadCache';
+import { libraryCacheHolding } from '@tests/helpers/library';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const testConfig: AppConfig = {
@@ -115,7 +115,7 @@ describe('exclude protection for a non-source actuator', () => {
       automationBlockService: new AutomationBlockService({ db }),
       filterReadiness: filterReadinessOver(db),
       providerFactory: { create: () => plexInstance },
-      sourceReadCache: sourceReadCacheHolding(
+      libraryCache: libraryCacheHolding(
         [...new Set(copies.map((c) => c.providerId))].map((providerId) => ({
           providerId,
           rows: copies
@@ -212,27 +212,5 @@ describe('exclude protection for a non-source actuator', () => {
 
     expect(deletedIds).toEqual(['rk-2']);
     expect(recordedTitles).toEqual(['Ronin']);
-  });
-
-  it('skips the run when an excluded copy has neither a primary id nor a recorded identity', async () => {
-    const main = await radarr('Radarr');
-    const fourK = await radarr('Radarr 4K');
-    await recordIdentity({ tmdbId: 200, title: 'Ronin', plexRatingKey: 'rk-2' }, [
-      { providerId: main.id, radarrId: 2 },
-    ]);
-
-    const { run, deletedIds } = await deleteAllButKept(
-      [
-        { providerId: main.id, radarrId: 2, tmdb: 200, title: 'Ronin' },
-        // Nothing yet says which title this is, so nothing can say what it protects.
-        { providerId: fourK.id, radarrId: 9, title: 'Unlisted cut', keep: true },
-      ],
-      fourK.id
-    );
-
-    expect(deletedIds).toEqual([]);
-    expect(run.status).toBe('skipped');
-    expect(run.error).toMatch(/excluded title is not resolved yet/);
-    expect(run.error).toContain('Unlisted cut');
   });
 });

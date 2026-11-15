@@ -8,7 +8,6 @@ import {
   mediaItems,
 } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
-import { type MediaItem, ensureSourceCopies } from '../media';
 
 export interface AutomationRunDto {
   id: number;
@@ -26,10 +25,10 @@ export interface RunItemPage {
   total: number;
 }
 
-/** The catalog items a user run acted on, all of its query's content type. */
+/** The copies a user run acted on, by their `media_item` ids in the library copy. */
 export interface RunTargets {
   contentType: ContentType;
-  items: MediaItem[];
+  mediaItemIds: number[];
 }
 
 export interface CreateRunData {
@@ -106,9 +105,7 @@ export class AutomationRunService {
    * SQLite transaction, so a run is never recorded without its items.
    */
   async createRun(data: CreateRunData): Promise<AutomationRunDto> {
-    const mediaItemIds = data.targets
-      ? await ensureSourceCopies(this.db, data.targets.contentType, data.targets.items)
-      : [];
+    const mediaItemIds = data.targets?.mediaItemIds ?? [];
     const insertRun = this.db
       .insert(automationRuns)
       .values({
@@ -147,7 +144,7 @@ export class AutomationRunService {
     return this.createRun({
       ...data,
       status: 'running',
-      itemCount: data.targets.items.length,
+      itemCount: data.targets.mediaItemIds.length,
     });
   }
 

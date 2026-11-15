@@ -23,21 +23,16 @@ export type { MediaCradle } from './media.registrations';
 // Canonical item shapes every provider role (Source, Enricher) operates on.
 export type { MediaItem, MediaItemSet } from './mediaItem';
 
-// Which title a copy belongs to: the one key every title count de-duplicates by.
-export { identifiesTitle, titleKeyOf } from './mediaItem';
+// A copy's collision-free key across instances, for matching evaluated items back to copies.
+export { itemKey } from './mediaItem';
 export type { NormalizedMovie } from './movie';
 export type { NormalizedSeries } from './series';
 
 // Per-provider DTO → canonical shape translation.
 export { normalizeRadarrMovie, normalizeSonarrSeries } from './normalizeMedia';
 
-// The read role a media-owning provider plays for the query engine, and the
-// binders that turn an instance's Radarr or Sonarr rows into one.
+// The read role the query engine evaluates over.
 export type { MediaSource } from './mediaSource';
-export { rowsSourceFor } from './sourceAdapters';
-
-// The one way to ask what Radarr and Sonarr hold: each active instance's latest read, as raw rows.
-export type { SourceRead, SourceReadCache } from './sourceReadCache';
 
 // The in-memory copy of the library every feature reads, and the records saying how current it is.
 export { copiesSource, recordsFor } from './libraryCache';
@@ -46,14 +41,16 @@ export type { Library, LibraryCache, LibraryCopy } from './libraryCache';
 // Owner-type policy: which provider type owns each content type, and its
 // active instances.
 export { sourceOwnership } from './mediaSourceFactory';
-export type { MediaSourceDescriptor, MediaSourceFactory } from './mediaSourceFactory';
+export type { MediaSourceDescriptor } from './mediaSourceFactory';
 
-// Non-source actuator addressing: query-matched items translated into the
-// actuator's own id space through the identity graph.
-export { resolveActuatorTargets } from './actuatorIdResolver';
-
-// Run history: the source copies a run's targeted items resolve to.
-export { ensureSourceCopies } from './sourceCopies';
+// Non-source actuator addressing: a copy's title in the actuator's own id space, from the ids
+// the catalog refresh linked.
+export {
+  ADDRESS_COLUMN_BY_TYPE,
+  MEDIA_SERVER_BY_COLUMN,
+  actuatorIdOf,
+  isAddressedActuator,
+} from './actuatorIdResolver';
 
 // Enrichment roles and the adapters that bind providers' native connections
 // to them.
@@ -95,8 +92,7 @@ export type {
 export { MediaQueryEngine, matchItems } from './mediaQueryEngine';
 export type { MediaQuery, MediaQueryClause, MediaQuerySpec } from './mediaQueryEngine';
 
-// Enrichment — the identity → media_enrichment materialization.
-export { mergeEnrichment } from './enrichmentMerge';
+// Enrichment — the job that stores each provider's facts.
 export { EnrichmentJobFactory } from './enrichmentJobFactory';
 export type { EnrichmentJobFactoryDeps } from './enrichmentJobFactory';
 

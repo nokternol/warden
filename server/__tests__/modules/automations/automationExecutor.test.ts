@@ -17,9 +17,7 @@ import { AutomationScheduler } from '@server/modules/automations/automationSched
 import { AutomationService } from '@server/modules/automations/automationService';
 import type { MediaItem } from '@server/modules/media';
 import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.queries';
-import type { MediaSourceFactory } from '@server/modules/media/mediaSourceFactory';
 import type { Filter } from '@server/modules/media/ruleRegistry';
-import { SourceReadCache } from '@server/modules/media/sourceReadCache';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import {
   type IProviderFactory,
@@ -34,7 +32,7 @@ import {
 import type { ProviderConfig } from '@server/modules/providers/connections/baseProviderConnection';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { seedFacts } from '@tests/helpers/library';
-import { sourceReadCacheHolding, sourceReadCacheOver } from '@tests/helpers/sourceReadCache';
+import { libraryCacheHolding, libraryCacheOver } from '@tests/helpers/library';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRadarrMovie, createSonarrSeries } from '../../../../tests/factories';
@@ -209,7 +207,7 @@ describe('AutomationExecutor', () => {
       automationService,
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
-      sourceReadCache: sourceReadCacheOver(providerSettingsService),
+      libraryCache: libraryCacheOver(providerSettingsService),
       mediaQueryService,
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),
@@ -240,7 +238,7 @@ describe('AutomationExecutor', () => {
         automationService,
         automationRunService: new AutomationRunService({ db }),
         providerSettingsService,
-        sourceReadCache: sourceReadCacheOver(providerSettingsService),
+        libraryCache: libraryCacheOver(providerSettingsService),
         mediaQueryService,
         automationBlockService: new AutomationBlockService({ db: getDb() }),
         filterReadiness: filterReadinessOver(getDb()),
@@ -264,7 +262,7 @@ describe('AutomationExecutor', () => {
         automationService,
         automationRunService: new AutomationRunService({ db }),
         providerSettingsService,
-        sourceReadCache: sourceReadCacheOver(providerSettingsService),
+        libraryCache: libraryCacheOver(providerSettingsService),
         mediaQueryService,
         automationBlockService: new AutomationBlockService({ db: getDb() }),
         filterReadiness: filterReadinessOver(getDb()),
@@ -286,7 +284,7 @@ describe('AutomationExecutor', () => {
         automationService,
         automationRunService,
         providerSettingsService,
-        sourceReadCache: sourceReadCacheOver(providerSettingsService),
+        libraryCache: libraryCacheOver(providerSettingsService),
         mediaQueryService,
         automationBlockService: new AutomationBlockService({ db: getDb() }),
         filterReadiness: filterReadinessOver(getDb()),
@@ -314,7 +312,7 @@ describe('AutomationExecutor', () => {
         automationService,
         automationRunService: new AutomationRunService({ db }),
         providerSettingsService,
-        sourceReadCache: sourceReadCacheOver(providerSettingsService),
+        libraryCache: libraryCacheOver(providerSettingsService),
         mediaQueryService,
         automationBlockService: new AutomationBlockService({ db: getDb() }),
         filterReadiness: filterReadinessOver(getDb()),
@@ -753,7 +751,7 @@ describe('AutomationExecutor', () => {
 
   describe('injected ProviderFactory', () => {
     it('calls factory.create() and executes the task — no HTTP stub needed', async () => {
-      const movies = [createRadarrMovie({ id: 10, title: 'Dune', year: 2021 })];
+      const movies = [createRadarrMovie({ id: 10, tmdbId: 1010, title: 'Dune', year: 2021 })];
       const unmonitored: number[] = [];
 
       const mockRadarr = radarrSource(movies, {
@@ -776,7 +774,7 @@ describe('AutomationExecutor', () => {
       const executorWithFactory = new AutomationExecutor({
         automationService,
         providerSettingsService,
-        sourceReadCache: sourceReadCacheOver(providerSettingsService, mockFactory),
+        libraryCache: libraryCacheOver(providerSettingsService, mockFactory),
         mediaQueryService,
         automationBlockService: new AutomationBlockService({ db: getDb() }),
         filterReadiness: filterReadinessOver(getDb()),
@@ -817,7 +815,7 @@ describe('AutomationExecutor', () => {
       const executorWithFactory = new AutomationExecutor({
         automationService,
         providerSettingsService,
-        sourceReadCache: sourceReadCacheOver(providerSettingsService, mockFactory),
+        libraryCache: libraryCacheOver(providerSettingsService, mockFactory),
         mediaQueryService,
         automationBlockService: new AutomationBlockService({ db: getDb() }),
         filterReadiness: filterReadinessOver(getDb()),
@@ -893,7 +891,7 @@ describe('AutomationExecutor', () => {
         automationBlockService: new AutomationBlockService({ db: getDb() }),
         filterReadiness: filterReadinessOver(getDb()),
         providerSettingsService: mockProviderSettingsService as unknown as ProviderSettingsService,
-        sourceReadCache: sourceReadCacheOver(
+        libraryCache: libraryCacheOver(
           mockProviderSettingsService as unknown as ProviderSettingsService,
           { create: () => mockRadarr }
         ),
@@ -921,6 +919,8 @@ describe('AutomationExecutor', () => {
 
   describe('contentType discriminator', () => {
     it('routes to the movie path when query.contentType is "movie"', async () => {
+      // The first provider row: id 1, the instance the mocks below name.
+      await seedRadarrProvider(providerSettingsService);
       const movies = [createRadarrMovie({ id: 7, title: 'Dune', year: 2021 })];
       const unmonitored: number[] = [];
 
@@ -988,7 +988,7 @@ describe('AutomationExecutor', () => {
           }),
         },
         providerSettingsService: mockProviderSettingsService as unknown as ProviderSettingsService,
-        sourceReadCache: sourceReadCacheHolding([{ providerId: 1, rows: movies }]),
+        libraryCache: libraryCacheHolding([{ providerId: 1, rows: movies }]),
         providerFactory: mockFactory,
         automationRunService: {
           beginRun: async () => ({ id: 1 }),
@@ -1018,10 +1018,10 @@ describe('AutomationExecutor', () => {
 
       const provider = await seedRadarrProvider(providerSettingsService);
 
-      // Seed media_identity + a media_item copy for movie 1 + enrichment (playCount=3)
+      // Seed movie 1's title + a media_item copy + enrichment (playCount=3)
       const [identity] = await db
         .insert(mediaIdentity)
-        .values({ contentType: 'movie' })
+        .values({ contentType: 'movie', tmdbId: movies[0].tmdbId })
         .returning();
       await db
         .insert(mediaItems)
@@ -1048,7 +1048,7 @@ describe('AutomationExecutor', () => {
         automationService,
         automationRunService: new AutomationRunService({ db }),
         providerSettingsService,
-        sourceReadCache: sourceReadCacheOver(providerSettingsService, mockFactory),
+        libraryCache: libraryCacheOver(providerSettingsService, mockFactory),
         mediaQueryService,
         automationBlockService: new AutomationBlockService({ db: getDb() }),
         filterReadiness: filterReadinessOver(getDb()),
@@ -1092,7 +1092,7 @@ describe('AutomationExecutor', () => {
         automationService,
         automationRunService: new AutomationRunService({ db }),
         providerSettingsService,
-        sourceReadCache: sourceReadCacheOver(providerSettingsService, providerFactory),
+        libraryCache: libraryCacheOver(providerSettingsService, providerFactory),
         mediaQueryService,
         automationBlockService: new AutomationBlockService({ db: getDb() }),
         filterReadiness: filterReadinessOver(getDb()),
@@ -1134,14 +1134,17 @@ describe('AutomationExecutor', () => {
       const tenDaysAgoUnix = Math.floor((Date.now() - 10 * 86_400_000) / 1000);
 
       const movies = [
-        createRadarrMovie({ id: 10, title: 'Old Play', hasFile: true }),
-        createRadarrMovie({ id: 11, title: 'Recent Play', hasFile: true }),
-        createRadarrMovie({ id: 12, title: 'Never Played', hasFile: true }),
+        createRadarrMovie({ id: 10, tmdbId: 1010, title: 'Old Play', hasFile: true }),
+        createRadarrMovie({ id: 11, tmdbId: 1011, title: 'Recent Play', hasFile: true }),
+        createRadarrMovie({ id: 12, tmdbId: 1012, title: 'Never Played', hasFile: true }),
       ];
 
       const provider = await seedRadarrProvider(providerSettingsService);
 
-      const [id10] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
+      const [id10] = await db
+        .insert(mediaIdentity)
+        .values({ contentType: 'movie', tmdbId: 1010 })
+        .returning();
       await db
         .insert(mediaItems)
         .values({ providerId: provider.id, externalId: 10, mediaIdentityId: id10.id });
@@ -1150,7 +1153,10 @@ describe('AutomationExecutor', () => {
       });
 
       const twoDaysAgoUnix = Math.floor((Date.now() - 2 * 86_400_000) / 1000);
-      const [id11] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
+      const [id11] = await db
+        .insert(mediaIdentity)
+        .values({ contentType: 'movie', tmdbId: 1011 })
+        .returning();
       await db
         .insert(mediaItems)
         .values({ providerId: provider.id, externalId: 11, mediaIdentityId: id11.id });
@@ -1180,7 +1186,7 @@ describe('AutomationExecutor', () => {
         automationService,
         automationRunService: new AutomationRunService({ db }),
         providerSettingsService,
-        sourceReadCache: sourceReadCacheOver(providerSettingsService, mockFactory),
+        libraryCache: libraryCacheOver(providerSettingsService, mockFactory),
         mediaQueryService,
         automationBlockService: new AutomationBlockService({ db: getDb() }),
         filterReadiness: filterReadinessOver(getDb()),
@@ -1209,10 +1215,10 @@ describe('AutomationExecutor', () => {
 
       const provider = await seedSonarrProvider(providerSettingsService);
 
-      // Seed media_identity + a media_item copy for series 1 + enrichment (playCount=5)
+      // Seed series 1's title + a media_item copy + enrichment (playCount=5)
       const [identity] = await db
         .insert(mediaIdentity)
-        .values({ contentType: 'series' })
+        .values({ contentType: 'series', tvdbId: seriesList[0].tvdbId })
         .returning();
       await db
         .insert(mediaItems)
@@ -1242,7 +1248,7 @@ describe('AutomationExecutor', () => {
         automationService,
         automationRunService: new AutomationRunService({ db }),
         providerSettingsService,
-        sourceReadCache: sourceReadCacheOver(providerSettingsService, mockFactory),
+        libraryCache: libraryCacheOver(providerSettingsService, mockFactory),
         mediaQueryService,
         automationBlockService: new AutomationBlockService({ db: getDb() }),
         filterReadiness: filterReadinessOver(getDb()),
@@ -1303,7 +1309,7 @@ describe('AutomationExecutor', () => {
       const executorWithFactory = new AutomationExecutor({
         automationService,
         providerSettingsService,
-        sourceReadCache: sourceReadCacheOver(providerSettingsService, mockFactory),
+        libraryCache: libraryCacheOver(providerSettingsService, mockFactory),
         mediaQueryService,
         automationBlockService: new AutomationBlockService({ db: getDb() }),
         filterReadiness: filterReadinessOver(getDb()),
@@ -1358,7 +1364,7 @@ describe('AutomationExecutor', () => {
       const executorWithFactory = new AutomationExecutor({
         automationService,
         providerSettingsService,
-        sourceReadCache: sourceReadCacheOver(providerSettingsService, mockFactory),
+        libraryCache: libraryCacheOver(providerSettingsService, mockFactory),
         mediaQueryService,
         automationBlockService: new AutomationBlockService({ db: getDb() }),
         filterReadiness: filterReadinessOver(getDb()),
@@ -1383,7 +1389,7 @@ describe('AutomationExecutor', () => {
       return new AutomationExecutor({
         automationService,
         providerSettingsService,
-        sourceReadCache: sourceReadCacheOver(providerSettingsService, {
+        libraryCache: libraryCacheOver(providerSettingsService, {
           create: () => radarrSource(movies),
         }),
         mediaQueryService,
@@ -1455,7 +1461,7 @@ describe('AutomationExecutor', () => {
       const dryRunExecutor = new AutomationExecutor({
         automationService,
         providerSettingsService,
-        sourceReadCache: sourceReadCacheOver(providerSettingsService, { create: () => radarr }),
+        libraryCache: libraryCacheOver(providerSettingsService, { create: () => radarr }),
         mediaQueryService,
         automationBlockService: new AutomationBlockService({ db: getDb() }),
         filterReadiness: filterReadinessOver(getDb()),
@@ -1514,7 +1520,7 @@ describe('AutomationExecutor', () => {
         automationService,
         providerSettingsService,
         // The library is read through its own connection, so only the executor's calls are counted.
-        sourceReadCache: sourceReadCacheOver(providerSettingsService, { create: () => mockRadarr }),
+        libraryCache: libraryCacheOver(providerSettingsService, { create: () => mockRadarr }),
         mediaQueryService,
         automationBlockService: new AutomationBlockService({ db: getDb() }),
         filterReadiness: filterReadinessOver(getDb()),
@@ -1551,7 +1557,7 @@ describe('AutomationExecutor', () => {
         automationService,
         automationRunService: new AutomationRunService({ db }),
         providerSettingsService,
-        sourceReadCache: sourceReadCacheOver(providerSettingsService),
+        libraryCache: libraryCacheOver(providerSettingsService),
         mediaQueryService,
         automationBlockService: new AutomationBlockService({ db: getDb() }),
         filterReadiness: filterReadinessOver(getDb()),
@@ -1586,7 +1592,7 @@ describe('AutomationExecutor', () => {
         automationService,
         automationRunService: new AutomationRunService({ db }),
         providerSettingsService,
-        sourceReadCache: sourceReadCacheOver(providerSettingsService),
+        libraryCache: libraryCacheOver(providerSettingsService),
         mediaQueryService,
         automationBlockService: new AutomationBlockService({ db: getDb() }),
         filterReadiness: filterReadinessOver(getDb()),
@@ -1624,7 +1630,7 @@ describe('AutomationExecutor', () => {
         automationService,
         automationRunService: new AutomationRunService({ db }),
         providerSettingsService,
-        sourceReadCache: sourceReadCacheOver(providerSettingsService),
+        libraryCache: libraryCacheOver(providerSettingsService),
         mediaQueryService,
         automationBlockService: new AutomationBlockService({ db: getDb() }),
         filterReadiness: filterReadinessOver(getDb()),
@@ -1658,7 +1664,7 @@ describe('AutomationExecutor', () => {
         automationService,
         automationRunService: new AutomationRunService({ db: getDb() }),
         providerSettingsService,
-        sourceReadCache: sourceReadCacheOver(providerSettingsService),
+        libraryCache: libraryCacheOver(providerSettingsService),
         mediaQueryService,
         automationBlockService: new AutomationBlockService({ db: getDb() }),
         filterReadiness: filterReadinessOver(getDb()),
@@ -1688,7 +1694,7 @@ describe('AutomationExecutor', () => {
       await new AutomationExecutor({
         automationService,
         providerSettingsService,
-        sourceReadCache: sourceReadCacheOver(providerSettingsService, { create: () => mockRadarr }),
+        libraryCache: libraryCacheOver(providerSettingsService, { create: () => mockRadarr }),
         mediaQueryService,
         automationBlockService: new AutomationBlockService({ db: getDb() }),
         filterReadiness: filterReadinessOver(getDb()),
@@ -1770,7 +1776,7 @@ describe('non-source actuators — id translation through the identity graph', (
 
   /** A pooled owning-source stand-in: three Radarr movies from one instance. */
   function fakeMovieSources(radarrProviderId: number) {
-    return sourceReadCacheHolding([
+    return libraryCacheHolding([
       {
         providerId: radarrProviderId,
         rows: [1, 2, 3].map((n) =>
@@ -1835,7 +1841,7 @@ describe('non-source actuators — id translation through the identity graph', (
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),
       providerFactory: { create: () => plexInstance },
-      sourceReadCache: fakeMovieSources(radarrProv.id),
+      libraryCache: fakeMovieSources(radarrProv.id),
       db,
     });
 
@@ -1876,7 +1882,7 @@ describe('non-source actuators — id translation through the identity graph', (
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),
       providerFactory: { create: () => plexInstance },
-      sourceReadCache: fakeMovieSources(radarrProv.id),
+      libraryCache: fakeMovieSources(radarrProv.id),
       db,
     });
     const query = await seedMediaQuery(mediaQueryService);
@@ -1925,7 +1931,7 @@ describe('non-source actuators — id translation through the identity graph', (
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),
       providerFactory: { create: () => plexInstance },
-      sourceReadCache: sourceReadCacheHolding(
+      libraryCache: libraryCacheHolding(
         [radarrProv.id, radarr4kProv.id].map((providerId) => ({
           providerId,
           rows: [createRadarrMovie({ id: 5, tmdbId: 500, title: 'Heat' })],
@@ -1966,7 +1972,7 @@ describe('non-source actuators — id translation through the identity graph', (
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),
       providerFactory: { create: () => plexInstance },
-      sourceReadCache: fakeMovieSources(radarrProv.id),
+      libraryCache: fakeMovieSources(radarrProv.id),
       db,
     });
     const query = await seedMediaQuery(mediaQueryService);
@@ -2008,7 +2014,7 @@ describe('non-source actuators — id translation through the identity graph', (
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),
       providerFactory: { create: () => tautulliInstance },
-      sourceReadCache: fakeMovieSources(radarrProv.id),
+      libraryCache: fakeMovieSources(radarrProv.id),
       db,
     });
 
@@ -2050,7 +2056,7 @@ describe('non-source actuators — id translation through the identity graph', (
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),
       providerFactory: { create: () => plexInstance },
-      sourceReadCache: sourceReadCacheHolding(
+      libraryCache: libraryCacheHolding(
         [radarrProv.id, radarr4kProv.id].map((providerId) => ({
           providerId,
           rows: [createRadarrMovie({ id: 5, tmdbId: 500, title: 'Heat' })],
@@ -2092,7 +2098,7 @@ describe('non-source actuators — id translation through the identity graph', (
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),
       providerFactory: { create: () => tautulliInstance },
-      sourceReadCache: fakeMovieSources(radarrProv.id),
+      libraryCache: fakeMovieSources(radarrProv.id),
       db,
     });
     const query = await seedMediaQuery(mediaQueryService);
@@ -2104,71 +2110,6 @@ describe('non-source actuators — id translation through the identity graph', (
     });
 
     expect(preview.count).toBe(2);
-  });
-
-  it('fails a Plex run, naming the instance, when any source instance could not be read', async () => {
-    const db = getDb();
-    const radarrProv = await seedRadarrProvider(providerSettingsService);
-    const plexProv = await seedPlexProvider();
-    await seedIdentityGraph(radarrProv.id);
-    const plexInstance = new PlexProvider(
-      { name: 'Test Plex', url: 'http://localhost:32400', apiKey: 'plex-token', settings: {} },
-      mockConnectionLogger
-    );
-    const deleteFromLibrary = vi
-      .spyOn(plexInstance, 'deleteFromLibrary')
-      .mockResolvedValue(undefined);
-    const radarrInstances = [
-      {
-        providerId: radarrProv.id,
-        name: 'Radarr',
-        provider: { getMovies: async () => [createRadarrMovie({ id: 1, tmdbId: 100 })] },
-      },
-      {
-        providerId: radarrProv.id + 100,
-        name: 'Radarr 4k',
-        provider: {
-          getMovies: async () => {
-            throw new Error('ECONNREFUSED');
-          },
-        },
-      },
-    ];
-    const automationRunService = new AutomationRunService({ db });
-    const executor = new AutomationExecutor({
-      automationService,
-      automationRunService,
-      providerSettingsService,
-      mediaQueryService,
-      automationBlockService: new AutomationBlockService({ db: getDb() }),
-      filterReadiness: filterReadinessOver(getDb()),
-      providerFactory: { create: () => plexInstance },
-      sourceReadCache: new SourceReadCache({
-        mediaSourceFactory: {
-          activeInstances: (async (contentType: ContentType) =>
-            contentType === 'movie'
-              ? radarrInstances
-              : []) as unknown as MediaSourceFactory['activeInstances'],
-        },
-        eventBus: new DomainEventBus(),
-      }),
-      db,
-    });
-    const query = await seedMediaQuery(mediaQueryService);
-    const automation = await seedAutomation(automationService, {
-      queryId: query.id,
-      providerId: plexProv.id,
-      taskId: 'deleteFromLibrary',
-    });
-
-    await executor.execute(automation.id);
-
-    const [run] = await automationRunService.listRuns({ automationId: automation.id });
-    expect(run).toMatchObject({
-      status: 'error',
-      error: expect.stringContaining("Radarr 4k: Couldn't be reached: ECONNREFUSED"),
-    });
-    expect(deleteFromLibrary).not.toHaveBeenCalled();
   });
 });
 
@@ -2212,7 +2153,7 @@ describe('task parameters — stored on the automation, threaded into run', () =
       automationService,
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
-      sourceReadCache: sourceReadCacheOver(providerSettingsService, { create: () => radarr }),
+      libraryCache: libraryCacheOver(providerSettingsService, { create: () => radarr }),
       mediaQueryService,
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),
@@ -2247,7 +2188,7 @@ describe('task parameters — stored on the automation, threaded into run', () =
       automationService,
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
-      sourceReadCache: sourceReadCacheOver(providerSettingsService, { create: () => radarr }),
+      libraryCache: libraryCacheOver(providerSettingsService, { create: () => radarr }),
       mediaQueryService,
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),

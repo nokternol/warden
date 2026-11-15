@@ -236,7 +236,7 @@ describe('Run Now on an automation row', () => {
     expect(screen.getByRole('button', { name: 'Run now' })).toBeDisabled();
   });
 
-  it("asks for a fresh count on open and on Retry, writing each answer into the row's readiness without refetching it", async () => {
+  it("checks again on open and on Retry, writing each answer into the row's readiness without refetching it", async () => {
     const checksMade = answerChecks({ count: 100 }, 'fail', { count: 214 });
     await openRunNow(103, checksMade);
     await screen.findByText("Couldn't check this automation.");
@@ -244,6 +244,6 @@ describe('Run Now on an automation row', () => {
     await userEvent.setup().click(screen.getByRole('button', { name: 'Retry' }));
 
     expect(await screen.findByText('Delete movie will affect 214 movies.')).toBeInTheDocument();
-    expect(freshAsked).toEqual([null, 'true', 'true']);
+    expect(freshAsked).toEqual([null, null, null]);
   });
 });

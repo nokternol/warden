@@ -90,20 +90,19 @@ describe('POST /api/automations/preview', () => {
 
   afterEach(() => {
     server.resetHandlers();
-    // The container's one read cache outlives each test; each test sets its own upstream answers.
-    cradle.sourceReadCache.clear();
   });
 
   afterAll(async () => {
     await closeDatabase();
   });
 
-  function radarrHolds(movies: ReturnType<typeof createRadarrMovie>[]) {
+  async function radarrHolds(movies: ReturnType<typeof createRadarrMovie>[]) {
     server.use(http.get(`${RADARR_URL}/movie`, () => HttpResponse.json(movies)));
+    await refreshCatalog(cradle);
   }
 
   it('answers how many movies an unsaved automation would act on', async () => {
-    radarrHolds([
+    await radarrHolds([
       createRadarrMovie({ id: 1, title: 'Alien', hasFile: true }),
       createRadarrMovie({ id: 2, title: 'Brazil', hasFile: false }),
       createRadarrMovie({ id: 3, title: 'Heat', hasFile: true }),
@@ -119,7 +118,7 @@ describe('POST /api/automations/preview', () => {
   });
 
   it('does not let a rating exclusion protect an unrated movie', async () => {
-    radarrHolds([
+    await radarrHolds([
       createRadarrMovie({
         id: 1,
         title: 'Unrated',
@@ -198,28 +197,5 @@ describe('POST /api/automations/preview', () => {
     );
 
     expect(automationPreview.count).toBe(queryPreview.count);
-  });
-
-  it('readiness with fresh re-reads the library; without it, reads it as it stands', async () => {
-    let library = [createRadarrMovie({ id: 1, title: 'Alien', hasFile: true })];
-    server.use(http.get(`${RADARR_URL}/movie`, () => HttpResponse.json(library)));
-    const automation = await cradle.automationService.create({
-      name: 'Delete what is on disk',
-      queries: [{ queryId: hasFileQueryId, role: 'include' }],
-      providerId: radarrId,
-      taskId: 'deleteMovieWithFiles',
-      schedule: '0 * * * *',
-    });
-    const readiness = async (query = '') =>
-      expectSuccessResponse(await client.get(`/api/automations/${automation.id}/readiness${query}`))
-        .count;
-
-    await readiness();
-    library = [...library, createRadarrMovie({ id: 2, title: 'Heat', hasFile: true })];
-
-    expect({ asItStands: await readiness(), fresh: await readiness('?fresh=true') }).toEqual({
-      asItStands: 1,
-      fresh: 2,
-    });
   });
 });

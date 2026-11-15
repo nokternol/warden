@@ -19,9 +19,10 @@ import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createMediaProcedures } from '@server/modules/media';
 import { createMockConfig } from '@tests/factories';
 import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
+import { refreshCatalog } from '@tests/helpers/library';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { server } from '../../../tests/mocks/server';
 
 describe('media caches after an automation run', () => {
@@ -41,10 +42,7 @@ describe('media caches after an automation run', () => {
     await closeDatabase();
   });
 
-  // The container's one read cache outlives each test; each test sets its own upstream answers.
-  afterEach(() => cradle.sourceReadCache.clear());
-
-  it("a title added to Radarr after the library was read, just before a run, is among the run's targets", async () => {
+  it('a run acts on the copy as last refreshed, reading no library from Radarr', async () => {
     const RADARR_4K = 'http://localhost:7879/api/v3';
     const movie = (id: number, title: string) => ({
       id,
@@ -57,15 +55,16 @@ describe('media caches after an automation run', () => {
       path: `/movies/${title}`,
     });
     let library = [movie(1, 'Alien')];
-    const unmonitored: number[] = [];
+    let libraryReads = 0;
+    const deleted: number[] = [];
     server.use(
-      http.get(`${RADARR_4K}/movie`, () => HttpResponse.json(library)),
-      http.put(`${RADARR_4K}/movie/:id`, async ({ params, request }) => {
-        unmonitored.push(Number(params.id));
-        return HttpResponse.json({
-          ...movie(Number(params.id), 'x'),
-          ...((await request.json()) as object),
-        });
+      http.get(`${RADARR_4K}/movie`, () => {
+        libraryReads++;
+        return HttpResponse.json(library);
+      }),
+      http.delete(`${RADARR_4K}/movie/:id`, ({ params }) => {
+        deleted.push(Number(params.id));
+        return new HttpResponse(null, { status: 200 });
       })
     );
     const provider = await cradle.providerSettingsService.create({
@@ -73,7 +72,7 @@ describe('media caches after an automation run', () => {
       name: 'Radarr 4k',
       url: RADARR_4K,
       apiKey: 'fake-key',
-      settings: { enabledTasks: ['unmonitorMovie'] },
+      settings: { enabledTasks: ['deleteMovieKeepFiles'] },
     });
     const query = await cradle.mediaQueryService.create({
       name: 'Everything in 4k',
@@ -81,18 +80,20 @@ describe('media caches after an automation run', () => {
       filters: [],
     });
     const automation = await cradle.automationService.create({
-      name: 'Unmonitor everything in 4k',
+      name: 'Remove everything in 4k',
       queries: [{ queryId: query.id, role: 'include' }],
       providerId: provider.id,
-      taskId: 'unmonitorMovie',
+      taskId: 'deleteMovieKeepFiles',
       schedule: '0 * * * *',
     });
-    await cradle.sourceReadCache.readOne(provider.id);
+    await refreshCatalog(cradle);
 
     library = [movie(1, 'Alien'), movie(2, 'Arrival')];
+    libraryReads = 0;
     await cradle.automationExecutor.execute(automation.id);
 
-    expect(unmonitored.sort()).toEqual([1, 2]);
+    expect({ deleted, libraryReads }).toEqual({ deleted: [1], libraryReads: 0 });
+    await cradle.providerSettingsService.delete(provider.id);
   }, 15_000);
 
   it("a Radarr automation's targets and reach count cover only its own instance", async () => {
@@ -140,6 +141,7 @@ describe('media caches after an automation run', () => {
       schedule: '0 * * * *',
     });
 
+    await refreshCatalog(cradle);
     const readiness = await cradle.automationExecutor.readiness(automation.id);
 
     expect(readiness.count).toBe(25);

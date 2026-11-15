@@ -1,8 +1,29 @@
+import type { ContentType } from '@contract/schemas';
 import type { Cradle } from '@server/container';
-import { enrichmentField, mediaEnrichment, metadataProviders } from '@server/database/schema';
-import type { DrizzleDb } from '@server/kernel/db';
+import {
+  MetadataProviderType,
+  enrichmentField,
+  mediaEnrichment,
+  metadataProviders,
+} from '@server/database/schema';
+import { type DrizzleDb, getDb } from '@server/kernel/db';
+import { DomainEventBus } from '@server/kernel/eventBus';
+import { getChildLogger } from '@server/kernel/logger';
 import type { EnrichmentFields } from '@server/modules/media';
+import { LibraryCache } from '@server/modules/media/libraryCache';
+import {
+  type IProviderFactory,
+  ProviderFactory,
+  type ProviderSettingsService,
+  type RadarrMovie,
+  type RadarrProvider,
+  type SonarrProvider,
+  type SonarrSeries,
+} from '@server/modules/providers';
+import { CatalogRefreshJob } from '@server/modules/providers/catalogRefreshJob';
 import { and, eq } from 'drizzle-orm';
+
+const log = getChildLogger('TestLibrary');
 
 /**
  * Runs the catalog refresh as its system automation would, so the library copy holds what the
@@ -50,4 +71,86 @@ export async function seedFacts(
       value: JSON.stringify(value),
     }));
   if (rows.length > 0) await db.insert(mediaEnrichment).values(rows);
+}
+
+/** What one active Radarr/Sonarr instance holds, for a catalog refresh to store. */
+interface InstanceLibrary {
+  providerId: number;
+  name?: string;
+  rows: RadarrMovie[] | SonarrSeries[];
+  contentType?: ContentType;
+}
+
+/** Stores what each instance holds as the catalog refresh would, so the copy holds exactly it. */
+export async function refreshCopies(db: DrizzleDb, libraries: InstanceLibrary[]): Promise<void> {
+  const of = (contentType: ContentType) =>
+    libraries
+      .filter((l) => (l.contentType ?? 'movie') === contentType)
+      .map(({ providerId, name = 'Instance', rows }) => ({ providerId, name, rows }));
+  const job = new CatalogRefreshJob({
+    db,
+    movieSources: of('movie').map(({ providerId, name, rows }) => ({
+      providerId,
+      name,
+      provider: { getMovies: async () => rows as RadarrMovie[] },
+    })),
+    seriesSources: of('series').map(({ providerId, name, rows }) => ({
+      providerId,
+      name,
+      provider: { getSeries: async () => rows as SonarrSeries[] },
+    })),
+  });
+  await job.runForMovies();
+  await job.runForSeries();
+}
+
+/**
+ * A library cache over the test database whose first read stores, as a catalog refresh would,
+ * what every active Radarr and Sonarr instance answers through `providerFactory`, so a test sets
+ * the copy by mocking the providers. Each call builds its own cache.
+ */
+export function libraryCacheOver(
+  providerSettingsService: Pick<ProviderSettingsService, 'findActiveByTypes'>,
+  providerFactory: Pick<IProviderFactory, 'create'> = new ProviderFactory()
+): LibraryCache {
+  const db = getDb();
+  return refreshingOnFirstRead(db, async () => {
+    const settings = await providerSettingsService.findActiveByTypes([
+      MetadataProviderType.RADARR,
+      MetadataProviderType.SONARR,
+    ]);
+    const libraries: InstanceLibrary[] = [];
+    for (const s of settings) {
+      const connection = providerFactory.create(s, log) as RadarrProvider | SonarrProvider;
+      const rows =
+        s.type === MetadataProviderType.RADARR
+          ? await (connection as RadarrProvider).getMovies()
+          : await (connection as SonarrProvider).getSeries();
+      libraries.push({
+        providerId: s.id,
+        name: s.name,
+        rows,
+        contentType: s.type === MetadataProviderType.RADARR ? 'movie' : 'series',
+      });
+    }
+    await refreshCopies(db, libraries);
+  });
+}
+
+/** A library cache whose first read stores exactly these instances' rows in the copy first. */
+export function libraryCacheHolding(libraries: InstanceLibrary[]): LibraryCache {
+  const db = getDb();
+  return refreshingOnFirstRead(db, () => refreshCopies(db, libraries));
+}
+
+function refreshingOnFirstRead(db: DrizzleDb, refresh: () => Promise<void>): LibraryCache {
+  const cache = new LibraryCache({ db, eventBus: new DomainEventBus() });
+  const read = cache.read.bind(cache);
+  let refreshed: Promise<void> | undefined;
+  cache.read = async () => {
+    refreshed ??= refresh().then(() => cache.clear());
+    await refreshed;
+    return read();
+  };
+  return cache;
 }

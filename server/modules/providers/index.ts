@@ -53,8 +53,7 @@ export { readEnabledTaskIds } from './taskEnablement';
 export type { PlexService } from './plexService';
 export type { TmdbService } from './tmdbService';
 
-// The catalog refresh — the system job that reads the providers' library data into the copy, and
-// the write that records a copy the job has not seen yet.
+// The catalog refresh — the system job that reads the providers' library data into the copy.
 export type { CatalogRefreshJobFactory } from './catalogRefreshJobFactory';
 // The library copy's refresh records: when each kind of each provider's data was last refreshed.
 export {
@@ -68,9 +67,6 @@ export type { RefreshKind, RefreshRecord } from './providerRefresh';
 export { readProviderLists } from './providerLists';
 export type { ProviderListsData } from './providerLists';
 export type { ProviderListsReader } from './providerListsReader';
-
-export { recordSourceCopy } from './sourceCopy';
-export type { SourceCopy } from './sourceCopy';
 
 // Connection classes + payload types still consumed outside the module
 // (search handler, media handler, enrichment mappers) until Phase 4.

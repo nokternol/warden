@@ -12,6 +12,7 @@ import { seerrHandlers } from './seerr';
 import { settingsHandlers } from './settings';
 import { sonarrHandlers } from './sonarr';
 import { tautulliHandlers } from './tautulli';
+import { tvMazeHandlers } from './tvmaze';
 
 export const handlers = [
   ...authHandlers,
@@ -29,4 +30,5 @@ export const handlers = [
   ...settingsHandlers,
   ...mediaHandlers,
   ...arrListFallbacks,
+  ...tvMazeHandlers,
 ];

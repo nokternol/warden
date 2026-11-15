@@ -39,6 +39,8 @@ export interface LibraryCopy<C extends ContentType = ContentType> {
   mediaIdentityId: number;
   providerId: number;
   record: CopyRecord[C];
+  /** The title's ids in the media servers, as the catalog refresh linked them. */
+  links: { plexRatingKey: string | null; jellyfinItemId: string | null };
   /** The copy as the query engine reads it: normalised, carrying its title group and facts. */
   item: MediaItem;
 }
@@ -188,6 +190,7 @@ export class LibraryCache implements ProviderListsReader {
         mediaIdentityId: row.mediaIdentityId,
         providerId: row.providerId,
         record,
+        links: { plexRatingKey: row.plexRatingKey, jellyfinItemId: row.jellyfinItemId },
         item,
       };
       (library.copies[row.contentType] as LibraryCopy[]).push(copy);

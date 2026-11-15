@@ -5,8 +5,6 @@ import { EnrichmentJobFactory } from './enrichmentJobFactory';
 import { FilterReadiness } from './filterReadiness';
 import { LibraryCache } from './libraryCache';
 import { MediaQueryEngine } from './mediaQueryEngine';
-import { MediaSourceFactory } from './mediaSourceFactory';
-import { SourceReadCache } from './sourceReadCache';
 
 /**
  * What the media module contributes to the app container. The app builder
@@ -17,10 +15,8 @@ export interface MediaCradle {
   mediaQueryEngine: MediaQueryEngine;
   enrichmentJobFactory: EnrichmentJobFactory;
   enrichmentQueries: EnrichmentQueries;
-  mediaSourceFactory: MediaSourceFactory;
   activeFieldSetCache: ActiveFieldSetCache;
   filterReadiness: FilterReadiness;
-  sourceReadCache: SourceReadCache;
   libraryCache: LibraryCache;
 }
 
@@ -36,10 +32,8 @@ export function registerMediaDependencies<TCradle extends MediaCradle>(
     mediaQueryEngine: asClass(MediaQueryEngine).singleton(),
     enrichmentJobFactory: asClass(EnrichmentJobFactory).singleton(),
     enrichmentQueries: asClass(EnrichmentQueries).singleton(),
-    mediaSourceFactory: asClass(MediaSourceFactory).singleton(),
     activeFieldSetCache: asClass(ActiveFieldSetCache).singleton(),
     filterReadiness: asClass(FilterReadiness).singleton(),
-    sourceReadCache: asClass(SourceReadCache).singleton(),
     libraryCache: asClass(LibraryCache).singleton(),
   };
   // TCradle extends MediaCradle, so the slice's keys and resolver types

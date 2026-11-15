@@ -1,75 +1,42 @@
-import { MetadataProviderType, mediaIdentity, mediaItems } from '@server/database/schema';
-import type { DrizzleDb } from '@server/kernel/db';
-import { and, eq } from 'drizzle-orm';
-import { itemKey, rawItemKey } from './mediaItem';
-import type { MediaItem } from './mediaItem';
-import { sourceCopyMatch } from './sourceCopies';
+import { MetadataProviderType } from '@server/database/schema';
+import type { LibraryCopy } from './libraryCache';
+
+/** A title's media-server id columns, as the catalog refresh links them. */
+export type AddressColumn = 'plexRatingKey' | 'jellyfinItemId';
 
 /**
- * The identity-graph column a non-source actuator addresses items by. Keyed by
- * addressing space, not provider: Tautulli has no id space of its own — it
- * reports entirely against Plex rating keys — so it shares Plex's column.
+ * The title id a non-source actuator addresses items by. Keyed by addressing space, not
+ * provider: Tautulli has no id space of its own (it reports entirely against Plex rating keys),
+ * so it shares Plex's column.
  */
-const ADDRESS_COLUMN_BY_TYPE = {
-  [MetadataProviderType.PLEX]: mediaIdentity.plexRatingKey,
-  [MetadataProviderType.TAUTULLI]: mediaIdentity.plexRatingKey,
-  [MetadataProviderType.JELLYFIN]: mediaIdentity.jellyfinItemId,
-} as const;
+export const ADDRESS_COLUMN_BY_TYPE: Partial<Record<MetadataProviderType, AddressColumn>> = {
+  [MetadataProviderType.PLEX]: 'plexRatingKey',
+  [MetadataProviderType.TAUTULLI]: 'plexRatingKey',
+  [MetadataProviderType.JELLYFIN]: 'jellyfinItemId',
+};
 
-type AddressedActuatorType = keyof typeof ADDRESS_COLUMN_BY_TYPE;
+/** The media server whose `links` refresh writes each address column. */
+export const MEDIA_SERVER_BY_COLUMN: Record<AddressColumn, MetadataProviderType> = {
+  plexRatingKey: MetadataProviderType.PLEX,
+  jellyfinItemId: MetadataProviderType.JELLYFIN,
+};
+
+/** Whether `type` acts on titles by a media server's id rather than a source's own catalog. */
+export function isAddressedActuator(type: MetadataProviderType): boolean {
+  return ADDRESS_COLUMN_BY_TYPE[type] !== undefined;
+}
 
 /**
- * Translates query-matched catalog items into a non-source actuator's own
- * addressing space: each item's `(providerId, externalId)` coordinate joins
- * through `media_item` to its `media_identity` group, whose Plex/Jellyfin
- * column carries the actuator-native id. Identities the resolution job has not
- * stamped yet drop out (no id to address), as do copies marked deleted (they
- * left their source, so a deleted row answers as a missing one). Multiple
- * instance copies of one identity collapse to a single id. `addressed` is the subset of `items` that
- * reached an actuator id — the items the task targets. `recorded` says whether a copy has a live
- * `media_item` row in any identity, stamped or not.
+ * A copy's title in a non-source actuator's own addressing space, from the ids the catalog
+ * refresh linked; undefined while the title is not linked to that server.
  */
-export async function resolveActuatorTargets(
-  db: DrizzleDb,
-  actuatorType: MetadataProviderType,
-  items: MediaItem[]
-): Promise<{
-  actuatorIds: string[];
-  addressed: MediaItem[];
-  actuatorIdOf: (item: MediaItem) => string | undefined;
-  recorded: (item: MediaItem) => boolean;
-}> {
-  const column = ADDRESS_COLUMN_BY_TYPE[actuatorType as AddressedActuatorType];
+export function actuatorIdOf(
+  copy: LibraryCopy,
+  actuatorType: MetadataProviderType
+): string | undefined {
+  const column = ADDRESS_COLUMN_BY_TYPE[actuatorType];
   if (!column) {
     throw new Error(`Provider type "${actuatorType}" has no actuator addressing space`);
   }
-
-  const match = sourceCopyMatch(items);
-  if (!match) {
-    return { actuatorIds: [], addressed: [], actuatorIdOf: () => undefined, recorded: () => false };
-  }
-
-  const rows = await db
-    .select({
-      actuatorId: column,
-      providerId: mediaItems.providerId,
-      externalId: mediaItems.externalId,
-    })
-    .from(mediaItems)
-    .innerJoin(mediaIdentity, eq(mediaItems.mediaIdentityId, mediaIdentity.id))
-    .where(and(match, eq(mediaItems.deleted, false)));
-
-  const actuatorIdByItemKey = new Map<string, string>();
-  const recordedKeys = new Set(rows.map((row) => rawItemKey(row.providerId, row.externalId)));
-  for (const row of rows) {
-    if (row.actuatorId !== null) {
-      actuatorIdByItemKey.set(rawItemKey(row.providerId, row.externalId), row.actuatorId);
-    }
-  }
-  return {
-    actuatorIds: [...new Set(actuatorIdByItemKey.values())],
-    addressed: items.filter((item) => actuatorIdByItemKey.has(itemKey(item) ?? '')),
-    actuatorIdOf: (item) => actuatorIdByItemKey.get(itemKey(item) ?? ''),
-    recorded: (item) => recordedKeys.has(itemKey(item) ?? ''),
-  };
+  return copy.links[column] ?? undefined;
 }

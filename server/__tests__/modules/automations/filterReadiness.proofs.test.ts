@@ -38,7 +38,7 @@ import { PlexProvider, ProviderSettingsService } from '@server/modules/providers
 import { CatalogRefreshJob } from '@server/modules/providers/catalogRefreshJob';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { seedFacts } from '@tests/helpers/library';
-import { sourceReadCacheHolding, sourceReadCacheOver } from '@tests/helpers/sourceReadCache';
+import { libraryCacheHolding, libraryCacheOver } from '@tests/helpers/library';
 import { desc, eq } from 'drizzle-orm';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -78,7 +78,7 @@ describe('filter readiness, as automations see it', () => {
       automationService,
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
-      sourceReadCache: sourceReadCacheOver(providerSettingsService),
+      libraryCache: libraryCacheOver(providerSettingsService),
       mediaQueryService,
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),
@@ -405,7 +405,7 @@ describe('a non-source actuator whose query names a source instance', () => {
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(db),
       providerFactory: { create: () => plexInstance },
-      sourceReadCache: sourceReadCacheHolding([
+      libraryCache: libraryCacheHolding([
         {
           providerId: radarr.id,
           rows: [1, 2].map((n) =>

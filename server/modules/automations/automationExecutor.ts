@@ -7,22 +7,15 @@ import { ValidationError } from '../../kernel/errors';
 import type { DomainEventBus } from '../../kernel/eventBus';
 import { getChildLogger } from '../../kernel/logger';
 import {
-  EnrichmentQueries,
   MediaQueryEngine,
+  actuatorIdOf,
   automationAnswer,
+  copiesSource,
   findingsFor,
-  identifiesTitle,
-  resolveActuatorTargets,
-  rowsSourceFor,
-  titleKeyOf,
+  isAddressedActuator,
+  itemKey,
 } from '../media';
-import type {
-  FilterReadiness,
-  MediaItem,
-  MediaQueryClause,
-  MediaSource,
-  SourceReadCache,
-} from '../media';
+import type { FilterReadiness, LibraryCache, LibraryCopy, MediaQueryClause } from '../media';
 import type { MediaQueryRecord, MediaQueryService } from '../mediaQueries';
 import {
   type ActuatorTask,
@@ -52,9 +45,8 @@ interface ExecutorDeps {
   automationBlockService: Pick<AutomationBlockService, 'reconcile'>;
   providerFactory?: IProviderFactory;
   mediaQueryEngine?: MediaQueryEngine;
-  enrichmentQueries?: EnrichmentQueries;
-  /** The library every plan reads: an actuator's own instance, or every owning instance pooled. */
-  sourceReadCache: Pick<SourceReadCache, 'readOne' | 'readAll'>;
+  /** The library copy every plan reads. */
+  libraryCache: Pick<LibraryCache, 'read'>;
   db?: DrizzleDb;
   systemTaskRunner?: SystemTaskRunnerLike;
   eventBus?: DomainEventBus;
@@ -82,15 +74,7 @@ interface RunPlan {
   /** How many source copies the query was evaluated against, and how many it matched. */
   poolSize: number;
   matchedCount: number;
-  /**
-   * Titles of excluded copies nothing yet identifies: no primary id and no recorded identity, so
-   * neither the identity graph nor the title key can say which actuator ids they protect.
-   */
-  unresolvedExcludes: string[];
 }
-
-/** How a plan reads the library from `SourceReadCache`. */
-type SourceReadOptions = Parameters<SourceReadCache['readOne']>[1];
 
 /** Below this many targets a destructive run is small enough to be its own limit. */
 const REACH_CHECK_MIN_ITEMS = 20;
@@ -109,36 +93,9 @@ export function excessiveReach({
   return `Not run: this would act on ${matchedCount} of ${poolSize} copies, more than half the library. Narrow its queries if that is intended.`;
 }
 
-/**
- * Why a run should wait: an exclude matched a copy whose title cannot be resolved yet, so acting
- * now could reach the very title it protects.
- */
-export function unresolvedExclude({ unresolvedExcludes }: Pick<RunPlan, 'unresolvedExcludes'>) {
-  if (unresolvedExcludes.length === 0) return undefined;
-  return `Not run: an excluded title is not resolved yet (${unresolvedExcludes.join(', ')}). The automation will run once identity resolution has seen it.`;
-}
-
 /** Why a planned run will not act, one line per reason; empty when it will. */
-function whyPlanWontRun(
-  plan: Pick<RunPlan, 'task' | 'matchedCount' | 'poolSize' | 'unresolvedExcludes'>
-) {
-  return [unresolvedExclude(plan), excessiveReach(plan)].filter(
-    (r): r is string => r !== undefined
-  );
-}
-
-/** A source that remembers how many items it returned. */
-function counting(source: MediaSource): MediaSource & { count: () => number } {
-  let count = 0;
-  return {
-    ...source,
-    getMediaItems: async () => {
-      const items = await source.getMediaItems();
-      count = items.length;
-      return items;
-    },
-    count: () => count,
-  };
+function whyPlanWontRun(plan: Pick<RunPlan, 'task' | 'matchedCount' | 'poolSize'>) {
+  return [excessiveReach(plan)].filter((r): r is string => r !== undefined);
 }
 
 /** "RADARR" as "Radarr". */
@@ -162,7 +119,7 @@ export class AutomationExecutor {
   private readonly mediaQueryEngine: MediaQueryEngine;
   private readonly filterReadiness: Pick<FilterReadiness, 'readFacts'>;
   private readonly automationBlockService: Pick<AutomationBlockService, 'reconcile'>;
-  private readonly sourceReadCache: Pick<SourceReadCache, 'readOne' | 'readAll'>;
+  private readonly libraryCache: Pick<LibraryCache, 'read'>;
   private readonly db?: DrizzleDb;
   private readonly systemTaskRunner?: SystemTaskRunnerLike;
   private readonly eventBus?: DomainEventBus;
@@ -175,17 +132,10 @@ export class AutomationExecutor {
     this.providerSettingsService = deps.providerSettingsService;
     this.mediaQueryService = deps.mediaQueryService;
     this.providerFactory = deps.providerFactory ?? new ProviderFactory();
-    const enrichmentQueries =
-      deps.enrichmentQueries ?? (deps.db ? new EnrichmentQueries({ db: deps.db }) : undefined);
-    this.mediaQueryEngine =
-      deps.mediaQueryEngine ??
-      new MediaQueryEngine({
-        db: deps.db,
-        enrichmentQueries: enrichmentQueries,
-      });
+    this.mediaQueryEngine = deps.mediaQueryEngine ?? new MediaQueryEngine();
     this.filterReadiness = deps.filterReadiness;
     this.automationBlockService = deps.automationBlockService;
-    this.sourceReadCache = deps.sourceReadCache;
+    this.libraryCache = deps.libraryCache;
     this.db = deps.db;
     this.systemTaskRunner = deps.systemTaskRunner;
     this.eventBus = deps.eventBus;
@@ -273,12 +223,9 @@ export class AutomationExecutor {
           }
           return;
         }
-        // Planned on a read that starts now, so the run acts on the library as it is.
-        const plan = await this.planRun(current.taskId, providerSettings, queries, {
-          refresh: true,
-        });
+        const plan = await this.planRun(current.taskId, providerSettings, queries);
         targets = plan.targets;
-        itemCount = targets.items.length;
+        itemCount = targets.mediaItemIds.length;
         const notRun = whyPlanWontRun(plan);
         if (notRun.length > 0) {
           await this.recordSkip(automationId, taskId, notRun.join('; '));
@@ -408,11 +355,10 @@ export class AutomationExecutor {
 
   /**
    * What a Run Now of this automation would do, and why, before anything runs. The findings are
-   * answered even when counting the targets fails, so a broken source cannot hide them. The count
-   * uses the library's latest read, or with `fresh` a read that starts now, so the count a user
-   * confirms comes from the read their confirmation started.
+   * answered even when counting the targets fails. The count comes from the library copy as the
+   * cache holds it, the same copy a run acts on.
    */
-  async readiness(automationId: number, opts?: { fresh?: boolean }): Promise<AutomationReadiness> {
+  async readiness(automationId: number): Promise<AutomationReadiness> {
     const automation = await this.automationService.getById(automationId);
     if (!automation.provider) {
       throw new Error(`Automation ${automationId} has no provider`);
@@ -425,9 +371,7 @@ export class AutomationExecutor {
       queries
     );
     const answer = automationAnswer(findings, signedOff);
-    const counted = await this.planRun(automation.taskId, providerSettings, queries, {
-      refresh: opts?.fresh,
-    }).then(
+    const counted = await this.planRun(automation.taskId, providerSettings, queries).then(
       (plan) => {
         // A run skipped after planning says so here, so Run Now does not confirm a run that won't act.
         problems.push(...whyPlanWontRun(plan));
@@ -467,16 +411,14 @@ export class AutomationExecutor {
   }
 
   /**
-   * Decides what a user run acts on: the enabled task, the catalog items the
-   * query targets, and those items in the actuator's own id space. Running the
-   * task is the caller's step, so the targets are known even if the task fails. `read` says how
-   * the library is read: as it stands, or refreshed so the plan is made on a read that starts now.
+   * Decides what a user run acts on, from the library copy: the enabled task, the copies the
+   * queries target, and those copies in the actuator's own id space. Running the task is the
+   * caller's step, so the targets are known even if the task fails.
    */
   private async planRun(
     taskId: string,
     providerSettings: MetadataProvider,
-    automationQueries: LoadedQuery[],
-    read?: SourceReadOptions
+    automationQueries: LoadedQuery[]
   ): Promise<RunPlan> {
     const contentType = automationQueries[0].record.contentType;
     const querySpecs = automationQueries.map(({ record, role }) => ({
@@ -497,118 +439,83 @@ export class AutomationExecutor {
       );
     }
 
+    const copies = (await this.libraryCache.read()).copies[contentType] as LibraryCopy[];
+
     if (isMediaSourceType(providerSettings.type)) {
-      // Catalog-owning actuator: the query evaluates against its own catalog
-      // and its native ids feed the task directly, one target per native id.
-      const mediaSource = counting(
-        rowsSourceFor(contentType, await this.sourceReadCache.readOne(providerSettings.id, read))
-      );
-      const matched = await this.mediaQueryEngine.evaluate({
-        source: mediaSource,
-        contentType,
-        clauses: querySpecs,
-      });
-      const targetById = new Map(matched.map((item) => [mediaSource.idOf(item)!, item]));
+      // Catalog-owning actuator: the queries evaluate against its own copies and their native ids
+      // feed the task directly, one target per native id.
+      const own = copies.filter((copy) => copy.providerId === providerSettings.id);
+      const targets = await this.matching(own, contentType, querySpecs);
       return {
         task,
-        targets: { contentType, items: [...targetById.values()] },
-        actuatorIds: [...targetById.keys()],
-        poolSize: mediaSource.count(),
-        matchedCount: matched.length,
-        unresolvedExcludes: [],
+        targets: { contentType, mediaItemIds: targets.map((c) => c.mediaItemId) },
+        actuatorIds: targets.map((c) => c.record.id),
+        poolSize: own.length,
+        matchedCount: targets.length,
       };
     }
 
-    // Non-source actuator: it owns no catalog, so the query evaluates against
-    // the content type's owning source instances (pooled), and matched items
-    // translate into the actuator's own addressing space through the identity
-    // graph. Unstamped identities drop out — the task never receives an id it
-    // cannot address.
-    if (!this.db) {
-      throw new Error(
-        `Task "${taskId}" on provider instance ${providerSettings.id} needs the owning-source catalog and identity graph to resolve ids`
-      );
+    // Non-source actuator: it owns no catalog, so the queries evaluate against every active
+    // source instance's copies, and matched copies reach the actuator by the media-server id the
+    // catalog refresh linked to their title. A title not linked drops out: the task never
+    // receives an id it cannot address. An exclude protects the whole title.
+    if (!isAddressedActuator(providerSettings.type)) {
+      throw new Error(`Provider type "${providerSettings.type}" has no actuator addressing space`);
     }
-    const sources = (await this.sourceReadCache.readAll(contentType, read)).map((r) =>
-      rowsSourceFor(contentType, r)
-    );
-    let fetched: ReturnType<MediaSource['getMediaItems']> | undefined;
-    const pooled = counting({
-      // Fetched once, so what a run excludes is judged on the same catalog as what it includes.
-      getMediaItems: () => {
-        fetched ??= Promise.all(sources.map((source) => source.getMediaItems())).then((all) =>
-          all.flat()
-        );
-        return fetched;
-      },
-      idOf: () => undefined,
-    });
-    const matched = await this.mediaQueryEngine.evaluate({
-      source: pooled,
+    const included = await this.matching(
+      copies,
       contentType,
-      clauses: querySpecs,
-    });
-    const resolved = await resolveActuatorTargets(this.db, providerSettings.type, matched);
-    const { protectedIds, unresolved } = await this.excludeProtection(
-      pooled,
-      contentType,
-      querySpecs,
-      providerSettings.type,
-      resolved
+      querySpecs.filter((spec) => spec.role === 'include')
     );
-    const actuatorIds = resolved.actuatorIds.filter((id) => !protectedIds.has(id));
+    const protectedTitles = await this.protectedTitles(copies, contentType, querySpecs);
+    const addressed = included.filter(
+      (copy) => actuatorIdOf(copy, providerSettings.type) !== undefined
+    );
+    const targets = addressed.filter((copy) => !protectedTitles.has(copy.mediaIdentityId));
     return {
       task,
-      targets: {
-        contentType,
-        items: resolved.addressed.filter((item) => {
-          const id = resolved.actuatorIdOf(item);
-          return id !== undefined && !protectedIds.has(id);
-        }),
-      },
-      actuatorIds,
-      poolSize: pooled.count(),
-      matchedCount: resolved.addressed.length,
-      unresolvedExcludes: unresolved.map((item) => item.title),
+      targets: { contentType, mediaItemIds: targets.map((c) => c.mediaItemId) },
+      actuatorIds: [...new Set(targets.map((c) => actuatorIdOf(c, providerSettings.type)!))],
+      poolSize: copies.length,
+      matchedCount: addressed.length,
     };
   }
 
-  /**
-   * The actuator ids a pooled run's excludes protect, judged on the same read as its includes. An
-   * actuator id is protected when any copy resolving to it is excluded, or carries the title key of
-   * an excluded copy. The second covers an excluded copy the identity job has not recorded yet,
-   * whose sibling copies are already stamped. Both the ids passed to the task and the run's
-   * recorded targets are filtered by this one set. `unresolved` holds the excluded copies neither
-   * route can place: no positive primary id and no recorded identity.
-   */
-  private async excludeProtection(
-    pooled: MediaSource,
+  /** The copies among `copies` that `clauses` select, by the one query evaluation. */
+  private async matching(
+    copies: LibraryCopy[],
     contentType: ContentType,
-    querySpecs: MediaQueryClause[],
-    actuatorType: MetadataProvider['type'],
-    resolved: Awaited<ReturnType<typeof resolveActuatorTargets>>
-  ): Promise<{ protectedIds: Set<string>; unresolved: MediaItem[] }> {
-    const protectedIds = new Set<string>();
-    const excludes = querySpecs.filter((spec) => spec.role === 'exclude');
-    if (excludes.length === 0 || !this.db) return { protectedIds, unresolved: [] };
-    const excluded = await this.mediaQueryEngine.evaluate({
-      source: pooled,
-      contentType,
-      clauses: excludes.map((spec) => ({ ...spec, role: 'include' as const })),
-    });
-    const excludedResolved = await resolveActuatorTargets(this.db, actuatorType, excluded);
-    for (const id of excludedResolved.actuatorIds) protectedIds.add(id);
-    const excludedTitles = new Set(excluded.map((item) => titleKeyOf(item, contentType)));
-    for (const item of resolved.addressed) {
-      const id = resolved.actuatorIdOf(item);
-      if (id !== undefined && excludedTitles.has(titleKeyOf(item, contentType))) {
-        protectedIds.add(id);
+    clauses: MediaQueryClause[]
+  ): Promise<LibraryCopy[]> {
+    if (clauses.length === 0) return [];
+    const matched = new Set(
+      (
+        await this.mediaQueryEngine.evaluate({
+          source: copiesSource(copies),
+          contentType,
+          clauses,
+        })
+      ).map((item) => itemKey(item))
+    );
+    return copies.filter((copy) => matched.has(itemKey(copy.item)));
+  }
+
+  /** The titles a run's excludes protect: every title with a copy any excluded query matches. */
+  private async protectedTitles(
+    copies: LibraryCopy[],
+    contentType: ContentType,
+    querySpecs: MediaQueryClause[]
+  ): Promise<Set<number>> {
+    const excludes = querySpecs
+      .filter((spec) => spec.role === 'exclude')
+      .map((spec) => ({ ...spec, role: 'include' as const }));
+    const excluded = new Set<number>();
+    for (const exclude of excludes) {
+      for (const copy of await this.matching(copies, contentType, [exclude])) {
+        excluded.add(copy.mediaIdentityId);
       }
     }
-    const unresolved = excluded.filter(
-      (item) => !excludedResolved.recorded(item) && !identifiesTitle(item, contentType)
-    );
-    return { protectedIds, unresolved };
+    return excluded;
   }
 
   private async recordResult(

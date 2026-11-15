@@ -1,9 +1,6 @@
 import { type ContentType, isInstanceScopedValue } from '@contract/schemas';
-import type { DrizzleDb } from '../../kernel/db';
 import { ValidationError } from '../../kernel/errors';
 import { type QueryResult, evaluateCombination } from './combinationEvaluator';
-import type { EnrichmentQueries } from './enrichment/enrichment.queries';
-import { mergeEnrichment } from './enrichmentMerge';
 import type { MediaItemSet } from './mediaItem';
 import { itemKey } from './mediaItem';
 import type { MediaSource } from './mediaSource';
@@ -73,20 +70,9 @@ export function matchItems<T extends NormalizedMovie | NormalizedSeries>(
  * across clauses into the matched `MediaItemSet`.
  */
 export class MediaQueryEngine {
-  private readonly db?: DrizzleDb;
-  private readonly enrichmentQueries?: EnrichmentQueries;
-
-  constructor(deps: { db?: DrizzleDb; enrichmentQueries?: EnrichmentQueries } = {}) {
-    this.db = deps.db;
-    this.enrichmentQueries = deps.enrichmentQueries;
-  }
-
+  /** Items come from the library copy carrying their facts, so evaluation reads nothing else. */
   async evaluate(query: MediaQuery): Promise<MediaItemSet> {
-    const { source } = query;
-    const items = await source.getMediaItems();
-    if (this.db && this.enrichmentQueries) {
-      await mergeEnrichment(this.db, this.enrichmentQueries, items);
-    }
+    const items = await query.source.getMediaItems();
     return this.combine(items, query.clauses, query.contentType);
   }
 
