@@ -7,19 +7,20 @@ const movie = (id: number, title: string) => ({ id, title }) as RadarrMovie;
 
 /**
  * A Radarr instance whose connection answers `rows`, throws it, or (`'hang'`) never answers, and
- * counts each upstream read.
+ * counts each upstream read. `rows` can be changed to change what upstream holds.
  */
 const radarrInstance = (providerId: number, name: string, rows: RadarrMovie[] | Error | 'hang') => {
   const instance = {
     providerId,
     name,
+    rows,
     reads: 0,
     provider: {
       getMovies: async () => {
         instance.reads++;
-        if (rows instanceof Error) throw rows;
-        if (rows === 'hang') return new Promise<RadarrMovie[]>(() => {});
-        return rows;
+        if (instance.rows instanceof Error) throw instance.rows;
+        if (instance.rows === 'hang') return new Promise<RadarrMovie[]>(() => {});
+        return instance.rows;
       },
     },
   };
@@ -92,5 +93,18 @@ describe('SourceReadCache.readOne', () => {
     const cache = cacheOver([radarrInstance(1, 'Radarr', [movie(10, 'Alien')])]);
 
     await expect(cache.readOne(9)).rejects.toThrow('Provider instance 9 is not an active provider');
+  });
+});
+
+describe('SourceReadCache refresh', () => {
+  it('re-reads upstream inside the TTL and returns the new rows', async () => {
+    const radarr = radarrInstance(1, 'Radarr', [movie(10, 'Alien')]);
+    const cache = cacheOver([radarr]);
+    await cache.readEach('movie');
+
+    radarr.rows = [movie(10, 'Alien'), movie(11, 'Aliens')];
+    const { reads } = await cache.readEach('movie', { refresh: true });
+
+    expect(reads[0].rows).toEqual([movie(10, 'Alien'), movie(11, 'Aliens')]);
   });
 });

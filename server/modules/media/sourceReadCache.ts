@@ -32,6 +32,15 @@ export interface SourceReadError {
 /** One instance's read: its rows, or why it could not be read. */
 type Read = { rows: unknown[] } | { error: string };
 
+/**
+ * How an ask reads. Without `refresh` it reads as it stands: each instance's latest read, kept for
+ * the TTL. With `refresh` it drops the instances it covers and reads them now, and that read is
+ * the one the ask returns.
+ */
+interface ReadOptions {
+  refresh?: boolean;
+}
+
 /** A failed read as a caller's failure names it: the instance, then why. */
 function failure(instanceName: string, error: string): string {
   return `${instanceName}: ${error}`;
@@ -61,7 +70,8 @@ export class SourceReadCache {
   /** Every active instance of `contentType`: the rows of each that answered, and an error for each
    *  that could not be read. Never fails; no active instance is an empty answer. */
   async readEach<C extends ContentType>(
-    contentType: C
+    contentType: C,
+    opts?: ReadOptions
   ): Promise<{ reads: SourceRead<C>[]; errors: SourceReadError[] }> {
     const instances = await this.deps.mediaSourceFactory.activeInstances(contentType);
     const reads: SourceRead<C>[] = [];
@@ -69,7 +79,7 @@ export class SourceReadCache {
     await Promise.all(
       instances.map(async (instance) => {
         const { providerId, name } = instance;
-        const read = await this.read(contentType, instance);
+        const read = await this.read(contentType, instance, opts);
         if ('error' in read) errors.push({ providerId, provider: name, error: read.error });
         else reads.push({ providerId, name, rows: read.rows as SourceRow[C][] });
       })
@@ -102,9 +112,15 @@ export class SourceReadCache {
   }
 
   /** One instance's latest read: its rows, or the message saying why it could not be read. */
-  private read<C extends ContentType>(contentType: C, instance: SourceInstance<C>): Promise<Read> {
+  private read<C extends ContentType>(
+    contentType: C,
+    instance: SourceInstance<C>,
+    opts?: ReadOptions
+  ): Promise<Read> {
     const { providerId, name, provider } = instance;
-    return this.cache.getOrFetch(`${contentType}:${providerId}`, async () => {
+    const key = `${contentType}:${providerId}`;
+    if (opts?.refresh) this.cache.invalidate(key);
+    return this.cache.getOrFetch(key, async () => {
       try {
         const rows =
           contentType === 'movie'
