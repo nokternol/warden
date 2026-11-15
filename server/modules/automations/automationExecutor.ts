@@ -220,10 +220,13 @@ export class AutomationExecutor {
         if (!this.systemTaskRunner) {
           throw new Error('System automation requires a systemTaskRunner');
         }
-        itemCount = await this.systemTaskRunner.run(automation.taskId);
+        try {
+          itemCount = await this.systemTaskRunner.run(automation.taskId);
+        } finally {
+          // A refresh job rewrites the library copy whether it succeeds or fails partway.
+          this.eventBus?.emit('media:changed', {});
+        }
         await this.recordResult(automationId, taskId, { itemCount, status: 'success', kind });
-
-        this.emitDataChange(SYSTEM_TASKS[taskId]?.affects, itemCount);
 
         log.info('System automation executed', {
           automationId,
@@ -283,12 +286,7 @@ export class AutomationExecutor {
         }
         const run = await this.automationRunService.beginRun({ automationId, kind, targets });
         runId = run.id;
-        try {
-          await plan.task.run(plan.actuatorIds, current.taskParameter);
-        } finally {
-          // A task that fails partway has still changed upstream data for the items it reached.
-          this.emitDataChange(plan.task.affects, itemCount);
-        }
+        await plan.task.run(plan.actuatorIds, current.taskParameter);
         await this.recordResult(
           automationId,
           taskId,
@@ -613,19 +611,6 @@ export class AutomationExecutor {
     return { protectedIds, unresolved };
   }
 
-  /**
-   * Emits the namespaced `<scope>:changed` event when a run with a declared data
-   * scope acted on at least one item. For an actuator task `itemCount` is the planned
-   * target count, so a run that failed partway still counts: over-eviction is the safe
-   * direction. The payload is empty — consumers evict the whole scope, so the event need
-   * only signal *that* the scope changed.
-   */
-  private emitDataChange(affects: 'media' | undefined, itemCount: number): void {
-    if (affects && itemCount > 0) {
-      this.eventBus?.emit(`${affects}:changed`, {});
-    }
-  }
-
   private async recordResult(
     automationId: number,
     taskId: string,
@@ -669,12 +654,3 @@ export class AutomationExecutor {
     });
   }
 }
-
-// System data jobs write enrichment and identity data. They declare `affects: 'media'`
-// for caches held over that data; none exists yet, and the planned enrichment cache will
-// be the first. Today's media caches hold only upstream fetches, which these jobs don't
-// change (`media.cache.enrichmentFresh.integration.test.ts` fails if that stops being so).
-export const SYSTEM_TASKS: Record<string, { affects?: 'media' }> = {
-  'system:enrichment': { affects: 'media' },
-  'system:identity-resolution': { affects: 'media' },
-};

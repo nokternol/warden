@@ -1649,61 +1649,33 @@ describe('AutomationExecutor', () => {
     });
   });
 
-  // ─── Domain events: <scope>:changed gate ─────────────────────────────────
+  // ─── Domain events: media:changed senders ────────────────────────────────
 
-  describe('domain events — media:changed gate', () => {
-    function makeExecutor(bus: DomainEventBus, provider: RadarrProvider) {
+  describe('domain events — media:changed senders', () => {
+    function systemExecutor(bus: DomainEventBus, run: () => Promise<number>) {
       return new AutomationExecutor({
         automationService,
+        automationRunService: new AutomationRunService({ db: getDb() }),
         providerSettingsService,
-        sourceReadCache: sourceReadCacheOver(providerSettingsService, { create: () => provider }),
+        sourceReadCache: sourceReadCacheOver(providerSettingsService),
         mediaQueryService,
         automationBlockService: new AutomationBlockService({ db: getDb() }),
         filterReadiness: filterReadinessOver(getDb()),
-        providerFactory: { create: () => provider },
-        automationRunService: new AutomationRunService({ db: getDb() }),
+        systemTaskRunner: { run: vi.fn(run) },
         eventBus: bus,
       });
     }
 
-    it('emits media:changed for a media-scoped task that changed at least one item', async () => {
+    it('does not send media:changed after a user run acts on titles', async () => {
       const bus = new DomainEventBus();
       const changes: DomainEvents['media:changed'][] = [];
       bus.on('media:changed', (p) => changes.push(p));
-
       const movies = [createRadarrMovie({ id: 1, title: 'A', hasFile: true })];
-      const mockRadarr = radarrSource(movies, {
-        unmonitorMovies: async () => {},
-        triggerMoviesSearch: async () => {},
-      });
-
-      const provider = await seedRadarrProvider(providerSettingsService);
-      const query = await seedMediaQuery(mediaQueryService, []);
-      const automation = await seedAutomation(automationService, {
-        queryId: query.id,
-        providerId: provider.id,
-        taskId: 'unmonitorMovie',
-      });
-
-      await makeExecutor(bus, mockRadarr).execute(automation.id);
-
-      expect(changes).toHaveLength(1);
-    });
-
-    it('emits media:changed once for a media-scoped task that throws after acting', async () => {
-      const bus = new DomainEventBus();
-      const changes: DomainEvents['media:changed'][] = [];
-      bus.on('media:changed', (p) => changes.push(p));
-
-      const movies = [createRadarrMovie({ id: 1, title: 'A', hasFile: true })];
-      const unmonitorMovies = vi.fn(async () => {
-        throw new Error('Radarr failed on the 6th of 10 titles');
-      });
+      const unmonitorMovies = vi.fn(async () => {});
       const mockRadarr = radarrSource(movies, {
         unmonitorMovies,
         triggerMoviesSearch: async () => {},
       });
-
       const provider = await seedRadarrProvider(providerSettingsService);
       const query = await seedMediaQuery(mediaQueryService, []);
       const automation = await seedAutomation(automationService, {
@@ -1712,107 +1684,46 @@ describe('AutomationExecutor', () => {
         taskId: 'unmonitorMovie',
       });
 
-      await makeExecutor(bus, mockRadarr).execute(automation.id);
+      await new AutomationExecutor({
+        automationService,
+        providerSettingsService,
+        sourceReadCache: sourceReadCacheOver(providerSettingsService, { create: () => mockRadarr }),
+        mediaQueryService,
+        automationBlockService: new AutomationBlockService({ db: getDb() }),
+        filterReadiness: filterReadinessOver(getDb()),
+        providerFactory: { create: () => mockRadarr },
+        automationRunService: new AutomationRunService({ db: getDb() }),
+        eventBus: bus,
+      }).execute(automation.id);
 
       expect(unmonitorMovies).toHaveBeenCalledOnce();
-      expect(changes).toHaveLength(1);
-      const dto = (await automationService.list()).find((a) => a.id === automation.id)!;
-      expect(dto.lastRun!.status).toBe('error');
-    });
-
-    it('does not emit media:changed when a scoped task changed zero items', async () => {
-      const bus = new DomainEventBus();
-      const changes: DomainEvents['media:changed'][] = [];
-      bus.on('media:changed', (p) => changes.push(p));
-
-      const mockRadarr = radarrSource([], {
-        unmonitorMovies: async () => {},
-        triggerMoviesSearch: async () => {},
-      });
-
-      const provider = await seedRadarrProvider(providerSettingsService);
-      const query = await seedMediaQuery(mediaQueryService, []);
-      const automation = await seedAutomation(automationService, {
-        queryId: query.id,
-        providerId: provider.id,
-        taskId: 'unmonitorMovie',
-      });
-
-      await makeExecutor(bus, mockRadarr).execute(automation.id);
-
       expect(changes).toHaveLength(0);
     });
 
-    it('does not emit media:changed for an unscoped task even when items match', async () => {
+    it('sends media:changed when a refresh job finishes, even having changed nothing', async () => {
       const bus = new DomainEventBus();
       const changes: DomainEvents['media:changed'][] = [];
       bus.on('media:changed', (p) => changes.push(p));
-
-      const movies = [createRadarrMovie({ id: 1, title: 'A', hasFile: false })];
-      const mockRadarr = radarrSource(movies, {
-        unmonitorMovies: async () => {},
-        triggerMoviesSearch: async () => {},
-      });
-
-      const provider = await seedRadarrProvider(providerSettingsService);
-      const query = await seedMediaQuery(mediaQueryService, []);
-      const automation = await seedAutomation(automationService, {
-        queryId: query.id,
-        providerId: provider.id,
-        taskId: 'triggerSearch',
-      });
-
-      await makeExecutor(bus, mockRadarr).execute(automation.id);
-
-      expect(changes).toHaveLength(0);
-    });
-
-    it('emits media:changed for a system data job that changed items', async () => {
-      const db = getDb();
-      const bus = new DomainEventBus();
-      const changes: DomainEvents['media:changed'][] = [];
-      bus.on('media:changed', (p) => changes.push(p));
-
-      const ex = new AutomationExecutor({
-        automationService,
-        automationRunService: new AutomationRunService({ db }),
-        providerSettingsService,
-        sourceReadCache: sourceReadCacheOver(providerSettingsService),
-        mediaQueryService,
-        automationBlockService: new AutomationBlockService({ db: getDb() }),
-        filterReadiness: filterReadinessOver(getDb()),
-        systemTaskRunner: { run: vi.fn(async () => 4) },
-        eventBus: bus,
-      });
-      const id = await seedSystemTask('system:enrichment');
-
-      await ex.execute(id);
-
-      expect(changes).toHaveLength(1);
-    });
-
-    it('does not emit media:changed for a system data job that changed zero items', async () => {
-      const db = getDb();
-      const bus = new DomainEventBus();
-      const changes: DomainEvents['media:changed'][] = [];
-      bus.on('media:changed', (p) => changes.push(p));
-
-      const ex = new AutomationExecutor({
-        automationService,
-        automationRunService: new AutomationRunService({ db }),
-        providerSettingsService,
-        sourceReadCache: sourceReadCacheOver(providerSettingsService),
-        mediaQueryService,
-        automationBlockService: new AutomationBlockService({ db: getDb() }),
-        filterReadiness: filterReadinessOver(getDb()),
-        systemTaskRunner: { run: vi.fn(async () => 0) },
-        eventBus: bus,
-      });
       const id = await seedSystemTask('system:identity-resolution');
 
-      await ex.execute(id);
+      await systemExecutor(bus, async () => 0).execute(id);
 
-      expect(changes).toHaveLength(0);
+      expect(changes).toHaveLength(1);
+    });
+
+    it('sends media:changed when a refresh job fails', async () => {
+      const bus = new DomainEventBus();
+      const changes: DomainEvents['media:changed'][] = [];
+      bus.on('media:changed', (p) => changes.push(p));
+      const id = await seedSystemTask('system:enrichment');
+
+      await systemExecutor(bus, async () => {
+        throw new Error('Could not refresh Tautulli');
+      }).execute(id);
+
+      expect(changes).toHaveLength(1);
+      const dto = (await automationService.list({ kind: 'system' })).find((a) => a.id === id)!;
+      expect(dto.lastRun!.status).toBe('error');
     });
   });
 
