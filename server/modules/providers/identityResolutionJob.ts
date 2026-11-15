@@ -8,6 +8,7 @@ import type { DrizzleDb } from '@server/kernel/db';
 import type { RadarrProvider } from './connections/radarrProvider';
 import type { SonarrProvider } from './connections/sonarrProvider';
 import { resolveGroup } from './groupResolver';
+import { type ProviderListsData, storeProviderLists } from './providerLists';
 import { failureMessage, recordRefreshFailed, recordRefreshed } from './providerRefresh';
 
 interface PlexBridgeProvider {
@@ -47,6 +48,16 @@ interface Deps {
   jellyfinSource?: { providerId: number; name: string; provider: JellyfinBridgeProvider };
   tvMazeLookup?: TVMazeLookupProvider;
   delay?: (ms: number) => Promise<void>;
+  /** One entry per active Radarr or Sonarr instance whose setup lists are kept. */
+  listSources?: Array<{ providerId: number; name: string; provider: ListsProvider }>;
+}
+
+/** The setup lists a Radarr or Sonarr instance answers; Sonarr also has language profiles. */
+interface ListsProvider {
+  getTags(): Promise<Array<{ id: number; label: string }>>;
+  getProfiles(): Promise<Array<{ id: number; name: string }>>;
+  getRootFolders(): Promise<Array<{ id: number; path: string }>>;
+  getLanguageProfiles?(): Promise<Array<{ id: number; name: string }>>;
 }
 
 export class IdentityResolutionJob {
@@ -194,6 +205,49 @@ export class IdentityResolutionJob {
     );
     await recordRefreshed(this.deps.db, source.providerId, 'links');
     return changed;
+  }
+
+  /**
+   * Stores each instance's setup lists. Each part is read on its own: a part that fails keeps its
+   * last successful value and fails the instance's `lists` record, and the other parts update.
+   */
+  async runForLists(): Promise<number> {
+    const sources = this.deps.listSources ?? [];
+    for (const { providerId, name, provider } of sources) {
+      const named = (rows: Array<{ id: number; name: string }>) =>
+        rows.map(({ id, name }) => ({ id, name }));
+      const reads: Array<[keyof ProviderListsData, (() => Promise<unknown>) | undefined]> = [
+        ['tags', async () => (await provider.getTags()).map(({ id, label }) => ({ id, label }))],
+        ['qualityProfiles', async () => named(await provider.getProfiles())],
+        [
+          'rootFolders',
+          async () => (await provider.getRootFolders()).map(({ id, path }) => ({ id, path })),
+        ],
+        [
+          'languageProfiles',
+          provider.getLanguageProfiles &&
+            (async () => named((await provider.getLanguageProfiles?.()) ?? [])),
+        ],
+      ];
+      const parts: Record<string, unknown> = {};
+      const errors: string[] = [];
+      for (const [part, read] of reads) {
+        if (!read) continue;
+        try {
+          parts[part] = await read();
+        } catch (err) {
+          errors.push(failureMessage(err));
+        }
+      }
+      await storeProviderLists(this.deps.db, providerId, parts as ProviderListsData);
+      if (errors.length > 0) {
+        this.failed.push(name);
+        await recordRefreshFailed(this.deps.db, providerId, 'lists', errors.join('; '));
+      } else {
+        await recordRefreshed(this.deps.db, providerId, 'lists');
+      }
+    }
+    return sources.length;
   }
 
   async runForSeries(): Promise<number> {

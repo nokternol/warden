@@ -1,3 +1,4 @@
+import { arrListFallbacks } from './arrLists';
 import { authHandlers } from './auth';
 import { automationRunHandlers } from './automationRuns';
 import { automationsHandlers, mediaQueriesHandlers } from './automations';
@@ -27,4 +28,5 @@ export const handlers = [
   ...providersHandlers,
   ...settingsHandlers,
   ...mediaHandlers,
+  ...arrListFallbacks,
 ];

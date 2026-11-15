@@ -13,6 +13,7 @@ import { PlexProvider } from '@server/modules/providers/connections/plexProvider
 import type { RadarrMovie } from '@server/modules/providers/connections/radarrProvider';
 import type { SonarrSeries } from '@server/modules/providers/connections/sonarrProvider';
 import { IdentityResolutionJob } from '@server/modules/providers/identityResolutionJob';
+import { readProviderLists } from '@server/modules/providers/providerLists';
 import { readRefreshRecords } from '@server/modules/providers/providerRefresh';
 import { server } from '@tests/mocks/server';
 import { eq } from 'drizzle-orm';
@@ -157,6 +158,36 @@ describe('IdentityResolutionJob', () => {
     const records = await readRefreshRecords(db);
     expect(records).toEqual([
       expect.objectContaining({ providerId: plexId, kind: 'links', error: 'Plex is down' }),
+    ]);
+  });
+
+  it("stores a provider's lists, keeping a part whose read failed and failing its lists record", async () => {
+    const db = getDb();
+    const radarr = {
+      getTags: vi.fn().mockResolvedValue([{ id: 1, label: 'keep' }]),
+      getProfiles: vi.fn().mockResolvedValue([{ id: 4, name: 'HD' }]),
+      getRootFolders: vi.fn().mockResolvedValue([{ id: 2, path: '/movies' }]),
+    };
+    const listSources = [{ providerId: radarrProviderId, name: 'Radarr', provider: radarr }];
+    await new IdentityResolutionJob({ db, listSources }).runForLists();
+
+    radarr.getTags.mockRejectedValue(new Error('tags timed out'));
+    radarr.getProfiles.mockResolvedValue([{ id: 5, name: '4K' }]);
+    const job = new IdentityResolutionJob({ db, listSources });
+    await job.runForLists();
+
+    expect((await readProviderLists(db)).get(radarrProviderId)).toEqual({
+      tags: [{ id: 1, label: 'keep' }],
+      qualityProfiles: [{ id: 5, name: '4K' }],
+      rootFolders: [{ id: 2, path: '/movies' }],
+    });
+    expect(job.failedProviders()).toEqual(['Radarr']);
+    expect(await readRefreshRecords(db)).toEqual([
+      expect.objectContaining({
+        providerId: radarrProviderId,
+        kind: 'lists',
+        error: 'tags timed out',
+      }),
     ]);
   });
 

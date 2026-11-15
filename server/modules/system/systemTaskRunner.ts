@@ -3,6 +3,7 @@ export interface IdentityJobLike {
   runForSeries(): Promise<number>;
   runForPlex(): Promise<number>;
   runForJellyfin(): Promise<number>;
+  runForLists(): Promise<number>;
   /** The providers the run could not refresh, by name. */
   failedProviders(): string[];
 }
@@ -40,6 +41,7 @@ export class SystemTaskRunner {
       const series = await job.runForSeries();
       const plex = await job.runForPlex();
       const jellyfin = await job.runForJellyfin();
+      await job.runForLists();
       const failed = job.failedProviders();
       if (failed.length > 0) throw new Error(`Could not refresh ${failed.join(', ')}`);
       return movies + series + plex + jellyfin;

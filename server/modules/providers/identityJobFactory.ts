@@ -51,12 +51,14 @@ export class IdentityJobFactory implements IdentityJobFactoryLike {
         name: i.settings.name,
         provider: i.provider as SonarrProvider,
       }));
+    const listSources = [...movieSources, ...seriesSources];
     const plex = instances.find((i) => i.provider instanceof PlexProvider);
     const jellyfin = instances.find((i) => i.provider instanceof JellyfinProvider);
     return new IdentityResolutionJob({
       db: this.db,
       movieSources,
       seriesSources,
+      listSources,
       plexSource: plex && {
         providerId: plex.settings.id,
         name: plex.settings.name,

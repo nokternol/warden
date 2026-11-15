@@ -18,6 +18,7 @@ function makeIdentityJob(counts?: {
     runForSeries: vi.fn(async () => counts?.series ?? 0),
     runForPlex: vi.fn(async () => counts?.plex ?? 0),
     runForJellyfin: vi.fn(async () => counts?.jellyfin ?? 0),
+    runForLists: vi.fn(async () => 0),
     failedProviders: vi.fn(() => []),
   };
 }
