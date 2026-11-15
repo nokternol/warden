@@ -60,7 +60,7 @@ interface ListsProvider {
   getLanguageProfiles?(): Promise<Array<{ id: number; name: string }>>;
 }
 
-export class IdentityResolutionJob {
+export class CatalogRefreshJob {
   private readonly failed: string[] = [];
 
   constructor(private deps: Deps) {}

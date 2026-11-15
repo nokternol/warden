@@ -3,7 +3,7 @@ import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { DomainEventBus } from '@server/kernel/eventBus';
 import { LibraryCache } from '@server/modules/media/libraryCache';
-import { IdentityResolutionJob } from '@server/modules/providers/identityResolutionJob';
+import { CatalogRefreshJob } from '@server/modules/providers/catalogRefreshJob';
 import { createRadarrMovie } from '@tests/factories';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -30,7 +30,7 @@ describe('LibraryCache', () => {
   });
 
   async function refresh(titles: string[]) {
-    await new IdentityResolutionJob({
+    await new CatalogRefreshJob({
       db: getDb(),
       movieSources: [
         {

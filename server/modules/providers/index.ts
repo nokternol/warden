@@ -53,9 +53,9 @@ export { readEnabledTaskIds } from './taskEnablement';
 export type { PlexService } from './plexService';
 export type { TmdbService } from './tmdbService';
 
-// Identity resolution — the system job that stitches source identities, and
+// The catalog refresh — the system job that reads the providers' library data into the copy, and
 // the write that records a copy the job has not seen yet.
-export type { IdentityJobFactory } from './identityJobFactory';
+export type { CatalogRefreshJobFactory } from './catalogRefreshJobFactory';
 // The library copy's refresh records: when each kind of each provider's data was last refreshed.
 export { readRefreshRecords } from './providerRefresh';
 export type { RefreshKind, RefreshRecord } from './providerRefresh';

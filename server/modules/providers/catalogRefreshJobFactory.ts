@@ -1,35 +1,35 @@
 import { MetadataProviderType } from '@server/database/schema';
 import type { DrizzleDb } from '@server/kernel/db';
 import { getChildLogger } from '@server/kernel/logger';
-import type { IdentityJobFactoryLike } from '@server/modules/system';
+import type { CatalogRefreshJobFactoryLike } from '@server/modules/system';
+import { CatalogRefreshJob } from './catalogRefreshJob';
 import { JellyfinProvider } from './connections/jellyfinProvider';
 import { PlexProvider } from './connections/plexProvider';
 import { RadarrProvider } from './connections/radarrProvider';
 import { SonarrProvider } from './connections/sonarrProvider';
-import { IdentityResolutionJob } from './identityResolutionJob';
 import type { ProviderFactory } from './providerFactory';
 import type { ProviderSettingsService } from './providerSettingsService';
 
-const log = getChildLogger('IdentityJobFactory');
+const log = getChildLogger('CatalogRefreshJobFactory');
 
-export interface IdentityJobFactoryDeps {
+export interface CatalogRefreshJobFactoryDeps {
   db: DrizzleDb;
   providerSettingsService: ProviderSettingsService;
   providerFactory: ProviderFactory;
 }
 
-export class IdentityJobFactory implements IdentityJobFactoryLike {
+export class CatalogRefreshJobFactory implements CatalogRefreshJobFactoryLike {
   private readonly db: DrizzleDb;
   private readonly providerSettingsService: ProviderSettingsService;
   private readonly providerFactory: ProviderFactory;
 
-  constructor(deps: IdentityJobFactoryDeps) {
+  constructor(deps: CatalogRefreshJobFactoryDeps) {
     this.db = deps.db;
     this.providerSettingsService = deps.providerSettingsService;
     this.providerFactory = deps.providerFactory;
   }
 
-  async create(): Promise<IdentityResolutionJob> {
+  async create(): Promise<CatalogRefreshJob> {
     const providers = await this.providerSettingsService.findActiveByTypes([
       MetadataProviderType.RADARR,
       MetadataProviderType.SONARR,
@@ -54,7 +54,7 @@ export class IdentityJobFactory implements IdentityJobFactoryLike {
     const listSources = [...movieSources, ...seriesSources];
     const plex = instances.find((i) => i.provider instanceof PlexProvider);
     const jellyfin = instances.find((i) => i.provider instanceof JellyfinProvider);
-    return new IdentityResolutionJob({
+    return new CatalogRefreshJob({
       db: this.db,
       movieSources,
       seriesSources,

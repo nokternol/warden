@@ -101,7 +101,7 @@ describe('Multi-instance Radarr — identity resolution + preview fan-out', () =
       )
     );
 
-    const job = await container.cradle.identityJobFactory.create();
+    const job = await container.cradle.catalogRefreshJobFactory.create();
     const count = await job.runForMovies();
 
     expect(count).toBe(2);

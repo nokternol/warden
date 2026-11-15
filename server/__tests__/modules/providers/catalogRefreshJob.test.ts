@@ -9,10 +9,10 @@ import {
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { getChildLogger } from '@server/kernel/logger';
+import { CatalogRefreshJob } from '@server/modules/providers/catalogRefreshJob';
 import { PlexProvider } from '@server/modules/providers/connections/plexProvider';
 import type { RadarrMovie } from '@server/modules/providers/connections/radarrProvider';
 import type { SonarrSeries } from '@server/modules/providers/connections/sonarrProvider';
-import { IdentityResolutionJob } from '@server/modules/providers/identityResolutionJob';
 import { readProviderLists } from '@server/modules/providers/providerLists';
 import { readRefreshRecords } from '@server/modules/providers/providerRefresh';
 import { server } from '@tests/mocks/server';
@@ -67,7 +67,7 @@ const makeSeries = (overrides: Partial<SonarrSeries> = {}): SonarrSeries => ({
   ...overrides,
 });
 
-describe('IdentityResolutionJob', () => {
+describe('CatalogRefreshJob', () => {
   let radarrProviderId: number;
   let radarr4kProviderId: number;
   let sonarrProviderId: number;
@@ -118,7 +118,7 @@ describe('IdentityResolutionJob', () => {
         .mockResolvedValue([{ ratingKey: 'plex-key-42', Guid: [{ id: 'tmdb://100' }] }]),
     };
 
-    const job = new IdentityResolutionJob({
+    const job = new CatalogRefreshJob({
       db,
       plexSource: { providerId: plexProviderId, name: 'Plex', provider: plexProvider },
     });
@@ -142,15 +142,15 @@ describe('IdentityResolutionJob', () => {
       ]),
     };
     const plexSource = { providerId: plexId, name: 'Plex', provider: plex };
-    await new IdentityResolutionJob({ db, plexSource }).runForPlex();
+    await new CatalogRefreshJob({ db, plexSource }).runForPlex();
 
     plex.getAllItems.mockResolvedValue([{ ratingKey: 'a', Guid: [{ id: 'tmdb://100' }] }]);
-    await new IdentityResolutionJob({ db, plexSource }).runForPlex();
+    await new CatalogRefreshJob({ db, plexSource }).runForPlex();
     const afterRemoval = await db.select().from(mediaIdentity).orderBy(mediaIdentity.tmdbId);
     expect(afterRemoval.map((r) => r.plexRatingKey)).toEqual(['a', null]);
 
     plex.getAllItems.mockRejectedValue(new Error('Plex is down'));
-    const failing = new IdentityResolutionJob({ db, plexSource });
+    const failing = new CatalogRefreshJob({ db, plexSource });
     await failing.runForPlex();
     const afterFailure = await db.select().from(mediaIdentity).orderBy(mediaIdentity.tmdbId);
     expect(afterFailure.map((r) => r.plexRatingKey)).toEqual(['a', null]);
@@ -169,11 +169,11 @@ describe('IdentityResolutionJob', () => {
       getRootFolders: vi.fn().mockResolvedValue([{ id: 2, path: '/movies' }]),
     };
     const listSources = [{ providerId: radarrProviderId, name: 'Radarr', provider: radarr }];
-    await new IdentityResolutionJob({ db, listSources }).runForLists();
+    await new CatalogRefreshJob({ db, listSources }).runForLists();
 
     radarr.getTags.mockRejectedValue(new Error('tags timed out'));
     radarr.getProfiles.mockResolvedValue([{ id: 5, name: '4K' }]);
-    const job = new IdentityResolutionJob({ db, listSources });
+    const job = new CatalogRefreshJob({ db, listSources });
     await job.runForLists();
 
     expect((await readProviderLists(db)).get(radarrProviderId)).toEqual({
@@ -202,7 +202,7 @@ describe('IdentityResolutionJob', () => {
         .mockResolvedValue([{ Id: 'jf-42', Type: 'Movie', ProviderIds: { Tmdb: '100' } }]),
     };
 
-    const job = new IdentityResolutionJob({
+    const job = new CatalogRefreshJob({
       db,
       jellyfinSource: {
         providerId: jellyfinProviderId,
@@ -234,7 +234,7 @@ describe('IdentityResolutionJob', () => {
         .mockResolvedValue([{ Id: 'jf-show', Type: 'Series', ProviderIds: { Tvdb: '200' } }]),
     };
 
-    const job = new IdentityResolutionJob({
+    const job = new CatalogRefreshJob({
       db,
       jellyfinSource: {
         providerId: jellyfinProviderId,
@@ -250,7 +250,7 @@ describe('IdentityResolutionJob', () => {
 
   it('runForJellyfin returns 0 without a Jellyfin provider and counts rows actually changed', async () => {
     const db = getDb();
-    expect(await new IdentityResolutionJob({ db }).runForJellyfin()).toBe(0);
+    expect(await new CatalogRefreshJob({ db }).runForJellyfin()).toBe(0);
 
     await db.insert(mediaIdentity).values({ contentType: 'movie', tmdbId: 100 });
     const jellyfinProvider = {
@@ -261,7 +261,7 @@ describe('IdentityResolutionJob', () => {
       ]),
     };
 
-    const job = new IdentityResolutionJob({
+    const job = new CatalogRefreshJob({
       db,
       jellyfinSource: {
         providerId: jellyfinProviderId,
@@ -283,7 +283,7 @@ describe('IdentityResolutionJob', () => {
       ]),
     };
 
-    const job = new IdentityResolutionJob({
+    const job = new CatalogRefreshJob({
       db,
       plexSource: { providerId: plexProviderId, name: 'Plex', provider: plexProvider },
     });
@@ -295,7 +295,7 @@ describe('IdentityResolutionJob', () => {
     const db = getDb();
     const radarrProvider = { getMovies: vi.fn().mockResolvedValue([makeMovie()]) };
 
-    const job = new IdentityResolutionJob({
+    const job = new CatalogRefreshJob({
       db,
       movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarrProvider }],
     });
@@ -321,7 +321,7 @@ describe('IdentityResolutionJob', () => {
       getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 1, tmdbId: 200 })]),
     };
 
-    const job = new IdentityResolutionJob({
+    const job = new CatalogRefreshJob({
       db,
       movieSources: [
         { providerId: radarrProviderId, name: 'Instance', provider: radarrA },
@@ -345,7 +345,7 @@ describe('IdentityResolutionJob', () => {
     const radarrA = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 1, tmdbId: 603 })]) };
     const radarrB = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 55, tmdbId: 603 })]) };
 
-    const job = new IdentityResolutionJob({
+    const job = new CatalogRefreshJob({
       db,
       movieSources: [
         { providerId: radarrProviderId, name: 'Instance', provider: radarrA },
@@ -371,13 +371,13 @@ describe('IdentityResolutionJob', () => {
           makeMovie({ id: 2, tmdbId: 200, title: 'Ronin' }),
         ]),
     };
-    await new IdentityResolutionJob({
+    await new CatalogRefreshJob({
       db,
       movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarr }],
     }).runForMovies();
 
     radarr.getMovies.mockResolvedValue([makeMovie({ id: 2, tmdbId: 200, title: 'Ronin' })]);
-    await new IdentityResolutionJob({
+    await new CatalogRefreshJob({
       db,
       movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarr }],
     }).runForMovies();
@@ -394,7 +394,7 @@ describe('IdentityResolutionJob', () => {
   it("believes a source's successful empty answer, marking its copies removed", async () => {
     const db = getDb();
     const radarr = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 1, tmdbId: 100 })]) };
-    const job = new IdentityResolutionJob({
+    const job = new CatalogRefreshJob({
       db,
       movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarr }],
     });
@@ -425,7 +425,7 @@ describe('IdentityResolutionJob', () => {
     };
     setImmediate(countTurns);
 
-    await new IdentityResolutionJob({
+    await new CatalogRefreshJob({
       db,
       movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarr }],
     }).runForMovies();
@@ -437,7 +437,7 @@ describe('IdentityResolutionJob', () => {
   it('clears the deleted mark when the source lists the item again', async () => {
     const db = getDb();
     const radarr = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 1, tmdbId: 100 })]) };
-    const job = new IdentityResolutionJob({
+    const job = new CatalogRefreshJob({
       db,
       movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarr }],
     });
@@ -459,7 +459,7 @@ describe('IdentityResolutionJob', () => {
         .mockResolvedValue([makeMovie({ id: 1, tmdbId: 100 }), makeMovie({ id: 3, tmdbId: 300 })]),
     };
     const radarrB = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 2, tmdbId: 200 })]) };
-    const job = new IdentityResolutionJob({
+    const job = new CatalogRefreshJob({
       db,
       movieSources: [
         { providerId: radarrProviderId, name: 'Instance', provider: radarrA },
@@ -472,7 +472,7 @@ describe('IdentityResolutionJob', () => {
     const radarrANowEmpty = {
       getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 3, tmdbId: 300 })]),
     };
-    const job2 = new IdentityResolutionJob({
+    const job2 = new CatalogRefreshJob({
       db,
       movieSources: [
         { providerId: radarrProviderId, name: 'Instance', provider: radarrANowEmpty },
@@ -493,7 +493,7 @@ describe('IdentityResolutionJob', () => {
     const db = getDb();
     const radarrA = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 1, tmdbId: 100 })]) };
     const radarrB = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 2, tmdbId: 200 })]) };
-    await new IdentityResolutionJob({
+    await new CatalogRefreshJob({
       db,
       movieSources: [
         { providerId: radarrProviderId, name: 'Instance', provider: radarrA },
@@ -503,7 +503,7 @@ describe('IdentityResolutionJob', () => {
     expect(await db.select().from(mediaIdentity)).toHaveLength(2);
 
     await db.delete(metadataProviders).where(eq(metadataProviders.id, radarrProviderId));
-    await new IdentityResolutionJob({
+    await new CatalogRefreshJob({
       db,
       movieSources: [{ providerId: radarr4kProviderId, name: 'Instance', provider: radarrB }],
     }).runForMovies();
@@ -520,7 +520,7 @@ describe('IdentityResolutionJob', () => {
         .mockResolvedValue([makeMovie({ id: 1, tmdbId: 603 }), makeMovie({ id: 3, tmdbId: 300 })]),
     };
     const radarrB = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 1, tmdbId: 603 })]) };
-    const job = new IdentityResolutionJob({
+    const job = new CatalogRefreshJob({
       db,
       movieSources: [
         { providerId: radarrProviderId, name: 'Instance', provider: radarrA },
@@ -532,7 +532,7 @@ describe('IdentityResolutionJob', () => {
     const radarrAEmpty = {
       getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 3, tmdbId: 300 })]),
     };
-    const job2 = new IdentityResolutionJob({
+    const job2 = new CatalogRefreshJob({
       db,
       movieSources: [
         { providerId: radarrProviderId, name: 'Instance', provider: radarrAEmpty },
@@ -578,7 +578,7 @@ describe('IdentityResolutionJob', () => {
         .mockResolvedValue([unlisted(1, 'Unlisted A', 2020), unlisted(2, 'Unlisted B', 2021)]),
     };
 
-    await new IdentityResolutionJob({
+    await new CatalogRefreshJob({
       db,
       seriesSources: [{ providerId: sonarrProviderId, name: 'Instance', provider: sonarrProvider }],
     }).runForSeries();
@@ -593,7 +593,7 @@ describe('IdentityResolutionJob', () => {
     const db = getDb();
     const sonarrProvider = { getSeries: vi.fn().mockResolvedValue([makeSeries()]) };
 
-    const job = new IdentityResolutionJob({
+    const job = new CatalogRefreshJob({
       db,
       seriesSources: [{ providerId: sonarrProviderId, name: 'Instance', provider: sonarrProvider }],
     });
@@ -622,7 +622,7 @@ describe('IdentityResolutionJob', () => {
       getSeries: vi.fn().mockResolvedValue([makeSeries({ id: 10, tvdbId: 201 })]),
     };
 
-    const job = new IdentityResolutionJob({
+    const job = new CatalogRefreshJob({
       db,
       seriesSources: [
         { providerId: sonarrProviderId, name: 'Instance', provider: sonarrA },
@@ -647,7 +647,7 @@ describe('IdentityResolutionJob', () => {
           makeSeries({ id: 11, tvdbId: 201 }),
         ]),
     };
-    const job = new IdentityResolutionJob({
+    const job = new CatalogRefreshJob({
       db,
       seriesSources: [{ providerId: sonarrProviderId, name: 'Instance', provider: sonarrA }],
     });
@@ -657,7 +657,7 @@ describe('IdentityResolutionJob', () => {
     const sonarrAEmpty = {
       getSeries: vi.fn().mockResolvedValue([makeSeries({ id: 11, tvdbId: 201 })]),
     };
-    const job2 = new IdentityResolutionJob({
+    const job2 = new CatalogRefreshJob({
       db,
       seriesSources: [{ providerId: sonarrProviderId, name: 'Instance', provider: sonarrAEmpty }],
     });
@@ -683,7 +683,7 @@ describe('IdentityResolutionJob', () => {
         ]),
     };
 
-    const job = new IdentityResolutionJob({
+    const job = new CatalogRefreshJob({
       db,
       plexSource: { providerId: plexProviderId, name: 'Plex', provider: plexProvider },
     });
@@ -712,7 +712,7 @@ describe('IdentityResolutionJob', () => {
         ]),
     };
 
-    const job = new IdentityResolutionJob({
+    const job = new CatalogRefreshJob({
       db,
       plexSource: { providerId: plexProviderId, name: 'Plex', provider: plexProvider },
     });
@@ -742,7 +742,7 @@ describe('IdentityResolutionJob', () => {
     const tvMazeLookup = { lookupByTvdbId: vi.fn().mockResolvedValue({ id: 999 }) };
     const delay = vi.fn().mockResolvedValue(undefined);
 
-    const job = new IdentityResolutionJob({
+    const job = new CatalogRefreshJob({
       db,
       seriesSources: [{ providerId: sonarrProviderId, name: 'Instance', provider: sonarrProvider }],
       tvMazeLookup,
@@ -764,7 +764,7 @@ describe('IdentityResolutionJob', () => {
       lookupByTvdbId: vi.fn().mockResolvedValue({ id: 999 }),
     };
 
-    const job = new IdentityResolutionJob({
+    const job = new CatalogRefreshJob({
       db,
       seriesSources: [{ providerId: sonarrProviderId, name: 'Instance', provider: sonarrProvider }],
       tvMazeLookup,
@@ -784,7 +784,7 @@ describe('IdentityResolutionJob', () => {
         .mockResolvedValue([makeMovie({ id: 1, tmdbId: 100 }), makeMovie({ id: 2, tmdbId: 200 })]),
     };
 
-    const job = new IdentityResolutionJob({
+    const job = new CatalogRefreshJob({
       db,
       movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarrProvider }],
     });
@@ -794,7 +794,7 @@ describe('IdentityResolutionJob', () => {
 
   it('runForMovies returns 0 when no Radarr instance is configured', async () => {
     const db = getDb();
-    const job = new IdentityResolutionJob({ db });
+    const job = new CatalogRefreshJob({ db });
 
     expect(await job.runForMovies()).toBe(0);
   });
@@ -810,7 +810,7 @@ describe('IdentityResolutionJob', () => {
         ]),
     };
 
-    const job = new IdentityResolutionJob({
+    const job = new CatalogRefreshJob({
       db,
       seriesSources: [{ providerId: sonarrProviderId, name: 'Instance', provider: sonarrProvider }],
     });
@@ -820,7 +820,7 @@ describe('IdentityResolutionJob', () => {
 
   it('runForSeries returns 0 when no Sonarr instance is configured', async () => {
     const db = getDb();
-    const job = new IdentityResolutionJob({ db });
+    const job = new CatalogRefreshJob({ db });
 
     expect(await job.runForSeries()).toBe(0);
   });
@@ -829,7 +829,7 @@ describe('IdentityResolutionJob', () => {
     const db = getDb();
     const radarrProvider = { getMovies: vi.fn().mockResolvedValue([makeMovie()]) };
 
-    const job = new IdentityResolutionJob({
+    const job = new CatalogRefreshJob({
       db,
       movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarrProvider }],
     });
@@ -876,7 +876,7 @@ describe('IdentityResolutionJob', () => {
         getChildLogger('test')
       );
 
-      await new IdentityResolutionJob({
+      await new CatalogRefreshJob({
         db,
         plexSource: { providerId: plexProviderId, name: 'Plex', provider: plexProvider },
       }).runForPlex();
@@ -904,7 +904,7 @@ describe('IdentityResolutionJob', () => {
         getChildLogger('test')
       );
 
-      await new IdentityResolutionJob({
+      await new CatalogRefreshJob({
         db,
         plexSource: { providerId: plexProviderId, name: 'Plex', provider: plexProvider },
       }).runForPlex();
@@ -927,7 +927,7 @@ describe('IdentityResolutionJob', () => {
         getChildLogger('test')
       );
 
-      const changed = await new IdentityResolutionJob({
+      const changed = await new CatalogRefreshJob({
         db,
         plexSource: { providerId: plexProviderId, name: 'Plex', provider: plexProvider },
       }).runForPlex();

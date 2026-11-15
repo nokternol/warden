@@ -5,7 +5,7 @@ import type { DrizzleDb } from '../../kernel/db';
 /** `taskId` identifies a job; `name` is what the owner reads on System and Runs. */
 const SYSTEM_JOBS = [
   {
-    name: 'Identity resolution',
+    name: 'Catalog refresh',
     taskId: 'system:identity-resolution',
     schedule: '0 * * * *',
   },

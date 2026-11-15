@@ -6,10 +6,10 @@ import {
 } from '@server/database/schema';
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
-import { IdentityJobFactory } from '@server/modules/providers/identityJobFactory';
+import { CatalogRefreshJobFactory } from '@server/modules/providers/catalogRefreshJobFactory';
 import { ProviderFactory } from '@server/modules/providers/providerFactory';
 import { ProviderSettingsService } from '@server/modules/providers/providerSettingsService';
-import type { IdentityJobLike } from '@server/modules/system/systemTaskRunner';
+import type { CatalogRefreshJobLike } from '@server/modules/system/systemTaskRunner';
 import { createRadarrMovie, createSonarrSeries } from '@tests/factories';
 import { server } from '@tests/mocks/server';
 import { eq } from 'drizzle-orm';
@@ -34,23 +34,23 @@ const RADARR_URL = 'http://localhost:7878';
 const SONARR_URL = 'http://localhost:8989';
 const PLEX_URL = 'http://localhost:32400';
 
-async function runIdentityJob(job: IdentityJobLike): Promise<void> {
+async function runCatalogRefresh(job: CatalogRefreshJobLike): Promise<void> {
   await job.runForMovies();
   await job.runForSeries();
   await job.runForPlex();
   await job.runForJellyfin();
 }
 
-function makeFactory(): IdentityJobFactory {
+function makeFactory(): CatalogRefreshJobFactory {
   const db = getDb();
-  return new IdentityJobFactory({
+  return new CatalogRefreshJobFactory({
     db,
     providerSettingsService: new ProviderSettingsService({ db }),
     providerFactory: new ProviderFactory(),
   });
 }
 
-describe('IdentityJobFactory', () => {
+describe('CatalogRefreshJobFactory', () => {
   beforeEach(async () => {
     await initializeDatabase(testConfig);
   });
@@ -76,7 +76,7 @@ describe('IdentityJobFactory', () => {
     );
 
     const job = await makeFactory().create();
-    await expect(runIdentityJob(job)).resolves.toBeUndefined();
+    await expect(runCatalogRefresh(job)).resolves.toBeUndefined();
 
     const rows = await db
       .select()
@@ -159,7 +159,7 @@ describe('IdentityJobFactory', () => {
     );
 
     const job = await makeFactory().create();
-    await runIdentityJob(job);
+    await runCatalogRefresh(job);
 
     const [row] = await db.select().from(mediaIdentity).where(eq(mediaIdentity.tmdbId, 603));
     expect(row.plexRatingKey).toBe('rk-1');
@@ -187,7 +187,7 @@ describe('IdentityJobFactory', () => {
     );
 
     const job = await makeFactory().create();
-    await runIdentityJob(job);
+    await runCatalogRefresh(job);
 
     const [row] = await db.select().from(mediaIdentity).where(eq(mediaIdentity.tmdbId, 603));
     expect(row.jellyfinItemId).toBe('jf-603');
@@ -210,7 +210,7 @@ describe('IdentityJobFactory', () => {
     );
 
     const job = await makeFactory().create();
-    await runIdentityJob(job);
+    await runCatalogRefresh(job);
 
     const [row] = await db
       .select()

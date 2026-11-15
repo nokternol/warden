@@ -20,7 +20,7 @@ providers/
   plexService.ts              # Validates a Plex auth token against plex.tv (used by auth login)
   tmdbService.ts              # TMDB lookups backed by MediaCache
   identityResolutionJob.ts    # System job linking provider-native ids into media_identity
-  identityJobFactory.ts       # Builds the identity job from configured providers
+  catalogRefreshJobFactory.ts  # Builds the catalog refresh from configured providers
 ```
 
 ## Public interface

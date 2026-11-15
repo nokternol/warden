@@ -35,7 +35,7 @@ import { matchItems } from '@server/modules/media/mediaQueryEngine';
 import type { Filter, NormalizedMovie } from '@server/modules/media/ruleRegistry';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { PlexProvider, ProviderSettingsService } from '@server/modules/providers';
-import { IdentityResolutionJob } from '@server/modules/providers/identityResolutionJob';
+import { CatalogRefreshJob } from '@server/modules/providers/catalogRefreshJob';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { sourceReadCacheHolding, sourceReadCacheOver } from '@tests/helpers/sourceReadCache';
 import { desc, eq } from 'drizzle-orm';

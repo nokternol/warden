@@ -29,4 +29,4 @@ export type { SystemCradle } from './system.registrations';
 // providers implement these to be runnable as system tasks — the dependent
 // (system) defines the abstraction, per dependency inversion, rather than
 // depending on the concrete factory classes.
-export type { EnrichmentJobFactoryLike, IdentityJobFactoryLike } from './systemTaskRunner';
+export type { EnrichmentJobFactoryLike, CatalogRefreshJobFactoryLike } from './systemTaskRunner';

@@ -15,7 +15,7 @@ import { AutomationRunService } from '@server/modules/automations/automationRunS
 import { AutomationService } from '@server/modules/automations/automationService';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
-import { IdentityResolutionJob } from '@server/modules/providers/identityResolutionJob';
+import { CatalogRefreshJob } from '@server/modules/providers/catalogRefreshJob';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { sourceReadCacheHolding, sourceReadCacheOver } from '@tests/helpers/sourceReadCache';
 import { http, HttpResponse } from 'msw';
@@ -236,7 +236,7 @@ describe('AutomationExecutor writes to automation_runs', () => {
       const { provider, automation } = await seedRadarrAutomation();
       await executor.execute(automation.id);
 
-      await new IdentityResolutionJob({
+      await new CatalogRefreshJob({
         db: getDb(),
         movieSources: [
           {

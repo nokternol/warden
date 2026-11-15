@@ -2,7 +2,7 @@ import { MetadataProviderType, mediaItems } from '@server/database/schema';
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { ProviderSettingsService } from '@server/modules/providers';
-import { IdentityResolutionJob } from '@server/modules/providers/identityResolutionJob';
+import { CatalogRefreshJob } from '@server/modules/providers/catalogRefreshJob';
 import { recordSourceCopy } from '@server/modules/providers/sourceCopy';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createRadarrMovie } from '../../../../tests/factories';
@@ -40,7 +40,7 @@ describe('recordSourceCopy', () => {
       settings: {},
     });
     const movie = createRadarrMovie({ id: 5, tmdbId: 105, title: 'Heat', year: 1995 });
-    await new IdentityResolutionJob({
+    await new CatalogRefreshJob({
       db,
       movieSources: [
         { providerId: provider.id, name: 'Radarr', provider: { getMovies: async () => [movie] } },
