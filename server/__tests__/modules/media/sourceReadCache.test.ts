@@ -68,6 +68,29 @@ describe('SourceReadCache.readEach', () => {
       errors: [{ providerId: 1, provider: 'Radarr', error: "Couldn't be reached: ECONNREFUSED" }],
     });
   });
+  it('answers in the order the instances are listed, however fast each one answers', async () => {
+    const slow = radarrInstance(1, 'Radarr', [movie(10, 'Alien')]);
+    const slowRead = slow.provider.getMovies;
+    slow.provider.getMovies = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      return slowRead();
+    };
+    const fast = radarrInstance(2, 'Radarr 4k', [movie(20, 'Heat')]);
+    const failsSlowly = radarrInstance(3, 'Radarr old', new Error('timeout'));
+    const failRead = failsSlowly.provider.getMovies;
+    failsSlowly.provider.getMovies = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      return failRead();
+    };
+    const failsFast = radarrInstance(4, 'Radarr spare', new Error('refused'));
+
+    const { reads, errors } = await cacheOver([slow, fast, failsSlowly, failsFast]).readEach(
+      'movie'
+    );
+
+    expect(reads.map((r) => r.providerId)).toEqual([1, 2]);
+    expect(errors.map((e) => e.providerId)).toEqual([3, 4]);
+  });
 });
 
 describe('SourceReadCache.readAll', () => {

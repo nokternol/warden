@@ -81,22 +81,24 @@ export class SourceReadCache {
   }
 
   /** Every active instance of `contentType`: the rows of each that answered, and an error for each
-   *  that could not be read. Never fails; no active instance is an empty answer. */
+   *  that could not be read, both in the order the instances are listed. Never fails; no active
+   *  instance is an empty answer. */
   async readEach<C extends ContentType>(
     contentType: C,
     opts?: ReadOptions
   ): Promise<{ reads: SourceRead<C>[]; errors: SourceReadError[] }> {
     const instances = await this.deps.mediaSourceFactory.activeInstances(contentType);
+    const outcomes = await Promise.all(
+      instances.map((instance) => this.read(contentType, instance, opts))
+    );
+    // Split after every read settles, so both lists keep the order the instances are listed in.
     const reads: SourceRead<C>[] = [];
     const errors: SourceReadError[] = [];
-    await Promise.all(
-      instances.map(async (instance) => {
-        const { providerId, name } = instance;
-        const read = await this.read(contentType, instance, opts);
-        if ('error' in read) errors.push({ providerId, provider: name, error: read.error });
-        else reads.push({ providerId, name, rows: read.rows as SourceRow[C][] });
-      })
-    );
+    outcomes.forEach((read, i) => {
+      const { providerId, name } = instances[i];
+      if ('error' in read) errors.push({ providerId, provider: name, error: read.error });
+      else reads.push({ providerId, name, rows: read.rows as SourceRow[C][] });
+    });
     return { reads, errors };
   }
 
