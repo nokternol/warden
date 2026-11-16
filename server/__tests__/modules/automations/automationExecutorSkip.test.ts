@@ -400,6 +400,16 @@ describe('AutomationExecutor — invalid automations', () => {
       expect(readiness.problems).toEqual([expect.stringMatching(/40 of 40 titles/)]);
     });
 
+    it('tells Run Now how current the copy it counted from is', async () => {
+      const automation = await destructiveAutomation();
+
+      const readiness = await executor.readiness(automation.id);
+
+      expect(readiness.records).toContainEqual(
+        expect.objectContaining({ kind: 'catalog', refreshedAt: expect.any(Number) })
+      );
+    });
+
     it('records a run as running before its task acts', async () => {
       let statusDuringTask: string | undefined;
       const radarr = await seedRadarr('Radarr');
