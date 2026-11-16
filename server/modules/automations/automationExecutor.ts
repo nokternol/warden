@@ -278,7 +278,12 @@ export class AutomationExecutor {
             started.trigger === 'runNow' ||
             !(await this.lastRunSkippedFor(automationId, reason))
           ) {
-            await this.recordSkip(automationId, taskId, reason);
+            const contentType = queries[0]?.record.contentType ?? 'movie';
+            await this.recordSkip(automationId, taskId, reason, {
+              contentType,
+              mediaItemIds: [],
+              copy: copyFreshness(recordsFor(await this.libraryCache.read(), contentType)),
+            });
           }
           return;
         }
@@ -287,7 +292,10 @@ export class AutomationExecutor {
         itemCount = targets.mediaItemIds.length;
         const notRun = whyPlanWontRun(plan);
         if (notRun.length > 0) {
-          await this.recordSkip(automationId, taskId, notRun.join('; '));
+          await this.recordSkip(automationId, taskId, notRun.join('; '), {
+            ...targets,
+            mediaItemIds: [],
+          });
           return;
         }
         const run = await this.automationRunService.beginRun({ automationId, kind, targets });
@@ -336,14 +344,23 @@ export class AutomationExecutor {
     await turn;
   }
 
-  /** Records that an invalid user automation was not run, and why. */
-  private async recordSkip(automationId: number, taskId: string, reason: string): Promise<void> {
+  /**
+   * Records that a user automation was not run, and why, with how current the library copy it was
+   * judged on was. `targets` names no copies: a skipped run acted on none.
+   */
+  private async recordSkip(
+    automationId: number,
+    taskId: string,
+    reason: string,
+    targets: RunTargets
+  ): Promise<void> {
     log.warn('Automation skipped as invalid', { automationId, reason });
     await this.recordResult(automationId, taskId, {
       itemCount: 0,
       status: 'skipped',
       error: reason,
       kind: 'user',
+      targets,
     });
   }
 

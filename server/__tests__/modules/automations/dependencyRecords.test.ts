@@ -152,6 +152,29 @@ describe('runs and the refresh records they depend on', () => {
     expect(run.status).toBe('skipped');
     expect(run.error).toMatch(/Radarr A/);
     expect(run.error).toMatch(/catalog/);
+    expect(run.copyAsOf).toEqual(expect.any(Number));
+    expect(JSON.parse(run.copyStale ?? '[]')).toContainEqual({
+      provider: 'Radarr A',
+      kind: 'catalog',
+      failed: true,
+    });
+  });
+
+  it('records how current the copy was on a run skipped for a filter problem', async () => {
+    const { connection, deleteMovies } = radarrConnection();
+
+    const { run, acted } = await runOnce({
+      providerId: radarrA,
+      connection,
+      act: deleteMovies,
+      taskId: 'deleteMovieWithFiles',
+      include: [{ ruleKey: 'tagIds', value: { providerId: 999, ids: [1] } }],
+    });
+
+    expect(acted).toBe(false);
+    expect(run.status).toBe('skipped');
+    expect(run.copyAsOf).toEqual(expect.any(Number));
+    expect(JSON.parse(run.copyStale ?? 'null')).toEqual([]);
   });
 
   it('runs a non-destructive task while a catalog refresh it depends on failed', async () => {
