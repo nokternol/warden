@@ -175,6 +175,11 @@ export class TmdbProvider extends BaseProviderConnection {
     capabilities: {},
   } as const satisfies ProviderTypeEntry;
 
+  /** One call that needs the key, so a wrong key fails the test. */
+  async testConnection(): Promise<void> {
+    await this.client.get('configuration', { searchParams: this.apiParams }).json();
+  }
+
   private get apiParams() {
     return { api_key: this.provider.apiKey || '' };
   }

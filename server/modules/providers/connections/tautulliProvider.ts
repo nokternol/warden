@@ -72,6 +72,13 @@ export class TautulliProvider extends BaseProviderConnection implements MediaAct
     capabilities: { addressedBy: 'plexRatingKey' },
   } as const satisfies ProviderTypeEntry;
 
+  /** One call that needs the key, so a wrong key fails the test. */
+  async testConnection(): Promise<void> {
+    await this.client
+      .get('api/v2', { searchParams: { ...this.baseParams, cmd: 'get_server_info' } })
+      .json();
+  }
+
   public readonly actuatorType = MetadataProviderType.TAUTULLI;
 
   public tasks(): ActuatorTask[] {

@@ -12,6 +12,9 @@ export class TvMazeProvider extends BaseProviderConnection {
     capabilities: {},
   } as const satisfies ProviderTypeEntry;
 
+  /** The public API needs no key, so there is nothing to test. */
+  async testConnection(): Promise<void> {}
+
   /** Resolve a TVmaze show id from a TheTVDB id, or null when unmatched. */
   public async lookupByTvdbId(tvdbId: number): Promise<{ id: number } | null> {
     try {

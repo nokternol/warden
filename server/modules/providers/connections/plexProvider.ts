@@ -56,6 +56,11 @@ export class PlexProvider extends BaseProviderConnection implements MediaActuato
     capabilities: { mediaServer: 'plexRatingKey' },
   } as const satisfies ProviderTypeEntry;
 
+  /** One call that needs the key, so a wrong key fails the test. */
+  async testConnection(): Promise<void> {
+    await this.client.get('library/sections', { headers: this.authHeader }).json();
+  }
+
   public readonly actuatorType = MetadataProviderType.PLEX;
 
   public tasks(): ActuatorTask[] {

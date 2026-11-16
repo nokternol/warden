@@ -103,6 +103,11 @@ export class RadarrProvider extends BaseProviderConnection implements MediaActua
     capabilities: { source: 'movie' },
   } as const satisfies ProviderTypeEntry;
 
+  /** One call that needs the key, so a wrong key fails the test. */
+  async testConnection(): Promise<void> {
+    await this.client.get('system/status', { searchParams: this.apiParams }).json();
+  }
+
   public readonly actuatorType = MetadataProviderType.RADARR;
 
   private get apiParams() {

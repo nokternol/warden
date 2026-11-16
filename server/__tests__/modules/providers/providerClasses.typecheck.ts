@@ -18,6 +18,8 @@ class MovieSourceWithoutMovies extends BaseProviderConnection {
     capabilities: { source: 'movie' },
   } as const satisfies ProviderTypeEntry;
 
+  async testConnection(): Promise<void> {}
+
   getTags = async () => [];
   getProfiles = async () => [];
   getRootFolders = async () => [];

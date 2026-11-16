@@ -56,6 +56,11 @@ export class SeerrProvider extends BaseProviderConnection {
     capabilities: {},
   } as const satisfies ProviderTypeEntry;
 
+  /** One call that needs the key, so a wrong key fails the test. */
+  async testConnection(): Promise<void> {
+    await this.client.get('api/v1/auth/me', { headers: this.authHeader }).json();
+  }
+
   private get authHeader() {
     return { 'X-Api-Key': this.provider.apiKey ?? '' };
   }

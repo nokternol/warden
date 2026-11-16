@@ -78,6 +78,11 @@ export class JellyfinProvider extends BaseProviderConnection implements MediaAct
     capabilities: { mediaServer: 'jellyfinItemId' },
   } as const satisfies ProviderTypeEntry;
 
+  /** One call that needs the key, so a wrong key fails the test. */
+  async testConnection(): Promise<void> {
+    await this.client.get('System/Info', { headers: this.authHeader }).json();
+  }
+
   public readonly actuatorType = MetadataProviderType.JELLYFIN;
 
   public tasks(): ActuatorTask[] {

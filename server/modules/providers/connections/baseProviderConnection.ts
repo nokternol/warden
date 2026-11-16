@@ -54,6 +54,13 @@ export abstract class BaseProviderConnection {
   }
 
   /**
+   * Tests the connection with one cheap call through this client and its authentication, to an
+   * endpoint that demands the key (a public one would pass with any key or none). Resolves when
+   * the service accepts the address and key, rejects otherwise.
+   */
+  abstract testConnection(): Promise<void>;
+
+  /**
    * Runs one delete, counting an answer of 404 as done: a run plans against the library copy, so
    * the item may already be gone from the service, which is what the delete was for.
    */
