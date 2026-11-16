@@ -138,4 +138,38 @@ describe('probeConnection', () => {
     logger.remove(capture);
     expect(written.filter((entry) => entry.includes('secret-key'))).toEqual([]);
   });
+
+  it('writes nothing to its logger for a failed test', async () => {
+    const writes: string[] = [];
+    const transport = new winston.transports.Stream({
+      stream: new Writable({
+        write(chunk, _encoding, done) {
+          writes.push(String(chunk));
+          done();
+        },
+      }),
+    });
+    const probeLogger = winston.createLogger({ silent: true, transports: [transport] });
+    server.use(
+      http.get(
+        'http://radarr.local:7878/api/v3/system/status',
+        () => new HttpResponse(null, { status: 401 })
+      )
+    );
+
+    await expect(
+      probeConnection(
+        factory,
+        {
+          type: MetadataProviderType.RADARR,
+          url: 'http://radarr.local:7878',
+          apiKey: 'secret-key',
+        },
+        undefined,
+        probeLogger
+      )
+    ).rejects.toThrow('Radarr refused this API key');
+
+    expect(writes).toEqual([]);
+  });
 });
