@@ -148,7 +148,7 @@ function unrefreshed(library: Library, { providerId, kind }: Dependency): string
   if (record?.failedAt != null) {
     return `${name}'s ${KIND_NOUN[kind]} refresh failed (${record.error ?? 'no answer'})`;
   }
-  if (record?.refreshedAt == null) return `${name}'s ${KIND_NOUN[kind]} is not refreshed yet`;
+  if (record?.refreshedAt == null) return `${name}'s ${KIND_NOUN[kind]} has not refreshed yet`;
   return undefined;
 }
 
