@@ -72,10 +72,14 @@ edge elsewhere is still worth a second look even though the tool won't flag it.
 **`media → providers` is the plain, exception-free default direction.** No provider code names
 media's types: `MediaEnricher` is a **media-owned** role contract
 ([`media/enrichment/enricher.ts`](ref:path:server/modules/media/enrichment/enricher.ts)), and
-`MediaSource` names only the catalog-owning role (`isMediaSourceType`), with no read contract: the
-catalog refresh stores what a source answers and the query engine judges the stored copies. Provider
-connection classes (`RadarrProvider`, `SonarrProvider`, `PlexProvider`, `TautulliProvider`,
-`SeerrProvider`, `TmdbProvider`) implement nothing directly — they are *bound* to these roles by
+`MediaSource` is a **provider-owned** role interface in
+[`providers/roles.ts`](ref:path:server/modules/providers/roles.ts): what the catalog refresh, inside
+providers, reads from a connection declaring `source`; media never reads a source connection, only the
+stored copies the query engine judges. Each connection class declares what it can do on itself
+(`catalogueEntry`, the role interfaces it implements); the providers module derives everything else from
+those declarations, and callers in media and automations ask for a capability, never a provider type.
+For media's own roles, provider connection classes (`PlexProvider`, `TautulliProvider`,
+`SeerrProvider`, `TmdbProvider`, `JellyfinProvider`) implement nothing directly — they are *bound* by
 media-owned code (the library cache's normalisation of stored copies,
 [`libraryCache.ts`](ref:path:server/modules/media/libraryCache.ts), and the enricher adapters,
 [`enrichment/enricherAdapters.ts`](ref:path:server/modules/media/enrichment/enricherAdapters.ts)) that

@@ -11,10 +11,16 @@ providers/
   index.ts                    # Public interface — the only import surface for code outside the module
   providers.procedures.ts     # API contract procedures: instance CRUD and connection test, actuator
                               #   tasks, task options, ad-hoc metadata
-  connectionProbe.ts          # One cheap upstream call per provider type to test connection details
-  connections/                # BaseProviderConnection + one class per external system
-  roles.ts                    # Capability role providers own: MediaActuator (task discovery)
-  providerFactory.ts          # Constructs the connection class for a stored provider row
+  connectionProbe.ts          # Tests the address and key the owner entered, through the connection
+  connections/                # BaseProviderConnection + one class per external system, each
+                              #   carrying its catalogue entry and implementing its role interfaces
+  roles.ts                    # Capability vocabulary: declared capabilities, role interfaces
+                              #   (MediaSource, MovieSource, SeriesSource, PlexLinks, JellyfinLinks,
+                              #   TitleLookup, MediaActuator)
+  providerClasses.ts          # The one map from provider type to connection class, compile-checked
+  providerCatalogue.ts        # Everything derived from the declarations: setup type list, labels,
+                              #   source owners, addressing columns
+  providerFactory.ts          # Constructs connections from the class map; one query per role
   providerSettingsService.ts  # Persistence + projection of configured providers
   taskEnablement.ts           # Per-instance enabledTasks authority (readEnabledTaskIds)
   plexService.ts              # Validates a Plex auth token against plex.tv (used by auth login)
@@ -37,13 +43,31 @@ internals directly; nothing else should.
 
 Each external system (Radarr, Sonarr, Tautulli, Jellyfin, Plex, Seerr, TMDB, OMDB,
 TVmaze) gets one class in `connections/` extending `BaseProviderConnection`, which supplies a
-pre-configured [`ky`](https://github.com/sindresorhus/ky) client (`prefixUrl` from the stored URL +
-optional `urlBase` for reverse-proxy installs), a 10-second timeout, JSON `Accept` header, and error
-logging hooks. Connection config (URL, API key, settings) lives in the `metadata_providers` table.
+pre-configured [`ky`](https://github.com/sindresorhus/ky) client (`prefixUrl` is the stored URL: the
+address the owner entered, any web-proxy path and URL base included, plus the type's API path), a
+10-second timeout, JSON `Accept` header, and error logging hooks. Connection config (URL, API key,
+settings) lives in the `metadata_providers` table. Every connection implements `testConnection()`: one
+cheap call that needs the key, through its own client and authentication; the connection test
+(`connectionProbe.ts`) runs it on a connection the factory builds, with a silent logger.
 
-A connection implements `MediaActuator` (`roles.ts`) directly when it exposes actions on media it owns —
-never by the base class. A Radarr or Sonarr connection plays the `MediaSource` role (it owns a catalog,
-`isMediaSourceType`) without implementing anything for it: the catalog refresh stores what it answers.
+### How a provider declares itself
+
+Each connection class carries `static readonly catalogueEntry = { … } as const satisfies
+ProviderTypeEntry`: its label, API path, host placeholder or default URL, key requirement, filter data
+and `capabilities` (`source`, `mediaServer`, `addressedBy`). It implements the role interfaces its
+capabilities require (`MovieSource`/`SeriesSource` for `source`, `PlexLinks`/`JellyfinLinks` for
+`mediaServer`) — the class map built through `defineProviderClasses` refuses to compile otherwise — and
+`MediaActuator` when it runs tasks. Callers ask for a capability (`SOURCE_OWNER`, the addressing
+columns, the factory's role queries), never for a provider type, and never cast.
+
+Adding a provider that is a source, an actuator addressed by an existing column, or a fact supplier is
+its type identity (the `MetadataProviderType` member and the contract's provider-type value), its
+connection class (with `catalogueEntry` and the role interfaces it implements) and its entry in the
+class map (`providerClasses.ts`). Each content type has exactly one source type today (north-star
+belief 9), checked by a unit test over the class map. A new media server still needs more than this: a
+role query, a link interface, a link slot in the catalog refresh and a database column, a departure
+recorded in the fracture ledger.
+
 `MediaEnricher` is a media-owned port: `enrichment/enricherAdapters.ts` binds a connection's data to
 it, so a connection implements nothing from media directly. See
 `docs/architecture/provider-roles-and-identity.md` for the role model.

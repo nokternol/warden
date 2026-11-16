@@ -193,8 +193,8 @@ added above.
 
 [`activeFieldSet.ts`](ref:path:server/modules/media/activeFieldSet.ts) declares
 `fieldsByProviderType`, the single source of truth for which `EnrichmentFields` keys each provider
-type's adapter(s) produce — hand-authored, mirroring
-[`roles.ts`](ref:path:server/modules/providers/roles.ts)'s `SOURCE_OWNER`, since an adapter's
+type's adapter(s) produce — hand-authored per provider type, not declared on the connection classes
+as their other capabilities are, since an adapter's
 field coverage lives in its generic type parameters, not something a runtime scan could discover:
 
 ```ts

@@ -21,9 +21,10 @@ none.
 
 **What it is:** movie library manager/downloader — the movie catalog owner.
 
-**Role:** `MediaSource` (movie) + `MediaActuator`. Per `SOURCE_OWNER`
-([`server/modules/providers/roles.ts`](ref:path:server/modules/providers/roles.ts)), Radarr is the sole
-owner of the movie catalog; any number of active instances may run at once.
+**Role:** `MediaSource` (movie) + `MediaActuator`. `RadarrProvider` declares `source: 'movie'` in its
+`catalogueEntry` and implements `MovieSource`
+([`server/modules/providers/roles.ts`](ref:path:server/modules/providers/roles.ts)), so `SOURCE_OWNER`
+names Radarr the sole owner of the movie catalog; any number of active instances may run at once.
 
 **Auth:** API key (`?apikey=` query param).
 
@@ -49,7 +50,8 @@ votes) leaves it undefined. Sonarr's `communityRating` is read the same way.
 
 **What it is:** TV series library manager/downloader — the series catalog owner.
 
-**Role:** `MediaSource` (series) + `MediaActuator`, symmetric to Radarr.
+**Role:** `MediaSource` (series) + `MediaActuator`, symmetric to Radarr: it declares
+`source: 'series'` and implements `SeriesSource`.
 
 **Auth:** API key (`?apikey=` query param).
 
@@ -77,7 +79,8 @@ not-yet-built `changeLanguageProfile` task.
 
 **What it is:** Plex watch-history/statistics tracker.
 
-**Role:** `MediaEnricher` + `MediaActuator`.
+**Role:** `MediaEnricher` + `MediaActuator`. It declares `addressedBy: 'plexRatingKey'`: it addresses
+titles by the Plex column without being the media server for it.
 
 **Auth:** API key (`?apikey=` query param, plus a `cmd=` command dispatch through a single `api/v2`
 endpoint).
@@ -116,7 +119,8 @@ its show (`grandparent_rating_key`), which is what a series is matched by.
 
 **Role:** `MediaEnricher` + `MediaActuator`. Explicitly *not* `MediaSource` today — "media servers cannot
 own" is a documented limitation in `provider-roles-and-identity.md`; Plex only enriches Radarr/Sonarr-owned
-items by shared `tmdbId`/`tvdbId`/`plexRatingKey`.
+items by shared `tmdbId`/`tvdbId`/`plexRatingKey`. It declares `mediaServer: 'plexRatingKey'` and
+implements `PlexLinks`, the item list the catalog refresh links titles from.
 
 **Auth:** access token (`X-Plex-Token` header). Separate token validation against `plex.tv` lives in
 `PlexService`, not this connection class.
@@ -143,7 +147,8 @@ by the `Guid` ids a listing carries with `includeGuids=1` — never inserts a gr
 **Role:** `MediaEnricher` + `MediaActuator`. Explicitly *not* `MediaSource`, same "media servers cannot
 own" limitation as Plex — Jellyfin only enriches Radarr/Sonarr-owned items, matched by
 `_sourceIds.jellyfin` (populated by the identity job's `runForJellyfin` stamping pass, matching by
-`contentType` + `tmdbId`/`tvdbId`, mirroring `runForPlex`).
+`contentType` + `tmdbId`/`tvdbId`, mirroring `runForPlex`). It declares
+`mediaServer: 'jellyfinItemId'` and implements `JellyfinLinks`.
 
 **Auth:** access token (`X-Emby-Authorization` header) plus a configured `userId` setting (today's model —
 one Jellyfin user per configured instance, not full multi-user).
@@ -244,11 +249,11 @@ store before OMDb has anything to feed, since a title search is ambiguous.
 **Role:** inert toward the media pipeline today — `TvMazeProvider` implements none of `MediaSource`/
 `MediaEnricher`/`MediaActuator`.
 
-**Auth:** none. `ProviderFactory.createTvMaze()`
+**Auth:** none. `ProviderFactory.tvMazeLookup()`
 ([`server/modules/providers/providerFactory.ts`](ref:path:server/modules/providers/providerFactory.ts))
-constructs it directly against its provider-catalogue `defaultUrl`, the public `https://api.tvmaze.com`
-base, with `apiKey: null` — no
-`metadata_provider` row is required to use it.
+constructs it, typed as the `TitleLookup` role, against its own catalogue entry's `defaultUrl`, the
+public `https://api.tvmaze.com` base, with `apiKey: null` — no `metadata_provider` row is required to
+use it. Its connection test resolves without a call.
 
 **What the app can pull today** ([`connections/tvmazeProvider.ts`](ref:path:server/modules/providers/connections/tvmazeProvider.ts)):
 `lookupByTvdbId(tvdbId)`, which resolves a TVmaze show id from a TheTVDB id.
