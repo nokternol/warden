@@ -382,7 +382,7 @@ describe('AutomationExecutor — invalid automations', () => {
 
       const [run] = await getDb().select().from(automationRuns);
       expect(run.status).toBe('skipped');
-      expect(run.error).toMatch(/40 of 40 copies/);
+      expect(run.error).toMatch(/40 of 40 titles/);
       expect(deletes).toBe(0);
     });
 
@@ -393,7 +393,7 @@ describe('AutomationExecutor — invalid automations', () => {
       const readiness = await executor.readiness(automation.id);
 
       expect(readiness.runNow).toBe('stops');
-      expect(readiness.problems).toEqual([expect.stringMatching(/40 of 40 copies/)]);
+      expect(readiness.problems).toEqual([expect.stringMatching(/40 of 40 titles/)]);
     });
 
     it('records a run as running before its task acts', async () => {
@@ -457,9 +457,9 @@ describe('AutomationExecutor — invalid automations', () => {
       expect(runs.map((r) => r.status)).toEqual(['success', 'success']);
     });
 
-    it('judges reach on copies, since copies of one title share an actuator id', () => {
+    it('judges reach on what the run would act on, against what it could', () => {
       const task = { destructive: true } as never;
-      expect(excessiveReach({ task, matchedCount: 80, poolSize: 80 })).toMatch(/80 of 80/);
+      expect(excessiveReach({ task, matchedCount: 80, poolSize: 80 })).toMatch(/80 of 80 titles/);
       expect(excessiveReach({ task, matchedCount: 40, poolSize: 80 })).toBeUndefined();
       expect(excessiveReach({ task, matchedCount: 10, poolSize: 10 })).toBeUndefined();
     });

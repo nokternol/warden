@@ -100,7 +100,7 @@ export function excessiveReach({
 }: Pick<RunPlan, 'task' | 'matchedCount' | 'poolSize'>): string | undefined {
   if (!task.destructive || matchedCount < REACH_CHECK_MIN_ITEMS) return undefined;
   if (matchedCount * 2 <= poolSize) return undefined;
-  return `Not run: this would act on ${matchedCount} of ${poolSize} copies, more than half the library. Narrow its queries if that is intended.`;
+  return `Not run: this would act on ${matchedCount} of ${poolSize} titles, more than half the library. Narrow its queries if that is intended.`;
 }
 
 /** Why a planned run will not act, one line per reason; empty when it will. */
