@@ -169,13 +169,7 @@ export function createProvidersProcedures(cradle: ProvidersCradle) {
       const providers = await providerSettingsService.list();
 
       return providers.flatMap((p) => {
-        let instance: object;
-        try {
-          instance = providerFactory.create(p as unknown as MetadataProvider, log);
-        } catch {
-          // A configured type with no constructable provider cannot be an actuator.
-          return [];
-        }
+        const instance = providerFactory.create(p, log);
         if (!isMediaActuator(instance)) return [];
 
         const enabled = readEnabledTaskIds(p.settings);

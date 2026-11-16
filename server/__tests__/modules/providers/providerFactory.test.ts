@@ -68,9 +68,10 @@ describe('ProviderFactory.create', () => {
     );
   });
 
-  it('throws an error for an unsupported provider type', () => {
-    const unsupported = makeProvider(MetadataProviderType.TVMAZE);
-    expect(() => factory.create(unsupported, log)).toThrow('Unsupported provider type: TVMAZE');
+  it('builds every provider type from its class in the class map, TVmaze included', () => {
+    expect(factory.create(makeProvider(MetadataProviderType.TVMAZE), log)).toBeInstanceOf(
+      TvMazeProvider
+    );
   });
 });
 

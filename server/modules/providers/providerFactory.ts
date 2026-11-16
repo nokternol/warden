@@ -1,15 +1,17 @@
 import type { MetadataProvider } from '@server/database/schema';
-import { MetadataProviderType } from '@server/database/schema';
+import type { MetadataProviderType } from '@server/database/schema';
 import type { Logger } from 'winston';
+import type { ProviderConfig } from './connections/baseProviderConnection';
 import { JellyfinProvider } from './connections/jellyfinProvider';
-import { OmdbProvider } from './connections/omdbProvider';
+import type { OmdbProvider } from './connections/omdbProvider';
 import { PlexProvider } from './connections/plexProvider';
-import { RadarrProvider } from './connections/radarrProvider';
+import type { RadarrProvider } from './connections/radarrProvider';
 import { SeerrProvider } from './connections/seerrProvider';
-import { SonarrProvider } from './connections/sonarrProvider';
+import type { SonarrProvider } from './connections/sonarrProvider';
 import { TautulliProvider } from './connections/tautulliProvider';
 import { TmdbProvider } from './connections/tmdbProvider';
 import { TvMazeProvider } from './connections/tvmazeProvider';
+import { PROVIDER_CLASSES } from './providerClasses';
 
 /** Every concrete provider the factory can construct from settings. */
 export type AnyProvider =
@@ -20,7 +22,8 @@ export type AnyProvider =
   | TautulliProvider
   | SeerrProvider
   | TmdbProvider
-  | OmdbProvider;
+  | OmdbProvider
+  | TvMazeProvider;
 
 /**
  * Active providers resolved into typed, named slots — absent types stay undefined.
@@ -43,32 +46,13 @@ export interface ProviderInstance<T extends AnyProvider = AnyProvider> {
 }
 
 export interface IProviderFactory {
-  create(provider: MetadataProvider, logger: Logger): AnyProvider;
+  create(provider: { type: MetadataProviderType } & ProviderConfig, logger: Logger): AnyProvider;
 }
 
 export class ProviderFactory implements IProviderFactory {
   /** Construct a single provider from its settings. The one place providers are `new`ed. */
-  create(provider: MetadataProvider, logger: Logger): AnyProvider {
-    switch (provider.type) {
-      case MetadataProviderType.RADARR:
-        return new RadarrProvider(provider, logger);
-      case MetadataProviderType.SONARR:
-        return new SonarrProvider(provider, logger);
-      case MetadataProviderType.PLEX:
-        return new PlexProvider(provider, logger);
-      case MetadataProviderType.JELLYFIN:
-        return new JellyfinProvider(provider, logger);
-      case MetadataProviderType.TAUTULLI:
-        return new TautulliProvider(provider, logger);
-      case MetadataProviderType.SEERR:
-        return new SeerrProvider(provider, logger);
-      case MetadataProviderType.TMDB:
-        return new TmdbProvider(provider, logger);
-      case MetadataProviderType.OMDB:
-        return new OmdbProvider(provider, logger);
-      default:
-        throw new Error(`Unsupported provider type: ${provider.type}`);
-    }
+  create(provider: { type: MetadataProviderType } & ProviderConfig, logger: Logger): AnyProvider {
+    return new PROVIDER_CLASSES[provider.type](provider, logger);
   }
 
   /** Resolve a list of active provider settings into typed, named slots. */
