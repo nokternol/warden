@@ -167,4 +167,19 @@ describe('MediaQueryEngine.select — which titles conditions select', () => {
       { mediaIdentityId: 1, copies: [missingOnA, downloadedOnB], met: [downloadedOnB] },
     ]);
   });
+
+  it("meets an instance-scoped value only through that instance's copy", () => {
+    const taggedOnA = copyOf(1, 1, { tags: [7] });
+    const untaggedOnB = copyOf(2, 2, { tags: [] });
+    const taggedOnB = copyOf(2, 2, { tags: [7] });
+
+    const selected = engine.select([taggedOnA, untaggedOnB, taggedOnB], {
+      contentType: 'movie',
+      include: [[{ ruleKey: 'tagIds', value: { providerId: 2, ids: [7] } }]],
+      exclude: [],
+    });
+
+    expect(selected.map((t) => t.mediaIdentityId)).toEqual([2]);
+    expect(selected[0].met).toEqual([taggedOnB]);
+  });
 });
