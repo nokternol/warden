@@ -16,7 +16,7 @@ import {
   type RefreshKind,
   SOURCE_OWNER,
   type SonarrSeries,
-  type RefreshRecord as StoredRefreshRecord,
+  type StoredRefreshRecord,
   isMediaSourceType,
   readProviderLists,
   readRefreshRecords,

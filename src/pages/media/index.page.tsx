@@ -1,6 +1,6 @@
 import AppLayout from '@app/components/AppLayout';
+import AsOfLine from '@app/components/AsOfLine';
 import { LoadError } from '@app/components/AsyncBoundary';
-import CopyAsOf from '@app/components/CopyAsOf';
 import EmptyState from '@app/components/EmptyState';
 import MediaCard from '@app/components/MediaCard';
 import { MediaFilterBar } from '@app/components/MediaFilterBar';
@@ -34,7 +34,7 @@ import { useSeries } from '@app/hooks/useSeries';
 import { toFilters } from '@app/lib/mediaQueryAdapters';
 import { cn } from '@app/lib/utils/cn';
 import { guardPage } from '@app/lib/utils/guardPage';
-import { type MediaRuleDescriptor, type RefreshRecord, copyFreshness } from '@contract/media';
+import type { MediaRuleDescriptor, RefreshRecord } from '@contract/media';
 import type { ProviderType } from '@contract/providers';
 import { type TitleRating, ratingsOf } from '@contract/ratings';
 import type { ReadinessFinding } from '@contract/readiness';
@@ -484,7 +484,7 @@ function PageAsOf({ records }: { records?: RefreshRecord[] }) {
   if (!records || records.length === 0) return null;
   return (
     <div className="mb-4">
-      <CopyAsOf freshness={copyFreshness(records)} />
+      <AsOfLine records={records} />
     </div>
   );
 }

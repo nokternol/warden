@@ -10,11 +10,11 @@ import {
 } from './schemas';
 
 export {
-  type CopyFreshness,
+  type Freshness,
   type RefreshRecord,
-  CopyFreshnessSchema,
+  FreshnessSchema,
   RefreshRecordSchema,
-  copyFreshness,
+  freshnessOf,
 } from './schemas';
 
 // ─── Browse query ───────────────────────────────────────────────────────────────

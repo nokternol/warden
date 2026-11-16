@@ -62,7 +62,7 @@ export {
   recordRefreshFailed,
   recordRefreshed,
 } from './providerRefresh';
-export type { RefreshKind, RefreshRecord } from './providerRefresh';
+export type { RefreshKind, StoredRefreshRecord } from './providerRefresh';
 // Each provider's stored setup lists, part of the library copy.
 export { readProviderLists } from './providerLists';
 export type { ProviderListsData } from './providerLists';

@@ -152,8 +152,8 @@ describe('runs and the refresh records they depend on', () => {
     expect(run.status).toBe('skipped');
     expect(run.error).toMatch(/Radarr A/);
     expect(run.error).toMatch(/catalog/);
-    expect(run.copyAsOf).toEqual(expect.any(Number));
-    expect(JSON.parse(run.copyStale ?? '[]')).toContainEqual({
+    expect(run.freshnessAsOf).toEqual(expect.any(Number));
+    expect(JSON.parse(run.freshnessStale ?? '[]')).toContainEqual({
       provider: 'Radarr A',
       kind: 'catalog',
       failed: true,
@@ -173,8 +173,8 @@ describe('runs and the refresh records they depend on', () => {
 
     expect(acted).toBe(false);
     expect(run.status).toBe('skipped');
-    expect(run.copyAsOf).toEqual(expect.any(Number));
-    expect(JSON.parse(run.copyStale ?? 'null')).toEqual([]);
+    expect(run.freshnessAsOf).toEqual(expect.any(Number));
+    expect(JSON.parse(run.freshnessStale ?? 'null')).toEqual([]);
   });
 
   it('runs a non-destructive task while a catalog refresh it depends on failed', async () => {

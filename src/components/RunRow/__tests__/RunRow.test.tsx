@@ -12,7 +12,7 @@ const run: AutomationRunDto = {
   status: 'success',
   itemCount: 5,
   error: null,
-  copy: null,
+  freshness: null,
   createdAt: '2026-06-04T02:00:00.000Z',
 };
 
@@ -30,7 +30,10 @@ describe('RunRow', () => {
   it('says how current the copy the run acted on was', () => {
     renderRow({
       ...run,
-      copy: { asOf: 1_794_800_000, stale: [{ provider: 'Tautulli', kind: 'facts', failed: true }] },
+      freshness: {
+        asOf: 1_794_800_000,
+        stale: [{ provider: 'Tautulli', kind: 'facts', failed: true }],
+      },
     });
 
     expect(screen.getByRole('status', { name: 'How current this is' })).toHaveTextContent(

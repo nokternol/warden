@@ -1,6 +1,6 @@
-import type { CopyFreshness } from '@contract/media';
+import { type Freshness, type RefreshRecord, freshnessOf } from '@contract/media';
 
-const KIND_NOUN: Record<CopyFreshness['stale'][number]['kind'], string> = {
+const KIND_NOUN: Record<Freshness['stale'][number]['kind'], string> = {
   catalog: 'library',
   links: 'links',
   lists: 'lists',
@@ -10,7 +10,7 @@ const KIND_NOUN: Record<CopyFreshness['stale'][number]['kind'], string> = {
 const AS_OF = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
 /** How one stale record reads: what failed, or what has never been refreshed. */
-function staleText({ provider, kind, failed }: CopyFreshness['stale'][number]): string {
+function staleText({ provider, kind, failed }: Freshness['stale'][number]): string {
   return failed
     ? `${provider}'s ${KIND_NOUN[kind]} failed to refresh`
     : `${provider}'s ${KIND_NOUN[kind]} not refreshed yet`;
@@ -19,9 +19,13 @@ function staleText({ provider, kind, failed }: CopyFreshness['stale'][number]): 
 /**
  * The one line every view of library data shows: how current the copy it answers from is, and
  * which providers failed their last refresh or have never refreshed. Never claims fresher data
- * than the copy's stalest successful refresh.
+ * than the copy's stalest successful refresh. A view passes the refresh records it answered with;
+ * run history passes the freshness its run recorded.
  */
-export default function CopyAsOf({ freshness }: { freshness: CopyFreshness }) {
+export default function AsOfLine(
+  props: { records: readonly RefreshRecord[] } | { freshness: Freshness }
+) {
+  const freshness = 'records' in props ? freshnessOf(props.records) : props.freshness;
   const asOf =
     freshness.asOf === null
       ? 'Not refreshed yet'

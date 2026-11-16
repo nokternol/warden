@@ -10,7 +10,7 @@ const succeeded: AutomationRunDto = {
   status: 'success',
   itemCount: 5,
   error: null,
-  copy: {
+  freshness: {
     asOf: 1_780_531_200,
     stale: [{ provider: 'Tautulli', kind: 'facts', failed: true }],
   },

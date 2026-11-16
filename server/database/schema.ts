@@ -234,9 +234,9 @@ export const automationRuns = sqliteTable(
     error: text('error'),
     kind: text('kind').notNull().default('user'), // 'user' | 'system'
     /** Unix seconds: how current the library copy the run acted on was; null for system runs. */
-    copyAsOf: integer('copyAsOf'),
+    freshnessAsOf: integer('freshnessAsOf'),
     /** JSON `{ provider, kind, failed }[]`: the copy's records that failed or never refreshed. */
-    copyStale: text('copyStale'),
+    freshnessStale: text('freshnessStale'),
     createdAt: createdAt('createdAt'),
   },
   (table) => [index('IDX_automation_runs_automationId').on(table.automationId)]

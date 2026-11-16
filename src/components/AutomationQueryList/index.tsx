@@ -1,9 +1,8 @@
+import AsOfLine from '@app/components/AsOfLine';
 import Button from '@app/components/Button';
-import CopyAsOf from '@app/components/CopyAsOf';
 import { api } from '@app/lib/api/client';
 import { useApi } from '@app/lib/api/useApi';
 import type { AutomationQueryInput } from '@contract/automations';
-import { copyFreshness } from '@contract/media';
 
 /** An automation query as the list edits it: always in a known position. */
 export type AutomationQueryItem = Required<AutomationQueryInput>;
@@ -68,7 +67,7 @@ function AutomationQueryRow({
         <option value="exclude">Exclude</option>
       </select>
       {countLabel && <span className="text-xs text-text-muted tabular-nums">{countLabel}</span>}
-      {preview && <CopyAsOf freshness={copyFreshness(preview.records)} />}
+      {preview && <AsOfLine records={preview.records} />}
       <Button
         type="button"
         variant="secondary"

@@ -272,7 +272,7 @@ describe('the library copy', () => {
     const refreshedAt = (await readRefreshRecords(ctx.db)).map(
       (r) => r.refreshedAt ?? Number.POSITIVE_INFINITY
     );
-    expect(run.copy).toEqual({
+    expect(run.freshness).toEqual({
       asOf: Math.min(...refreshedAt),
       stale: [{ provider: 'Plex', kind: 'facts', failed: false }],
     });

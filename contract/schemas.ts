@@ -211,7 +211,7 @@ export const RefreshRecordSchema = z.object({
 export type RefreshRecord = z.infer<typeof RefreshRecordSchema>;
 
 /** How current a copy is: its "As of" time, and which providers failed or never refreshed. */
-export const CopyFreshnessSchema = z.object({
+export const FreshnessSchema = z.object({
   /** The oldest last successful refresh among the copy's records; null when none succeeded. */
   asOf: z.number().nullable(),
   stale: z.array(
@@ -219,13 +219,15 @@ export const CopyFreshnessSchema = z.object({
   ),
 });
 
-export type CopyFreshness = z.infer<typeof CopyFreshnessSchema>;
+export type Freshness = z.infer<typeof FreshnessSchema>;
 
 /**
- * A copy's freshness from its refresh records: never fresher than its stalest successful
+ * A copy's freshness from its refresh records, each provider and kind counted once: never fresher than its stalest successful
  * refresh, naming each record whose latest refresh failed (`failed`) or never ran.
  */
-export function copyFreshness(records: readonly RefreshRecord[]): CopyFreshness {
+export function freshnessOf(all: readonly RefreshRecord[]): Freshness {
+  // Records gathered from several views (movies and series) can repeat one provider's kind.
+  const records = Array.from(new Map(all.map((r) => [`${r.providerId}:${r.kind}`, r])).values());
   const refreshed = records.flatMap((r) => (r.refreshedAt === null ? [] : [r.refreshedAt]));
   return {
     asOf: refreshed.length > 0 ? Math.min(...refreshed) : null,
@@ -245,7 +247,7 @@ export const AutomationRunSchema = z
     itemCount: z.number().nullable(),
     error: z.string().nullable(),
     /** How current the library copy the run acted on was; null for a run that acted on none. */
-    copy: CopyFreshnessSchema.nullable(),
+    freshness: FreshnessSchema.nullable(),
     createdAt: IsoDateSchema,
   })
   .strict();

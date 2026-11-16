@@ -78,10 +78,10 @@ content type answers from: the `catalog` and `lists` records of each active inst
 the `links` and `facts` records of every active media server and enricher. A kind that never refreshed
 appears with neither time, as not refreshed yet. Browse, query counts, automation previews and
 readiness carry these records.
-[`copyFreshness`](ref:path:contract/schemas.ts) turns them into one "As of" time, the stalest
+[`freshnessOf`](ref:path:contract/schemas.ts) turns them into one "As of" time, the stalest
 successful refresh, so a view never claims fresher data than it has, plus the providers that failed or
 never refreshed. The client shows that as one line,
-[`CopyAsOf`](ref:path:src/components/CopyAsOf/index.tsx), on the Media page, the builder's counts, the
+[`AsOfLine`](ref:path:src/components/AsOfLine/index.tsx), on the Media page, the builder's counts, the
 query list, the Run Now check, the System page and run history.
 
 ## When it reloads

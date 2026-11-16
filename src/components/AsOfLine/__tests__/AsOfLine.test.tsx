@@ -1,10 +1,10 @@
 import { render, screen } from '@tests/helpers/component';
 import { describe, expect, it } from 'vitest';
-import CopyAsOf from '../index';
+import AsOfLine from '../index';
 
-describe('CopyAsOf', () => {
+describe('AsOfLine', () => {
   it('says when the copy was refreshed', () => {
-    render(<CopyAsOf freshness={{ asOf: 1_794_000_000, stale: [] }} />);
+    render(<AsOfLine freshness={{ asOf: 1_794_000_000, stale: [] }} />);
     expect(screen.getByRole('status', { name: 'How current this is' }).textContent).toMatch(
       /^As of /
     );
@@ -12,7 +12,7 @@ describe('CopyAsOf', () => {
 
   it('names each provider that failed or never refreshed', () => {
     render(
-      <CopyAsOf
+      <AsOfLine
         freshness={{
           asOf: 1_794_000_000,
           stale: [
@@ -29,7 +29,7 @@ describe('CopyAsOf', () => {
 
   it('says not refreshed yet when nothing has refreshed', () => {
     render(
-      <CopyAsOf
+      <AsOfLine
         freshness={{ asOf: null, stale: [{ provider: 'Radarr', kind: 'catalog', failed: false }] }}
       />
     );

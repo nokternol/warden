@@ -1,5 +1,5 @@
 import type { AutomationPreview, AutomationReadiness } from '@contract/automations';
-import { type RefreshRecord, copyFreshness } from '@contract/media';
+import { type RefreshRecord, freshnessOf } from '@contract/media';
 import type { ReadinessFinding } from '@contract/readiness';
 import type { AutomationRunStatus, ContentType } from '@contract/schemas';
 import type { MetadataProvider, MetadataProviderType } from '../../database/schema';
@@ -287,7 +287,7 @@ export class AutomationExecutor {
             await this.recordSkip(automationId, taskId, reason, {
               contentType,
               mediaItemIds: [],
-              copy: copyFreshness(records),
+              freshness: freshnessOf(records),
             });
           }
           return;
@@ -540,7 +540,21 @@ export class AutomationExecutor {
       );
     // An exclude protects the whole title, judged over every active instance's copies.
     const protectedTitles = await this.protectedTitles(copies, contentType, querySpecs);
-    const copy = copyFreshness(records);
+    const freshness = freshnessOf(records);
+    const planOf = (
+      targets: LibraryCopy[],
+      actuatorIds: RunPlan['actuatorIds'],
+      poolSize: number,
+      matchedCount: number
+    ): RunPlan => ({
+      task,
+      targets: { contentType, mediaItemIds: targets.map((c) => c.mediaItemId), freshness },
+      actuatorIds,
+      poolSize,
+      matchedCount,
+      unrefreshed,
+      records,
+    });
     const unprotected = (candidates: LibraryCopy[]) =>
       candidates.filter((copy) => !protectedTitles.has(copy.mediaIdentityId));
 
@@ -550,15 +564,12 @@ export class AutomationExecutor {
       const own = copies.filter((copy) => copy.providerId === providerSettings.id);
       const matched = await included(own);
       const targets = unprotected(matched);
-      return {
-        task,
-        targets: { contentType, mediaItemIds: targets.map((c) => c.mediaItemId), copy },
-        actuatorIds: targets.map((c) => c.record.id),
-        poolSize: own.length,
-        matchedCount: targets.length,
-        unrefreshed,
-        records,
-      };
+      return planOf(
+        targets,
+        targets.map((c) => c.record.id),
+        own.length,
+        targets.length
+      );
     }
 
     // Non-source actuator: it owns no catalog, so the included queries evaluate against every
@@ -572,15 +583,12 @@ export class AutomationExecutor {
       (copy) => actuatorIdOf(copy, providerSettings.type) !== undefined
     );
     const targets = unprotected(addressed);
-    return {
-      task,
-      targets: { contentType, mediaItemIds: targets.map((c) => c.mediaItemId), copy },
-      actuatorIds: [...new Set(targets.map((c) => actuatorIdOf(c, providerSettings.type)!))],
-      poolSize: copies.length,
-      matchedCount: addressed.length,
-      unrefreshed,
-      records,
-    };
+    return planOf(
+      targets,
+      [...new Set(targets.map((c) => actuatorIdOf(c, providerSettings.type)!))],
+      copies.length,
+      addressed.length
+    );
   }
 
   /**

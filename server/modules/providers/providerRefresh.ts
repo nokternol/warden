@@ -5,7 +5,7 @@ import type { DrizzleDb } from '@server/kernel/db';
 export type RefreshKind = 'catalog' | 'links' | 'lists' | 'facts';
 
 /** When Warden last refreshed one kind of one provider's data, and whether the latest attempt failed. */
-export interface RefreshRecord {
+export interface StoredRefreshRecord {
   providerId: number;
   kind: RefreshKind;
   refreshedAt: number | null;
@@ -18,7 +18,7 @@ function nowSeconds(): number {
 }
 
 /** Every refresh record, for every provider and kind. */
-export async function readRefreshRecords(db: DrizzleDb): Promise<RefreshRecord[]> {
+export async function readRefreshRecords(db: DrizzleDb): Promise<StoredRefreshRecord[]> {
   const rows = await db.select().from(providerRefresh);
   return rows.map((row) => ({ ...row, kind: row.kind as RefreshKind }));
 }

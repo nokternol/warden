@@ -145,7 +145,7 @@ A run takes its targets' `media_item` ids straight from the library cache, so ev
 copy and a run never writes to the identity tables. A link keeps the title and year from when the run
 targeted the copy, so a run's history outlives the media rows: removing copies through a provider's
 deletion or a media reset empties `mediaItemId`, and the run still lists those titles as removed. Each run
-also records how current the copy it acted on was (`copyAsOf`, `copyStale`). `createRun` writes the run row
+also records how current the copy it acted on was (`freshnessAsOf`, `freshnessStale`). `createRun` writes the run row
 and its links in one `db.batch`, a single SQLite transaction. A user run's `itemCount` is the number of
 copies it targeted.
 
