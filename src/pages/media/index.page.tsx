@@ -479,9 +479,9 @@ export interface MediaContentProps {
   onDensityChange: (d: CardDensity) => void;
 }
 
-/** How current the page's titles are, once the first page has answered. */
+/** How current the page's titles are, once the first page has answered from some provider. */
 function PageAsOf({ records }: { records?: RefreshRecord[] }) {
-  if (!records) return null;
+  if (!records || records.length === 0) return null;
   return (
     <div className="mb-4">
       <CopyAsOf freshness={copyFreshness(records)} />

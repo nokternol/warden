@@ -161,6 +161,24 @@ describe('CatalogRefreshJob', () => {
     ]);
   });
 
+  it('names a provider once when both its catalog and its lists failed', async () => {
+    const db = getDb();
+    const down = new Error('Radarr is down');
+    const provider = {
+      getMovies: vi.fn().mockRejectedValue(down),
+      getTags: vi.fn().mockRejectedValue(down),
+      getProfiles: vi.fn().mockRejectedValue(down),
+      getRootFolders: vi.fn().mockRejectedValue(down),
+    };
+    const source = { providerId: radarrProviderId, name: 'Radarr', provider };
+    const job = new CatalogRefreshJob({ db, movieSources: [source], listSources: [source] });
+
+    await job.runForMovies();
+    await job.runForLists();
+
+    expect(job.failedProviders()).toEqual(['Radarr']);
+  });
+
   it("stores a provider's lists, keeping a part whose read failed and failing its lists record", async () => {
     const db = getDb();
     const radarr = {

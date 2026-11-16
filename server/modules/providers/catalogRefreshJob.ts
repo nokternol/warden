@@ -65,9 +65,9 @@ export class CatalogRefreshJob {
 
   constructor(private deps: Deps) {}
 
-  /** The providers this run could not refresh, by name, in the order they failed. */
+  /** The providers this run could not refresh, each named once, in the order they first failed. */
   failedProviders(): string[] {
-    return [...this.failed];
+    return [...new Set(this.failed)];
   }
 
   /**
