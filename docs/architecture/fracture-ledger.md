@@ -642,22 +642,45 @@ Earlier entries in this ledger use the names that were current when they healed 
   (`fresh`). The connection-bound source adapters, `MediaSourceFactory.sourcesFor`, the Media page's
   private movie and series caches and the executor's optional source dependency are deleted.
 - **Different on purpose:** an automation acting later, on a library that has changed since, counts
-  differently from an earlier page or preview. The identity resolution job still reads its own
-  instances; that is the open "Source instance choice" entry below, and the follow-up issue for the
-  recording side.
+  differently from an earlier page or preview.
+- **Superseded:** this heal unified the features on the live read, the authority north-star belief 4
+  rules out. The "Library copies" entry below replaced the source read cache with the stored copy.
 
-## Open
-
-### Library copies — a live 60-second read beside the database (recorded 2026-11-15)
+### Library copies — a live 60-second read beside the database (recorded 2026-11-15 — healed 2026-11-16, MVP slice C16)
 
 - **Fracture:** north-star belief 4 says Warden holds one copy of the library, in its database,
-  refreshed on the owner's schedule. Features read a second copy instead: the 60-second live read of
-  Radarr/Sonarr (`server/modules/media/sourceReadCache.ts`), while title grouping and facts come from
-  the database. The two disagree until the next refresh, and the workarounds for that gap (the Media
-  page's own title grouping, runs recording copies, the unresolved-exclude skip, live Plex/Jellyfin
-  filter choices) are departures too. The "Library reads" entry above, marked healed, unified the
-  features on the live read: a heal toward the wrong authority.
-- **Heals by:** the "One copy of the library" slice (#252), per `docs/in_progress/mvp/system-design.md`.
+  refreshed on the owner's schedule. Features read a second copy instead: a 60-second live read of
+  Radarr/Sonarr (the source read cache), while title grouping and facts came from the database. The two
+  disagreed until the next hourly identity run, and the workarounds for that gap were departures too:
+  the Media page's own title grouping, runs recording copies the job had not seen, the "excluded title
+  not resolved yet" skip, live Plex/Jellyfin reads for filter choices, per-lookup caches in the media
+  procedures, and a refresh read before every run.
+- **How it misled:** titles re-added in Radarr were skipped by Plex, Jellyfin and Tautulli automations;
+  run history called present titles removed; automations refused to run on an unresolved exclude; the
+  Media page grouped titles by a rule the rest of Warden did not use. Nothing said how current any of it
+  was.
+- **Healed by:** the catalog refresh became the only reader of the providers' library data. It stores
+  each copy's payload, the title grouping, Plex/Jellyfin links and each instance's setup lists, believes
+  a successful answer (even an empty one), keeps data on a failure, and records per provider and kind
+  when it last refreshed and whether it failed. The enrichment job stores facts per provider. One
+  in-memory library cache, loaded from the database and cleared when a refresh lands, is the only thing
+  features read: browse, counts, filter and task choices, runs and readiness. Every view carries the
+  refresh records and shows one "As of" line naming failed providers. Destructive runs skip while a
+  refresh they depend on failed or never ran. The source read cache, copy recording, the unresolved
+  exclude skip, the title key, the live lookups, the staleness window and the provider-metadata route
+  are deleted.
+- **Different on purpose:** a run acts on the copy as it stands; refresh after a Warden action, an
+  owner-settable refresh schedule and one shared evaluation are later slices. The Search page still reads
+  live; it is deferred.
+
+### Source instance choice — the identity job chose its own (recorded 2026-11-07 — healed 2026-11-16, MVP slice C16)
+
+- **Fracture:** the identity job chose its Radarr and Sonarr instances itself, apart from
+  `MediaSourceFactory.activeInstances`, which browse, the preview and runs shared.
+- **Healed by:** features no longer read source instances at all. The catalog refresh is the one place
+  active source instances are chosen and read, and `MediaSourceFactory` is deleted.
+
+## Open
 
 ### Title lookup — two mechanisms, one blocked (recorded 2026-11-01, MVP slice B4)
 
@@ -667,11 +690,3 @@ Earlier entries in this ledger use the names that were current when they healed 
   "One title lookup" in `docs/in_progress/mvp/plan.md` decides whether they do one job or two and
   settles it, and the MVP does not close until it merges.
 
-### Source instance choice — the identity job chooses its own (recorded 2026-11-07)
-
-- **Fracture:** the identity resolution job chooses its Radarr and Sonarr instances itself
-  (`identityJobFactory.ts`), apart from `MediaSourceFactory.activeInstances`, which browse, the preview and
-  runs share. `providers` may not import `media`, so the job cannot use the media module's helper.
-- **Status:** both select the active instances of the source-owning type today, so they agree; a change
-  to how catalog instances are chosen must still be made in both places. The enrichment job chooses
-  enrichers, not catalog sources, and is not part of this entry.

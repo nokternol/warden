@@ -32,10 +32,14 @@ startup health check ([`server/modules/system/systemHealthCheck.ts`](ref:path:se
 If a container restarts and a system job is missing, it is restored automatically.
 
 Current system automations (added in Phase 2):
-- **Identity resolution** — maps Radarr/Sonarr items to cross-provider IDs
-- **Enrichment** — fetches Tier 2 provider data for enriched filter predicates
+- **Catalog refresh** (task id `system:identity-resolution`) — the only reader of the providers'
+  library data: stores each Radarr/Sonarr copy, groups copies into titles, links titles to Plex and
+  Jellyfin items, and stores each instance's setup lists
+- **Enrichment** — stores each enricher's facts per provider
 
-Both are prerequisites for Tier 2 filter predicates to return meaningful results. A system job is
+Together they write the library copy every feature reads. Each records, per provider and kind, when
+it last refreshed and whether it failed, and both send `media:changed` when they finish, success or
+failure. A system job is
 identified by its `taskId`; its `name` is the display name the owner reads, and the startup check
 corrects a row whose name differs.
 

@@ -1,8 +1,8 @@
-# Media enrichment: `(mediaIdentityId, fieldId, value)` persistence shape
+# Media enrichment: `(mediaIdentityId, fieldId, providerId, value)` persistence shape
 
 **Status:** AS-BUILT (current fact). `media_enrichment` is an entity-attribute-value (EAV) table — one
-row per `(identity, field)` fact actually present, not one row per identity with a nullable column per
-field.
+row per `(identity, field, provider)` fact actually present, as the provider reported it, not one row
+per identity with a nullable column per field.
 
 ## Why this shape, not a wide table
 
@@ -37,15 +37,13 @@ enrichment_field
 media_enrichment
   mediaIdentityId  INTEGER NOT NULL REFERENCES media_identity(id) ON DELETE CASCADE
   fieldId          INTEGER NOT NULL REFERENCES enrichment_field(id) ON DELETE CASCADE
+  providerId       INTEGER NOT NULL REFERENCES metadata_provider(id) ON DELETE CASCADE
   value            TEXT NOT NULL   -- JSON-encoded: number | string | boolean
-
-media_identity
-  …
-  enrichedAt       INTEGER   -- last time EnrichmentJob resolved this identity's fields
+  UNIQUE (mediaIdentityId, fieldId, providerId)
 ```
 
 ([`server/database/schema.ts`](ref:path:server/database/schema.ts),
-`server/database/migrations/0018_media_enrichment_eav.sql`)
+`server/database/migrations/0039_facts_per_provider.sql`)
 
 - **`enrichment_field` stores only `{id, key}`.** Which provider produces which field stays a
   compile-time TypeScript fact
@@ -63,16 +61,20 @@ media_identity
   foreign keys at runtime, so `ON DELETE CASCADE` is real: removing a field's declaration cascade-deletes
   its fact rows automatically, and the DB rejects a `fieldId` that doesn't correspond to a
   currently-seeded field.
-- **`enrichedAt` lives on `media_identity`, one column, one per identity — not per field.** Matches
-  `mediaItems.resolvedAt`'s existing precedent (a per-row "last refreshed" timestamp living on the
-  entity table itself). `EnrichmentJob`'s staleness check is a plain filter over `media_identity` rows,
-  no join required.
+- **Facts are stored per provider, as reported.** Where more than one provider supplies a fact (play
+  count from Tautulli, Plex and Jellyfin; studio and file details when Plex and Jellyfin are both
+  active), each provider's value is its own row. No value is lost at write time: precedence picks one
+  value when the library cache loads (below), so a title Tautulli and Plex both track keeps Plex's
+  studio and codecs alongside Tautulli's play count.
+- **When the facts were read is a refresh record, not a column.** Each enricher's `facts` row in
+  `provider_refresh` says when its facts were last read and whether the latest attempt failed. There is
+  no staleness window: the enrichment job reads every enricher for every title on every run.
 - **Migration path: drop and recreate, no unpivot.** `media_enrichment` had already been dropped and
   recreated outright at least twice before this change (`0004_drop_media_enrichment.sql`,
   `0008_drop_old_media_enrichment.sql`) — it's a derived cache, not a source of truth.
-  `EnrichmentJob.run()` already does a full resolve-and-replace from live provider state every pass, so
-  losing existing rows on migration just means every identity is treated as never-enriched until the
-  next scheduled pass (bounded by 24h staleness) repopulates it.
+  Each provider's facts are replaced in full on every pass, so losing existing rows on migration just
+  means the next enrichment run repopulates them (migration `0039` deleted every fact stored without a
+  provider).
 
 ## The DAL seam: `EnrichmentQueries`
 
@@ -82,21 +84,30 @@ works with. Constructed with `{ db }` and registered via awilix in
 [`media.registrations.ts`](ref:path:server/modules/media/media.registrations.ts) alongside every other
 module service.
 
-- **`getByIdentityIds(ids)`** reads via a SQL-side pivot:
-  ```sql
-  json_group_object(enrichment_field.key, json(media_enrichment.value))
-  ```
-  grouped by `mediaIdentityId`, one row back per identity. The `json(...)` wrap is load-bearing, not
-  decorative: `media_enrichment.value` is already JSON-encoded text, so omitting the wrap would make
-  `json_group_object` re-encode it as a JSON string (`3` becomes `"3"`, silently, with no error at any
-  layer). This is called out inline in the source, not just here, because it's the one place in this
-  file a dropped function call produces wrong-typed data instead of a compile or runtime error.
-- **`replaceFields(mediaIdentityId, values)`** does a full delete-then-insert for that identity — one
-  row per key present in `values`. A key with no matching `enrichment_field` row (migration/
-  `EnrichmentFields` drift — see below) throws a named error identifying the missing key, rather than
-  hitting a `NOT NULL` constraint on `fieldId` as an opaque SQL failure.
+- **`allFacts()`** reads every fact with the provider that reported it, value decoded from JSON.
+- **`replaceProviderFacts(providerId, factsByTitle)`** replaces everything one provider reported, in one
+  `db.batch` so a reader never sees the provider's facts half gone. A title or field the provider no
+  longer reports loses its fact from that provider; other providers' facts are untouched. A key with no
+  matching `enrichment_field` row (migration/`EnrichmentFields` drift — see below) throws a named error
+  identifying the missing key.
 
-`enrichmentMerge.ts` and `EnrichmentJob` both depend on `EnrichmentQueries` instead of touching
+## How a failed enricher is kept, and how one value is chosen
+
+[`EnrichmentJob`](ref:path:server/modules/media/enrichmentJob.ts) reads each enricher on its own. A
+successful answer replaces that provider's facts and records its `facts` refresh; a failed one keeps
+every fact Warden held from it, records the failure, and the run ends in error naming it (north-star
+belief 6). The other enrichers are still written.
+
+A fact is contested when more than one enricher type declares it in `fieldsByProviderType` (`tags` is
+construction-only and never contested). [`contestedFieldPrecedence`](ref:path:server/modules/media/enrichment/precedence.ts)
+orders every contested fact: Tautulli, then Plex, then Jellyfin for play count and last-watched, and
+Plex before Jellyfin for the facts both media servers report. When the library cache loads,
+[`resolveFacts`](ref:path:server/modules/media/enrichmentMerge.ts) picks, for each title and contested
+fact, the value of the active provider ranked first; an uncontested fact is kept as reported. The
+activation guard `assertContestedFieldsCovered` derives the contested facts from the declarations and
+refuses to activate a provider whose type a contested fact's order leaves out.
+
+The library cache and `EnrichmentJob` both depend on `EnrichmentQueries` instead of touching
 `media_enrichment` directly — see `docs/architecture/warden-core-model.md`'s enrichment section for how
 this replaces the two modules' direct table access with a shared dependency neither imports from the
 other.
@@ -113,9 +124,9 @@ guard and couldn't get one under a wide-table shape:
 
 - **`schema.ts` + a migration per field** — eliminated as a recurring action. Adding field #7 through
   #90 is a seed row in `enrichment_field`, never a schema change.
-- **`enrichmentMerge.ts`'s copy-through** — eliminated by making the read generic. Storage only ever
-  holds a row for a field actually present, so the merge is one `Object.assign(item, fields)` instead of
-  a hand-written `if` line per field; there's no per-field line left to omit.
+- **The read's per-field copy-through** — eliminated by making the read generic. Storage only ever
+  holds a row for a field actually present, so the library cache assigns each title's resolved facts in
+  one step instead of a hand-written line per field; there's no per-field line left to omit.
 
 **Accepted, documented residual risk: migration seed drift.** The migration's seeded `enrichment_field`
 keys are hand-typed and asserted against `fieldsByProviderType`'s deduped values in a test

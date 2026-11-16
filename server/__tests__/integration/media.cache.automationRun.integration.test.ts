@@ -1,13 +1,8 @@
 import { buildContainer } from '@server/container';
 import { MetadataProviderType } from '@server/database/schema';
 /**
- * Integration test: how an automation run reads the library and clears the media caches.
- *
- * The automation executor sends `media:changed` once a task declaring
- * `affects: 'media'` has acted; the media procedures and `SourceReadCache`,
- * built on the same container and so the same event bus, clear on it. The next
- * browse refetches from Radarr and shows the change. A run plans on a read of
- * its own instance that starts after the run did.
+ * Integration test: an automation run plans on the library copy as the last catalog refresh stored
+ * it, reading no library from the provider, and a Radarr run counts only its own instance's copies.
  *
  * Run: vitest run --project server
  */

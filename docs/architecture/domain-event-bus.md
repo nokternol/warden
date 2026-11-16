@@ -33,64 +33,38 @@ single `recordResult` emit site.
 
 | Event | Payload | Emitted |
 |---|---|---|
-| `media:changed` | *(none)* | once an actuator task declaring `affects: 'media'` has acted on at least one item, **whether or not the run then succeeds**; and after a system data job declaring `affects: 'media'` reports `itemCount > 0` |
+| `media:changed` | *(none)* | when the catalog refresh or the enrichment job finishes, **success or failure, whatever it changed**; and after a media reset deletes the library copy |
 | `provider:changed` | *(none)* | after every [`ProviderSettingsService`](ref:path:server/modules/providers/providerSettingsService.ts) create, update and delete (not `recordTest`, which changes only a provider's test status) |
 
-The event name is **derived from the declared scope**: a task declaring `affects: 'media'` emits
-`` `${affects}:changed` `` = `media:changed`. A future scope (e.g. `library`) declares
-`affects: 'library'` and emits `library:changed` — its own typed event, not a discriminator field on
-a shared event. This is the deliberate alternative to a single generic `data:changed` carrying a
-`scope` field: the namespace lives in the event name, giving each domain room to deepen its own
-payload independently.
+`media:changed` means *the library copy in Warden's database changed*. Only what writes the copy sends
+it: the refresh jobs ([`AutomationExecutor`](ref:path:server/modules/automations/automationExecutor.ts)
+sends it in a `finally` around a system job, since a job that fails partway has still rewritten part of
+the copy) and a media reset ([`media.procedures.ts`](ref:path:server/modules/media/media.procedures.ts)).
+User runs do not send it: a run acts on the services, not on the copy, and the copy changes only when
+a refresh reads the services again.
 
-The payload is **intentionally empty**. The event drives cache invalidation, and the enrichment cache
-it will feed (Phase 3) is whole-scope — so the event need only say *that* media changed, not which
-slice. A within-scope discriminator (e.g. `movie`/`series`) is added only if and when a consumer
-segments its cache and proves it needs one, expressed in that consumer's own vocabulary. An earlier
-iteration carried a provider `sourceType` discriminator; it was removed before shipping because it
-conflated *provider* with *media kind* — the wrong axis for a consumer that would actually segment on
-kind, not on which provider produced the event.
+The event name carries the scope, so a future scope gets its own typed event rather than a
+discriminator field on a shared one. The payload is **intentionally empty**: the one consumer reloads
+the whole copy, so the event need only say *that* it changed.
 
-## How a task declares it changed data — declarative + gated
+## The `affects` declaration on actuator tasks
 
-Scope lives **with the task definition**, so the executor never hard-codes which tasks touch the cache:
-
-- **Actuator tasks** carry `affects` on the `ActuatorTaskDescriptor` the `MediaActuator` role declares
-  ([`server/modules/providers/roles.ts`](ref:path:server/modules/providers/roles.ts), returned by each provider's `tasks()`), by the rule in
-  [Cache invalidation conventions](#cache-invalidation-conventions).
-- **System data jobs** declare scope in `SYSTEM_TASKS` ([`automationExecutor.ts`](ref:path:server/modules/automations/automationExecutor.ts)): `system:enrichment`,
-  `system:identity-resolution` declare `affects: 'media'`. They write enrichment and identity data,
-  which no cache holds yet, so today their event clears caches that don't depend on them; the
-  declaration is for the planned enrichment cache.
-
-The gate and emit are unified in one private helper, [`AutomationExecutor`](ref:label:AutomationExecutor)`.emitDataChange(affects,
-itemCount)`: it emits `` `${affects}:changed` `` only when `affects` is set and `itemCount > 0`.
-The same helper serves both user tasks and system data jobs. For an actuator task it runs in a
-`finally` around `task.run`, with `itemCount` the planned target count: a task that fails partway
-(Radarr erroring on the 6th of 10 titles) has still changed upstream data, and a failure while
-recording the result can't suppress the event.
-
-## The gate contract
-
-Emit `media:changed` **iff** the task declares a media scope **and** `itemCount > 0`.
-
-- `itemCount` **must be non-zero whenever cache-relevant data was written** (no false zero — the only
-  failure mode that matters; it would leave the cache stale until a TTL backstop). Phase 1 guarantees
-  honest counts for system jobs.
-- `itemCount` **may over-count**; over-emission causes only safe, scope-level over-eviction.
-- Consumers read only the scope (the event name) — never the count's magnitude. Within-scope and
-  per-identity/keyed eviction are deferred until a consumer needs them.
+Actuator tasks still carry `affects` on the `ActuatorTaskDescriptor` the `MediaActuator` role declares
+([`server/modules/providers/roles.ts`](ref:path:server/modules/providers/roles.ts), returned by each
+provider's `tasks()`): `affects: 'media'` when, by the time `run` returns, the task has changed library
+data in the upstream service, and nothing for a task that only starts a background command (search,
+refresh, rescan). Nothing reads it today; it is the declaration a refresh-after-action would read to
+know which runs are worth a follow-up refresh.
+[`actuatorTaskAffects.test.ts`](ref:path:server/__tests__/modules/providers/actuatorTaskAffects.test.ts)
+pins the exact set of tasks that leave it off, so a new task fails it until someone applies the rule.
 
 ## Producers & consumers
 
-- **Producers:** `AutomationExecutor.execute()` sends `media:changed`; `ProviderSettingsService`
-  sends `provider:changed`. Any future writer of media-relevant data (a Tautulli/Plex webhook, a
-  manual re-enrich, a backfill) sends `media:changed` directly — decoupled from run lifecycle so
-  non-run writers invalidate caches too.
+- **Producers:** `AutomationExecutor.execute()` (for system refresh jobs) and the media reset send
+  `media:changed`; `ProviderSettingsService` sends `provider:changed`.
 - **Consumers:**
-  - The media procedures ([`media.procedures.ts`](ref:path:server/modules/media/media.procedures.ts)) clear every cache they own on both
-    `media:changed` and `provider:changed`. `createMediaProcedures` returns `dispose()`, which
-    unsubscribes; the composition root builds them once, tests that build them repeatedly dispose.
+  - [`LibraryCache`](ref:path:server/modules/media/libraryCache.ts) drops its loaded copy on both events,
+    and loads again on the next read.
   - [`ActiveFieldSetCache`](ref:path:server/modules/media/activeFieldSet.ts) drops its cached field set on `provider:changed`.
 
 `EventEmitter.emit` is synchronous and re-throws a listener's exception into the sender. The bus
@@ -100,41 +74,17 @@ attach.
 
 ## Cache invalidation conventions
 
-The event bus is the only route by which Warden's own changes clear a cache. The 60s expiry
-([`MediaCache`](ref:path:server/kernel/cache.ts)) stays for changes the bus can't see.
-
-### What clears the media caches
+The event bus is the only route by which a cache over Warden's own data clears. Neither cache has a
+time-based expiry: the library copy changes only when a refresh writes it.
 
 | Route | Fires when | Covers |
 |---|---|---|
-| `media:changed` | An actuator task declaring `affects: 'media'` has acted on at least one item, whether the run then succeeds or fails. Also a system data job that reports changes. | Upstream library data changed by Warden |
-| `provider:changed` | `ProviderSettingsService` create, update or delete | A provider's library joining, changing or leaving |
-| 60s expiry | Always | Changes Warden can't see: edits made in Radarr's own UI, upstream background commands finishing, an upstream service recovering by itself |
+| `media:changed` | A refresh job finished, or a media reset deleted the copy | The library copy in the database changed |
+| `provider:changed` | `ProviderSettingsService` create, update or delete | Which providers' copies are active, and which fields can be supplied |
 
-The media procedures' caches and the source read cache
-([`SourceReadCache`](ref:path:server/modules/media/sourceReadCache.ts)), which holds each Radarr/Sonarr
-instance's latest read, clear on both events; a media reset leaves the source read cache alone. `ActiveFieldSetCache`, which has no expiry, clears
-on `provider:changed`. Both caches guard against an in-flight fetch: a fetch that started before an
-invalidation still answers its own callers but never writes its result back, so the old data can't
-reappear (`MediaCache.invalidate` bumps a per-key generation; `ActiveFieldSetCache` keeps one counter).
-
-A failed provider fetch is cached as a partial or empty result until the expiry or a provider edit,
-so requests during an outage don't each wait on the dead upstream's timeout
-([`media.cache.failuresCached.integration.test.ts`](ref:path:server/__tests__/integration/media.cache.failuresCached.integration.test.ts)).
-
-### When a task declares `affects`
-
-- **Declare `affects: 'media'`** when, by the time `run` returns, the task has changed library data in
-  the upstream service: which titles exist, monitored state, files, quality profile, tags, play
-  state, collection membership, metadata — anything a media cache holds or browse and the filters show.
-- **Leave it off** only when the task changes no library data by the time `run` returns, such as a
-  task that starts an upstream background command (search, refresh, rescan) whose effect lands later.
-  An event at return would clear the caches before the change exists, so the expiry covers it. This
-  is why `triggerSearch` declares nothing: the *arr search flips `hasFile` out-of-band.
-- **If unsure, declare it.** Over-eviction costs one refetch; under-eviction leaves the page stale.
-
-[`actuatorTaskAffects.test.ts`](ref:path:server/__tests__/modules/providers/actuatorTaskAffects.test.ts) builds every provider and pins the exact set of tasks
-that leave `affects` off, so a new task fails it until someone applies the rule.
+Both caches guard against an in-flight load: `LibraryCache` stores the promise of the load it starts and a
+clear drops it, so a load that started before an invalidation is never kept; `ActiveFieldSetCache`
+keeps a generation counter.
 
 ### When something sends `provider:changed`
 
@@ -151,5 +101,4 @@ Every provider-settings mutation that can change which providers are active or w
 
 ### Adding a cache
 
-Put it where its owner's handler clears it (for the media procedures, the cache array), and say in a
-comment which route covers each kind of change it holds.
+Prefer reading the library cache. A cache of anything else says in a comment which route clears it.

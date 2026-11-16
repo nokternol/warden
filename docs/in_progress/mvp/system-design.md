@@ -7,7 +7,7 @@ design and the north star disagree, the north star wins and this document is wro
 
 The graded map of the current code that this design answers is posted on #251.
 
-## 1. One copy of the library (beliefs 3, 4, 6, 8)
+## 1. One copy of the library (beliefs 3, 4, 6, 8) — built (#252)
 
 - **The database holds the services' data.** What Radarr and Sonarr say about each copy, which
   copies are one title and the title's id in every other service, and the facts the other services
@@ -23,15 +23,17 @@ The graded map of the current code that this design answers is posted on #251.
 - **Warden believes what a service answers** (north-star belief 6). A successful answer, even an
   empty one, is the service's truth. An error or no answer is a failure: the refresh keeps the last
   good data for that service and records the failure.
-- **Condition (owner):** the Media page must stay fast. The first build step measures it on a
-  library of the owner's size; if the cache cannot keep it fast, that goes back to the owner.
+- **Condition (owner):** the Media page must stay fast. The measurement runs on the built read path,
+  once the cache serves browse and before the slice is finished; if the cache cannot keep it fast, that
+  goes back to the owner. Measured on a generated library of 10,000 movies and 3,000 series: cold load
+  about 0.9 s, warm browse page about 220 ms (`docs/architecture/library-cache.md`).
 
 **Removes:** the 60-second live copy as something features read (it becomes the refresh's way of
 reading, or goes); the Media page's own title grouping; runs writing copies into the database;
 the "excluded title not resolved yet" skip; live Plex/Jellyfin reads for filter choices; the
 per-lookup caches in the media procedures.
 
-## 2. Same title (beliefs 2, 3)
+## 2. Same title (beliefs 2, 3) — built (#252)
 
 - The refresh decides which copies are one title, with one rule, and records it in the copy.
 - Every feature that needs titles reads that grouping: the Media page, counts, exclude protection,
@@ -42,7 +44,7 @@ per-lookup caches in the media procedures.
 - **Each service declares once which facts it supplies.** The fact list, the refresh's write, the
   rules that read a fact and the services a rule depends on all follow from that one declaration.
 - **Filter choices come from the stored facts,** read from the cache, never from a live service.
-- **Facts are stored per provider,** as each provider reported them. Where more than one provider
+- **Facts are stored per provider,** as each provider reported them (built, #252). Where more than one provider
   supplies a fact (play count; studio and file details when Plex and Jellyfin are both active),
   precedence picks one value when the cache loads.
 
@@ -94,7 +96,7 @@ page, the client mutation pattern, per-row fetching, and the refresh's write per
 
 | Slice | New scope | Depends on |
 |---|---|---|
-| #252 The library record (renamed: **One copy of the library**) | Section 1 and 2: the refresh stores the services' data and records each service's refresh; one cache over the database; every feature reads it; the Media page measurement first. Absorbs from #247 the read side, the per-lookup caches and the fan-outs. | this design |
+| #252 The library record (renamed: **One copy of the library**) | Section 1 and 2: the refresh stores the services' data and records each service's refresh; one cache over the database; every feature reads it; the Media page measured on the built read path before the slice is finished. Absorbs from #247 the read side, the per-lookup caches and the fan-outs. | this design |
 | #244 Provider types | Section 4. | this design |
 | #246 Enrichment | Section 3. | #244, #252 |
 | #247 Reading the catalog | Section 6: one evaluation for the Media page, counts, the matches view and runs. | #252 |

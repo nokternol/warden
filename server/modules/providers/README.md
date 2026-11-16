@@ -19,8 +19,11 @@ providers/
   taskEnablement.ts           # Per-instance enabledTasks authority (readEnabledTaskIds)
   plexService.ts              # Validates a Plex auth token against plex.tv (used by auth login)
   tmdbService.ts              # TMDB lookups backed by MediaCache
-  identityResolutionJob.ts    # System job linking provider-native ids into media_identity
-  catalogRefreshJobFactory.ts  # Builds the catalog refresh from configured providers
+  catalogRefreshJob.ts        # System job reading the providers' library data into the copy
+  catalogRefreshJobFactory.ts # Builds the catalog refresh from configured providers
+  providerRefresh.ts          # Refresh records: when each kind of a provider's data last refreshed
+  providerLists.ts            # Each provider's stored setup lists (tags, profiles, root folders)
+  providerListsReader.ts      # Type-only port the library cache implements for task choices
 ```
 
 ## Public interface
@@ -39,8 +42,8 @@ optional `urlBase` for reverse-proxy installs), a 10-second timeout, JSON `Accep
 logging hooks. Connection config (URL, API key, settings) lives in the `metadata_providers` table.
 
 A connection implements `MediaActuator` (`roles.ts`) directly when it exposes actions on media it owns —
-never by the base class. `MediaSource`/`MediaEnricher` are media-owned roles instead: media's
-`sourceAdapters.ts`/`enrichment/enricherAdapters.ts` bind a connection's native surface to those roles,
+never by the base class. `MediaSource`/`MediaEnricher` are media-owned roles instead: media's library
+cache and `enrichment/enricherAdapters.ts` bind a connection's data to those roles,
 so a connection implements nothing from media directly. See
 `docs/architecture/provider-roles-and-identity.md` for the role model.
 

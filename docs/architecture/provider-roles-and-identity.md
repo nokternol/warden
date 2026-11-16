@@ -44,7 +44,7 @@ the *only* place that fact is declared:
   re-declares the map, only imports it (the one legal `media → providers` direction).
 - `ProviderSettingsService.assertNoActiveConflict` reads `isMediaSourceType` to decide whether the
   single-active-provider invariant (D8) applies — see below.
-- The identity job reads `SOURCE_OWNER`/`contentTypeOfSourceType` to know which provider types to fetch
+- The catalog refresh reads `SOURCE_OWNER`/`contentTypeOfSourceType` to know which provider types to fetch
   and which content type (`contentType`) to resolve their items under.
 
 A type graduating into the `MediaSource` role (Plex, per the still-open intent doc) would extend this one
@@ -83,102 +83,84 @@ two-table split between the logical title and each instance's concrete copy of i
   id that is not positive counts as missing: Sonarr reports `tvdbId: 0` for series it cannot match, and
   keying on it would join unrelated series into one group sharing one Plex or Jellyfin id. Migration
   `0036_identity_zero_ids` cleared groups keyed that way, along with the ids they borrowed from their
-  first copy, so the identity job's next run regroups those copies by title and year. Identifier fields
+  first copy, so the catalog refresh's next run regroups those copies by title and year. Identifier fields
   are merged onto an existing group **fill-only** — a found group's non-`NULL` column is never
   overwritten. No code path ever merges two *existing* groups; a group left with zero `media_item` rows
   is swept, not merged away.
 
-## The identity job: one loop per active instance
+## The catalog refresh: the only reader of the providers' library data
 
-`IdentityResolutionJob`/`IdentityJobFactory` ([`server/modules/providers/identityResolutionJob.ts`](ref:path:server/modules/providers/identityResolutionJob.ts))
-loop every active instance per type — never collapsed to one:
+`CatalogRefreshJob`, built by `CatalogRefreshJobFactory`
+([`server/modules/providers/catalogRefreshJob.ts`](ref:path:server/modules/providers/catalogRefreshJob.ts),
+[`catalogRefreshJobFactory.ts`](ref:path:server/modules/providers/catalogRefreshJobFactory.ts)), runs as
+the "Catalog refresh" system automation (stored task id `system:identity-resolution`). It is the only code
+that reads Radarr, Sonarr, Plex and Jellyfin library data; every feature reads what it stores through the
+library cache. It loops every active instance per type, never collapsed to one, and refreshes each
+provider on its own:
 
-- `IdentityJobFactory.create()` builds `movieSources`/`seriesSources` arrays via `createInstances`, one
-  `{ providerId, provider }` per active Radarr/Sonarr row.
-- `runForMovies`/`runForSeries` resolve each fetched item's group via `resolveGroup`, upsert its
-  `media_item` row on `(providerId, externalId)` (clearing any `deleted` mark, since the instance lists
-  it again), then **mark deleted** that instance's `media_item` rows whose `externalId` is no longer in
-  its fetched set (an item removed from one instance's library stops being a live copy there without
-  touching any other instance's copies), and finally **sweep** every group left with zero `media_item`
-  rows. A deleted copy still counts for the sweep, so a removed title keeps its group and its name; a
-  group empties only when its copies' provider is deleted (the `metadata_provider` cascade).
-- `runForPlex` never inserts a group — it only *stamps* `plexRatingKey` onto groups matching by
-  `contentType` + `tmdbId`/`tvdbId`, closing a bug where an unscoped `tmdbId` match could cross the movie/tv id
-  namespaces. It reads the ids from each library item's `Guid` list (`tmdb://N`, `tvdb://N`), which Plex
-  includes in a listing only when the request asks with `includeGuids=1`. A stamp writes only a new or
-  changed id and clears that group's `enrichedAt`, so the next enrichment run reads the linked server
-  instead of waiting out the staleness window. `tests/fixtures/plex/` holds a real server's responses,
-  captured by `scripts/capture-plex-fixture.sh`, that
-  [`identityResolutionJob.test.ts`](ref:path:server/__tests__/modules/providers/identityResolutionJob.test.ts)
-  tests the job against.
+- **Copies.** `runForMovies`/`runForSeries` resolve each listed item's group via `resolveGroup`, upsert
+  its `media_item` row on `(providerId, externalId)` with the provider's own record as its payload
+  (`media_item_payload`), clear any removed mark, then mark removed that instance's copies it no longer
+  lists, and finally sweep every group left with zero `media_item` rows. A removed copy still counts for
+  the sweep, so a removed title keeps its group and its name.
+- **Links.** `runForPlex`/`runForJellyfin` never insert a group: they stamp `plexRatingKey` /
+  `jellyfinItemId` onto groups matching by `contentType` + `tmdbId`/`tvdbId`, and clear the link from
+  every title whose item the server no longer lists. Plex ids come from each item's `Guid` list, which a
+  listing includes only with `includeGuids=1`; a section whose answer omits `Metadata` is empty.
+  `tests/fixtures/plex/` holds a real server's responses for
+  [`catalogRefreshJob.test.ts`](ref:path:server/__tests__/modules/providers/catalogRefreshJob.test.ts).
+- **Setup lists.** `runForLists` stores each Radarr/Sonarr instance's tags, quality profiles, root
+  folders and (Sonarr) language profiles in `provider_lists`
+  ([`providerLists.ts`](ref:path:server/modules/providers/providerLists.ts)). Each part is read on its
+  own, and a failed part keeps its last successful value. The lists are part of the disposable copy, so
+  they live apart from `metadata_provider`, which is the owner's configuration.
 
-## Soft-deleted copies and run history
+### Believing what a provider answers
 
-`media_item.deleted` ([`server/database/schema.ts`](ref:path:server/database/schema.ts)) is a soft delete
-inside Warden's own database. A copy that leaves its source is usually the result of a destructive run,
-which is exactly the item that run's history must still name. Hard-deleting the row would cascade away
-the history link and the title with it, so the identity job keeps the row and marks it instead. There is
-no deletion timestamp: when a Warden run removed the item, the run's own `ranAt` dates it. Retained
-copies and groups are never pruned yet; their maintenance is future work.
+A successful answer, empty or not, is that provider's truth: copies it no longer lists are marked
+removed, links it no longer lists are cleared. An error, timeout or malformed answer is a failure: the
+refresh keeps everything it held from that provider, records the failure and moves on to the next
+provider. A run in which any provider failed ends in error naming them, each once.
 
-Readers treat a deleted copy exactly as a missing one wherever an item must be live:
-`resolveActuatorTargets` ([`server/modules/media/actuatorIdResolver.ts`](ref:path:server/modules/media/actuatorIdResolver.ts))
-never addresses it, so no task receives an id for media that has gone. `resolveGroup` reads only
-`media_identity`, so a title that returns reuses its retained group, and the upsert clears the mark on the
-same row.
+### Refresh records
 
-`automation_run_items(runId, mediaItemId, title, year)` links a run to every source copy it targeted. The
-`runId` and `mediaItemId` unique index answers "what did this run touch", and the `mediaItemId` index answers "which runs touched this
-item" (`AutomationRunService.listRunItems` / `listItemRuns`,
+[`providerRefresh.ts`](ref:path:server/modules/providers/providerRefresh.ts) owns `provider_refresh`:
+one row per provider and kind, holding `refreshedAt` (last success) and `failedAt`/`error` (latest
+failure, cleared on success). Each kind has one writer: `catalog`, `links` and `lists` the catalog
+refresh, `facts` the enrichment job. The records are how every view says how current it is, and what a
+destructive run checks before acting (see below).
+
+## Removed copies and run history
+
+`media_item.deleted` ([`server/database/schema.ts`](ref:path:server/database/schema.ts)) marks a copy its
+instance no longer lists. A removed copy is usually the result of a destructive run, which is exactly the
+item that run's history must still name, so the row stays and is marked. The library cache leaves removed
+copies out, so no feature shows or acts on them. `resolveGroup` reads only `media_identity`, so a title that
+returns reuses its retained group, and the upsert clears the mark on the same row.
+
+`automation_run_items(runId, mediaItemId, title, year)` links a run to every copy it targeted
+(`AutomationRunService.listRunItems` / `listItemRuns`,
 [`server/modules/automations/automationRunService.ts`](ref:path:server/modules/automations/automationRunService.ts)).
-A link keeps the title and year from when the run targeted the copy, so a run's history outlives the media
-rows. Deleting a run removes its links. Deleting a provider deletes its automations and their runs. Removing
-copies a surviving run targeted, through another provider's deletion or the derived media data
-(`resetMediaData`), empties `mediaItemId`, and the run still lists those titles as removed.
+A run takes its targets' `media_item` ids straight from the library cache, so every target is a recorded
+copy and a run never writes to the identity tables. A link keeps the title and year from when the run
+targeted the copy, so a run's history outlives the media rows: removing copies through a provider's
+deletion or a media reset empties `mediaItemId`, and the run still lists those titles as removed. Each run
+also records how current the copy it acted on was (`copyAsOf`, `copyStale`). `createRun` writes the run row
+and its links in one `db.batch`, a single SQLite transaction. A user run's `itemCount` is the number of
+copies it targeted.
 
-The executor records **targeted** items, because `ActuatorTask.run(ids)` is batch-shaped and returns
-nothing per item; the run's status and error cover the whole batch, including a run whose task threw
-after its targets were known. A target is resolved to its copy by `ensureSourceCopies`
-([`server/modules/media/sourceCopies.ts`](ref:path:server/modules/media/sourceCopies.ts)). When the
-hourly identity job has not seen the item yet, it hands the copy to `recordSourceCopy`
-([`server/modules/providers/sourceCopy.ts`](ref:path:server/modules/providers/sourceCopy.ts)), which
-places it through `resolveGroup` exactly as the job would, so every target is recorded. The insert is
-idempotent on `(providerId, externalId)`: a copy the job records in the meantime, or a coordinate a run
-targets twice, resolves to the existing row rather than failing the run's recording. The providers
-module owns every write to `media_identity`/`media_item`; media only translates a catalog item into the
-copy's coordinate and group ids. `createRun` writes the run row and its links in one `db.batch`, a single SQLite transaction on
-one connection; the link insert reads the new run's id inside that transaction. An interactive
-transaction is not used because `@libsql/client` opens a fresh connection for one, which loses a
-`:memory:` database. A user run's `itemCount` equals the number of items it recorded: source copies, so two instances'
-copies of one Plex title count two, matching the run items listed when the run expands. System automations
-target no catalog items and keep their runner-reported count.
+## Enrichment: facts per provider
 
-## Enrichment: two distinct paths through the group/item split
-
-- **The enrichment job** (`EnrichmentJob.run`, [`server/modules/media/enrichmentJob.ts`](ref:path:server/modules/media/enrichmentJob.ts)) is
-  group-level and instance-agnostic: it selects every `media_identity` row and filters on that row's own
-  `enrichedAt` column (staleness is a fact about the group, not a joined fact table —
-  see [the EAV rewrite](ref:path:docs/architecture/media-enrichment-eav-model.md) for why enrichment
-  storage no longer carries one row per identity to join against), hydrates each stale group into a
-  canonical `MediaItem` (`_sourceIds.identity` is the group's own surrogate id — collision-free by
-  construction, since no two groups share it, unlike a bare `tmdbId` that could span kinds), and hands the
-  batch to every `MediaEnricher`; each matches by the logical key it speaks (`_sourceIds.plex`/`.tmdb`) and
-  `resolvePrecedence` resolves per field at write time. An empty identity table means the enrichers are
-  never even queried. See `docs/architecture/media-enricher-role.md`.
-- **`mergeEnrichment(db, enrichmentQueries, items)`** (browse/preview path,
-  [`server/modules/media/enrichmentMerge.ts`](ref:path:server/modules/media/enrichmentMerge.ts)) joins
-  the other direction — from a batch of source-produced items, each carrying its own
-  `_sourceIds.providerId`/native id, grouped by `providerId` and joined through `media_item` to its
-  group's id, which `EnrichmentQueries.getByIdentityIds` resolves to that group's fields. Two items from
-  two instances that resolve to the same group correctly read identical group-level enrichment
-  (watched-ness is a fact about the title, not the copy); two instances' distinct copies that happen to
-  share a raw external id never cross-attribute, since the join is scoped per `providerId`. No type
-  parameter — attribution is a relational join, not a type-string equality.
+The enrichment job (`EnrichmentJob.run`, [`server/modules/media/enrichmentJob.ts`](ref:path:server/modules/media/enrichmentJob.ts))
+reads every active enricher for every title on every run, hydrating each `media_identity` row into a
+canonical item (`_sourceIds.identity` is the group's surrogate id), and stores each provider's facts as it
+reported them. Precedence between providers is applied when the library cache loads. See
+[the EAV model](ref:path:docs/architecture/media-enrichment-eav-model.md) and
+`docs/architecture/media-enricher-role.md`.
 
 ## The MediaSource read contract
 
-The source role is a typed read contract ([`server/modules/media/mediaSource.ts`](ref:path:server/modules/media/mediaSource.ts)), not duck-typed
-access to `getMovies`/`getSeries`:
+The source role is a typed read contract ([`server/modules/media/mediaSource.ts`](ref:path:server/modules/media/mediaSource.ts)):
 
 ```ts
 interface MediaSource {
@@ -187,59 +169,44 @@ interface MediaSource {
 }
 ```
 
-The method names are role-named — a source advertises *media items*, not movies or series. Every
-source-produced item's `_sourceIds` carries `providerId` (the constructing instance) and the logical
-`tmdb`/`imdb`/`tvdb` ids (`normalizeRadarrMovie`/`normalizeSonarrSeries` take `providerId` and populate
-them). `MediaQueryEngine.evaluate` never branches on provider type: it reads `source.getMediaItems()`,
-merges DB enrichment via `mergeEnrichment(db, items)`, and pools matched items by `itemKey(item)`
-(`${providerId}:${externalId}`, [`server/modules/media/mediaItem.ts`](ref:path:server/modules/media/mediaItem.ts) — collision-free across
-instances) rather than a single source's `idOf`. `idOf` stays as the provider-native id projection
-`task.run` speaks — unambiguous within one bound instance, which is what an automation execution and a
-raw-DTO lookup both are.
+Every item the library cache builds carries `providerId`, its native id, the logical `tmdb`/`imdb`/`tvdb`
+ids, its title group and its facts. `MediaQueryEngine.evaluate` reads `source.getMediaItems()` and pools
+matched items by `itemKey(item)` (`${providerId}:${externalId}`,
+[`server/modules/media/mediaItem.ts`](ref:path:server/modules/media/mediaItem.ts)), collision-free across
+instances. `copiesSource` ([`libraryCache.ts`](ref:path:server/modules/media/libraryCache.ts)) is the one
+source: it serves a list of cached copies. `sourceOwnership`
+([`mediaSourceFactory.ts`](ref:path:server/modules/media/mediaSourceFactory.ts)) projects `SOURCE_OWNER`
+for the client.
 
-`MediaSourceFactory.activeInstances(contentType)` ([`server/modules/media/mediaSourceFactory.ts`](ref:path:server/modules/media/mediaSourceFactory.ts))
-is the one place the catalog's source instances are chosen: every active instance of the provider type
-`SOURCE_OWNER` names for the content type, each with its connection built (`{ providerId, name,
-provider }`), never collapsed to one. The source read cache
-([`server/modules/media/sourceReadCache.ts`](ref:path:server/modules/media/sourceReadCache.ts)) reads
-the library through it, and every feature that reads the library asks that cache.
-`GET /api/media-queries/:id/preview` binds each instance's rows as a source, evaluating the query spec
-once per instance, and counts the pooled matches in titles: `{ count }` is the number of distinct
-`titleKeyOf` keys, so a title held by two instances counts once, the same unit as the Media page. The executor instead binds a specific provider by `automation.provider.id`, since it needs
-the actuator role on the same instance for `task.run` — an automation targets one instance; running the
-same query against two instances is two automations sharing that query record.
+## Same title everywhere
 
-## Browse: per-instance sublists, live display dedup, and instance-qualified filters
+The catalog refresh decides which copies are one title, with one rule (`resolveGroup`), and every
+feature reads that grouping:
 
-`media.procedures.ts`'s `getMovies()`/`getSeries()` read every active instance from the source read
-cache (`readEach`) into **per-instance sublists** of raw `RadarrMovie[]`/`SonarrSeries[]` rows
-(`{ providerId, providerName, movies }`), never flattened into one array before matching. Each sublist is bound as a
-source by the over-rows binders `radarrRowsSource`/`sonarrRowsSource`
-([`server/modules/media/sourceAdapters.ts`](ref:path:server/modules/media/sourceAdapters.ts)), which
-normalise the rows with their own `providerId` into new objects on every read, so every item pooled
-into `MediaQueryEngine.evaluate` self-describes which instance produced it, and enrichment merged into
-one request's items never reaches the cached rows or another request. The preview, pooled runs and a
-Radarr or Sonarr automation's own catalog bind the reads they get from the same cache with
-`rowsSourceFor`, which hands them to the same binders: one way builds a source. Raw-row recovery after matching
-keys on `itemKey(item)` (`${providerId}:${externalId}`), so two instances' rows sharing a raw provider id
-are never conflated.
+- **Browse** evaluates the filters over every active instance's copies, sorts the matched copies, then
+  groups them by title group. Filter semantics are ANY: a title appears if at least one of its copies
+  matched. The representative row is the first matched copy in sort order, with `sourceCount` and
+  `sourceProviderIds`; pagination and totals count titles.
+- **Query counts** count title groups.
+- **Exclude protection** works by title for every actuator: a title is protected when any of its copies,
+  on any active instance, matches an excluded query. A Radarr or Sonarr run selects only from its own
+  instance's copies but judges its excludes over every active instance's copies. Tag values belong to
+  their instance, so protecting a film through either instance's "keep" tag takes one excluded query per
+  instance.
+- **Non-source actuators** (Plex, Jellyfin, Tautulli) address a title by the media-server id the catalog
+  refresh linked to it; a title not linked drops out.
 
-**Display dedup** groups the matched raw rows by `titleKey`
-([`server/modules/media/mediaItem.ts`](ref:path:server/modules/media/mediaItem.ts)): the native primary
-id (`tmdbId` for movies, `tvdbId` for series), or `${providerId}:${id}` when the primary id is missing or
-not positive (Sonarr reports `tvdbId: 0` for series it cannot match), making that row its own title —
-computed live per request over provider data, no DB join, no dependency on the identity job having run.
-The saved-query preview counts titles with the same key over normalised items (`titleKeyOf`), so its
-count and the Media page's total are in one unit. The persisted `media_identity` grouping does not
-always agree: `resolveGroup` also falls back to the imdb id and then to title and year when no primary id
-exists, so two copies browse shows as two titles can share one identity, and with it one actuator id. Grouping happens **after** engine matching, so filter semantics are ANY: a title
-appears if at least one of its copies matched (the motivating case — "do I have this in 4k?"). The
-representative row is the first matched copy in sort order, decorated with additive `sourceCount` and
-`sourceProviderIds` fields; pagination and totals operate on the grouped rows. With exactly one active
-instance every group is a singleton, so every row is byte-identical to the single-instance shape apart
-from the two additive fields. `listTags`/`listQualityProfiles` decorate each returned tag/profile with
-`{ providerId, providerName }`, and `MediaSourceDescriptor.instances` (`GET /api/media/sources`) lists
-every active instance — the provenance the client needs to label per-instance options.
+### Destructive runs and the records they depend on
+
+A destructive run does not act when any refresh it reads failed its latest attempt or never ran, and
+records a skip naming the provider and the kind (north-star belief 7). It reads: the `catalog` record of
+every instance whose copies it evaluates (a source run's own instance, plus every other active instance of
+the content type when it has excluded queries; any other run, every active instance); the `links` record
+of the media server whose ids it addresses; and, for each rule in its queries, the `facts` record of each
+active supplier and the `links` record of the media server those facts attach through, derived from
+`ADDRESS_COLUMN_BY_TYPE` and `MEDIA_SERVER_BY_COLUMN`
+([`actuatorIdResolver.ts`](ref:path:server/modules/media/actuatorIdResolver.ts)). Non-destructive runs
+proceed, and nothing here judges a run by how much it would affect.
 
 **Instance-scoped filter values.** `qualityProfileIds`, `languageProfileIds` and `tagIds` are
 provider-*minted* numeric id spaces — each instance numbers its own profiles/tags independently, so
@@ -259,9 +226,10 @@ pass-throughs to a different instance's coincidentally-matching id. Filter readi
 ([`server/modules/media/filterReadiness.ts`](ref:path:server/modules/media/filterReadiness.ts)) surfaces
 the misconfigurations rather than leaving silent mismatches: `inactive-instance` for a value naming an
 instance that is not an active source of the content type (inactive, deleted, or of the wrong type),
-for every actuator; and `other-instance` when the automation's provider is itself a source and the
-value names a different source instance, which the gate above would make match nothing in that
-automation's own catalog. A non-source actuator acts on the pooled catalogs of every source, so a value
+for every actuator; and `other-instance` when the automation's provider is itself a source and a value
+in an included query names a different source instance, which the gate above would make match nothing
+in that automation's own catalog. An excluded query may name any active source instance: it protects
+titles through every instance's copies. A non-source actuator acts on the pooled catalogs of every source, so a value
 naming any active source instance is valid for it. Deleting a provider leaves the `providerId` in any
 filter value that names it, so the filter matches nothing and its query reports `inactive-instance`; it
 never widens to another instance's ids, which name different tags and profiles.

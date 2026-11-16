@@ -60,8 +60,8 @@ automations): `automations → media, mediaQueries, providers`; `mediaQueries �
 design errors. This graph is mechanically enforced — see "Enforcement" below — so it cannot silently
 drift from what's written here.
 
-One narrow, sanctioned exception to the direction graph: `providers/identityJobFactory.ts` and
-`media/enrichmentJobFactory.ts` each `import type` an interface (`IdentityJobFactoryLike`,
+One narrow, sanctioned exception to the direction graph: `providers/catalogRefreshJobFactory.ts` and
+`media/enrichmentJobFactory.ts` each `import type` an interface (`CatalogRefreshJobFactoryLike`,
 `EnrichmentJobFactoryLike`) from [`system/systemTaskRunner.ts`](ref:path:server/modules/system/systemTaskRunner.ts)
 — dependency inversion: `system`'s dispatcher declares the minimal interface it needs to run a job as a
 system task, and the module that owns the concrete job factory implements it, importing only the type.
@@ -77,7 +77,8 @@ role contracts ([`media/mediaSource.ts`](ref:path:server/modules/media/mediaSour
 [`media/enrichment/enricher.ts`](ref:path:server/modules/media/enrichment/enricher.ts)). Provider
 connection classes (`RadarrProvider`, `SonarrProvider`, `PlexProvider`, `TautulliProvider`,
 `SeerrProvider`, `TmdbProvider`) implement nothing directly — they are *bound* to these roles by
-media-owned adapters ([`sourceAdapters.ts`](ref:path:server/modules/media/sourceAdapters.ts),
+media-owned code (the library cache's normalisation of stored copies,
+[`libraryCache.ts`](ref:path:server/modules/media/libraryCache.ts), and the enricher adapters,
 [`enrichment/enricherAdapters.ts`](ref:path:server/modules/media/enrichment/enricherAdapters.ts)) that
 import the provider connection classes from providers' public interface — ordinary `media → providers`,
 ordinary direction, no exception. The enrichment mechanics that only need providers' own DTO vocabulary
