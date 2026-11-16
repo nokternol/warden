@@ -213,4 +213,36 @@ describe('MediaQueryEngine.select — which titles conditions select', () => {
       [2, 1],
     ]);
   });
+
+  it('does not select a title one copy of which meets an included query and another an excluded one', () => {
+    const downloadedOnA = copyOf(1, 1, { hasFile: true, tags: [] });
+    const keptOnB = copyOf(1, 2, { hasFile: false, tags: [7] });
+    const plain = copyOf(2, 1, { hasFile: true, tags: [] });
+
+    const selected = engine.select([downloadedOnA, keptOnB, plain], {
+      contentType: 'movie',
+      include: [[HAS_FILE]],
+      exclude: [[{ ruleKey: 'tagIds', value: { providerId: 2, ids: [7] } }]],
+    });
+
+    expect(selected.map((t) => t.mediaIdentityId)).toEqual([2]);
+  });
+
+  it('protects a title whose copies meet different filters of an excluded query', () => {
+    const missingOnA = copyOf(1, 1, { hasFile: false, tags: [] });
+    const taggedOnB = copyOf(1, 2, { hasFile: true, tags: [7] });
+
+    const selected = engine.select([missingOnA, taggedOnB], {
+      contentType: 'movie',
+      include: [[]],
+      exclude: [
+        [
+          { ruleKey: 'tagIds', value: { providerId: 2, ids: [7] } },
+          { ruleKey: 'hasFile', value: false },
+        ],
+      ],
+    });
+
+    expect(selected).toEqual([]);
+  });
 });

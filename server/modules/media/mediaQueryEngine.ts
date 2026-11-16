@@ -112,10 +112,10 @@ export class MediaQueryEngine {
     const meets = (copy: LibraryCopy, filters: Filter[]) =>
       matchItems([copy.item], filters, conditions.contentType).length > 0;
     return [...titlesOf(copies)].flatMap(([mediaIdentityId, group]) => {
-      const metQueries = conditions.include.filter((filters) =>
-        filters.every((filter) => group.some((copy) => meets(copy, [filter])))
-      );
-      if (metQueries.length === 0) return [];
+      const titleMeets = (filters: Filter[]) =>
+        filters.every((filter) => group.some((copy) => meets(copy, [filter])));
+      const metQueries = conditions.include.filter(titleMeets);
+      if (metQueries.length === 0 || conditions.exclude.some(titleMeets)) return [];
       const met = group.filter((copy) => metQueries.some((filters) => meets(copy, filters)));
       return [{ mediaIdentityId, copies: group, met }];
     });
