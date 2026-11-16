@@ -12,6 +12,52 @@ import { TautulliProvider } from './connections/tautulliProvider';
 import { TmdbProvider } from './connections/tmdbProvider';
 import { TvMazeProvider } from './connections/tvmazeProvider';
 import { PROVIDER_CLASSES } from './providerClasses';
+import type {
+  JellyfinLinks,
+  MovieSource,
+  PlexLinks,
+  ProviderCapabilities,
+  SeriesSource,
+  TitleLookup,
+} from './roles';
+
+/** A stored provider row: what a role query reads to choose and construct connections. */
+type ProviderRow = { id: number; type: MetadataProviderType } & ProviderConfig;
+
+/** A constructed connection playing one role, named by the provider row it came from. */
+interface RoleInstance<Role> {
+  providerId: number;
+  name: string;
+  provider: Role;
+}
+
+type ProviderClasses = typeof PROVIDER_CLASSES;
+
+/** The provider types whose declared capabilities set `capability` to `value`. */
+type TypeDeclaring<Capability extends keyof ProviderCapabilities, Value> = {
+  [T in keyof ProviderClasses]: ProviderClasses[T]['catalogueEntry']['capabilities'] extends {
+    [C in Capability]: Value;
+  }
+    ? T
+    : never;
+}[keyof ProviderClasses];
+
+/** Narrows provider rows to those whose type declares `capability` as `value`. */
+function declaring<
+  Capability extends keyof ProviderCapabilities,
+  const Value extends ProviderCapabilities[Capability],
+>(capability: Capability, value: Value) {
+  return <Row extends ProviderRow>(
+    row: Row
+  ): row is Row & { type: TypeDeclaring<Capability, Value> } => {
+    const declared: ProviderCapabilities = PROVIDER_CLASSES[row.type].catalogueEntry.capabilities;
+    return declared[capability] === value;
+  };
+}
+
+function roleInstance<Role>(row: ProviderRow, provider: Role): RoleInstance<Role> {
+  return { providerId: row.id, name: row.name, provider };
+}
 
 /** Every concrete provider the factory can construct from settings. */
 export type AnyProvider =
@@ -28,8 +74,8 @@ export type AnyProvider =
 /**
  * Active providers resolved into typed, named slots — absent types stay undefined.
  * Carries only the types the single-active invariant still guarantees are singular;
- * `MediaSource` types (Radarr, Sonarr) are constructed via `createInstances` instead,
- * which never collapses same-type instances into one slot.
+ * catalog sources are constructed by the role queries instead, which never collapse
+ * same-type instances into one slot.
  */
 export interface ProviderSet {
   plex?: PlexProvider;
@@ -37,12 +83,6 @@ export interface ProviderSet {
   tautulli?: TautulliProvider;
   seerr?: SeerrProvider;
   tmdb?: TmdbProvider;
-}
-
-/** A constructed provider paired with the settings row it came from (`settings.id` is the providerId). */
-export interface ProviderInstance<T extends AnyProvider = AnyProvider> {
-  settings: MetadataProvider;
-  provider: T;
 }
 
 export interface IProviderFactory {
@@ -53,6 +93,32 @@ export class ProviderFactory implements IProviderFactory {
   /** Construct a single provider from its settings. The one place providers are `new`ed. */
   create(provider: { type: MetadataProviderType } & ProviderConfig, logger: Logger): AnyProvider {
     return new PROVIDER_CLASSES[provider.type](provider, logger);
+  }
+
+  /** Every row whose type declares the movie source, with its connection. */
+  movieSourcesOf(rows: ProviderRow[], logger: Logger): Array<RoleInstance<MovieSource>> {
+    return rows
+      .filter(declaring('source', 'movie'))
+      .map((row) => roleInstance(row, new PROVIDER_CLASSES[row.type](row, logger)));
+  }
+
+  /** Every row whose type declares the series source, with its connection. */
+  seriesSourcesOf(rows: ProviderRow[], logger: Logger): Array<RoleInstance<SeriesSource>> {
+    return rows
+      .filter(declaring('source', 'series'))
+      .map((row) => roleInstance(row, new PROVIDER_CLASSES[row.type](row, logger)));
+  }
+
+  /** The row whose type is the media server for `plexRatingKey` links, with its connection. */
+  plexServerOf(rows: ProviderRow[], logger: Logger): RoleInstance<PlexLinks> | undefined {
+    const row = rows.find(declaring('mediaServer', 'plexRatingKey'));
+    return row && roleInstance(row, new PROVIDER_CLASSES[row.type](row, logger));
+  }
+
+  /** The row whose type is the media server for `jellyfinItemId` links, with its connection. */
+  jellyfinServerOf(rows: ProviderRow[], logger: Logger): RoleInstance<JellyfinLinks> | undefined {
+    const row = rows.find(declaring('mediaServer', 'jellyfinItemId'));
+    return row && roleInstance(row, new PROVIDER_CLASSES[row.type](row, logger));
   }
 
   /** Resolve a list of active provider settings into typed, named slots. */
@@ -69,16 +135,11 @@ export class ProviderFactory implements IProviderFactory {
     return set;
   }
 
-  /** Construct every provider, one entry per configured instance. Never collapses. */
-  createInstances(providers: MetadataProvider[], logger: Logger): ProviderInstance[] {
-    return providers.map((settings) => ({ settings, provider: this.create(settings, logger) }));
-  }
-
   /**
-   * The TVmaze lookup provider, configured for the public TVmaze API. TVmaze is
+   * The title lookup, configured for the public TVmaze API from its catalogue entry. TVmaze is
    * keyless, so no configured provider is required.
    */
-  createTvMaze(logger: Logger): TvMazeProvider {
+  tvMazeLookup(logger: Logger): TitleLookup {
     const { label, defaultUrl } = TvMazeProvider.catalogueEntry;
     return new TvMazeProvider(
       { name: label, url: defaultUrl, apiKey: null, settings: null },

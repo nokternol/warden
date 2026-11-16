@@ -8,11 +8,14 @@ import type { DrizzleDb } from '@server/kernel/db';
 import { resolveGroup } from './groupResolver';
 import { type ProviderListsData, storeProviderLists } from './providerLists';
 import { failureMessage, recordRefreshFailed, recordRefreshed } from './providerRefresh';
-import type { JellyfinLinks, MediaSource, MovieSource, PlexLinks, SeriesSource } from './roles';
-
-interface TVMazeLookupProvider {
-  lookupByTvdbId(tvdbId: number): Promise<{ id: number } | null>;
-}
+import type {
+  JellyfinLinks,
+  MediaSource,
+  MovieSource,
+  PlexLinks,
+  SeriesSource,
+  TitleLookup,
+} from './roles';
 
 const PLEX_CONTENT_TYPE: Record<string, ContentType> = { movie: 'movie', show: 'series' };
 const JELLYFIN_CONTENT_TYPE: Record<string, ContentType> = { Movie: 'movie', Series: 'series' };
@@ -35,7 +38,7 @@ interface Deps {
   plexSource?: { providerId: number; name: string; provider: PlexLinks };
   /** The active Jellyfin server whose items titles link to. */
   jellyfinSource?: { providerId: number; name: string; provider: JellyfinLinks };
-  tvMazeLookup?: TVMazeLookupProvider;
+  tvMazeLookup?: TitleLookup;
   delay?: (ms: number) => Promise<void>;
   /** One entry per active Radarr or Sonarr instance whose setup lists are kept. */
   listSources?: Array<{ providerId: number; name: string; provider: MediaSource }>;

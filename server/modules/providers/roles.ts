@@ -65,6 +65,11 @@ export interface JellyfinLinks {
   >;
 }
 
+/** Resolves a series' TVmaze id from its TheTVDB id, for the catalog refresh. */
+export interface TitleLookup {
+  lookupByTvdbId(tvdbId: number): Promise<{ id: number } | null>;
+}
+
 /** One field within a `fields`-shaped parameter — see `ActuatorTaskParameter`. */
 export interface ActuatorTaskParameterField {
   key: string;

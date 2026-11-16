@@ -28,7 +28,7 @@ export { isMediaActuator } from './roles';
 // ProviderFactory keeps a value export because consumers construct it as an
 // injection fallback; the container-only classes are types here.
 export { ProviderFactory } from './providerFactory';
-export type { IProviderFactory, ProviderInstance } from './providerFactory';
+export type { IProviderFactory } from './providerFactory';
 
 // Provider settings — persistence and projection of configured providers.
 export { ProviderSettingsService } from './providerSettingsService';
