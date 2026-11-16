@@ -6,9 +6,9 @@
  * contract, not a barrel. Anything not exported is module-private, and a
  * growing export list is a design smell to challenge.
  *
- * The per-system connection classes and their payload types are part of the
- * contract — media owns the `MediaEnricher` port and builds its adapters
- * directly over these connections' native surface.
+ * Each provider type declares what it can do on its connection class
+ * (`catalogueEntry` and the role interfaces it implements); callers ask for a
+ * capability, never a provider type.
  */
 
 // HTTP surface — this module's procedures of the API contract.
@@ -71,8 +71,11 @@ export { readProviderLists } from './providerLists';
 export type { ProviderListsData } from './providerLists';
 export type { ProviderListsReader } from './providerListsReader';
 
-// Connection classes + payload types still consumed outside the module
-// (search handler, media handler, enrichment mappers) until Phase 4.
+// Connection classes and the payload types callers read. The classes stay
+// exported only while Search (#238) and the enricher adapters (#246) still
+// import them; every other caller asks for a capability through the role
+// interfaces and the factory's role queries. Payload types that only the
+// connections use (profiles, tags) stay module-private.
 export { JellyfinProvider } from './connections/jellyfinProvider';
 export type {
   JellyfinItem,
@@ -86,9 +89,9 @@ export type { SeerrIssue, SeerrRequest } from './connections/seerrProvider';
 export { PlexProvider } from './connections/plexProvider';
 export type { PlexMedia, PlexMediaItem, PlexMediaPart } from './connections/plexProvider';
 export { RadarrProvider } from './connections/radarrProvider';
-export type { RadarrMovie, RadarrProfile, RadarrTag } from './connections/radarrProvider';
+export type { RadarrMovie } from './connections/radarrProvider';
 export { SonarrProvider } from './connections/sonarrProvider';
-export type { SonarrProfile, SonarrSeries, SonarrTag } from './connections/sonarrProvider';
+export type { SonarrSeries } from './connections/sonarrProvider';
 export { TautulliProvider } from './connections/tautulliProvider';
 export type { TautulliHistoryItem } from './connections/tautulliProvider';
 export { TmdbProvider } from './connections/tmdbProvider';
