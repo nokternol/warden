@@ -122,10 +122,12 @@ instance can actually do.
 `AutomationExecutor` binds the specific provider instance by `automation.provider.id`, resolves the task by
 `provider.tasks().find(t => t.id === taskId)`, enforces enablement via
 `readEnabledTaskIds(providerSettings.settings)`, evaluates the query, and calls
-`task.run(ids, automation.taskParameter)` — the runner already bound to the instance. `task.affects`
-drives the `media:changed` event, sent once the task has acted whether or not it then succeeds. When a task
-declares it is a written rule at `ActuatorTaskDescriptor.affects` ([`roles.ts`](ref:path:server/modules/providers/roles.ts)), and
-[`actuatorTaskAffects.test.ts`](ref:path:server/__tests__/modules/providers/actuatorTaskAffects.test.ts) pins every task that leaves it off. `SYSTEM_TASKS` (`system:enrichment`, `system:identity-resolution`) are
+`task.run(ids, automation.taskParameter)` — the runner already bound to the instance. A user run sends
+no `media:changed`: the library copy changes only on the scheduled catalog refresh and enrichment, so
+what a run changed shows after the next refresh. `ActuatorTaskDescriptor.affects` ([`roles.ts`](ref:path:server/modules/providers/roles.ts))
+still declares whether a task has changed library data by the time it returns; nothing reads it yet, and
+it is kept for refreshing what a run just changed (#256).
+[`actuatorTaskAffects.test.ts`](ref:path:server/__tests__/modules/providers/actuatorTaskAffects.test.ts) pins every task that leaves it off. The system jobs (`system:enrichment`, and `system:identity-resolution`, which is the catalog refresh's task id) are
 separate: internal jobs run via `SystemTaskRunner`, not actuator tasks, and absent from the discovery
 surface.
 
@@ -155,25 +157,28 @@ a `MediaSource`** — valid only while the actuator is also a catalog owner. Tha
 the executor branches on `isMediaSourceType(providerSettings.type)`
 ([`server/modules/automations/automationExecutor.ts`](ref:path:server/modules/automations/automationExecutor.ts)).
 
-- **Source actuator (Radarr/Sonarr):** the query evaluates against the instance's own
-  catalog (its rows from the source read cache's `readOne`, never a sibling instance's) and its native ids (`mediaSource.idOf`) feed the task directly, one target per native id (an
-  item its catalog lists twice is targeted once).
-- **Non-source actuator (Plex/Jellyfin/Tautulli):** it owns no catalog, so the query evaluates against
-  the content type's owning source instances (every instance's rows from the source read cache's `readAll`, [`server/modules/media/sourceReadCache.ts`](ref:path:server/modules/media/sourceReadCache.ts), pooled into one source), and matched
-  items are translated into the actuator's addressing space by `resolveActuatorTargets`
-  ([`server/modules/media/actuatorIdResolver.ts`](ref:path:server/modules/media/actuatorIdResolver.ts)):
-  each item's `(providerId, externalId)` coordinate joins through `media_item` to its `media_identity`
-  group, whose `plexRatingKey`/`jellyfinItemId` column carries the actuator-native id. Identities the
-  resolution job has not stamped drop out (there is no id to address), and multiple instance copies of
-  one identity collapse to a single id. The resolver also returns the matched items that reached an id;
-  those are the run's targets, recorded as its run items, and the run's `itemCount` counts them. Two
-  instance copies of one title therefore count as two targeted items even though the task receives one
-  id.
+Both plan on the library copy ([`LibraryCache`](ref:path:server/modules/media/libraryCache.ts)) as it
+stands; no run reads a provider's library live.
+
+- **Source actuator (Radarr/Sonarr):** the included queries evaluate against the instance's own copies,
+  never a sibling instance's, and their native ids feed the task directly, one target per native id.
+- **Non-source actuator (Plex/Jellyfin/Tautulli):** it owns no catalog, so the included queries
+  evaluate against every active source instance's copies, and each matched copy reaches the actuator by
+  its title's media-server id, read by `actuatorIdOf`
+  ([`server/modules/media/actuatorIdResolver.ts`](ref:path:server/modules/media/actuatorIdResolver.ts)).
+  A title the catalog refresh has not linked drops out (there is no id to address), and copies of one
+  title collapse to a single id. The matched copies that reached an id are the run's targets, recorded
+  as its run items by their `media_item` ids, so two instance copies of one title count as two targeted
+  items even though the task receives one id.
+
+For every actuator, an exclude protects the whole title: a title with any copy, on any active
+instance, matching an excluded query is left out.
 
 Translation is keyed by **addressing space, not provider**: Tautulli has no id space of its own — it
-reports entirely against Plex rating keys — so it shares Plex's `plexRatingKey` column. The spaces are
-populated by the identity job's stamping passes (`runForPlex`, `runForJellyfin`,
-[`server/modules/providers/identityResolutionJob.ts`](ref:path:server/modules/providers/identityResolutionJob.ts)).
+reports entirely against Plex rating keys — so it shares Plex's `plexRatingKey` column
+(`ADDRESS_COLUMN_BY_TYPE`). The catalog refresh links titles to Plex and Jellyfin items (`runForPlex`,
+`runForJellyfin`, [`server/modules/providers/catalogRefreshJob.ts`](ref:path:server/modules/providers/catalogRefreshJob.ts))
+and clears links the server no longer lists.
 
 ## How it is wired
 

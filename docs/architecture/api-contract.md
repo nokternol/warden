@@ -129,8 +129,8 @@ encodes it.
 - **No server-only features.** [`procedureCoverage.test.ts`](ref:path:src/__tests__/contract/procedureCoverage.test.ts)
   requires every contract procedure to be called somewhere in `src/`, outside tests and stories. Its
   explicit allowlist names the procedures no client calls, each with a reason: `system.health`, which
-  the container health check probes, and the deferred `appSettings.get`, `appSettings.update` and
-  `providers.metadata`, which have no client consumer yet. Deferred procedures stay in the contract and
+  the container health check probes, and the deferred `appSettings.get` and `appSettings.update`,
+  which have no client consumer yet. Deferred procedures stay in the contract and
   stay implemented; the root middleware answers them 404.
 - **Direction.** [`.dependency-cruiser.cjs`](ref:path:.dependency-cruiser.cjs) forbids `src/` importing
   `server/`, `server/` importing `src/` (type-only imports included), and `contract/` importing either.

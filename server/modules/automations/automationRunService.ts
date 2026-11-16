@@ -1,4 +1,4 @@
-import type { AutomationRunStatus, ContentType, RunItemDto } from '@contract/schemas';
+import type { AutomationRunStatus, ContentType, Freshness, RunItemDto } from '@contract/schemas';
 import { asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import {
   automationRunItems,
@@ -8,7 +8,6 @@ import {
   mediaItems,
 } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
-import { type MediaItem, ensureSourceCopies } from '../media';
 
 export interface AutomationRunDto {
   id: number;
@@ -18,6 +17,7 @@ export interface AutomationRunDto {
   status: AutomationRunStatus;
   itemCount: number | null;
   error: string | null;
+  freshness: Freshness | null;
   createdAt: Date;
 }
 
@@ -26,10 +26,12 @@ export interface RunItemPage {
   total: number;
 }
 
-/** The catalog items a user run acted on, all of its query's content type. */
+/** The copies a user run acted on, by their `media_item` ids in the library copy. */
 export interface RunTargets {
   contentType: ContentType;
-  items: MediaItem[];
+  mediaItemIds: number[];
+  /** How current the copy those ids come from was. */
+  freshness?: Freshness;
 }
 
 export interface CreateRunData {
@@ -68,6 +70,8 @@ function rowToDto(row: {
   status: string;
   itemCount: number | null;
   error: string | null;
+  freshnessAsOf?: number | null;
+  freshnessStale?: string | null;
   createdAt: unknown;
 }): AutomationRunDto {
   return {
@@ -78,6 +82,10 @@ function rowToDto(row: {
     status: row.status as AutomationRunStatus,
     itemCount: row.itemCount ?? null,
     error: row.error ?? null,
+    freshness:
+      row.freshnessStale == null
+        ? null
+        : { asOf: row.freshnessAsOf ?? null, stale: JSON.parse(row.freshnessStale) },
     createdAt: toDate(row.createdAt),
   };
 }
@@ -91,6 +99,8 @@ const RUN_COLUMNS = {
   status: automationRuns.status,
   itemCount: automationRuns.itemCount,
   error: automationRuns.error,
+  freshnessAsOf: automationRuns.freshnessAsOf,
+  freshnessStale: automationRuns.freshnessStale,
   createdAt: automationRuns.createdAt,
 };
 
@@ -106,9 +116,7 @@ export class AutomationRunService {
    * SQLite transaction, so a run is never recorded without its items.
    */
   async createRun(data: CreateRunData): Promise<AutomationRunDto> {
-    const mediaItemIds = data.targets
-      ? await ensureSourceCopies(this.db, data.targets.contentType, data.targets.items)
-      : [];
+    const mediaItemIds = data.targets?.mediaItemIds ?? [];
     const insertRun = this.db
       .insert(automationRuns)
       .values({
@@ -118,6 +126,10 @@ export class AutomationRunService {
         itemCount: data.itemCount ?? null,
         error: data.error ?? null,
         kind: data.kind ?? 'user',
+        freshnessAsOf: data.targets?.freshness?.asOf ?? null,
+        freshnessStale: data.targets?.freshness
+          ? JSON.stringify(data.targets.freshness.stale)
+          : null,
       })
       .returning();
     const [[row]] =
@@ -138,6 +150,8 @@ export class AutomationRunService {
       status: row.status,
       itemCount: row.itemCount ?? null,
       error: row.error ?? null,
+      freshnessAsOf: row.freshnessAsOf,
+      freshnessStale: row.freshnessStale,
       createdAt: row.createdAt,
     });
   }
@@ -147,7 +161,7 @@ export class AutomationRunService {
     return this.createRun({
       ...data,
       status: 'running',
-      itemCount: data.targets.items.length,
+      itemCount: data.targets.mediaItemIds.length,
     });
   }
 
@@ -188,17 +202,6 @@ export class AutomationRunService {
       .update(automationRuns)
       .set({ status: 'error', error: INTERRUPTED_RUN_ERROR })
       .where(eq(automationRuns.status, 'running'));
-  }
-
-  async latestStatusOfTask(taskId: string): Promise<AutomationRunStatus | undefined> {
-    const [row] = await this.db
-      .select({ status: automationRuns.status })
-      .from(automationRuns)
-      .innerJoin(automations, eq(automationRuns.automationId, automations.id))
-      .where(eq(automations.taskId, taskId))
-      .orderBy(desc(automationRuns.id))
-      .limit(1);
-    return row?.status as AutomationRunStatus | undefined;
   }
 
   async countRuns(opts: Pick<ListRunsOptions, 'automationId'> = {}): Promise<number> {

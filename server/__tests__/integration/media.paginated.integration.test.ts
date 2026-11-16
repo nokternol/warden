@@ -22,11 +22,12 @@ import {
   expectErrorResponse,
   expectSuccessResponse,
 } from '@tests/helpers/api';
+import { refreshCatalog } from '@tests/helpers/library';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -59,6 +60,7 @@ const mockUser = {
 
 // ─── Suite ────────────────────────────────────────────────────────────────────
 
+let libraryCradle: import('@server/container').Cradle;
 describe('Paginated Media API', () => {
   let authedApp: Express;
   let unauthedApp: Express;
@@ -66,18 +68,10 @@ describe('Paginated Media API', () => {
   let unauthedClient: ReturnType<typeof createApiClient>;
   let cradle: ReturnType<typeof buildContainer>['cradle'];
 
-  // Each build subscribes to the shared bus; dispose them so listeners don't pile up across tests.
-  const builtMedia: Array<{ dispose(): void }> = [];
   function buildMedia() {
     const media = createMediaProcedures(cradle);
-    builtMedia.push(media);
     return media;
   }
-  afterEach(() => {
-    for (const media of builtMedia.splice(0)) media.dispose();
-    // The container's one read cache outlives each test; each test sets its own upstream answers.
-    cradle.sourceReadCache.clear();
-  });
 
   beforeAll(async () => {
     const mockConfig = createMockConfig({
@@ -92,6 +86,7 @@ describe('Paginated Media API', () => {
     const config = loadConfig();
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
+    libraryCradle = container.cradle;
     cradle = container.cradle;
     const { providerSettingsService } = cradle;
 
@@ -137,10 +132,11 @@ describe('Paginated Media API', () => {
   // Override Radarr to return 5 movies before each test so the cache is
   // populated with predictable data. vitest.server.ts resets handlers in
   // afterEach, so we re-apply here.
-  beforeEach(() => {
+  beforeEach(async () => {
     server.use(
       http.get('http://localhost:7878/api/v3/movie', () => HttpResponse.json(makeMovies(5)))
     );
+    await refreshCatalog(libraryCradle);
   });
 
   // ─── /api/media/movie ───────────────────────────────────────────────────────
@@ -249,98 +245,4 @@ describe('Paginated Media API', () => {
   // Each test creates a fresh serveApi({ media: buildMedia().procedures }) so the cache is cold
   // and the per-test MSW override is the sole source of truth for that request.
   //
-  describe('provider error propagation', () => {
-    function buildErrorClient(
-      routes: ReturnType<typeof serveApi>
-    ): ReturnType<typeof createApiClient> {
-      const app = express();
-      app.use(express.json());
-      app.use(requestIdMiddleware);
-      app.use((_req: Request, _res: Response, next: NextFunction) => {
-        _req.user = mockUser;
-        next();
-      });
-      app.use('/api/media', routes);
-      app.use(errorHandlerMiddleware);
-      return createApiClient(app);
-    }
-
-    it('GET /api/media/movie includes errors when Radarr returns 500', async () => {
-      server.use(
-        http.get(
-          'http://localhost:7878/api/v3/movie',
-          () => new HttpResponse(null, { status: 500 })
-        )
-      );
-
-      const client = buildErrorClient(serveApi({ media: buildMedia().procedures }));
-      const res = await client.get(browsePath('movie'));
-      const data = expectSuccessResponse(res);
-
-      expect(data.items).toEqual([]);
-      expect(data.totalCount).toBe(0);
-      expect(Array.isArray(data.errors)).toBe(true);
-      expect(data.errors).toHaveLength(1);
-      expect(data.errors[0]).toMatchObject({ provider: 'Radarr' });
-      expect(data.errors[0].error).toMatch(/^Couldn't be reached: /);
-    });
-
-    it('GET /api/media/series includes errors when Sonarr returns 500', async () => {
-      server.use(
-        http.get(
-          'http://localhost:8989/api/v3/series',
-          () => new HttpResponse(null, { status: 500 })
-        )
-      );
-
-      const client = buildErrorClient(serveApi({ media: buildMedia().procedures }));
-      const res = await client.get(browsePath('series'));
-      const data = expectSuccessResponse(res);
-
-      expect(data.items).toEqual([]);
-      expect(data.totalCount).toBe(0);
-      expect(Array.isArray(data.errors)).toBe(true);
-      expect(data.errors).toHaveLength(1);
-      expect(data.errors[0]).toMatchObject({ provider: 'Sonarr' });
-    });
-
-    it('GET /api/media/movie has errors: [] when Radarr is healthy', async () => {
-      server.use(
-        http.get('http://localhost:7878/api/v3/movie', () => HttpResponse.json(makeMovies(2)))
-      );
-
-      const client = buildErrorClient(serveApi({ media: buildMedia().procedures }));
-      const res = await client.get(browsePath('movie'));
-      const data = expectSuccessResponse(res);
-
-      expect(Array.isArray(data.errors)).toBe(true);
-      expect(data.errors).toEqual([]);
-    });
-
-    it('GET /api/media/series has errors: [] when Sonarr is healthy', async () => {
-      server.use(
-        http.get('http://localhost:8989/api/v3/series', () =>
-          HttpResponse.json([
-            {
-              id: 1,
-              title: 'Breaking Bad',
-              status: 'ended',
-              monitored: true,
-              tvdbId: 81189,
-              qualityProfileId: 1,
-              tags: [],
-              path: '/tv/Breaking Bad',
-            },
-          ])
-        )
-      );
-
-      const client = buildErrorClient(serveApi({ media: buildMedia().procedures }));
-      const res = await client.get(browsePath('series'));
-      const data = expectSuccessResponse(res);
-
-      expect(Array.isArray(data.errors)).toBe(true);
-      expect(data.errors).toEqual([]);
-    });
-  });
 });

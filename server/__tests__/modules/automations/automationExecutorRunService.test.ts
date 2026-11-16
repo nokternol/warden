@@ -15,9 +15,9 @@ import { AutomationRunService } from '@server/modules/automations/automationRunS
 import { AutomationService } from '@server/modules/automations/automationService';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
-import { IdentityResolutionJob } from '@server/modules/providers/identityResolutionJob';
+import { CatalogRefreshJob } from '@server/modules/providers/catalogRefreshJob';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
-import { sourceReadCacheHolding, sourceReadCacheOver } from '@tests/helpers/sourceReadCache';
+import { libraryCacheHolding, libraryCacheOver } from '@tests/helpers/library';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createRadarrMovie } from '../../../../tests/factories';
@@ -57,7 +57,7 @@ describe('AutomationExecutor writes to automation_runs', () => {
       automationService,
       automationRunService,
       providerSettingsService,
-      sourceReadCache: sourceReadCacheOver(providerSettingsService),
+      libraryCache: libraryCacheOver(providerSettingsService),
       mediaQueryService,
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),
@@ -73,7 +73,7 @@ describe('AutomationExecutor writes to automation_runs', () => {
     const movies = [createRadarrMovie({ id: 1, title: 'The Matrix', year: 1999, hasFile: true })];
     server.use(
       http.get(`${RADARR_URL}/api/v3/movie`, () => HttpResponse.json(movies)),
-      http.put(`${RADARR_URL}/api/v3/movie/:id`, () =>
+      http.put(`${RADARR_URL}/api/v3/movie/editor`, () =>
         HttpResponse.json({ id: 1, monitored: false })
       )
     );
@@ -184,7 +184,7 @@ describe('AutomationExecutor writes to automation_runs', () => {
     function serveRadarr(movies: ReturnType<typeof createRadarrMovie>[]) {
       server.use(
         http.get(`${RADARR_URL}/api/v3/movie`, () => HttpResponse.json(movies)),
-        http.put(`${RADARR_URL}/api/v3/movie/:id`, () => HttpResponse.json({}))
+        http.put(`${RADARR_URL}/api/v3/movie/editor`, () => HttpResponse.json({}))
       );
     }
 
@@ -236,11 +236,12 @@ describe('AutomationExecutor writes to automation_runs', () => {
       const { provider, automation } = await seedRadarrAutomation();
       await executor.execute(automation.id);
 
-      await new IdentityResolutionJob({
+      await new CatalogRefreshJob({
         db: getDb(),
         movieSources: [
           {
             providerId: provider.id,
+            name: 'Radarr',
             provider: {
               getMovies: async () => [createRadarrMovie({ id: 9, tmdbId: 109, title: 'Other' })],
             },
@@ -258,7 +259,7 @@ describe('AutomationExecutor writes to automation_runs', () => {
         http.get(`${RADARR_URL}/api/v3/movie`, () =>
           HttpResponse.json([createRadarrMovie({ id: 4, tmdbId: 104, title: 'Alien' })])
         ),
-        http.put(`${RADARR_URL}/api/v3/movie/:id`, () => new HttpResponse(null, { status: 400 }))
+        http.put(`${RADARR_URL}/api/v3/movie/editor`, () => new HttpResponse(null, { status: 400 }))
       );
       const { automation } = await seedRadarrAutomation();
 

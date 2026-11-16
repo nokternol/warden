@@ -211,19 +211,15 @@ export class RadarrProvider extends BaseProviderConnection implements MediaActua
       .json<RadarrMovie[]>();
   }
 
+  /** Unmonitors the movies in one editor request; nothing is read from Radarr first. */
   public async unmonitorMovies(movieIds: number[]): Promise<void> {
-    const all = await this.getMovies();
-    const targets = all.filter((m) => movieIds.includes(m.id));
-    await Promise.all(
-      targets.map((movie) =>
-        this.client
-          .put(`movie/${movie.id}`, {
-            searchParams: this.apiParams,
-            json: { ...movie, monitored: false },
-          })
-          .json()
-      )
-    );
+    if (movieIds.length === 0) return;
+    await this.client
+      .put('movie/editor', {
+        searchParams: this.apiParams,
+        json: { movieIds, monitored: false },
+      })
+      .json();
   }
 
   public async triggerMoviesSearch(movieIds: number[]): Promise<void> {
@@ -257,11 +253,13 @@ export class RadarrProvider extends BaseProviderConnection implements MediaActua
   public async deleteMovies(movieIds: number[]): Promise<void> {
     await Promise.all(
       movieIds.map((id) =>
-        this.client
-          .delete(`movie/${id}`, {
-            searchParams: { ...this.apiParams, deleteFiles: 'true', addImportExclusion: 'false' },
-          })
-          .json()
+        this.deleteAlreadyGoneIsDone(() =>
+          this.client
+            .delete(`movie/${id}`, {
+              searchParams: { ...this.apiParams, deleteFiles: 'true', addImportExclusion: 'false' },
+            })
+            .json()
+        )
       )
     );
   }
@@ -269,11 +267,17 @@ export class RadarrProvider extends BaseProviderConnection implements MediaActua
   public async deleteMoviesKeepFiles(movieIds: number[]): Promise<void> {
     await Promise.all(
       movieIds.map((id) =>
-        this.client
-          .delete(`movie/${id}`, {
-            searchParams: { ...this.apiParams, deleteFiles: 'false', addImportExclusion: 'false' },
-          })
-          .json()
+        this.deleteAlreadyGoneIsDone(() =>
+          this.client
+            .delete(`movie/${id}`, {
+              searchParams: {
+                ...this.apiParams,
+                deleteFiles: 'false',
+                addImportExclusion: 'false',
+              },
+            })
+            .json()
+        )
       )
     );
   }

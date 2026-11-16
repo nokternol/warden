@@ -204,3 +204,15 @@ describe('JellyfinProvider — actuator tasks', () => {
     );
   });
 });
+
+describe('JellyfinProvider — deleting an item already gone', () => {
+  const provider = new JellyfinProvider(mockConfig, logger);
+
+  it('counts a delete answered 404 as done', async () => {
+    server.use(
+      http.delete(`${JELLYFIN_URL}/Items/:id`, () => new HttpResponse(null, { status: 404 }))
+    );
+
+    await expect(provider.deleteItems(['jf-1'])).resolves.toBeUndefined();
+  });
+});

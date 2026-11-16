@@ -16,6 +16,7 @@ import {
   expectSuccessResponse,
 } from '@tests/helpers/api';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
+import { refreshCatalog } from '@tests/helpers/library';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import { http, HttpResponse } from 'msw';
@@ -68,6 +69,8 @@ const SERIES = [
  * one active instance the browse page and the preview count describe the
  * same set of items.
  */
+
+let libraryCradle: import('@server/container').Cradle;
 describe('Browse speaks the save encoding', () => {
   let client: ReturnType<typeof createApiClient>;
   let mediaQueryService: MediaQueryService;
@@ -86,6 +89,7 @@ describe('Browse speaks the save encoding', () => {
     const config = loadConfig();
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
+    libraryCradle = container.cradle;
     mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
 
     ({ id: radarrId } = await container.cradle.providerSettingsService.create({
@@ -122,11 +126,12 @@ describe('Browse speaks the save encoding', () => {
     await closeDatabase();
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     server.use(
       http.get(`${RADARR_URL}/api/v3/movie`, () => HttpResponse.json(MOVIES)),
       http.get(`${SONARR_URL}/api/v3/series`, () => HttpResponse.json(SERIES))
     );
+    await refreshCatalog(libraryCradle);
   });
 
   async function browse(contentType: 'movie' | 'series', filters: Filter[]) {

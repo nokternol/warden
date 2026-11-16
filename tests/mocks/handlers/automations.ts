@@ -38,7 +38,11 @@ export const MOCK_AUTOMATIONS: AutomationDto[] = [
 export const automationsHandlers = [
   mockProcedure(contract.automations.list, () => MOCK_AUTOMATIONS),
 
-  mockProcedure(contract.automations.preview, () => ({ count: 3, contentType: 'movie' as const })),
+  mockProcedure(contract.automations.preview, () => ({
+    count: 3,
+    contentType: 'movie' as const,
+    records: [],
+  })),
 
   mockProcedure(contract.automations.create, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
@@ -74,6 +78,7 @@ export const automationsHandlers = [
     problems: [],
     count: 3,
     contentType: 'movie' as const,
+    records: [],
   })),
   mockProcedure(contract.automations.signOff, () => null),
 ];
@@ -124,6 +129,6 @@ export const mediaQueriesHandlers = [
 
   mockProcedure(contract.mediaQueries.preview, ({ params }) => {
     const count = Number(params.id) === 1 ? 42 : 14;
-    return { count };
+    return { count, records: [] };
   }),
 ];

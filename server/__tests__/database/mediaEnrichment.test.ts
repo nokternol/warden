@@ -1,4 +1,10 @@
-import { enrichmentField, mediaEnrichment, mediaIdentity } from '@server/database/schema';
+import {
+  MetadataProviderType,
+  enrichmentField,
+  mediaEnrichment,
+  mediaIdentity,
+  metadataProviders,
+} from '@server/database/schema';
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { fieldsByProviderType } from '@server/modules/media/activeFieldSet';
@@ -20,8 +26,14 @@ const testConfig: AppConfig = {
 };
 
 describe('media_enrichment table', () => {
+  let providerId: number;
+
   beforeEach(async () => {
     await initializeDatabase(testConfig);
+    [{ id: providerId }] = await getDb()
+      .insert(metadataProviders)
+      .values({ type: MetadataProviderType.TAUTULLI, name: 'Tautulli', url: 'http://t' })
+      .returning({ id: metadataProviders.id });
   });
 
   afterEach(async () => {
@@ -41,7 +53,7 @@ describe('media_enrichment table', () => {
 
     const [enr] = await db
       .insert(mediaEnrichment)
-      .values({ mediaIdentityId: identity.id, fieldId: field.id, value: '7' })
+      .values({ mediaIdentityId: identity.id, fieldId: field.id, providerId, value: '7' })
       .returning();
 
     expect(enr.mediaIdentityId).toBe(identity.id);
@@ -49,7 +61,7 @@ describe('media_enrichment table', () => {
     expect(JSON.parse(enr.value)).toBe(7);
   });
 
-  it('enforces UNIQUE on (mediaIdentityId, fieldId) — one row per field per identity', async () => {
+  it('enforces UNIQUE on (mediaIdentityId, fieldId, providerId) — one row per field per provider', async () => {
     const db = getDb();
     const [identity] = await db.insert(mediaIdentity).values({ contentType: 'movie' }).returning();
     const [field] = await db
@@ -59,11 +71,11 @@ describe('media_enrichment table', () => {
 
     await db
       .insert(mediaEnrichment)
-      .values({ mediaIdentityId: identity.id, fieldId: field.id, value: '1' });
+      .values({ mediaIdentityId: identity.id, fieldId: field.id, providerId, value: '1' });
     await expect(
       db
         .insert(mediaEnrichment)
-        .values({ mediaIdentityId: identity.id, fieldId: field.id, value: '2' })
+        .values({ mediaIdentityId: identity.id, fieldId: field.id, providerId, value: '2' })
     ).rejects.toThrow();
   });
 });

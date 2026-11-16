@@ -63,16 +63,22 @@ should do. It makes whatever they decide possible, safe and repeatable.
    Warden is can be seen and set by the owner. Wherever Warden shows or uses what it knows, it is
    clear how current that is. Queries answer quickly from the cache: the matches they show are what
    the cache holds now, not a promise of what a scheduled run will act on later. Warden does not
-   hold back actions, add manual steps or demand fresh data to work around staleness.
+   hold back actions, add manual steps or demand fresh data to work around staleness. Warden
+   believes what a service answers. A successful answer is that service's truth, even when it is
+   empty; only an error or no answer is a failure, and then Warden keeps what it last had. Warden
+   does not guess whether a successful answer is wrong.
 
 7. **Destructive actions are the owner's choice, and accountable.** The owner can schedule any
    action, destructive ones included, and accepts the risk of it acting on the cache as it stands
-   when the run happens. Warden makes it clear when an action being set up is destructive.
-   Warden trusts the owner's conditions and guards against its own faults. What an automation would
-   act on now is always one step away, so the owner can review it whenever they choose; reviewing is
-   never required. Warden does not run a destructive action when its own data looks broken (a
-   service failed to answer, or the run would reach most of the library), because that is far more
-   likely a fault than the owner's intent. Afterwards, Warden can always say what it did, to which
+   when the run happens. Warden trusts the owner's conditions and never decides for them whether an
+   action may run because of how much it would affect. It makes it clear when an action is
+   destructive, and warns well before the schedule reaches it when a destructive action would
+   affect a large share of the library, so the owner can review it. What an automation would act on
+   now is always one step away, so the owner can review it whenever they choose; reviewing is never
+   required. Warden does not run a destructive action when a service it depends on failed to
+   answer, because that is far more likely a fault than the owner's intent. A service that has
+   never been read counts as one that failed to answer. A fact that another connected service
+   still supplies does not depend on the one that failed. Afterwards, Warden can always say what it did, to which
    titles and when, even after those titles are gone from every service.
 
 8. **One meaning per idea.** Each idea in Warden has one name and one way of working, the same in what

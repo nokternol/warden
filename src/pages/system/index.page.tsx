@@ -1,4 +1,5 @@
 import AppLayout from '@app/components/AppLayout';
+import AsOfLine from '@app/components/AsOfLine';
 import AsyncBoundary from '@app/components/AsyncBoundary';
 import AutomationRow, { AUTOMATION_COLUMNS } from '@app/components/AutomationRow';
 import EmptyState from '@app/components/EmptyState';
@@ -26,6 +27,7 @@ export default function SystemPage() {
   const { data: movies } = useApi(api.media.browse.movie, { pageSize: 1 });
   const { data: series } = useApi(api.media.browse.series, { pageSize: 1 });
   const titleCount = movies && series ? movies.totalCount + series.totalCount : undefined;
+  const records = movies && series ? [...movies.records, ...series.records] : undefined;
 
   return (
     <AppLayout sidebar={<SidebarNav />} topBar={<TopBar title="System" />}>
@@ -74,9 +76,14 @@ export default function SystemPage() {
             Media data
           </h2>
           <p className="text-xs text-text-muted mb-4 max-w-prose">
-            Clears Warden's stored identities and enrichment so they can be rebuilt. Your providers
-            and their libraries are not touched.
+            Clears Warden's copy of your library so the scheduled refreshes rebuild it. Your
+            providers and their libraries are not touched.
           </p>
+          {records && (
+            <div className="mb-3">
+              <AsOfLine records={records} />
+            </div>
+          )}
           <MediaResetControl
             titleCount={titleCount}
             onReset={async () => {

@@ -84,9 +84,9 @@ export default function MediaResetControl({
         />
         <p className="text-sm text-text-primary">
           {titleCount !== undefined && `Your library lists ${titleCount.toLocaleString()} titles. `}
-          Deletes every resolved title and its enrichment data. Nothing is fetched from Radarr,
-          Sonarr, or your other providers — this is a local rebuild only. Run identity resolution
-          and enrichment afterwards to repopulate.
+          Deletes Warden's copy of your library: every title, its facts, the providers' stored lists
+          and when each was last refreshed. Nothing is changed in Radarr, Sonarr or your other
+          providers. Until the next catalog refresh and enrichment run, Warden shows no titles.
         </p>
       </div>
       <label className="block mt-2.5">

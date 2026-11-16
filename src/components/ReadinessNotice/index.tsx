@@ -1,7 +1,11 @@
-import type { ReadinessFinding } from '@contract/readiness';
+import { type ReadinessFinding, isInformational } from '@contract/readiness';
 
-/** Why the filters shown may not select what they describe, stated beside the results. */
-export default function ReadinessNotice({ findings }: { findings: ReadinessFinding[] }) {
+/**
+ * Why the filters shown may not select what they describe, stated beside the results.
+ * Informational findings are left out: the copy's "As of" line already names those providers.
+ */
+export default function ReadinessNotice({ findings: all }: { findings: ReadinessFinding[] }) {
+  const findings = all.filter((f) => !isInformational(f));
   if (findings.length === 0) return null;
   return (
     <div

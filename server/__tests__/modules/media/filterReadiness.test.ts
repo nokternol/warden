@@ -17,15 +17,14 @@ import { describe, expect, it } from 'vitest';
 
 const { RADARR, SONARR, PLEX, TAUTULLI } = MetadataProviderType;
 
-/** Facts with these instances, enrichment succeeded, and no field values unless given. */
+/** Facts with these instances, every one with a successful `facts` refresh unless given. */
 function facts(
   providers: ProviderFact[],
   overrides: Partial<Omit<ReadinessFacts, 'providers'>> = {}
 ): ReadinessFacts {
   return {
     providers,
-    latestEnrichment: 'success',
-    fieldsWithValues: { movie: new Set(), series: new Set() },
+    factsRecords: providers.map((p) => ({ providerId: p.id, refreshedAt: 1, failedAt: null })),
     ...overrides,
   };
 }
@@ -70,9 +69,7 @@ describe('findingsFor', () => {
   });
 
   it('raises nothing for an enrichment-only filter when any one of its producers is active', () => {
-    const f = facts([active(1, RADARR), active(2, TAUTULLI)], {
-      fieldsWithValues: { movie: new Set(['playCount']), series: new Set() },
-    });
+    const f = facts([active(1, RADARR), active(2, TAUTULLI)]);
     expect(kinds(movies([{ ruleKey: 'watched', value: true }]), f)).toEqual([]);
   });
 
@@ -130,28 +127,40 @@ describe('findingsFor', () => {
 
   describe('an enrichment-only filter with an active producer', () => {
     const watched = movies([{ ruleKey: 'watched', value: true }]);
-    const withValues = { movie: new Set(['playCount'] as const), series: new Set<never>() };
 
-    it('raises data-incomplete when the latest enrichment run did not succeed, or none has finished', () => {
-      for (const latestEnrichment of ['error', undefined] as const) {
-        const f = facts([active(1, RADARR), active(2, TAUTULLI)], {
-          latestEnrichment,
-          fieldsWithValues: withValues,
-        });
-        expect(kinds(watched, f)).toEqual(['data-incomplete']);
+    it("raises data-incomplete, naming the supplier, while a supplier's facts failed or never refreshed", () => {
+      const providers = [active(1, RADARR), active(4, PLEX), active(2, TAUTULLI)];
+      const failed = facts(providers, {
+        factsRecords: [
+          { providerId: 4, refreshedAt: 1, failedAt: null },
+          { providerId: 2, refreshedAt: 1, failedAt: 5 },
+        ],
+      });
+      const never = facts(providers, {
+        factsRecords: [{ providerId: 4, refreshedAt: 1, failedAt: null }],
+      });
+      for (const f of [failed, never]) {
+        expect(findingsFor(f, watched)).toMatchObject([
+          { kind: 'data-incomplete', ruleKey: 'watched', providerIds: [2] },
+        ]);
       }
     });
 
-    it("raises no-data, naming the field's active producers, when no title holds a value for its field", () => {
+    it('believes successful facts records: a fact no title holds raises nothing', () => {
       const f = facts([active(1, RADARR), active(4, PLEX), active(2, TAUTULLI)]);
-      expect(findingsFor(f, watched)).toMatchObject([
-        { kind: 'no-data', ruleKey: 'watched', providerIds: [2, 4] },
-      ]);
+      expect(kinds(watched, f)).toEqual([]);
     });
 
-    it('raises nothing once enrichment succeeded and a title holds a value', () => {
-      const f = facts([active(1, RADARR), active(2, TAUTULLI)], { fieldsWithValues: withValues });
-      expect(kinds(watched, f)).toEqual([]);
+    it('treats data-incomplete as informational: the query list is clear and runs proceed', () => {
+      const f = facts([active(1, RADARR), active(2, TAUTULLI)], { factsRecords: [] });
+      const findings = findingsFor(f, watched);
+      expect(findings.map((x) => x.kind)).toEqual(['data-incomplete']);
+      expect(filterAnswer(findings)).toEqual({ queryList: 'clear', mediaPage: 'clear' });
+      expect(automationAnswer(findings, new Set())).toMatchObject({
+        schedule: 'runs',
+        runNow: 'runs',
+        blocks: { needsFix: [], awaitingSignOff: [], signedOff: [] },
+      });
     });
   });
 
@@ -226,7 +235,7 @@ describe('automationAnswer', () => {
   });
 
   it('stops both triggers on a finding no one can sign off, listing it as needing a fix', () => {
-    const broken = findingOf('data-incomplete');
+    const broken = findingOf('no-provider');
     expect(automationAnswer([broken], none)).toEqual({
       schedule: 'blocked',
       runNow: 'stops',

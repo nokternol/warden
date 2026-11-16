@@ -5,8 +5,10 @@
 Now feedback (trigger confirmation + polling-based list revalidation) has since shipped too, but
 through a simpler, non-bus mechanism — see `docs/architecture/system-vs-user-automations.md`'s "Run
 Now feedback" section. That closes the "no feedback at all" gap without touching what this document
-still covers: a cached enrichment layer reacting to the bus, a genuine live "still running" signal for
-slow jobs, and the hardening the bus needs before any real consumer (cache or SSE) can depend on it.
+still covers: a genuine live "still running" signal for slow jobs, live data-changed updates on screen,
+and the hardening the bus needs before per-connection SSE consumers can depend on it. The library cache
+(`docs/architecture/library-cache.md`) already serves the copy, facts included, from memory and reloads
+on `media:changed`.
 
 ## The problem
 
@@ -17,18 +19,11 @@ executor happens, and something outside it needs to react.* Today neither reacti
   eventual, polled `lastRun` update — but there is still no live "still running" state for a job's
   actual duration, and no way to distinguish a slow cross-system job from a hung one. A push-based
   signal (the bus was built for exactly this) remains unbuilt.
-- **The enrichment cache doesn't exist.** `mergeEnrichment` issues two DB queries (identity + enrichment)
-  on *every* request, with no cache in front of it — the old `watchedTitlesCache` that used to soften this
-  was removed and never replaced. Every movie/series list pays that cost regardless of whether the
-  underlying data changed.
+- **Screens don't learn that the copy changed.** The library cache reloads on `media:changed`, but an
+  open page only sees the new copy when it next fetches.
 
-The domain event bus (`media:changed`, `run:started`, `run:completed`) exists precisely to drive both of
-these. `media:changed` already has a consumer: the media procedures and the source read cache clear their
-upstream-fetch caches on it (and on `provider:changed`). The enrichment cache will sit beside them on the same event. Nothing
-consumes the run lifecycle events yet. When the enrichment cache lands,
-`media.cache.enrichmentFresh.integration.test.ts` fails by design: it pins that browse reads enrichment
-fresh, and its header names the senders (`media.reset`, the system jobs) that must then send
-`media:changed`.
+The domain event bus (`media:changed`, `run:started`, `run:completed`) exists to drive both. Nothing
+consumes the run lifecycle events yet.
 
 ## Why it needs solving
 
@@ -36,21 +31,12 @@ fresh, and its header names the senders (`media.reset`, the system jobs) that mu
   still reads as silent, and there's no way to tell "still working" from "stuck" for anything
   longer-running than that. Cross-system jobs (Radarr/Sonarr/Plex) can take real time; a silent UI
   during that window reads as broken, not busy.
-- The enrichment query cost is paid on every list request today, unconditionally — it's standing,
-  measurable perf debt with a known fix shape (cache the lookup maps, invalidate on change) that just
-  hasn't been wired up.
 - The bus was deliberately built ahead of its consumers (event-first, not consumer-first), so the
   architecture is ready; the gap is entirely on the consuming side plus making the bus itself safe to
   depend on.
 
 ## The shape of the fix
 
-- **Cache the enrichment lookup maps, not the merged result**, keyed separately from provider list
-  caches — they have different invalidation lifetimes. A user unmonitoring an item must not evict
-  enrichment data (playcount is unaffected by the monitored flag); an enrichment write must not touch the
-  provider-list cache. `media:changed` evicts the enrichment cache; a short absolute TTL is the backstop
-  for a missed emit, deliberately absolute rather than sliding so a hot, continuously-read cache can still
-  self-heal.
 - **Two SSE streams, one for run status and one for data changes**, reusing the same
   `EventSource`-in-hook + resync-on-connect pattern for both. The two families are never shown on the
   same screen — the Automations/System screens want run status, the media grid wants data-changed — so
@@ -69,7 +55,7 @@ fresh, and its header names the senders (`media.reset`, the system jobs) that mu
 
 - **The bus doesn't isolate listeners.** `EventEmitter.emit` is synchronous and re-throws a listener's
   exception into the sender. In-process listeners follow the convention of catching their own errors
-  (the media cache listener does), but per-connection SSE consumers are many and transient, so bus-level
+  (the library cache's listener only drops its loaded copy), but per-connection SSE consumers are many and transient, so bus-level
   isolation is still needed before they attach — a throwing stream would otherwise be mis-recorded as an
   execution failure.
 - **No teardown contract for SSE.** In-process listeners subscribe once, or unsubscribe with `off` when
@@ -82,8 +68,8 @@ fresh, and its header names the senders (`media.reset`, the system jobs) that mu
   first tick) is simply dropped. Any consumer built against an assumed order or assumed delivery will be
   quietly wrong under load or at boot.
 - **The event payload is deliberately underspecified** (`media:changed` carries no discriminator between
-  movie/series). This was a considered decision, not an oversight — the enrichment cache is whole-scope, so
-  a discriminator has no consumer to honour yet. Re-introducing one is only worth doing once a consumer
+  movie/series). This was a considered decision, not an oversight — the library cache reloads the whole
+  copy, so a discriminator has no consumer to honour yet. Re-introducing one is only worth doing once a consumer
   actually segments its cache and needs it, expressed in that consumer's own vocabulary — not the
   provider/source axis the identity model happens to expose today.
 - **Observability is missing.** `EventEmitter.emit` reports whether any listener fired; nothing surfaces

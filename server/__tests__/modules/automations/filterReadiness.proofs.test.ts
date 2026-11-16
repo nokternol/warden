@@ -35,9 +35,10 @@ import { matchItems } from '@server/modules/media/mediaQueryEngine';
 import type { Filter, NormalizedMovie } from '@server/modules/media/ruleRegistry';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { PlexProvider, ProviderSettingsService } from '@server/modules/providers';
-import { IdentityResolutionJob } from '@server/modules/providers/identityResolutionJob';
+import { CatalogRefreshJob } from '@server/modules/providers/catalogRefreshJob';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
-import { sourceReadCacheHolding, sourceReadCacheOver } from '@tests/helpers/sourceReadCache';
+import { seedFacts } from '@tests/helpers/library';
+import { libraryCacheHolding, libraryCacheOver } from '@tests/helpers/library';
 import { desc, eq } from 'drizzle-orm';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -59,7 +60,6 @@ const testConfig: AppConfig = {
 };
 
 const RADARR_URL = 'http://localhost:7878';
-const NOW = Math.floor(Date.now() / 1000);
 
 describe('filter readiness, as automations see it', () => {
   let automationService: AutomationService;
@@ -78,7 +78,7 @@ describe('filter readiness, as automations see it', () => {
       automationService,
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
-      sourceReadCache: sourceReadCacheOver(providerSettingsService),
+      libraryCache: libraryCacheOver(providerSettingsService),
       mediaQueryService,
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),
@@ -89,7 +89,7 @@ describe('filter readiness, as automations see it', () => {
       http.get(`${RADARR_URL}/api/v3/movie`, () =>
         HttpResponse.json([createRadarrMovie({ id: 1, title: 'The Matrix', tags: [1] })])
       ),
-      http.put(`${RADARR_URL}/api/v3/movie/:id`, () => {
+      http.put(`${RADARR_URL}/api/v3/movie/editor`, () => {
         unmonitorCalls += 1;
         return HttpResponse.json({ id: 1, monitored: false });
       })
@@ -131,21 +131,6 @@ describe('filter readiness, as automations see it', () => {
       .where(eq(automationRuns.kind, 'user'))
       .orderBy(desc(automationRuns.id));
     return run;
-  }
-
-  /** The enrichment system job, with one finished run of `status`. */
-  async function enrichmentRan(status: 'success' | 'error') {
-    const db = getDb();
-    const [job] = await db
-      .insert(automations)
-      .values({
-        name: 'Enrichment',
-        kind: 'system',
-        taskId: 'system:enrichment',
-        schedule: '0 * * * *',
-      })
-      .returning();
-    await db.insert(automationRuns).values({ automationId: job.id, status, kind: 'system' });
   }
 
   describe('safety pins', () => {
@@ -293,49 +278,6 @@ describe('filter readiness, as automations see it', () => {
       expect(query.health.findings.map((f) => f.kind)).toEqual(['no-library']);
     });
   });
-
-  describe('a filter whose field holds no value', () => {
-    it('blocks a scheduled run using a Seerr filter while no title holds Seerr data, saying so rather than that data is loading', async () => {
-      // A library where nobody has requested anything through Seerr is a legitimate state;
-      // nothing distinguishes it from data that failed to load, so only a user can accept it.
-      const radarr = await seedRadarr();
-      await providerSettingsService.create({
-        type: MetadataProviderType.SEERR,
-        name: 'Seerr',
-        url: 'http://localhost:5055',
-        apiKey: 'k',
-      });
-      await enrichmentRan('success');
-      const db = getDb();
-      const [identity] = await db
-        .insert(mediaIdentity)
-        .values({ contentType: 'movie' })
-        .returning();
-      await new EnrichmentQueries({ db }).replaceFields(identity.id, { playCount: 1 });
-      const include = await mediaQueryService.create({
-        name: 'All',
-        contentType: 'movie',
-        filters: [],
-      });
-      const exclude = await mediaQueryService.create({
-        name: 'Requested',
-        contentType: 'movie',
-        filters: [{ ruleKey: 'seerrRequestStatus', value: 2 }],
-      });
-      const automation = await automationOver(radarr.id, [
-        { id: include.id, role: 'include' },
-        { id: exclude.id, role: 'exclude' },
-      ]);
-
-      await executor.execute(automation.id);
-
-      const run = await latestRun();
-      expect(run.status).toBe('skipped');
-      expect(run.error).toBe(
-        'Seerr request status filter has no data: no movie holds a value for it'
-      );
-    });
-  });
 });
 
 describe('a non-source actuator whose query names a source instance', () => {
@@ -405,7 +347,7 @@ describe('a non-source actuator whose query names a source instance', () => {
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(db),
       providerFactory: { create: () => plexInstance },
-      sourceReadCache: sourceReadCacheHolding([
+      libraryCache: libraryCacheHolding([
         {
           providerId: radarr.id,
           rows: [1, 2].map((n) =>
@@ -509,111 +451,6 @@ describe('a non-source actuator whose query names a source instance', () => {
       `Tags filter names Sonarr instance ${sonarr.id}, which is not a Radarr provider`
     );
     expect(deleteFromLibrary).not.toHaveBeenCalled();
-  });
-});
-
-describe('what "the latest enrichment run succeeded" does and does not say', () => {
-  let queries: EnrichmentQueries;
-
-  beforeEach(async () => {
-    await initializeDatabase(testConfig);
-    queries = new EnrichmentQueries({ db: getDb() });
-  });
-
-  afterEach(async () => {
-    await _resetDatabase();
-  });
-
-  function enricher(provider: MetadataProviderType, fields: Partial<MediaItem>): MediaEnricher {
-    return {
-      enrich: vi.fn(async (items: MediaItem[]) => ({
-        provider,
-        items: items.map((item) => ({ ...item, ...fields }) as MediaItem),
-      })),
-    };
-  }
-
-  it('fails the whole run when one enricher fails, writing nothing from the enrichers that answered', async () => {
-    const db = getDb();
-    const [identity] = await db
-      .insert(mediaIdentity)
-      .values({ contentType: 'movie', tmdbId: 1, enrichedAt: NOW - 2 * 86400 })
-      .returning();
-    const plex = enricher(MetadataProviderType.PLEX, { playCount: 3 });
-    const seerr: MediaEnricher = {
-      enrich: vi.fn(async () => {
-        throw new Error('Seerr unreachable');
-      }),
-    };
-
-    await expect(
-      new EnrichmentJob({ db, enrichmentQueries: queries, enrichers: [plex, seerr] }).run()
-    ).rejects.toThrow('Seerr unreachable');
-
-    expect(await queries.getByIdentityIds([identity.id])).toEqual(new Map());
-    const [after] = await db.select().from(mediaIdentity).where(eq(mediaIdentity.id, identity.id));
-    expect(after.enrichedAt).toBe(NOW - 2 * 86400);
-  });
-
-  it("drops a title's stored fields that a write does not repeat", async () => {
-    // So an enrichment run that carried on past a failed enricher would erase that
-    // enricher's earlier values rather than keep them.
-    const db = getDb();
-    const [identity] = await db
-      .insert(mediaIdentity)
-      .values({ contentType: 'movie', tmdbId: 1 })
-      .returning();
-    await queries.replaceFields(identity.id, { playCount: 3, seerrRequestStatus: 2 });
-
-    await queries.replaceFields(identity.id, { playCount: 4 });
-
-    expect((await queries.getByIdentityIds([identity.id])).get(identity.id)).toEqual({
-      playCount: 4,
-    });
-  });
-
-  it('does not re-read titles enriched within a day when a provider is connected after that run', async () => {
-    const db = getDb();
-    const bus = new DomainEventBus();
-    const providerSettingsService = new ProviderSettingsService({ db, eventBus: bus });
-    const enrichedAt = NOW - 3600;
-    await db.insert(mediaIdentity).values({ contentType: 'movie', tmdbId: 1, enrichedAt });
-
-    await providerSettingsService.create({
-      type: MetadataProviderType.TAUTULLI,
-      name: 'Tautulli',
-      url: 'http://localhost:8181',
-      apiKey: 'k',
-    });
-    const tautulli = enricher(MetadataProviderType.TAUTULLI, { playCount: 5 });
-    const enriched = await new EnrichmentJob({
-      db,
-      enrichmentQueries: queries,
-      enrichers: [tautulli],
-    }).run();
-
-    expect(enriched).toBe(0);
-    expect(tautulli.enrich).not.toHaveBeenCalled();
-    const [after] = await db.select().from(mediaIdentity);
-    expect(after.enrichedAt).toBe(enrichedAt);
-  });
-  it('re-reads a title once identity resolution links it to a newly connected Jellyfin server', async () => {
-    // The Plex counterpart is pinned in identityResolutionJob.test.ts.
-    const db = getDb();
-    await db
-      .insert(mediaIdentity)
-      .values({ contentType: 'movie', tmdbId: 100, enrichedAt: NOW - 3600 });
-    const jellyfinProvider = {
-      getAllItems: vi
-        .fn()
-        .mockResolvedValue([{ Id: 'jf-42', Type: 'Movie', ProviderIds: { Tmdb: '100' } }]),
-    };
-
-    await new IdentityResolutionJob({ db, jellyfinProvider } as never).runForJellyfin();
-
-    const [after] = await db.select().from(mediaIdentity);
-    expect(after.jellyfinItemId).toBe('jf-42');
-    expect(after.enrichedAt).toBeNull();
   });
 });
 

@@ -343,6 +343,7 @@ describe('AutomationBuilder', () => {
       mockProcedure(contract.automations.preview, () => ({
         count: 214,
         contentType: 'movie' as const,
+        records: [],
       }))
     );
     const user = userEvent.setup();
@@ -373,6 +374,7 @@ describe('AutomationBuilder', () => {
       mockProcedure(contract.automations.preview, () => ({
         count: 3,
         contentType: 'series' as const,
+        records: [],
       }))
     );
     const user = userEvent.setup();
@@ -394,6 +396,7 @@ describe('AutomationBuilder', () => {
       mockProcedure(contract.automations.preview, () => ({
         count: 1,
         contentType: 'movie' as const,
+        records: [],
       }))
     );
     const user = userEvent.setup();
@@ -417,7 +420,7 @@ describe('AutomationBuilder', () => {
         contract.automations.preview,
         () =>
           new Promise((resolve) => {
-            answer = (count) => resolve({ count, contentType: 'movie' as const });
+            answer = (count) => resolve({ count, contentType: 'movie' as const, records: [] });
           })
       )
     );
@@ -434,7 +437,7 @@ describe('AutomationBuilder', () => {
 
   it('does not count for a non-destructive task', async () => {
     mockApi([makeProvider()], [{ providerId: 1, type: 'RADARR', tasks: [ENABLED_UNMONITOR] }]);
-    const previewed = vi.fn(() => ({ count: 5, contentType: 'movie' as const }));
+    const previewed = vi.fn(() => ({ count: 5, contentType: 'movie' as const, records: [] }));
     server.use(mockProcedure(contract.automations.preview, previewed));
     const user = userEvent.setup();
     renderBuilder();
@@ -483,6 +486,7 @@ describe('AutomationBuilder', () => {
       mockProcedure(contract.automations.preview, () => ({
         count: 7,
         contentType: 'movie' as const,
+        records: [],
       }))
     );
     await user.click(screen.getByRole('radio', { name: /keep files/i }));

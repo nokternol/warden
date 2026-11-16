@@ -1,3 +1,4 @@
+import { arrListFallbacks } from './arrLists';
 import { authHandlers } from './auth';
 import { automationRunHandlers } from './automationRuns';
 import { automationsHandlers, mediaQueriesHandlers } from './automations';
@@ -11,6 +12,7 @@ import { seerrHandlers } from './seerr';
 import { settingsHandlers } from './settings';
 import { sonarrHandlers } from './sonarr';
 import { tautulliHandlers } from './tautulli';
+import { tvMazeHandlers } from './tvmaze';
 
 export const handlers = [
   ...authHandlers,
@@ -27,4 +29,6 @@ export const handlers = [
   ...providersHandlers,
   ...settingsHandlers,
   ...mediaHandlers,
+  ...arrListFallbacks,
+  ...tvMazeHandlers,
 ];

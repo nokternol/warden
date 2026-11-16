@@ -1,5 +1,5 @@
 import { type AwilixContainer, type NameAndRegistrationPair, asClass } from 'awilix';
-import { IdentityJobFactory } from './identityJobFactory';
+import { CatalogRefreshJobFactory } from './catalogRefreshJobFactory';
 import { PlexService } from './plexService';
 import { ProviderFactory } from './providerFactory';
 import { ProviderSettingsService } from './providerSettingsService';
@@ -15,7 +15,7 @@ export interface ProvidersCradle {
   providerFactory: ProviderFactory;
   plexService: PlexService;
   tmdbService: TmdbService;
-  identityJobFactory: IdentityJobFactory;
+  catalogRefreshJobFactory: CatalogRefreshJobFactory;
 }
 
 /**
@@ -31,7 +31,7 @@ export function registerProvidersDependencies<TCradle extends ProvidersCradle>(
     plexService: asClass(PlexService).scoped(),
     providerSettingsService: asClass(ProviderSettingsService).singleton(),
     providerFactory: asClass(ProviderFactory).singleton(),
-    identityJobFactory: asClass(IdentityJobFactory).singleton(),
+    catalogRefreshJobFactory: asClass(CatalogRefreshJobFactory).singleton(),
   };
   // TCradle extends ProvidersCradle, so the slice's keys and resolver types
   // are a subset of the app pair type.

@@ -2,17 +2,13 @@ import {
   type FindingDescription,
   type ReadinessFinding,
   describeFinding,
+  isInformational,
 } from '@contract/readiness';
-import {
-  type AutomationRunStatus,
-  type ContentType,
-  isInstanceScopedValue,
-} from '@contract/schemas';
+import { type ContentType, isInstanceScopedValue } from '@contract/schemas';
 import { isOfferedProviderType, scope } from '@contract/scope';
 import type { MetadataProviderType } from '../../database/schema';
 import { SOURCE_OWNER, isMediaSourceType, providerTypeLabel } from '../providers';
-import type { EnrichmentQueries } from './enrichment/enrichment.queries';
-import type { EnrichmentFields } from './mediaFieldProvider';
+import type { LibraryCache } from './libraryCache';
 import { type Filter, type FilterValue, type MediaRule, getRule } from './ruleRegistry';
 
 /** A configured provider instance, as readiness judges filters against it. */
@@ -22,6 +18,13 @@ export interface ProviderFact {
   isActive: boolean;
 }
 
+/** One enricher's `facts` refresh record, as readiness judges its facts with it. */
+export interface FactsRecord {
+  providerId: number;
+  refreshedAt: number | null;
+  failedAt: number | null;
+}
+
 /**
  * Everything filter readiness judges with. The same for every filter list in a request, so it is
  * read once and each list is judged against it in memory.
@@ -29,18 +32,8 @@ export interface ProviderFact {
 export interface ReadinessFacts {
   /** Every configured provider instance, active or not. */
   providers: readonly ProviderFact[];
-  /** The latest enrichment run's outcome; undefined when no run has finished. */
-  latestEnrichment: AutomationRunStatus | undefined;
-  /** The enrichment fields at least one title of each content type holds a value for. */
-  fieldsWithValues: Readonly<Record<ContentType, ReadonlySet<keyof EnrichmentFields>>>;
-}
-
-/**
- * Where `media` learns the latest enrichment run's outcome. The run history belongs to
- * `automations`, which implements this; `media` declares only the slice it reads.
- */
-export interface EnrichmentOutcomeSource {
-  latestEnrichmentStatus(): Promise<AutomationRunStatus | undefined>;
+  /** Every stored `facts` refresh record. */
+  factsRecords: readonly FactsRecord[];
 }
 
 /** The narrow slice of `ProviderSettingsService` readiness reads. */
@@ -52,8 +45,8 @@ export interface ProviderInstancesSource {
 export class FilterReadiness {
   private readonly deps: {
     providerSettingsService: ProviderInstancesSource;
-    enrichmentQueries: Pick<EnrichmentQueries, 'fieldsWithValues'>;
-    enrichmentOutcomeSource: EnrichmentOutcomeSource;
+    /** The library copy, whose refresh records say whose facts are complete. */
+    libraryCache: Pick<LibraryCache, 'read'>;
   };
 
   constructor(deps: FilterReadiness['deps']) {
@@ -61,15 +54,15 @@ export class FilterReadiness {
   }
 
   async readFacts(): Promise<ReadinessFacts> {
-    const [providers, latestEnrichment, fieldsWithValues] = await Promise.all([
+    const [providers, { records }] = await Promise.all([
       this.deps.providerSettingsService.list(),
-      this.deps.enrichmentOutcomeSource.latestEnrichmentStatus(),
-      this.deps.enrichmentQueries.fieldsWithValues(),
+      this.deps.libraryCache.read(),
     ]);
     return {
       providers: providers.map(({ id, type, isActive }) => ({ id, type, isActive })),
-      latestEnrichment,
-      fieldsWithValues,
+      factsRecords: records
+        .filter((r) => r.kind === 'facts')
+        .map(({ providerId, refreshedAt, failedAt }) => ({ providerId, refreshedAt, failedAt })),
     };
   }
 }
@@ -79,6 +72,8 @@ export interface FilterList {
   queryId?: number;
   contentType: ContentType;
   filters: readonly Filter[];
+  /** How an automation uses the query; an excluded query protects titles on any instance. */
+  role?: 'include' | 'exclude';
 }
 
 /** The provider an automation acts through. */
@@ -162,34 +157,28 @@ function filterFindings(judging: Judging, { ruleKey, value }: Filter): Readiness
 }
 
 /**
- * Whether an enrichment-only rule's data can be trusted. A title with no stored value is unknown
- * and matches neither value of a filter on it, so until enrichment is known to have succeeded such
- * a filter can select the wrong titles. Fields a source supplies arrive with the catalog.
+ * Whether an enrichment-only rule's data is complete: Warden believes a supplier's successful
+ * `facts` refresh, so a fact no title holds is the truth and raises nothing (north-star belief 6).
+ * A supplier whose latest refresh failed, or that never refreshed, makes the rule's data
+ * incomplete: an informational finding, which names the suppliers and never stops a run.
  */
 function enrichmentFindings(judging: Judging, rule: MediaRule): ReadinessFinding[] {
   if (!rule.sourceField || rule.providers.some(isMediaSourceType)) return [];
-  if (judging.facts.latestEnrichment !== 'success') {
-    return [
-      finding(
-        judging.list,
-        { kind: 'data-incomplete', ruleLabel: rule.label },
-        { ruleKey: rule.key }
-      ),
-    ];
-  }
   const { facts, list } = judging;
-  if (facts.fieldsWithValues[list.contentType].has(rule.sourceField)) return [];
-  // The producers are part of the finding's identity: a sign-off given while one set of
-  // instances supplied the field does not carry over to another.
-  const producerIds = facts.providers
+  const incomplete = facts.providers
     .filter((p) => p.isActive && rule.providers.includes(p.type))
+    .filter((p) => {
+      const record = facts.factsRecords.find((r) => r.providerId === p.id);
+      return record?.refreshedAt == null || record.failedAt != null;
+    })
     .map((p) => p.id)
     .sort((a, b) => a - b);
+  if (incomplete.length === 0) return [];
   return [
     finding(
       list,
-      { kind: 'no-data', ruleLabel: rule.label, contentType: list.contentType },
-      { ruleKey: rule.key, providerIds: producerIds }
+      { kind: 'data-incomplete', ruleLabel: rule.label },
+      { ruleKey: rule.key, providerIds: incomplete }
     ),
   ];
 }
@@ -245,10 +234,16 @@ function instanceFindings(
       ),
     ];
   }
-  // A source automation acts on its own catalog only, so a value naming another instance
-  // matches nothing there; any other actuator acts on the pooled catalogs of every source.
+  // A source automation's included queries select from its own catalog only, so a value naming
+  // another instance matches nothing there; its excluded queries protect titles through every
+  // instance's copies, and any other actuator acts on the pooled catalogs of every source.
   const automation = judging.automationProvider;
-  if (!automation || !isMediaSourceType(automation.type) || automation.id === providerId) {
+  if (
+    !automation ||
+    !isMediaSourceType(automation.type) ||
+    automation.id === providerId ||
+    judging.list.role === 'exclude'
+  ) {
     return [];
   }
   return [
@@ -280,7 +275,8 @@ function canBeSignedOff(finding: ReadinessFinding): boolean {
   return finding.kind === 'no-data';
 }
 
-export function filterAnswer(findings: readonly ReadinessFinding[]): FilterAnswer {
+export function filterAnswer(all: readonly ReadinessFinding[]): FilterAnswer {
+  const findings = all.filter((f) => !isInformational(f));
   if (findings.length === 0) return { queryList: 'clear', mediaPage: 'clear' };
   return {
     queryList: findings.every(canBeSignedOff) ? 'checkData' : 'broken',
@@ -307,10 +303,11 @@ export interface AutomationAnswer {
 }
 
 export function automationAnswer(
-  findings: readonly ReadinessFinding[],
+  all: readonly ReadinessFinding[],
   signedOffIds: ReadonlySet<string>,
   consentedIds: ReadonlySet<string> = new Set()
 ): AutomationAnswer {
+  const findings = all.filter((f) => !isInformational(f));
   const suspect = findings.filter(canBeSignedOff);
   const blocks: AutomationBlocks = {
     needsFix: findings.filter((f) => !canBeSignedOff(f)),

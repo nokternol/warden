@@ -233,6 +233,10 @@ export const automationRuns = sqliteTable(
     itemCount: integer('itemCount'),
     error: text('error'),
     kind: text('kind').notNull().default('user'), // 'user' | 'system'
+    /** Unix seconds: how current the library copy the run acted on was; null for system runs. */
+    freshnessAsOf: integer('freshnessAsOf'),
+    /** JSON `{ provider, kind, failed }[]`: the copy's records that failed or never refreshed. */
+    freshnessStale: text('freshnessStale'),
     createdAt: createdAt('createdAt'),
   },
   (table) => [index('IDX_automation_runs_automationId').on(table.automationId)]
@@ -285,9 +289,6 @@ export const mediaIdentity = sqliteTable(
     title: text('title'),
     year: integer('year'),
     resolvedAt: integer('resolvedAt'),
-    /** Last time EnrichmentJob resolved this identity's fields — one per identity,
-     *  not per field (mirrors mediaItems.resolvedAt's precedent). */
-    enrichedAt: integer('enrichedAt'),
   },
   (table) => [
     uniqueIndex('ux_media_identity_movie_tmdb')
@@ -372,10 +373,11 @@ export type EnrichmentField = typeof enrichmentField.$inferSelect;
 export type NewEnrichmentField = typeof enrichmentField.$inferInsert;
 
 // ---------------------------------------------------------------------------
-// mediaEnrichment — one row per (identity, field) fact present. A field's
-// existence is a data fact (a row), not a schema fact (a column) — sparse by
-// construction for an attribute set whose membership varies by configured
-// provider.
+// mediaEnrichment — one row per (identity, field, provider) fact present, as
+// that provider reported it. A field's existence is a data fact (a row), not a
+// schema fact (a column) — sparse by construction for an attribute set whose
+// membership varies by configured provider. Where several providers report a
+// field, precedence picks one value when the library cache loads.
 // ---------------------------------------------------------------------------
 export const mediaEnrichment = sqliteTable(
   'media_enrichment',
@@ -387,13 +389,71 @@ export const mediaEnrichment = sqliteTable(
     fieldId: integer('fieldId')
       .notNull()
       .references(() => enrichmentField.id, { onDelete: 'cascade' }),
+    /** The provider that reported the fact. */
+    providerId: integer('providerId')
+      .notNull()
+      .references(() => metadataProviders.id, { onDelete: 'cascade' }),
     /** JSON-encoded: number | string | boolean. */
     value: text('value').notNull(),
   },
   (table) => [
-    uniqueIndex('ux_media_enrichment_identity_field').on(table.mediaIdentityId, table.fieldId),
+    uniqueIndex('ux_media_enrichment_identity_field_provider').on(
+      table.mediaIdentityId,
+      table.fieldId,
+      table.providerId
+    ),
+    index('idx_media_enrichment_provider').on(table.providerId),
   ]
 );
 
 export type MediaEnrichment = typeof mediaEnrichment.$inferSelect;
 export type NewMediaEnrichment = typeof mediaEnrichment.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// mediaItemPayload — the provider's own record of one copy, as last refreshed.
+// Kept apart from `media_item` so the copy's identity rows stay narrow; the
+// in-memory library cache, not database indexes, serves reads over it.
+// ---------------------------------------------------------------------------
+export const mediaItemPayload = sqliteTable('media_item_payload', {
+  mediaItemId: integer('mediaItemId')
+    .primaryKey()
+    .references(() => mediaItems.id, { onDelete: 'cascade' }),
+  /** JSON: the provider's record of the copy (a Radarr movie, a Sonarr series). */
+  data: text('data').notNull(),
+});
+
+// ---------------------------------------------------------------------------
+// providerRefresh — when Warden last refreshed one kind of one provider's data,
+// and whether the latest attempt failed.
+// ---------------------------------------------------------------------------
+export const providerRefresh = sqliteTable(
+  'provider_refresh',
+  {
+    providerId: integer('providerId')
+      .notNull()
+      .references(() => metadataProviders.id, { onDelete: 'cascade' }),
+    /** 'catalog' | 'links' | 'lists' | 'facts' */
+    kind: text('kind').notNull(),
+    /** Unix seconds of the last successful refresh; null until one succeeds. */
+    refreshedAt: integer('refreshedAt'),
+    /** Unix seconds of the latest attempt, when it failed; cleared on success. */
+    failedAt: integer('failedAt'),
+    error: text('error'),
+  },
+  (table) => [primaryKey({ columns: [table.providerId, table.kind] })]
+);
+
+export type ProviderRefreshRow = typeof providerRefresh.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// providerLists — one provider's setup lists (tags, quality profiles, root
+// folders, language profiles), part of the disposable copy rather than the
+// owner's configuration in `metadata_provider`.
+// ---------------------------------------------------------------------------
+export const providerLists = sqliteTable('provider_lists', {
+  providerId: integer('providerId')
+    .primaryKey()
+    .references(() => metadataProviders.id, { onDelete: 'cascade' }),
+  /** JSON: `{ tags?, qualityProfiles?, rootFolders?, languageProfiles? }`. */
+  data: text('data').notNull(),
+});

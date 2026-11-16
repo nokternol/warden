@@ -1,4 +1,4 @@
-import { MetadataProviderType } from '@server/database/schema';
+import { MetadataProviderType, mediaIdentity, mediaItems } from '@server/database/schema';
 /**
  * AutomationRunService tests.
  *
@@ -19,6 +19,7 @@ import { resetMediaData } from '@server/modules/media/mediaReset';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
+import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const testConfig: AppConfig = {
@@ -73,9 +74,37 @@ function catalogMovie(providerId: number, radarrId: number, title: string): Norm
   return { _sourceIds: { radarr: radarrId, providerId, tmdb: radarrId * 100 }, title };
 }
 
-/** A movie query's run targets. */
-function movies(...items: NormalizedMovie[]): RunTargets {
-  return { contentType: 'movie', items };
+/** A movie query's run targets: each item's copy in the library copy, recorded if new. */
+async function movies(...items: NormalizedMovie[]): Promise<RunTargets> {
+  const db = getDb();
+  const mediaItemIds: number[] = [];
+  for (const item of items) {
+    const providerId = item._sourceIds.providerId!;
+    const externalId = item._sourceIds.radarr!;
+    const [existing] = await db
+      .select({ id: mediaItems.id })
+      .from(mediaItems)
+      .where(and(eq(mediaItems.providerId, providerId), eq(mediaItems.externalId, externalId)));
+    if (existing) {
+      mediaItemIds.push(existing.id);
+      continue;
+    }
+    const [title] = await db
+      .insert(mediaIdentity)
+      .values({
+        contentType: 'movie',
+        tmdbId: item._sourceIds.tmdb,
+        title: item.title,
+        year: item.year,
+      })
+      .returning();
+    const [copy] = await db
+      .insert(mediaItems)
+      .values({ providerId, externalId, mediaIdentityId: title.id })
+      .returning();
+    mediaItemIds.push(copy.id);
+  }
+  return { contentType: 'movie', mediaItemIds };
 }
 
 // ---------------------------------------------------------------------------
@@ -148,7 +177,7 @@ describe('AutomationRunService', () => {
         service.createRun({
           automationId: automation.id,
           status: 'success',
-          targets: movies(heat, heat),
+          targets: await movies(heat, heat),
         })
       ).resolves.toMatchObject({ status: 'success' });
 
@@ -261,7 +290,7 @@ describe('AutomationRunService', () => {
       const run = await service.createRun({
         automationId: automation.id,
         status: 'success',
-        targets: movies(catalogMovie(provider.id, 1, 'Heat')),
+        targets: await movies(catalogMovie(provider.id, 1, 'Heat')),
       });
       await resetMediaData(getDb());
 
@@ -281,17 +310,17 @@ describe('AutomationRunService', () => {
       const first = await service.createRun({
         automationId: automation.id,
         status: 'success',
-        targets: movies(heat),
+        targets: await movies(heat),
       });
       await service.createRun({
         automationId: automation.id,
         status: 'success',
-        targets: movies(ronin),
+        targets: await movies(ronin),
       });
       const third = await service.createRun({
         automationId: automation.id,
         status: 'error',
-        targets: movies(heat, ronin),
+        targets: await movies(heat, ronin),
       });
       const [heatCopy] = (await service.listRunItems(first.id)).data;
 
@@ -310,7 +339,7 @@ describe('AutomationRunService', () => {
       const run = await service.createRun({
         automationId: automation.id,
         status: 'success',
-        targets: movies(...titles.map((title, i) => catalogMovie(provider.id, i + 1, title))),
+        targets: await movies(...titles.map((title, i) => catalogMovie(provider.id, i + 1, title))),
       });
 
       const page1 = await service.listRunItems(run.id, { limit: 2, offset: 0 });

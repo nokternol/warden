@@ -192,7 +192,7 @@ describe('MediaQueryService', () => {
     const [listed] = await service.list();
 
     expect(listed.health.findings).toMatchObject([{ kind: 'data-incomplete', ruleKey: 'watched' }]);
-    expect(listed.health.queryList).toBe('broken');
+    expect(listed.health.queryList).toBe('clear');
   });
 
   it('reads the readiness facts once however many queries it lists', async () => {

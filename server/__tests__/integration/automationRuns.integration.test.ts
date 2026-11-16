@@ -1,5 +1,5 @@
 import { buildContainer } from '@server/container';
-import { MetadataProviderType } from '@server/database/schema';
+import { MetadataProviderType, mediaIdentity, mediaItems } from '@server/database/schema';
 /**
  * Automation Runs API Integration Tests
  *
@@ -10,7 +10,7 @@ import { MetadataProviderType } from '@server/database/schema';
  */
 import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
-import { closeDatabase, initializeDatabase } from '@server/kernel/db';
+import { closeDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createAutomationProcedures } from '@server/modules/automations';
@@ -137,17 +137,22 @@ describe('GET /api/automations/runs', () => {
   });
 
   it("serves a run's targeted items page by page", async () => {
+    const mediaItemIds: number[] = [];
+    for (const [i, title] of ['Heat', 'Alien', 'Ronin'].entries()) {
+      const [group] = await getDb()
+        .insert(mediaIdentity)
+        .values({ contentType: 'movie', tmdbId: 9000 + i, title, year: 1990 + i })
+        .returning();
+      const [copy] = await getDb()
+        .insert(mediaItems)
+        .values({ providerId, externalId: 900 + i, mediaIdentityId: group.id })
+        .returning();
+      mediaItemIds.push(copy.id);
+    }
     const run = await runService.createRun({
       automationId,
       status: 'success',
-      targets: {
-        contentType: 'movie',
-        items: ['Heat', 'Alien', 'Ronin'].map((title, i) => ({
-          _sourceIds: { radarr: 900 + i, providerId, tmdb: 9000 + i },
-          title,
-          year: 1990 + i,
-        })),
-      },
+      targets: { contentType: 'movie', mediaItemIds },
     });
 
     const res = await client.get(`/api/automations/runs/${run.id}/items?limit=2&offset=1`);

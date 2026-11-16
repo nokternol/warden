@@ -168,7 +168,11 @@ export class JellyfinProvider extends BaseProviderConnection implements MediaAct
 
   public async deleteItems(itemIds: string[]): Promise<void> {
     await Promise.all(
-      itemIds.map((id) => this.client.delete(`Items/${id}`, { headers: this.authHeader }))
+      itemIds.map((id) =>
+        this.deleteAlreadyGoneIsDone(() =>
+          this.client.delete(`Items/${id}`, { headers: this.authHeader })
+        )
+      )
     );
   }
 

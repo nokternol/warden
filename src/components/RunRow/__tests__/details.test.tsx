@@ -17,6 +17,7 @@ const run: AutomationRunDto = {
   status: 'error',
   itemCount: 150,
   error: `Connection refused ${'x'.repeat(120)} at the end`,
+  freshness: null,
   createdAt: '2026-06-04T02:00:00.000Z',
 };
 

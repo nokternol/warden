@@ -22,7 +22,7 @@ import type { Filter } from '@server/modules/media/ruleRegistry';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
-import { sourceReadCacheHolding, sourceReadCacheOver } from '@tests/helpers/sourceReadCache';
+import { libraryCacheHolding, libraryCacheOver } from '@tests/helpers/library';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRadarrMovie } from '../../../../tests/factories';
@@ -61,7 +61,7 @@ describe('AutomationExecutor — invalid automations', () => {
       automationService,
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
-      sourceReadCache: sourceReadCacheOver(providerSettingsService),
+      libraryCache: libraryCacheOver(providerSettingsService),
       mediaQueryService,
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),
@@ -72,7 +72,7 @@ describe('AutomationExecutor — invalid automations', () => {
       http.get(`${RADARR_URL}/api/v3/movie`, () =>
         HttpResponse.json([createRadarrMovie({ id: 1, title: 'The Matrix', tags: [1] })])
       ),
-      http.put(`${RADARR_URL}/api/v3/movie/:id`, () => {
+      http.put(`${RADARR_URL}/api/v3/movie/editor`, () => {
         unmonitorCalls += 1;
         return HttpResponse.json({ id: 1, monitored: false });
       })
@@ -211,7 +211,7 @@ describe('AutomationExecutor — invalid automations', () => {
       automationService,
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
-      sourceReadCache: sourceReadCacheOver(providerSettingsService),
+      libraryCache: libraryCacheOver(providerSettingsService),
       mediaQueryService,
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),
@@ -256,7 +256,7 @@ describe('AutomationExecutor — invalid automations', () => {
         createRadarrMovie({ id: i + 1, title: `T${i}`, tags: [1] })
       );
 
-    it('will not filter on play history that has not been loaded, since none reads as unwatched', async () => {
+    it('runs a non-destructive automation on play history before any enrichment has run', async () => {
       const radarr = await seedRadarr('Radarr');
       await providerSettingsService.create({
         type: MetadataProviderType.TAUTULLI,
@@ -271,9 +271,7 @@ describe('AutomationExecutor — invalid automations', () => {
       await executor.execute(automation.id);
 
       const [run] = await getDb().select().from(automationRuns);
-      expect(run.status).toBe('skipped');
-      expect(run.error).toMatch(/has not finished loading/);
-      expect(unmonitorCalls).toBe(0);
+      expect(run.status).toBe('success');
     });
 
     it('will not filter on play history when nothing connected can supply it', async () => {
@@ -289,7 +287,7 @@ describe('AutomationExecutor — invalid automations', () => {
       expect(run.error).toMatch(/needs a .* provider, and none is active/);
     });
 
-    it('will not exclude on play history that has not been loaded, since nothing would be protected', async () => {
+    it('runs a non-destructive automation excluding on play history before any enrichment has run', async () => {
       const radarr = await seedRadarr('Radarr');
       await providerSettingsService.create({
         type: MetadataProviderType.TAUTULLI,
@@ -321,8 +319,7 @@ describe('AutomationExecutor — invalid automations', () => {
       await executor.execute(automation.id);
 
       const [run] = await getDb().select().from(automationRuns);
-      expect(run.status).toBe('skipped');
-      expect(unmonitorCalls).toBe(0);
+      expect(run.status).toBe('success');
     });
 
     it('still filters on fields a source supplies itself, with no enrichment loaded', async () => {
@@ -404,7 +401,7 @@ describe('AutomationExecutor — invalid automations', () => {
       const radarr = await seedRadarr('Radarr');
       const automation = await seedAutomationOver(radarr.id, []);
       server.use(
-        http.put(`${RADARR_URL}/api/v3/movie/:id`, async () => {
+        http.put(`${RADARR_URL}/api/v3/movie/editor`, async () => {
           const [run] = await getDb().select().from(automationRuns);
           statusDuringTask = run?.status;
           return HttpResponse.json({ id: 1, monitored: false });
@@ -425,7 +422,7 @@ describe('AutomationExecutor — invalid automations', () => {
       await runService.beginRun({
         automationId: automation.id,
         kind: 'user',
-        targets: { contentType: 'movie', items: [] },
+        targets: { contentType: 'movie', mediaItemIds: [] },
       });
 
       await runService.closeInterruptedRuns();
@@ -444,7 +441,7 @@ describe('AutomationExecutor — invalid automations', () => {
       let active = 0;
       let mostAtOnce = 0;
       server.use(
-        http.put(`${RADARR_URL}/api/v3/movie/:id`, async () => {
+        http.put(`${RADARR_URL}/api/v3/movie/editor`, async () => {
           active += 1;
           mostAtOnce = Math.max(mostAtOnce, active);
           await new Promise((resolve) => setTimeout(resolve, 20));

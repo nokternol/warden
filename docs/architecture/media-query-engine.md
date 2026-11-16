@@ -29,13 +29,12 @@ builds the provider once, hands the instance to `evaluate`, and reuses the *same
 | Caller | Builds the provider via | Uses the result for |
 |---|---|---|
 | `AutomationExecutor.planRun` | `providerFactory.create(providerSettings)` | the run's target items and their actuator ids; `execute` passes the ids to `task.run` |
-| `GET /media-queries/:id/preview` | `rowsSourceFor` over each active instance's read from the source read cache's `readAll(contentType)` ([`sourceReadCache.ts`](ref:path:server/modules/media/sourceReadCache.ts)), read as it stands | `{ count }` in **titles**: the matches pooled across instances, de-duplicated by `titleKeyOf` (TMDB id for movies, TVDB id for series), the key browse groups by; rejects if any instance cannot be read |
-| `media.browse.movie`/`media.browse.series` (`browseMovies`/`browseSeries` in `media.procedures.ts`) | the over-rows binders (`radarrRowsSource`/`sonarrRowsSource`) over the per-instance sublists read from the source read cache (`readEach`), pooled into one source; each read builds new items, each self-describing its `providerId` | id set → live display-grouping → sort/paginate |
+| `GET /media-queries/:id/preview` | `copiesSource` over the content type's copies in the library cache ([`libraryCache.ts`](ref:path:server/modules/media/libraryCache.ts)) | `{ count, records }`: matches counted in **title groups**, with the copy's refresh records |
+| `media.browse.movie`/`media.browse.series` (`browse` in `media.procedures.ts`) | `copiesSource` over every active instance's copies in the library cache | matched copies → sort → group by title group → paginate |
 
-The browse adapter lets the procedure keep its multi-instance read (and per-instance `yearRange`/
-error aggregation) while the engine owns normalize → enrich → match → combine; the procedure's own
-post-match step then groups the surviving items into one row per title (see
-`docs/architecture/provider-roles-and-identity.md`'s browse section).
+Every item comes from the library cache already normalised and carrying its facts, so the engine owns
+only match → combine; the procedure's own post-match step groups the surviving copies into one row per
+title (see `docs/architecture/provider-roles-and-identity.md`).
 
 ## Internals
 
@@ -46,13 +45,13 @@ post-match step then groups the surviving items into one row per title (see
   `evaluateCombination` (include union minus exclude), and returns the surviving normalized items.
 - Unknown `contentType` resolves to an empty `MediaItemSet`.
 - Depends on [`ruleRegistry`](ref:path:server/modules/media/ruleRegistry.ts) (rule set) and `combinationEvaluator` (combination contract) — both
-  internal domain, never mocked. DB enrichment (`mergeEnrichment`) runs when a `db` is injected.
+  internal domain, never mocked. The engine reads no database: facts arrive on the items.
 
 ## Registration
 
 `mediaQueryEngine` is registered in the awilix container ([`server/container.ts`](ref:path:server/container.ts)) and injected into the
 executor, the saved-query preview handler, and the media browse procedures. The executor falls back to
-`new MediaQueryEngine({ db })` when no engine is injected (unit tests).
+`new MediaQueryEngine()` when no engine is injected (unit tests).
 
 ## Convergence achieved
 

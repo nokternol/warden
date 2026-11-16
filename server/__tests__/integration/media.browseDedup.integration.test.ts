@@ -11,7 +11,7 @@ import { buildContainer } from '@server/container';
  *
  * Run: vitest run --project server
  */
-import { MetadataProviderType } from '@server/database/schema';
+import { MetadataProviderType, mediaIdentity } from '@server/database/schema';
 import { serveApi } from '@server/kernel/api';
 import { loadConfig } from '@server/kernel/config';
 import { closeDatabase, getDb, initializeDatabase } from '@server/kernel/db';
@@ -20,6 +20,7 @@ import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createMediaProcedures } from '@server/modules/media';
 import { createMockConfig } from '@tests/factories';
 import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
+import { refreshCatalog } from '@tests/helpers/library';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
@@ -41,6 +42,7 @@ const mockUser = {
   updatedAt: new Date(),
 };
 
+let libraryCradle: import('@server/container').Cradle;
 describe('Browse display dedup — multiple active Radarr instances', () => {
   let client: ReturnType<typeof createApiClient>;
   let radarrId: number;
@@ -58,6 +60,7 @@ describe('Browse display dedup — multiple active Radarr instances', () => {
     const config = loadConfig();
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
+    libraryCradle = container.cradle;
 
     const radarr = await container.cradle.providerSettingsService.create({
       type: MetadataProviderType.RADARR,
@@ -81,7 +84,9 @@ describe('Browse display dedup — multiple active Radarr instances', () => {
 
   // Each test's movie payload differs, and MediaCache has a 60s TTL — rebuild the
   // handlers (and their caches) fresh per test rather than reuse one across tests.
-  beforeEach(() => {
+  beforeEach(async () => {
+    // Each test's providers answer afresh; start from an empty copy.
+    await getDb().delete(mediaIdentity);
     const container = buildContainer({ config: loadConfig(), db: getDb() });
     const app: Express = express();
     app.use(express.json());
@@ -131,6 +136,7 @@ describe('Browse display dedup — multiple active Radarr instances', () => {
       )
     );
 
+    await refreshCatalog(libraryCradle);
     const res = await client.get(browsePath('movie', [], { pageSize: 100 }));
     const data = expectSuccessResponse(res);
 
@@ -176,6 +182,7 @@ describe('Browse display dedup — multiple active Radarr instances', () => {
       )
     );
 
+    await refreshCatalog(libraryCradle);
     const res = await client.get(
       browsePath('movie', [{ ruleKey: 'hasFile', value: true }], { pageSize: 100 })
     );
@@ -206,6 +213,7 @@ describe('Browse display dedup — multiple active Radarr instances', () => {
       http.get(`${RADARR_4K_URL}/api/v3/movie`, () => HttpResponse.json([]))
     );
 
+    await refreshCatalog(libraryCradle);
     const res = await client.get(browsePath('movie', [], { pageSize: 100 }));
     const data = expectSuccessResponse(res);
 
@@ -232,6 +240,7 @@ describe('Browse display dedup — multiple active Radarr instances', () => {
       http.get(`${RADARR_4K_URL}/api/v3/movie`, () => HttpResponse.json([row(2, 'Unlisted B')]))
     );
 
+    await refreshCatalog(libraryCradle);
     const res = await client.get(browsePath('movie', [], { pageSize: 100 }));
     const data = expectSuccessResponse(res);
 
@@ -239,23 +248,33 @@ describe('Browse display dedup — multiple active Radarr instances', () => {
     expect(data.items.map((m: { sourceCount: number }) => m.sourceCount)).toEqual([1, 1]);
   });
 
-  it('names an unreadable instance and still shows the titles of the instances that answered', async () => {
+  it('shows copies the catalog refresh grouped as one title as one row, by the same rule everywhere', async () => {
+    // No TMDB id, so only the refresh's grouping rule (here, the shared IMDb id) joins them.
+    const row = (id: number) => ({
+      id,
+      title: 'Imported Without TMDB',
+      year: 2001,
+      hasFile: true,
+      monitored: true,
+      tmdbId: 0,
+      imdbId: 'tt0123456',
+      profileId: 1,
+      qualityProfileId: 1,
+      tags: [],
+      folderName: `/m/${id}`,
+      path: `/m/${id}`,
+    });
     server.use(
-      http.get(`${RADARR_URL}/api/v3/movie`, () => new HttpResponse(null, { status: 500 })),
-      http.get(`${RADARR_4K_URL}/api/v3/movie`, () =>
-        HttpResponse.json([
-          { id: 7, title: 'Heat', hasFile: true, monitored: true, tmdbId: 949, tags: [] },
-        ])
-      )
+      http.get(`${RADARR_URL}/api/v3/movie`, () => HttpResponse.json([row(1)])),
+      http.get(`${RADARR_4K_URL}/api/v3/movie`, () => HttpResponse.json([row(2)]))
     );
 
+    await refreshCatalog(libraryCradle);
     const data = expectSuccessResponse(
       await client.get(browsePath('movie', [], { pageSize: 100 }))
     );
 
-    expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Heat']);
-    expect(data.errors).toEqual([
-      { provider: 'Radarr', error: expect.stringContaining("Couldn't be reached") },
-    ]);
+    expect(data.totalCount).toBe(1);
+    expect(data.items[0].sourceProviderIds.sort()).toEqual([radarrId, radarr4kId].sort());
   });
 });

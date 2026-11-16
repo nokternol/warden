@@ -6,16 +6,11 @@ import { api } from '@server/kernel/api';
 import { ValidationError } from '@server/kernel/errors';
 import { getChildLogger } from '@server/kernel/logger';
 import { probeConnection } from './connectionProbe';
-import { JellyfinProvider } from './connections/jellyfinProvider';
-import { PlexProvider } from './connections/plexProvider';
-import { RadarrProvider } from './connections/radarrProvider';
-import { SeerrProvider } from './connections/seerrProvider';
-import { SonarrProvider } from './connections/sonarrProvider';
-import { TautulliProvider } from './connections/tautulliProvider';
 import { describeProviderTypes } from './providerCatalogue';
 import type { ProviderFactory } from './providerFactory';
+import type { ProviderListsReader } from './providerListsReader';
 import type { ProviderSettingsService } from './providerSettingsService';
-import { isMediaActuator } from './roles';
+import { isMediaActuator, isMediaSourceType } from './roles';
 import { readEnabledTaskIds } from './taskEnablement';
 
 const log = getChildLogger('ProvidersProcedures');
@@ -34,6 +29,8 @@ const _providerTypesAgree: ProviderTypesAgree = true;
 interface ProvidersCradle {
   providerSettingsService: ProviderSettingsService;
   providerFactory: ProviderFactory;
+  /** The library copy's stored lists, which task parameter choices are read from. */
+  libraryCache: ProviderListsReader;
   scope: Scope;
 }
 
@@ -43,39 +40,27 @@ interface TaskOption {
 }
 
 /**
- * A provider instance's live choices for a parameterized task's `select`
- * control. `undefined` means this provider type has nothing to say about
- * `route` — omitted from the response, not surfaced as an empty list.
- * `collections`/`language-profiles` return `[]` for their owning provider
- * type: the procedure gives the client a stable shape to call, and the empty
- * list is the answer while no provider fetches collections or language profiles.
+ * A provider instance's stored choices for a parameterized task's `select` control, from the
+ * lists the catalog refresh stored. `undefined` means this provider type has nothing to say about
+ * `route`: omitted from the response, not surfaced as an empty list. `collections` and
+ * `language-profiles` return `[]` for their owning provider type: the procedure gives the client a
+ * stable shape to call, and the empty list is the answer while no task takes those choices.
  */
 async function resolveTaskOptions(
   provider: MetadataProvider,
   route: TaskOptionsRoute,
-  providerFactory: ProviderFactory
+  lists: ProviderListsReader
 ): Promise<TaskOption[] | undefined> {
+  const isSource = isMediaSourceType(provider.type);
   switch (route) {
     case 'quality-profiles': {
-      if (
-        provider.type !== MetadataProviderType.RADARR &&
-        provider.type !== MetadataProviderType.SONARR
-      ) {
-        return undefined;
-      }
-      const instance = providerFactory.create(provider, log) as RadarrProvider | SonarrProvider;
-      const profiles = await instance.getProfiles();
+      if (!isSource) return undefined;
+      const profiles = (await lists.listsOf(provider.id))?.qualityProfiles ?? [];
       return profiles.map((p) => ({ id: String(p.id), label: p.name }));
     }
     case 'root-folders': {
-      if (
-        provider.type !== MetadataProviderType.RADARR &&
-        provider.type !== MetadataProviderType.SONARR
-      ) {
-        return undefined;
-      }
-      const instance = providerFactory.create(provider, log) as RadarrProvider | SonarrProvider;
-      const folders = await instance.getRootFolders();
+      if (!isSource) return undefined;
+      const folders = (await lists.listsOf(provider.id))?.rootFolders ?? [];
       return folders.map((f) => ({ id: String(f.id), label: f.path }));
     }
     case 'collections':
@@ -105,7 +90,7 @@ function storedKeyFor(
  * connection probing, and provider capabilities.
  */
 export function createProvidersProcedures(cradle: ProvidersCradle) {
-  const { providerSettingsService, providerFactory, scope } = cradle;
+  const { providerSettingsService, providerFactory, libraryCache, scope } = cradle;
 
   /** Refuses a provider type the scope declaration defers. */
   function assertOfferedType(type: ProviderType): void {
@@ -216,7 +201,7 @@ export function createProvidersProcedures(cradle: ProvidersCradle) {
       const entries = await Promise.all(
         providers.map(async (p) => {
           try {
-            const options = await resolveTaskOptions(p, params.route, providerFactory);
+            const options = await resolveTaskOptions(p, params.route, libraryCache);
             if (options === undefined) return undefined;
             return { providerId: p.id, type: p.type, options };
           } catch (err) {
@@ -227,66 +212,6 @@ export function createProvidersProcedures(cradle: ProvidersCradle) {
       );
 
       return entries.filter((e): e is NonNullable<typeof e> => e !== undefined);
-    }),
-
-    metadata: api.providers.metadata.handler(async ({ input }) => {
-      const { url, apiKey, settings } = input;
-      const type = input.type as MetadataProviderType;
-      const config = { name: `adhoc-${type}`, url, apiKey, settings };
-
-      log.debug('Fetching provider metadata', { type, url });
-
-      switch (type) {
-        case MetadataProviderType.SONARR: {
-          const provider = new SonarrProvider(config, log);
-          const [series, qualityProfiles, rootFolders, tags] = await Promise.all([
-            provider.getSeries(),
-            provider.getProfiles(),
-            provider.getRootFolders(),
-            provider.getTags(),
-          ]);
-          return { type, data: { series, qualityProfiles, rootFolders, tags } };
-        }
-
-        case MetadataProviderType.RADARR: {
-          const provider = new RadarrProvider(config, log);
-          const [movies, qualityProfiles, rootFolders, tags] = await Promise.all([
-            provider.getMovies(),
-            provider.getProfiles(),
-            provider.getRootFolders(),
-            provider.getTags(),
-          ]);
-          return { type, data: { movies, qualityProfiles, rootFolders, tags } };
-        }
-
-        case MetadataProviderType.PLEX: {
-          const provider = new PlexProvider(config, log);
-          const libraries = await provider.getLibraries();
-          return { type, data: { libraries } };
-        }
-
-        case MetadataProviderType.JELLYFIN: {
-          const provider = new JellyfinProvider(config, log);
-          const libraries = await provider.getLibraries();
-          return { type, data: { libraries } };
-        }
-
-        case MetadataProviderType.TAUTULLI: {
-          const provider = new TautulliProvider(config, log);
-          const [libraryStats, homeStats, recentHistory] = await Promise.all([
-            provider.getLibraryStats(),
-            provider.getHomeStats(),
-            provider.getHistory(),
-          ]);
-          return { type, data: { libraryStats, homeStats, recentHistory } };
-        }
-
-        case MetadataProviderType.SEERR: {
-          const provider = new SeerrProvider(config, log);
-          const requests = await provider.getRequests();
-          return { type, data: { requests } };
-        }
-      }
     }),
   };
 }

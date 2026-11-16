@@ -12,6 +12,7 @@ const run: AutomationRunDto = {
   status: 'success',
   itemCount: 5,
   error: null,
+  freshness: null,
   createdAt: '2026-06-04T02:00:00.000Z',
 };
 
@@ -26,6 +27,25 @@ function renderRow(row: AutomationRunDto, props: { defaultExpanded?: boolean } =
 }
 
 describe('RunRow', () => {
+  it('says how current the copy the run acted on was', () => {
+    renderRow({
+      ...run,
+      freshness: {
+        asOf: 1_794_800_000,
+        stale: [{ provider: 'Tautulli', kind: 'facts', failed: true }],
+      },
+    });
+
+    expect(screen.getByRole('status', { name: 'How current this is' })).toHaveTextContent(
+      /^As of .* · Tautulli's data failed to refresh$/
+    );
+  });
+
+  it('shows no As of line for a run that acted on no copy', () => {
+    renderRow(run);
+    expect(screen.queryByRole('status', { name: 'How current this is' })).not.toBeInTheDocument();
+  });
+
   it('expands to the titles the run targeted', async () => {
     const user = setupUser();
     renderRow(run);

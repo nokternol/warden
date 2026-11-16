@@ -53,11 +53,20 @@ export { readEnabledTaskIds } from './taskEnablement';
 export type { PlexService } from './plexService';
 export type { TmdbService } from './tmdbService';
 
-// Identity resolution — the system job that stitches source identities, and
-// the write that records a copy the job has not seen yet.
-export type { IdentityJobFactory } from './identityJobFactory';
-export { recordSourceCopy } from './sourceCopy';
-export type { SourceCopy } from './sourceCopy';
+// The catalog refresh — the system job that reads the providers' library data into the copy.
+export type { CatalogRefreshJobFactory } from './catalogRefreshJobFactory';
+// The library copy's refresh records: when each kind of each provider's data was last refreshed.
+export {
+  failureMessage,
+  readRefreshRecords,
+  recordRefreshFailed,
+  recordRefreshed,
+} from './providerRefresh';
+export type { RefreshKind, StoredRefreshRecord } from './providerRefresh';
+// Each provider's stored setup lists, part of the library copy.
+export { readProviderLists } from './providerLists';
+export type { ProviderListsData } from './providerLists';
+export type { ProviderListsReader } from './providerListsReader';
 
 // Connection classes + payload types still consumed outside the module
 // (search handler, media handler, enrichment mappers) until Phase 4.

@@ -79,7 +79,7 @@ function LastRun({ automation }: { automation: AutomationDto }) {
 
 /**
  * The readiness a Run Now confirmation may show: only the answer to the read that opening it (or
- * Retry) started. That read asks for a fresh count of the library, and its answer replaces the
+ * Retry) started. That read counts from the library copy as it stands, and its answer replaces the
  * row's readiness in place, under the row's own key, without fetching it again. Until it answers
  * nothing is confirmable, and if it fails no earlier answer is shown. Each read gets an id, so one
  * from an earlier open settling late cannot end a newer one.
@@ -97,7 +97,7 @@ function useCheckOnOpen(
     setFailed(false);
     void (async () => {
       try {
-        const answer = await api.automations.readiness({ id: automationId, fresh: true });
+        const answer = await api.automations.readiness({ id: automationId });
         if (checkId.current === id) await readiness.mutate(answer, { revalidate: false });
       } catch {
         if (checkId.current === id) setFailed(true);

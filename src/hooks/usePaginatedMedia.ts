@@ -1,6 +1,6 @@
 import type { Filter } from '@app/hooks/useMediaQueries';
 import { apiKey } from '@app/lib/api/useApi';
-import type { BrowseQuery } from '@contract/media';
+import type { BrowseQuery, RefreshRecord } from '@contract/media';
 import type { ReadinessFinding } from '@contract/readiness';
 import { useCallback, useLayoutEffect, useRef } from 'react';
 import useSWRInfinite from 'swr/infinite';
@@ -11,7 +11,7 @@ interface PaginatedPage<T> {
   page: number;
   pageSize: number;
   yearRange?: { min: number | null; max: number | null };
-  errors?: { provider: string; error: string }[];
+  records?: RefreshRecord[];
   findings?: ReadinessFinding[];
 }
 
@@ -112,10 +112,8 @@ export function usePaginatedMedia<T>(
       void setSize((s) => s + 1);
     }, [setSize]),
     error: error as Error | undefined,
-    // Each page reports the sources that failed for it; one source is stated once.
-    sourceErrors: Array.from(
-      new Map(data?.flatMap((page) => page.errors ?? []).map((e) => [e.provider, e])).values()
-    ),
+    // Every page answers from the same copy, so the first page's records stand for all.
+    records: data?.[0]?.records,
     // The filters are the same on every page, so the first page's findings stand for all.
     findings: data?.[0]?.findings ?? [],
     refresh: mutate,

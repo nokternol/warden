@@ -94,8 +94,8 @@ only a fully watched row (`watched_status === 1`) with a stored id counts, and i
 is the last-played timestamp — so a play count from Tautulli means completed viewings, not opens
 ([`mediaFieldProvider.ts`](ref:path:server/modules/media/mediaFieldProvider.ts)).
 
-The source binders (`radarrRowsSource`/`sonarrRowsSource`,
-[`sourceAdapters.ts`](ref:path:server/modules/media/sourceAdapters.ts)) and the five
+The library cache's normalisation of each stored copy
+([`libraryCache.ts`](ref:path:server/modules/media/libraryCache.ts)) and the five
 `MediaEnricher` adapters
 ([`enrichment/enricherAdapters.ts`](ref:path:server/modules/media/enrichment/enricherAdapters.ts))
 route through these `MediaFieldSource`/`MediaFieldProvider` instances instead of hand-copied field
@@ -120,11 +120,10 @@ only constrains the *listed* keys to be real ones — it doesn't require the lis
 new `EnrichmentFields` key could be silently left off it and nothing would fail to compile. `Partial<
 EnrichmentFields>` removes the union (and the maintenance burden) entirely, so a *new* field is now
 automatically carried on `NormalizedMovie`/`NormalizedSeries` instead of needing a matching edit here.
-(`enrichmentMerge.ts` no longer assigns fields one at a time — since
-[the EAV rewrite](ref:path:docs/architecture/media-enrichment-eav-model.md) it applies whatever
-`EnrichmentQueries.getByIdentityIds` returns via one generic `Object.assign`, so a field-type change
-there is no longer a compile-time-checked touch point at all; it was never enforceable in that shape to
-begin with.) See
+(Facts are not assigned one at a time anywhere — since
+[the EAV rewrite](ref:path:docs/architecture/media-enrichment-eav-model.md) the library cache assigns
+each title's resolved facts generically, so a field-type change there is not a compile-time-checked
+touch point at all; it was never enforceable in that shape to begin with.) See
 [`docs/architecture/enrichment-field-completeness.md`](ref:path:docs/architecture/enrichment-field-completeness.md)
 for the fuller set of compile-time checks a new `EnrichmentFields` key is now subject to end to end.
 
@@ -155,7 +154,7 @@ deferred for the MVP by the [scope declaration](ref:path:docs/architecture/scope
 
 Scoped only to fields with more than one real producer — an uncontested field (`seerrHasIssue`,
 `tmdbStatus`, `tags`, `isFavorite`, all single-producer today) needs no entry, since there's nothing to
-order; it carries through `resolvePrecedence` unlisted. An array's positions can't collide, so a tie is
+order; its value is kept as reported when the library cache loads. An array's positions can't collide, so a tie is
 structurally unrepresentable rather than merely forbidden by convention — the same shape decision
 `EnrichmentFields` makes for field types, applied to field ordering. This replaced the prior
 `ENRICHMENT_POLICY`/`PrecedencePolicy` shape, which listed every field (including single-producer

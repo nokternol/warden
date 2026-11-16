@@ -1,47 +1,30 @@
-import { eq } from 'drizzle-orm';
-import { mediaIdentity } from '../../database/schema';
+import { type MetadataProviderType, mediaIdentity } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
 import { yieldToEventLoop } from '../../kernel/yieldToEventLoop';
+import { failureMessage, recordRefreshFailed, recordRefreshed } from '../providers';
+import { fieldsByProviderType } from './activeFieldSet';
 import type { EnrichableField, MediaEnricher } from './enrichment/enricher';
 import type { EnrichmentQueries } from './enrichment/enrichment.queries';
-import { contestedFieldPrecedence, resolvePrecedence } from './enrichment/precedence';
 import type { EnrichmentFields } from './mediaFieldProvider';
 import type { MediaItem } from './mediaItem';
 
-/**
- * Every enrichable field's resolved-or-unknown value, keyed exactly like
- * `EnrichmentFields` minus `tags`. Assigning an object literal to this type makes a
- * missing or extra key a compile error — a new `EnrichmentFields` key breaks this
- * file until the write side is updated, instead of silently never persisting
- * (caught the hard way once already: `plexAddedAt` shipped to every other
- * touch point but not this one, and no test caught it because tests insert
- * enrichment rows directly, bypassing this write path).
- */
-type EnrichmentWriteValues = { [K in EnrichableField]: EnrichmentFields[K] | null };
-
-const STALENESS_SECONDS = 24 * 60 * 60;
+/** One active enricher, with the provider instance whose facts it reads. */
+export interface EnricherSource {
+  providerId: number;
+  name: string;
+  enricher: MediaEnricher;
+}
 
 interface Deps {
   db: DrizzleDb;
   enrichmentQueries: EnrichmentQueries;
-  enrichers?: MediaEnricher[];
+  enrichers?: EnricherSource[];
 }
 
 /**
- * A stable identity for a hydrated item — matches `resolvePrecedence`'s grouping key.
- * Collision-free by construction: `hydrate` always sets `_sourceIds.identity` to the
- * group's own surrogate id, so two kind-scoped groups that happen to share a numeric
- * `tmdbId` (a movie and a series with the same TMDB id) never hydrate to identical
- * keys and collide here.
- */
-function identityKey(item: MediaItem): string {
-  return JSON.stringify(item._sourceIds);
-}
-
-/**
- * Project a group row into the canonical item the enrichers match and decorate.
- * No `radarr`/`sonarr` key: the group carries no per-instance coordinate, and no
- * enricher ever matched on those keys (verified in `enricherAdapters.ts`).
+ * Project a title row into the canonical item the enrichers match and decorate. No
+ * `radarr`/`sonarr` key: the title carries no per-instance coordinate, and no enricher matches
+ * on those keys (`enricherAdapters.ts`).
  */
 function hydrate(identity: typeof mediaIdentity.$inferSelect): MediaItem {
   const ids: Record<string, number | string> = { identity: identity.id };
@@ -52,64 +35,57 @@ function hydrate(identity: typeof mediaIdentity.$inferSelect): MediaItem {
   return { _sourceIds: ids, title: '' } as MediaItem;
 }
 
+/**
+ * Reads every active enricher for every title on every run and stores each provider's facts as
+ * it reported them. A provider's successful answer replaces everything Warden held from it; a
+ * failed one keeps it and records the failure. Precedence between providers is applied when the
+ * library cache loads, not here.
+ */
 export class EnrichmentJob {
+  private readonly failed: string[] = [];
+
   constructor(private deps: Deps) {}
 
+  /** The enrichers this run could not read, by name. */
+  failedProviders(): string[] {
+    return [...this.failed];
+  }
+
   async run(): Promise<number> {
-    const now = Math.floor(Date.now() / 1000);
-    const staleThreshold = now - STALENESS_SECONDS;
-
     const identities = await this.deps.db.select().from(mediaIdentity);
-    const toEnrich = identities.filter((identity) => (identity.enrichedAt ?? 0) < staleThreshold);
-    if (toEnrich.length === 0) return 0;
+    const items = identities.map(hydrate);
 
-    // Hydrate each stale identity into a canonical item, tracking the row to write back to.
-    const hydrated = toEnrich.map((identity) => ({
-      identityId: identity.id,
-      item: hydrate(identity),
-    }));
-    const items = hydrated.map((h) => h.item);
-
-    // Every enricher decorates the same batch; precedence resolves per field at write time.
-    const enrichers = this.deps.enrichers ?? [];
-    const results = await Promise.all(enrichers.map((e) => e.enrich(items)));
-    const resolvedByKey = new Map(
-      resolvePrecedence(results, contestedFieldPrecedence).map((item) => [identityKey(item), item])
-    );
-
-    for (const { identityId, item } of hydrated) {
-      await yieldToEventLoop();
-      const resolved = resolvedByKey.get(identityKey(item));
-      const values: EnrichmentWriteValues = {
-        playCount: resolved?.playCount ?? null,
-        lastWatchedAt: resolved?.lastWatchedAt ?? null,
-        seerrRequestStatus: resolved?.seerrRequestStatus ?? null,
-        seerrHasIssue: resolved?.seerrHasIssue ?? null,
-        tmdbStatus: resolved?.tmdbStatus ?? null,
-        plexAddedAt: resolved?.plexAddedAt ?? null,
-        studio: resolved?.studio ?? null,
-        runtimeMinutes: resolved?.runtimeMinutes ?? null,
-        fileSizeBytes: resolved?.fileSizeBytes ?? null,
-        releaseDate: resolved?.releaseDate ?? null,
-        fileContainer: resolved?.fileContainer ?? null,
-        videoCodec: resolved?.videoCodec ?? null,
-        audioCodec: resolved?.audioCodec ?? null,
-        fileResolution: resolved?.fileResolution ?? null,
-        labels: resolved?.labels ?? null,
-        jellyfinAddedAt: resolved?.jellyfinAddedAt ?? null,
-        isFavorite: resolved?.isFavorite ?? null,
-      };
-      const presentFields = Object.fromEntries(
-        Object.entries(values).filter(([, value]) => value !== null)
-      ) as Partial<EnrichmentFields>;
-
-      await this.deps.enrichmentQueries.replaceFields(identityId, presentFields);
-      await this.deps.db
-        .update(mediaIdentity)
-        .set({ enrichedAt: now })
-        .where(eq(mediaIdentity.id, identityId));
+    for (const { providerId, name, enricher } of this.deps.enrichers ?? []) {
+      let result: Awaited<ReturnType<MediaEnricher['enrich']>>;
+      try {
+        result = await enricher.enrich(items);
+      } catch (err) {
+        this.failed.push(name);
+        await recordRefreshFailed(this.deps.db, providerId, 'facts', failureMessage(err));
+        continue;
+      }
+      const declared = fieldsByProviderType as Partial<
+        Record<MetadataProviderType, readonly (keyof EnrichmentFields)[]>
+      >;
+      const fields = (declared[result.provider] ?? []).filter(
+        (field): field is EnrichableField => field !== 'tags'
+      );
+      const factsByTitle = new Map<number, Partial<EnrichmentFields>>();
+      for (const item of result.items) {
+        await yieldToEventLoop();
+        const titleId = item._sourceIds.identity;
+        if (titleId === undefined) continue;
+        const facts = Object.fromEntries(
+          fields
+            .map((field) => [field, item[field]] as const)
+            .filter(([, value]) => value !== undefined && value !== null)
+        ) as Partial<EnrichmentFields>;
+        factsByTitle.set(titleId, facts);
+      }
+      await this.deps.enrichmentQueries.replaceProviderFacts(providerId, factsByTitle);
+      await recordRefreshed(this.deps.db, providerId, 'facts');
     }
 
-    return toEnrich.length;
+    return identities.length;
   }
 }

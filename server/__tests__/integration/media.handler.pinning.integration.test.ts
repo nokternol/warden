@@ -20,6 +20,7 @@ import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createMediaProcedures } from '@server/modules/media';
 import { createMockConfig } from '@tests/factories';
 import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
+import { refreshCatalog } from '@tests/helpers/library';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
@@ -129,6 +130,7 @@ const mockUser = {
 
 // ─── Suite ────────────────────────────────────────────────────────────────────
 
+let libraryCradle: import('@server/container').Cradle;
 describe('Media browse — Phase 2 pinning net', () => {
   let client: ReturnType<typeof createApiClient>;
 
@@ -145,6 +147,7 @@ describe('Media browse — Phase 2 pinning net', () => {
     const config = loadConfig();
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
+    libraryCradle = container.cradle;
     const { providerSettingsService } = container.cradle;
 
     await providerSettingsService.create({
@@ -177,11 +180,12 @@ describe('Media browse — Phase 2 pinning net', () => {
     await closeDatabase();
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     server.use(
       http.get('http://localhost:7878/api/v3/movie', () => HttpResponse.json(PIN_MOVIES)),
       http.get('http://localhost:8989/api/v3/series', () => HttpResponse.json(PIN_SERIES))
     );
+    await refreshCatalog(libraryCradle);
   });
 
   // ─── Genres ────────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 /**
- * Exclude protection for a non-source actuator: an exclude matching any copy of a title protects
- * that title, judged at actuator-id level, including copies the identity job has not recorded yet.
+ * Exclude protection works by title for every actuator: an exclude matching any copy of a title,
+ * on any active instance, protects that title.
  */
 import { MetadataProviderType, mediaIdentity, mediaItems } from '@server/database/schema';
 import type { AppConfig } from '@server/kernel/config';
@@ -11,10 +11,10 @@ import { AutomationExecutor } from '@server/modules/automations/automationExecut
 import { AutomationRunService } from '@server/modules/automations/automationRunService';
 import { AutomationService } from '@server/modules/automations/automationService';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
-import { PlexProvider, ProviderSettingsService } from '@server/modules/providers';
+import { PlexProvider, ProviderSettingsService, RadarrProvider } from '@server/modules/providers';
 import { createRadarrMovie } from '@tests/factories';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
-import { sourceReadCacheHolding } from '@tests/helpers/sourceReadCache';
+import { libraryCacheHolding } from '@tests/helpers/library';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const testConfig: AppConfig = {
@@ -42,7 +42,7 @@ interface Copy {
   keep?: boolean;
 }
 
-describe('exclude protection for a non-source actuator', () => {
+describe('exclude protection', () => {
   let providerSettingsService: ProviderSettingsService;
   let automationService: AutomationService;
   let mediaQueryService: MediaQueryService;
@@ -115,7 +115,7 @@ describe('exclude protection for a non-source actuator', () => {
       automationBlockService: new AutomationBlockService({ db }),
       filterReadiness: filterReadinessOver(db),
       providerFactory: { create: () => plexInstance },
-      sourceReadCache: sourceReadCacheHolding(
+      libraryCache: libraryCacheHolding(
         [...new Set(copies.map((c) => c.providerId))].map((providerId) => ({
           providerId,
           rows: copies
@@ -214,25 +214,67 @@ describe('exclude protection for a non-source actuator', () => {
     expect(recordedTitles).toEqual(['Ronin']);
   });
 
-  it('skips the run when an excluded copy has neither a primary id nor a recorded identity', async () => {
-    const main = await radarr('Radarr');
-    const fourK = await radarr('Radarr 4K');
-    await recordIdentity({ tmdbId: 200, title: 'Ronin', plexRatingKey: 'rk-2' }, [
-      { providerId: main.id, radarrId: 2 },
-    ]);
-
-    const { run, deletedIds } = await deleteAllButKept(
-      [
-        { providerId: main.id, radarrId: 2, tmdb: 200, title: 'Ronin' },
-        // Nothing yet says which title this is, so nothing can say what it protects.
-        { providerId: fourK.id, radarrId: 9, title: 'Unlisted cut', keep: true },
-      ],
-      fourK.id
+  it("protects a film from a Radarr run on one instance through the other instance's keep tag", async () => {
+    const db = getDb();
+    const a = await providerSettingsService.create({
+      type: MetadataProviderType.RADARR,
+      name: 'Radarr A',
+      url: 'http://localhost:7878/api/v3',
+      apiKey: 'k',
+      settings: { enabledTasks: ['deleteMovieWithFiles'] },
+    });
+    const b = await radarr('Radarr B');
+    const radarrA = new RadarrProvider(
+      { name: 'Radarr A', url: 'http://localhost:7878/api/v3', apiKey: 'k', settings: {} },
+      getChildLogger('excludeProtection')
     );
+    const deleteMovies = vi.spyOn(radarrA, 'deleteMovies').mockResolvedValue(undefined);
+    const executor = new AutomationExecutor({
+      automationService,
+      automationRunService,
+      providerSettingsService,
+      mediaQueryService,
+      automationBlockService: new AutomationBlockService({ db }),
+      filterReadiness: filterReadinessOver(db),
+      providerFactory: { create: () => radarrA },
+      libraryCache: libraryCacheHolding([
+        {
+          providerId: a.id,
+          rows: [
+            createRadarrMovie({ id: 1, tmdbId: 100, title: 'Heat' }),
+            createRadarrMovie({ id: 2, tmdbId: 200, title: 'Ronin' }),
+          ],
+        },
+        {
+          providerId: b.id,
+          rows: [createRadarrMovie({ id: 9, tmdbId: 100, title: 'Heat', tags: [KEEP_TAG] })],
+        },
+      ]),
+      db,
+    });
+    const everything = await mediaQueryService.create({
+      name: 'Everything',
+      contentType: 'movie',
+      filters: [],
+    });
+    const keptOnB = await mediaQueryService.create({
+      name: 'Kept on B',
+      contentType: 'movie',
+      filters: [{ ruleKey: 'tagIds', value: { providerId: b.id, ids: [KEEP_TAG] } }],
+    });
+    const automation = await automationService.create({
+      name: 'Clean Radarr A',
+      queries: [
+        { queryId: everything.id, role: 'include' },
+        { queryId: keptOnB.id, role: 'exclude' },
+      ],
+      providerId: a.id,
+      taskId: 'deleteMovieWithFiles',
+      schedule: '0 2 * * *',
+    });
 
-    expect(deletedIds).toEqual([]);
-    expect(run.status).toBe('skipped');
-    expect(run.error).toMatch(/excluded title is not resolved yet/);
-    expect(run.error).toContain('Unlisted cut');
+    await executor.execute(automation.id);
+
+    expect(deleteMovies).toHaveBeenCalledWith([2]);
   });
 });

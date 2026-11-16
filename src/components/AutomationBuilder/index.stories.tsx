@@ -161,11 +161,21 @@ const destructiveAvailability: ProviderTaskAvailability[] = [
 
 /** Select "Delete movie + files": the confirmation states the exact count and gates saving. */
 export const DestructiveTask: Story = () =>
-  withData(destructiveProviders, destructiveAvailability, {}, { count: 214, contentType: 'movie' });
+  withData(
+    destructiveProviders,
+    destructiveAvailability,
+    {},
+    { count: 214, contentType: 'movie', records: [] }
+  );
 
 /** Select "Delete movie + files": a count of one is singular. */
 export const DestructiveTaskSingular: Story = () =>
-  withData(destructiveProviders, destructiveAvailability, {}, { count: 1, contentType: 'movie' });
+  withData(
+    destructiveProviders,
+    destructiveAvailability,
+    {},
+    { count: 1, contentType: 'movie', records: [] }
+  );
 
 /** Select "Delete movie + files": the count has not answered yet, so no number is shown. */
 export const DestructiveTaskCounting: Story = () =>

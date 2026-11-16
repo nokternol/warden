@@ -1,10 +1,7 @@
 import { MetadataProviderType } from '@server/database/schema';
-import type { EnrichmentResult } from '@server/modules/media/enrichment/enricher';
-import {
-  contestedFieldPrecedence,
-  resolvePrecedence,
-} from '@server/modules/media/enrichment/precedence';
-import type { NormalizedMovie } from '@server/modules/media/movie';
+import { fieldsByProviderType } from '@server/modules/media/activeFieldSet';
+import { contestedFieldPrecedence } from '@server/modules/media/enrichment/precedence';
+import type { EnrichmentFields } from '@server/modules/media/mediaFieldProvider';
 import { describe, expect, it } from 'vitest';
 
 describe('contestedFieldPrecedence', () => {
@@ -20,76 +17,28 @@ describe('contestedFieldPrecedence', () => {
       MetadataProviderType.JELLYFIN,
     ]);
   });
-});
 
-function result(provider: MetadataProviderType, item: NormalizedMovie): EnrichmentResult {
-  return { provider, items: [item] };
-}
+  it('orders every fact more than one enricher type declares, covering each of them', () => {
+    const declarers = new Map<keyof EnrichmentFields, MetadataProviderType[]>();
+    for (const [type, fields] of Object.entries(fieldsByProviderType)) {
+      for (const field of fields) {
+        if (field === 'tags') continue;
+        declarers.set(field, [...(declarers.get(field) ?? []), type as MetadataProviderType]);
+      }
+    }
+    const contested = [...declarers.entries()].filter(([, types]) => types.length > 1);
 
-describe('resolvePrecedence', () => {
-  it('resolves a contested field to the provider first in contestedFieldPrecedence', () => {
-    const tautulli = result(MetadataProviderType.TAUTULLI, {
-      _sourceIds: { radarr: 1 },
-      title: 'M',
-      playCount: 5,
-    });
-    const plex = result(MetadataProviderType.PLEX, {
-      _sourceIds: { radarr: 1 },
-      title: 'M',
-      playCount: 2,
-    });
-
-    const resolved = resolvePrecedence([plex, tautulli], {
-      playCount: [MetadataProviderType.TAUTULLI, MetadataProviderType.PLEX] as const,
-    });
-
-    expect(resolved).toHaveLength(1);
-    expect(resolved[0].playCount).toBe(5);
-  });
-
-  it('passes through a field with no contestedFieldPrecedence entry from its sole contributor', () => {
-    const tmdb = result(MetadataProviderType.TMDB, {
-      _sourceIds: { radarr: 1 },
-      title: 'M',
-      tmdbStatus: 'Released',
-    });
-
-    const resolved = resolvePrecedence([tmdb], {});
-
-    expect(resolved[0].tmdbStatus).toBe('Released');
-  });
-
-  it('falls through to the next provider when the higher one did not set the field', () => {
-    const plex = result(MetadataProviderType.PLEX, {
-      _sourceIds: { radarr: 1 },
-      title: 'M',
-      playCount: 2,
-    });
-
-    const resolved = resolvePrecedence([plex], {
-      playCount: [MetadataProviderType.TAUTULLI, MetadataProviderType.PLEX],
-    });
-
-    expect(resolved[0].playCount).toBe(2);
-  });
-
-  it('merges fields contributed by different providers onto one item', () => {
-    const tautulli = result(MetadataProviderType.TAUTULLI, {
-      _sourceIds: { radarr: 1 },
-      title: 'M',
-      playCount: 5,
-    });
-    const seerr = result(MetadataProviderType.SEERR, {
-      _sourceIds: { radarr: 1 },
-      title: 'M',
-      seerrHasIssue: true,
-    });
-
-    const resolved = resolvePrecedence([tautulli, seerr], {
-      playCount: [MetadataProviderType.TAUTULLI],
-      seerrHasIssue: [MetadataProviderType.SEERR],
-    });
-
-    expect(resolved[0]).toMatchObject({ playCount: 5, seerrHasIssue: true });
+    for (const [field, types] of contested) {
+      const order: readonly MetadataProviderType[] =
+        contestedFieldPrecedence[field as keyof typeof contestedFieldPrecedence] ?? [];
+      expect({ field, missing: types.filter((t) => !order.includes(t)) }).toEqual({
+        field,
+        missing: [],
+      });
+    }
+    expect(contestedFieldPrecedence.studio).toEqual([
+      MetadataProviderType.PLEX,
+      MetadataProviderType.JELLYFIN,
+    ]);
   });
 });

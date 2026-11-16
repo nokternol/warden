@@ -46,6 +46,7 @@ describe('provider tasks under the scope declaration', () => {
     const procedureCradle = {
       providerSettingsService: cradle.providerSettingsService,
       providerFactory: cradle.providerFactory,
+      libraryCache: cradle.libraryCache,
       config: cradle.config,
       scope: deferringRadarrSearch,
     };

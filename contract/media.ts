@@ -1,7 +1,21 @@
 import { z } from 'zod';
 import { base } from './base';
 import { ReadinessFindingSchema } from './readiness';
-import { type ContentType, ContentTypeSchema, FilterSchema, ProviderTypeSchema } from './schemas';
+import {
+  type ContentType,
+  ContentTypeSchema,
+  FilterSchema,
+  ProviderTypeSchema,
+  RefreshRecordSchema,
+} from './schemas';
+
+export {
+  type Freshness,
+  type RefreshRecord,
+  FreshnessSchema,
+  RefreshRecordSchema,
+  freshnessOf,
+} from './schemas';
 
 // ─── Browse query ───────────────────────────────────────────────────────────────
 
@@ -89,9 +103,6 @@ export const ManagedSeriesSchema = z.looseObject({
   ...BrowseCopiesSchema,
 });
 
-/** A source instance whose library could not be fetched for this page. */
-const MediaErrorSchema = z.object({ provider: z.string(), error: z.string() });
-
 const browsePage = <T extends z.ZodType>(item: T) =>
   z.object({
     items: z.array(item),
@@ -99,7 +110,8 @@ const browsePage = <T extends z.ZodType>(item: T) =>
     page: z.number(),
     pageSize: z.number(),
     yearRange: z.object({ min: z.number().nullable(), max: z.number().nullable() }),
-    errors: z.array(MediaErrorSchema),
+    /** The refresh records of the copy the page answers from: how current it is, and what failed. */
+    records: z.array(RefreshRecordSchema),
     /** Every reason the page's filters cannot be trusted, from filter readiness. */
     findings: z.array(ReadinessFindingSchema),
     /** What the Media page does with them. */

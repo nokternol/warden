@@ -63,49 +63,40 @@ it — so the hard logic stays mock-free testable. The standalone mapper functio
 through (`mappers.ts`'s `mapTautulliHistory`/`mapPlexItems`/`mapOverseerr`) are deleted; that logic now
 lives on each adapter, alongside the field declaration it produces.
 
-## Cross-enricher precedence is a per-field policy, resolved at write time
+## Cross-enricher precedence is a per-field policy, resolved when the copy loads
 
-Two enrichers can speak to one canonical field (`playCount` from Tautulli **or** Plex). A single global
-enricher ordering cannot express this, because precedence can differ per field — so it is a small
-declarative map, scoped to only the fields with more than one real producer, consumed by a **pure**
-`resolvePrecedence` ([`enrichment/precedence.ts`](ref:path:server/modules/media/enrichment/precedence.ts)).
-Full shape and the fail-fast guardrail around it are in
-[`docs/architecture/media-field-provider-role.md`](ref:path:docs/architecture/media-field-provider-role.md):
+Two enrichers can speak to one canonical field (`playCount` from Tautulli, Plex or Jellyfin; studio and
+file details from Plex or Jellyfin). A single global enricher ordering cannot express this, because
+precedence can differ per field — so it is a declarative map,
+[`contestedFieldPrecedence`](ref:path:server/modules/media/enrichment/precedence.ts), with an order for
+every field more than one enricher type declares. Full shape and the fail-fast guardrail around it are in
+[`docs/architecture/media-field-provider-role.md`](ref:path:docs/architecture/media-field-provider-role.md).
 
-```ts
-const contestedFieldPrecedence = {
-  playCount:     [TAUTULLI, PLEX],
-  lastWatchedAt: [TAUTULLI, PLEX],
-};
-```
+Each enricher's facts are **stored as reported**, one row per title, fact and provider, so no provider's
+value is lost at write time. Precedence runs when the library cache loads:
+[`resolveFacts`](ref:path:server/modules/media/enrichmentMerge.ts) picks, per title and contested field,
+the value of the active provider ranked first, and keeps uncontested fields as reported. See
+[the EAV model](ref:path:docs/architecture/media-enrichment-eav-model.md).
 
-Precedence runs at **write time**, so the cache stores **resolved** canonical fields (`playCount`,
-`lastWatchedAt`), not provider-shaped columns side by side. Read-time `enrichmentMerge.ts` is then a
-generic `Object.assign` of whatever fields storage holds for the matched identity onto the item — see
-[the EAV rewrite](ref:path:docs/architecture/media-enrichment-eav-model.md) for why storage only ever
-holds a row for a field actually present, which is what makes the read-side generic rather than a
-per-field copy. Resolution is explicit and testable at the point of write rather than implicit at every
-read; storage-level provenance is intentionally discarded because the job recomputes from all enrichers
-on every staleness pass.
-
-## The job is a scheduled executor over a cache
+## The job is a scheduled reader of every enricher
 
 ```
-items     = hydrate(identities)                  // MediaItem with _sourceIds resolved (identity layer)
-results   = await Promise.all(enrichers.map(e => e.enrich(items)))
-canonical = resolvePrecedence(results, contestedFieldPrecedence)
-persist(canonical)                                // cache projection for cheap reads
+items = hydrate(identities)                      // MediaItem with _sourceIds resolved (catalog refresh)
+for each enricher:
+  result = await enricher.enrich(items)          // a failure keeps that provider's facts, records it
+  replaceProviderFacts(provider, result)         // and records a successful `facts` refresh
 ```
 
-`EnrichmentJob` (`modules/media/enrichmentJob.ts`, wired by `EnrichmentJobFactory`) is a scheduled executor, not
-the hot path: enrichers do live fetches, so their output is **cached** and refreshed on staleness, and
-browse/preview/executor read the cache cheaply.
+`EnrichmentJob` (`modules/media/enrichmentJob.ts`, wired by `EnrichmentJobFactory`) runs as the
+"Enrichment" system automation. It reads every active enricher for every title on every run; a failed
+enricher keeps its earlier facts and the run ends in error naming it. Features never call an enricher:
+they read the stored facts through the library cache.
 
-## Identity resolution is upstream, and is a Source concern
+## Title links are upstream, and are a Source concern
 
-`media_identity` / `IdentityResolutionJob` is **not** enrichment: it is what lets a Radarr-owned item learn
-its `plexRatingKey` (Radarr never knew it), hydrating `_sourceIds` so a `MediaEnricher` has a key to match.
-It is upstream of, and separate from, enrichment — an ownership/identity concern, not an enricher one.
+The catalog refresh, not enrichment, is what lets a Radarr-owned item learn its `plexRatingKey`
+(Radarr never knew it), hydrating `_sourceIds` so a `MediaEnricher` has a key to match. It is upstream
+of, and separate from, enrichment — an ownership/identity concern, not an enricher one.
 
 ## How it is wired
 
@@ -113,7 +104,7 @@ It is upstream of, and separate from, enrichment — an ownership/identity conce
 - [`enrichment/enricherAdapters.ts`](ref:path:server/modules/media/enrichment/enricherAdapters.ts) — `plexEnricher`, `tautulliEnricher`,
   `seerrEnricher`, `tmdbEnricher`, each a thin shell binding a provider connection to the role: fetch,
   run its `MediaFieldProvider`/`MediaFieldSource` adapter's `visit`/`toEnrichmentFields`, then `enrichment/decorate.ts`.
-- [`enrichment/precedence.ts`](ref:path:server/modules/media/enrichment/precedence.ts) — `resolvePrecedence` + the per-field `contestedFieldPrecedence`.
-- `EnrichmentJob` — hydrates stale identities into `MediaItem`s, runs every enricher, resolves per field,
-  persists resolved canonical fields via `EnrichmentQueries.replaceFields`.
-- [`enrichmentMerge.ts`](ref:path:server/modules/media/enrichmentMerge.ts) — read-time generic assign of canonical fields onto browse/executor items via `EnrichmentQueries.getByIdentityIds`.
+- [`enrichment/precedence.ts`](ref:path:server/modules/media/enrichment/precedence.ts) — the per-field `contestedFieldPrecedence` and its activation guard.
+- `EnrichmentJob` — hydrates every title into a `MediaItem`, reads each enricher, and stores each
+  provider's facts via `EnrichmentQueries.replaceProviderFacts`.
+- [`enrichmentMerge.ts`](ref:path:server/modules/media/enrichmentMerge.ts) — `resolveFacts`, the load-time choice of one value per fact.

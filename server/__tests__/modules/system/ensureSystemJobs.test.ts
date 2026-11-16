@@ -72,7 +72,7 @@ describe('ensureSystemJobs()', () => {
 
     const rows = await db.select().from(automations).where(eq(automations.kind, 'system'));
 
-    expect(rows.map((row) => row.name).sort()).toEqual(['Enrichment', 'Identity resolution']);
+    expect(rows.map((row) => row.name).sort()).toEqual(['Catalog refresh', 'Enrichment']);
   });
 
   it('renames a row seeded under its task id, without adding a second', async () => {

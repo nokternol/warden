@@ -13,6 +13,7 @@ import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createMediaProcedures } from '@server/modules/media';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
+import { refreshCatalog } from '@tests/helpers/library';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
@@ -31,6 +32,7 @@ const mockUser = {
   updatedAt: new Date(),
 };
 
+let libraryCradle: import('@server/container').Cradle;
 describe('Media lookup routes — Sonarr language profiles', () => {
   let client: ReturnType<typeof createApiClient>;
 
@@ -47,6 +49,7 @@ describe('Media lookup routes — Sonarr language profiles', () => {
     const config = loadConfig();
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
+    libraryCradle = container.cradle;
     const { providerSettingsService } = container.cradle;
 
     await providerSettingsService.create({
@@ -73,7 +76,7 @@ describe('Media lookup routes — Sonarr language profiles', () => {
     await closeDatabase();
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     server.use(
       http.get('http://localhost:8989/api/v3/languageprofile', () =>
         HttpResponse.json([
@@ -82,6 +85,7 @@ describe('Media lookup routes — Sonarr language profiles', () => {
         ])
       )
     );
+    await refreshCatalog(libraryCradle);
   });
 
   describe('GET /api/media/language-profiles', () => {

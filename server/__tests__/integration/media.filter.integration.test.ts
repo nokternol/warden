@@ -16,6 +16,7 @@ import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createMediaProcedures } from '@server/modules/media';
 import { createMockConfig } from '@tests/factories';
 import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
+import { refreshCatalog } from '@tests/helpers/library';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
@@ -152,6 +153,7 @@ const mockUser = {
 
 // ─── Suite ────────────────────────────────────────────────────────────────────
 
+let libraryCradle: import('@server/container').Cradle;
 describe('Media Filter API', () => {
   let client: ReturnType<typeof createApiClient>;
   let unauthedClient: ReturnType<typeof createApiClient>;
@@ -169,6 +171,7 @@ describe('Media Filter API', () => {
     const config = loadConfig();
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
+    libraryCradle = container.cradle;
     const { providerSettingsService } = container.cradle;
 
     await providerSettingsService.create({
@@ -212,11 +215,12 @@ describe('Media Filter API', () => {
 
   // Populate cache with our fixture data before every test.
   // vitest.server.ts resets handlers in afterEach so we re-apply here.
-  beforeEach(() => {
+  beforeEach(async () => {
     server.use(
       http.get('http://localhost:7878/api/v3/movie', () => HttpResponse.json(FILTER_MOVIES)),
       http.get('http://localhost:8989/api/v3/series', () => HttpResponse.json(FILTER_SERIES))
     );
+    await refreshCatalog(libraryCradle);
   });
 
   // ─── A01 — Title search ────────────────────────────────────────────────────

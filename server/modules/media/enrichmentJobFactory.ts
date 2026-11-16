@@ -3,6 +3,7 @@ import type { DrizzleDb } from '../../kernel/db';
 import { getChildLogger } from '../../kernel/logger';
 import type { EnrichmentJobFactoryLike } from '../../modules/system';
 import type { ProviderFactory, ProviderSettingsService } from '../providers';
+import type { MediaEnricher } from './enrichment/enricher';
 import {
   jellyfinEnricher,
   plexEnricher,
@@ -47,13 +48,20 @@ export class EnrichmentJobFactory implements EnrichmentJobFactoryLike {
       providers,
       log
     );
-    const enrichers = [
-      tautulli && tautulliEnricher(tautulli),
-      seerr && seerrEnricher(seerr),
-      plex && plexEnricher(plex),
-      jellyfin && jellyfinEnricher(jellyfin),
-      tmdb && tmdbEnricher(tmdb),
-    ].filter((e) => e !== undefined);
+    const settingsOf = (type: MetadataProviderType) => providers.find((p) => p.type === type);
+    const candidates: Array<[MetadataProviderType, MediaEnricher | undefined]> = [
+      [MetadataProviderType.TAUTULLI, tautulli && tautulliEnricher(tautulli)],
+      [MetadataProviderType.SEERR, seerr && seerrEnricher(seerr)],
+      [MetadataProviderType.PLEX, plex && plexEnricher(plex)],
+      [MetadataProviderType.JELLYFIN, jellyfin && jellyfinEnricher(jellyfin)],
+      [MetadataProviderType.TMDB, tmdb && tmdbEnricher(tmdb)],
+    ];
+    const enrichers = candidates.flatMap(([type, enricher]) => {
+      const settings = settingsOf(type);
+      return enricher && settings
+        ? [{ providerId: settings.id, name: settings.name, enricher }]
+        : [];
+    });
     return new EnrichmentJob({ db: this.db, enrichmentQueries: this.enrichmentQueries, enrichers });
   }
 }

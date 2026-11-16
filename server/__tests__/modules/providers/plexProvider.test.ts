@@ -49,6 +49,15 @@ describe('PlexProvider', () => {
     expect(items[0].viewCount).toBe(3);
     expect(items[0].lastViewedAt).toBe(1700000000);
   });
+
+  it('reads a section whose answer has no Metadata as an empty section', async () => {
+    server.use(
+      http.get(`${PLEX_URL}/library/sections/3/all`, () =>
+        HttpResponse.json({ MediaContainer: { size: 0 } })
+      )
+    );
+    expect(await provider.getLibraryContents('3')).toEqual([]);
+  });
 });
 
 describe('PlexProvider — actuator tasks', () => {
@@ -130,5 +139,20 @@ describe('PlexProvider — actuator tasks', () => {
     await task('markUnplayed').run(['201']);
 
     expect(calls).toEqual([{ key: '201', identifier: 'com.plexapp.plugins.library' }]);
+  });
+});
+
+describe('PlexProvider — deleting an item already gone', () => {
+  const provider = new PlexProvider(mockConfig, logger);
+
+  it('counts a delete answered 404 as done', async () => {
+    server.use(
+      http.delete(
+        `${PLEX_URL}/library/metadata/:key`,
+        () => new HttpResponse(null, { status: 404 })
+      )
+    );
+
+    await expect(provider.deleteFromLibrary(['101'])).resolves.toBeUndefined();
   });
 });

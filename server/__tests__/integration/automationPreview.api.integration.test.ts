@@ -16,6 +16,7 @@ import { ProviderSettingsService } from '@server/modules/providers';
 import { createMockConfig, createRadarrMovie } from '@tests/factories';
 import { createApiClient, expectErrorResponse, expectSuccessResponse } from '@tests/helpers/api';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
+import { refreshCatalog } from '@tests/helpers/library';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import { http, HttpResponse } from 'msw';
@@ -89,20 +90,19 @@ describe('POST /api/automations/preview', () => {
 
   afterEach(() => {
     server.resetHandlers();
-    // The container's one read cache outlives each test; each test sets its own upstream answers.
-    cradle.sourceReadCache.clear();
   });
 
   afterAll(async () => {
     await closeDatabase();
   });
 
-  function radarrHolds(movies: ReturnType<typeof createRadarrMovie>[]) {
+  async function radarrHolds(movies: ReturnType<typeof createRadarrMovie>[]) {
     server.use(http.get(`${RADARR_URL}/movie`, () => HttpResponse.json(movies)));
+    await refreshCatalog(cradle);
   }
 
   it('answers how many movies an unsaved automation would act on', async () => {
-    radarrHolds([
+    await radarrHolds([
       createRadarrMovie({ id: 1, title: 'Alien', hasFile: true }),
       createRadarrMovie({ id: 2, title: 'Brazil', hasFile: false }),
       createRadarrMovie({ id: 3, title: 'Heat', hasFile: true }),
@@ -114,11 +114,17 @@ describe('POST /api/automations/preview', () => {
       queries: [{ queryId: hasFileQueryId, role: 'include' }],
     });
 
-    expectSuccessResponse(res, { count: 2, contentType: 'movie' });
+    expect(expectSuccessResponse(res)).toEqual({
+      count: 2,
+      contentType: 'movie',
+      records: expect.arrayContaining([
+        expect.objectContaining({ providerId: radarrId, kind: 'catalog', error: null }),
+      ]),
+    });
   });
 
   it('does not let a rating exclusion protect an unrated movie', async () => {
-    radarrHolds([
+    await radarrHolds([
       createRadarrMovie({
         id: 1,
         title: 'Unrated',
@@ -140,7 +146,7 @@ describe('POST /api/automations/preview', () => {
       ],
     });
 
-    expectSuccessResponse(res, { count: 2, contentType: 'movie' });
+    expect(expectSuccessResponse(res)).toMatchObject({ count: 2, contentType: 'movie' });
   });
 
   it('answers 404 for an unknown provider', async () => {
@@ -173,11 +179,9 @@ describe('POST /api/automations/preview', () => {
     expectErrorResponse(res, 400, 'VALIDATION_ERROR');
   });
 
-  it("given one read, a query preview and an automation's planning match the same titles", async () => {
-    let reads = 0;
+  it("a query preview and an automation's planning match the same titles", async () => {
     server.use(
       http.get(`${RADARR_URL}/movie`, () => {
-        reads++;
         return HttpResponse.json([
           createRadarrMovie({ id: 1, title: 'Alien', hasFile: true }),
           createRadarrMovie({ id: 2, title: 'Brazil', hasFile: false }),
@@ -186,6 +190,7 @@ describe('POST /api/automations/preview', () => {
       })
     );
 
+    await refreshCatalog(cradle);
     const queryPreview = expectSuccessResponse(
       await client.get(`/api/media-queries/${hasFileQueryId}/preview`)
     );
@@ -197,32 +202,6 @@ describe('POST /api/automations/preview', () => {
       })
     );
 
-    expect({ reads, automation: automationPreview.count }).toEqual({
-      reads: 1,
-      automation: queryPreview.count,
-    });
-  });
-
-  it('readiness with fresh re-reads the library; without it, reads it as it stands', async () => {
-    let library = [createRadarrMovie({ id: 1, title: 'Alien', hasFile: true })];
-    server.use(http.get(`${RADARR_URL}/movie`, () => HttpResponse.json(library)));
-    const automation = await cradle.automationService.create({
-      name: 'Delete what is on disk',
-      queries: [{ queryId: hasFileQueryId, role: 'include' }],
-      providerId: radarrId,
-      taskId: 'deleteMovieWithFiles',
-      schedule: '0 * * * *',
-    });
-    const readiness = async (query = '') =>
-      expectSuccessResponse(await client.get(`/api/automations/${automation.id}/readiness${query}`))
-        .count;
-
-    await readiness();
-    library = [...library, createRadarrMovie({ id: 2, title: 'Heat', hasFile: true })];
-
-    expect({ asItStands: await readiness(), fresh: await readiness('?fresh=true') }).toEqual({
-      asItStands: 1,
-      fresh: 2,
-    });
+    expect(automationPreview.count).toBe(queryPreview.count);
   });
 });

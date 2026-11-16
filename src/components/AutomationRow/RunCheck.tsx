@@ -1,3 +1,4 @@
+import AsOfLine from '@app/components/AsOfLine';
 import Button from '@app/components/Button';
 import { blastRadius } from '@app/lib/blastRadius';
 import type { AutomationReadiness } from '@contract/automations';
@@ -34,7 +35,11 @@ export default function RunCheck({
   const radius = blastRadius({
     data:
       readiness && readiness.count !== null
-        ? { count: readiness.count, contentType: readiness.contentType }
+        ? {
+            count: readiness.count,
+            contentType: readiness.contentType,
+            records: readiness.records,
+          }
         : undefined,
     error: readiness?.countError !== undefined ? new Error(readiness.countError) : undefined,
   });
@@ -78,6 +83,7 @@ export default function RunCheck({
           {radius.state === 'counted' ? `${taskLabel} ${radius.phrase}.` : radius.phrase}
         </p>
       )}
+      {readiness && <AsOfLine records={readiness.records} />}
       <div className="flex flex-wrap gap-2">
         {(failed || (readiness && radius.state === 'failed')) && (
           <Button type="button" variant="secondary" size="sm" onClick={onRetry}>

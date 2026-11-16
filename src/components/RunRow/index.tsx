@@ -1,3 +1,4 @@
+import AsOfLine from '@app/components/AsOfLine';
 import { LoadError, SkeletonRows } from '@app/components/AsyncBoundary';
 import Badge from '@app/components/Badge';
 import Button from '@app/components/Button';
@@ -57,6 +58,7 @@ function Root({ run, defaultExpanded = false }: RunRowProps) {
         </td>
         <td className={table.cell} data-label="Ran at">
           {formatDate(run.ranAt)}
+          {run.freshness && <AsOfLine freshness={run.freshness} />}
         </td>
         <td className={table.cell} data-label="Items">
           {run.itemCount !== null ? run.itemCount : '—'}

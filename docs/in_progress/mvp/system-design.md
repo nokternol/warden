@@ -7,7 +7,7 @@ design and the north star disagree, the north star wins and this document is wro
 
 The graded map of the current code that this design answers is posted on #251.
 
-## 1. One copy of the library (beliefs 3, 4, 6, 8)
+## 1. One copy of the library (beliefs 3, 4, 6, 8) — built (#252)
 
 - **The database holds the services' data.** What Radarr and Sonarr say about each copy, which
   copies are one title and the title's id in every other service, and the facts the other services
@@ -20,18 +20,20 @@ The graded map of the current code that this design answers is posted on #251.
   the database and replaced when a refresh lands. It is the only thing features read.
 - **Staleness is shown, not fought.** Every view that shows library data says when the copy was
   last refreshed, and which services failed their last refresh.
-- **A failed or empty answer is not news.** A refresh whose service failed, or answered with nothing
-  where it held titles before, keeps the last good data for that service and records the failure.
-  It never marks that service's titles removed.
-- **Condition (owner):** the Media page must stay fast. The first build step measures it on a
-  library of the owner's size; if the cache cannot keep it fast, that goes back to the owner.
+- **Warden believes what a service answers** (north-star belief 6). A successful answer, even an
+  empty one, is the service's truth. An error or no answer is a failure: the refresh keeps the last
+  good data for that service and records the failure.
+- **Condition (owner):** the Media page must stay fast. The measurement runs on the built read path,
+  once the cache serves browse and before the slice is finished; if the cache cannot keep it fast, that
+  goes back to the owner. Measured on a generated library of 10,000 movies and 3,000 series: cold load
+  about 0.9 s, warm browse page about 220 ms (`docs/architecture/library-cache.md`).
 
 **Removes:** the 60-second live copy as something features read (it becomes the refresh's way of
 reading, or goes); the Media page's own title grouping; runs writing copies into the database;
 the "excluded title not resolved yet" skip; live Plex/Jellyfin reads for filter choices; the
 per-lookup caches in the media procedures.
 
-## 2. Same title (beliefs 2, 3)
+## 2. Same title (beliefs 2, 3) — built (#252)
 
 - The refresh decides which copies are one title, with one rule, and records it in the copy.
 - Every feature that needs titles reads that grouping: the Media page, counts, exclude protection,
@@ -42,8 +44,9 @@ per-lookup caches in the media procedures.
 - **Each service declares once which facts it supplies.** The fact list, the refresh's write, the
   rules that read a fact and the services a rule depends on all follow from that one declaration.
 - **Filter choices come from the stored facts,** read from the cache, never from a live service.
-- **Contested facts** (supplied by more than one service, such as play count) keep the existing
-  precedence rule, applied once, when the refresh writes.
+- **Facts are stored per provider,** as each provider reported them (built, #252). Where more than one provider
+  supplies a fact (play count; studio and file details when Plex and Jellyfin are both active),
+  precedence picks one value when the cache loads.
 
 ## 4. Providers (beliefs 2, 8, 10)
 
@@ -66,9 +69,11 @@ per-lookup caches in the media procedures.
   demand for fresh data.
 - **One step to see what an automation would act on now:** its includes minus its excludes, from
   the copy, whenever the owner chooses. Viewing it is never required.
-- **Guards against Warden's own faults stay:** a destructive run does not act when a service it
-  depends on failed its last refresh, or when it would reach at least 20 titles and more than half
-  the library.
+- **A destructive run does not act when a service it depends on failed its last refresh,** or has
+  never been read. A fact another connected service still supplies does not depend on the one that
+  failed: the run needs one refreshed supplier per fact it filters on (north-star belief 7). Nothing
+  skips a run because of how much it would affect (north-star belief 7): an automation whose
+  destructive action would affect a large share of the library is flagged for review instead.
 - **Run history** records what each run targeted, with title and year, and outlives the copy.
 
 ## 6. Reading the catalog (beliefs 3, 8)
@@ -93,7 +98,7 @@ page, the client mutation pattern, per-row fetching, and the refresh's write per
 
 | Slice | New scope | Depends on |
 |---|---|---|
-| #252 The library record (renamed: **One copy of the library**) | Section 1 and 2: the refresh stores the services' data and records each service's refresh; one cache over the database; every feature reads it; the Media page measurement first. Absorbs from #247 the read side, the per-lookup caches and the fan-outs. | this design |
+| #252 The library record (renamed: **One copy of the library**) | Section 1 and 2: the refresh stores the services' data and records each service's refresh; one cache over the database; every feature reads it; the Media page measured on the built read path before the slice is finished. Absorbs from #247 the read side, the per-lookup caches and the fan-outs. | this design |
 | #244 Provider types | Section 4. | this design |
 | #246 Enrichment | Section 3. | #244, #252 |
 | #247 Reading the catalog | Section 6: one evaluation for the Media page, counts, the matches view and runs. | #252 |
@@ -102,5 +107,5 @@ page, the client mutation pattern, per-row fetching, and the refresh's write per
 | #243 Small fixes | One container convention, one time helper, the scope declaration read one way, stale docs and narrating comments, unused code. | this design |
 | #250 Remaining duplication | Whatever duplicates are left after the slices above. | all above |
 
-The fracture ledger's "Library reads — one per feature" entry, marked healed, reopens: the shared
-60-second read is a second copy of the library under belief 4.
+The shared 60-second read was a second copy of the library under belief 4. The fracture ledger
+records it as "Library copies — a live 60-second read beside the database", healed by #252.

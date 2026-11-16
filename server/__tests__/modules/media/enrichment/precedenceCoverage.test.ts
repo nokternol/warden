@@ -1,5 +1,9 @@
 import { MetadataProviderType } from '@server/database/schema';
-import { assertContestedFieldsCovered } from '@server/modules/media/enrichment/precedence';
+import { fieldsByProviderType } from '@server/modules/media/activeFieldSet';
+import {
+  assertContestedFieldsCovered,
+  contestedFieldPrecedence,
+} from '@server/modules/media/enrichment/precedence';
 import { describe, expect, it } from 'vitest';
 
 describe('assertContestedFieldsCovered', () => {
@@ -35,6 +39,48 @@ describe('assertContestedFieldsCovered', () => {
         new Set([MetadataProviderType.TAUTULLI, MetadataProviderType.PLEX]),
         precedence,
         fieldsByType
+      )
+    ).not.toThrow();
+  });
+
+  it('throws for a fact two active producers declare that has no precedence order at all', () => {
+    const fieldsByType = {
+      [MetadataProviderType.PLEX]: ['studio'] as const,
+      [MetadataProviderType.JELLYFIN]: ['studio'] as const,
+    };
+
+    expect(() =>
+      assertContestedFieldsCovered(
+        new Set([MetadataProviderType.PLEX, MetadataProviderType.JELLYFIN]),
+        {},
+        fieldsByType
+      )
+    ).toThrow(/studio/);
+  });
+
+  it('lets Sonarr activate while Radarr is active', () => {
+    expect(() =>
+      assertContestedFieldsCovered(
+        new Set([MetadataProviderType.RADARR, MetadataProviderType.SONARR]),
+        contestedFieldPrecedence,
+        fieldsByProviderType
+      )
+    ).not.toThrow();
+  });
+
+  it('accepts every offered enricher active together', () => {
+    expect(() =>
+      assertContestedFieldsCovered(
+        new Set([
+          MetadataProviderType.RADARR,
+          MetadataProviderType.SONARR,
+          MetadataProviderType.TAUTULLI,
+          MetadataProviderType.PLEX,
+          MetadataProviderType.JELLYFIN,
+          MetadataProviderType.SEERR,
+        ]),
+        contestedFieldPrecedence,
+        fieldsByProviderType
       )
     ).not.toThrow();
   });

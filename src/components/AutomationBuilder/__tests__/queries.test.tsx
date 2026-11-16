@@ -58,7 +58,11 @@ beforeEach(() => {
       { providerId: 1, type: 'RADARR', tasks: [UNMONITOR, DELETE] },
     ]),
     mockProcedure(contract.mediaQueries.preview, () => ({ count: 5 }) as never),
-    mockProcedure(contract.automations.preview, () => ({ count: 3, contentType: 'movie' as const }))
+    mockProcedure(contract.automations.preview, () => ({
+      count: 3,
+      contentType: 'movie' as const,
+      records: [],
+    }))
   );
 });
 
@@ -143,7 +147,7 @@ describe('the blast radius', () => {
     server.use(
       mockProcedure(contract.automations.preview, async () => {
         await delay('infinite');
-        return { count: 3, contentType: 'movie' as const };
+        return { count: 3, contentType: 'movie' as const, records: [] };
       })
     );
     const user = userEvent.setup();
@@ -175,6 +179,7 @@ describe('the blast radius', () => {
       mockProcedure(contract.automations.preview, () => ({
         count: 3,
         contentType: 'movie' as const,
+        records: [],
       }))
     );
     await user.click(screen.getByRole('button', { name: 'Retry count' }));

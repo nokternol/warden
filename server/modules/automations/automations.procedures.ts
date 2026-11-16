@@ -78,7 +78,7 @@ export function createAutomationProcedures(cradle: Cradle) {
     }),
 
     readiness: api.automations.readiness.handler(async ({ input }) =>
-      automationExecutor.readiness(input.id, { fresh: input.fresh })
+      automationExecutor.readiness(input.id)
     ),
 
     signOff: api.automations.signOff.handler(async ({ input }) => {

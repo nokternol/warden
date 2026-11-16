@@ -1,3 +1,4 @@
+import AsOfLine from '@app/components/AsOfLine';
 import AutomationQueryList from '@app/components/AutomationQueryList';
 import type { AutomationQueryItem } from '@app/components/AutomationQueryList';
 import Badge from '@app/components/Badge';
@@ -435,6 +436,7 @@ export default function AutomationBuilder({
                     : radius.phrase}
               </span>
             </label>
+            {hasInclude && preview.data && <AsOfLine records={preview.data.records} />}
             {radius?.state === 'failed' && (
               <Button
                 type="button"

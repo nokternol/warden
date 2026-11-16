@@ -120,8 +120,8 @@ describe('loading never shows an empty state', () => {
   });
 });
 
-describe('a source that failed during a successful browse', () => {
-  it('names the provider and its error above the results', async () => {
+describe('a source that failed its last refresh', () => {
+  it("names the provider in the copy's As of line above the results", async () => {
     server.use(
       mockProcedure(contract.media.browse.movie, () => ({
         items: [],
@@ -129,12 +129,25 @@ describe('a source that failed during a successful browse', () => {
         page: 1,
         pageSize: 48,
         yearRange: { min: null, max: null },
-        errors: [{ provider: 'Radarr Main', error: 'Timed out' }],
+        records: [
+          {
+            providerId: 1,
+            provider: 'Radarr Main',
+            kind: 'catalog' as const,
+            refreshedAt: 1_794_000_000,
+            failedAt: 1_794_003_600,
+            error: 'Timed out',
+          },
+        ],
         findings: [],
         mediaPage: 'clear' as const,
       }))
     );
     page(<MediaPage />);
-    await alertNaming(/radarr main.*timed out/i);
+    // Each content type's pane says how current its own copy is.
+    const lines = await screen.findAllByRole('status', { name: 'How current this is' });
+    expect(lines.map((line) => line.textContent).join('\n')).toMatch(
+      /Radarr Main's library failed to refresh/
+    );
   });
 });

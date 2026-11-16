@@ -13,6 +13,7 @@ import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createMediaProcedures } from '@server/modules/media';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
+import { refreshCatalog } from '@tests/helpers/library';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
@@ -72,6 +73,7 @@ const mockUser = {
   updatedAt: new Date(),
 };
 
+let libraryCradle: import('@server/container').Cradle;
 describe('Media lookup routes — Radarr-sourced', () => {
   let client: ReturnType<typeof createApiClient>;
 
@@ -88,6 +90,7 @@ describe('Media lookup routes — Radarr-sourced', () => {
     const config = loadConfig();
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
+    libraryCradle = container.cradle;
     const { providerSettingsService } = container.cradle;
 
     await providerSettingsService.create({
@@ -114,8 +117,9 @@ describe('Media lookup routes — Radarr-sourced', () => {
     await closeDatabase();
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     server.use(http.get('http://localhost:7878/api/v3/movie', () => HttpResponse.json(PIN_MOVIES)));
+    await refreshCatalog(libraryCradle);
   });
 
   describe('GET /api/media/release-groups', () => {

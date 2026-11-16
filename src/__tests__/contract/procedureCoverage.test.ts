@@ -12,7 +12,6 @@ const UNCALLED_BY_CLIENT: Record<string, string> = {
   'system.health': 'server-only: the container health check probes it',
   'appSettings.get': 'deferred, no client consumer yet (plan L2)',
   'appSettings.update': 'deferred, no client consumer yet (plan L2)',
-  'providers.metadata': 'deferred, no client consumer yet (plan L2)',
 };
 
 /** Every procedure's dotted path in the contract, e.g. `automations.list`. */

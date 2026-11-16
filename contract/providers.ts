@@ -141,30 +141,6 @@ export const providers = {
     .route({ method: 'GET', path: '/api/providers/task-options/{route}' })
     .input(z.object({ route: TaskOptionsRouteSchema }))
     .output(z.array(ProviderTaskOptionsAvailabilitySchema)),
-
-  /** A provider's raw catalogue data, fetched with ad-hoc connection details. */
-  metadata: base
-    .route({ method: 'GET', path: '/api/providers/metadata' })
-    .input(
-      z.object({
-        type: ProviderTypeSchema,
-        url: z.string().url(),
-        apiKey: z.string().optional().default(''),
-        /** JSON-encoded extra settings (e.g. `{"userId":"abc"}` for Jellyfin). */
-        settings: z
-          .string()
-          .optional()
-          .transform((val) => {
-            if (!val) return {};
-            try {
-              return JSON.parse(val) as Record<string, unknown>;
-            } catch {
-              return {};
-            }
-          }),
-      })
-    )
-    .output(z.object({ type: z.string(), data: z.record(z.string(), z.unknown()) }).optional()),
 };
 
 export type { ProviderType } from './schemas';

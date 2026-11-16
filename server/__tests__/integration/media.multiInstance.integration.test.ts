@@ -19,6 +19,7 @@ import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryServic
 import { createMockConfig, createRadarrMovie, createSonarrSeries } from '@tests/factories';
 import { createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
+import { refreshCatalog } from '@tests/helpers/library';
 import { server } from '@tests/mocks/server';
 import express, { type Express } from 'express';
 import { http, HttpResponse } from 'msw';
@@ -101,7 +102,7 @@ describe('Multi-instance Radarr — identity resolution + preview fan-out', () =
       )
     );
 
-    const job = await container.cradle.identityJobFactory.create();
+    const job = await container.cradle.catalogRefreshJobFactory.create();
     const count = await job.runForMovies();
 
     expect(count).toBe(2);
@@ -113,6 +114,7 @@ describe('Multi-instance Radarr — identity resolution + preview fan-out', () =
   });
 
   async function previewOf(contentType: 'movie' | 'series'): Promise<unknown> {
+    await refreshCatalog(container.cradle);
     const mediaQueryService = new MediaQueryService({
       db,
       filterReadiness: filterReadinessOver(db),
@@ -122,7 +124,7 @@ describe('Multi-instance Radarr — identity resolution + preview fan-out', () =
       contentType,
       filters: [],
     });
-    return expectSuccessResponse(await client.get(`/api/media-queries/${query.id}/preview`));
+    return expectSuccessResponse(await client.get(`/api/media-queries/${query.id}/preview`)).count;
   }
 
   it('preview counts one title for copies sharing a TMDB id on two instances, and two for different ids', async () => {
@@ -138,7 +140,7 @@ describe('Multi-instance Radarr — identity resolution + preview fan-out', () =
       )
     );
 
-    expect(await previewOf('movie')).toEqual({ count: 2 });
+    expect(await previewOf('movie')).toBe(2);
   });
 
   it('preview counts each series Sonarr reports with a TVDB id of 0 as its own title', async () => {
@@ -148,9 +150,11 @@ describe('Multi-instance Radarr — identity resolution + preview fan-out', () =
           createSonarrSeries({ id: 1, title: 'Unlisted A', tvdbId: 0 }),
           createSonarrSeries({ id: 2, title: 'Unlisted B', tvdbId: 0 }),
         ])
-      )
+      ),
+      http.get(`${RADARR_URL}/api/v3/movie`, () => HttpResponse.json([])),
+      http.get(`${RADARR_4K_URL}/api/v3/movie`, () => HttpResponse.json([]))
     );
 
-    expect(await previewOf('series')).toEqual({ count: 2 });
+    expect(await previewOf('series')).toBe(2);
   });
 });

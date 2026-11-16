@@ -14,7 +14,7 @@ const EMPTY_PAGE = {
   page: 1,
   pageSize: 48,
   yearRange: { min: null, max: null },
-  errors: [],
+  records: [],
   findings: [],
   mediaPage: 'clear' as const,
 };
@@ -102,37 +102,21 @@ describe('usePaginatedMedia', () => {
     expect(result.current.items[95]).toHaveProperty('title', 'Movie 96');
   });
 
-  it('states a source that failed on a later page, once per source', async () => {
-    server.use(
-      mockProcedure(contract.media.browse.movie, ({ request }) => {
-        const page = Number(new URL(request.url).searchParams.get('page'));
-        return {
-          ...EMPTY_PAGE,
-          items: [
-            {
-              id: page,
-              title: `Movie ${page}`,
-              hasFile: true,
-              monitored: true,
-              tmdbId: page,
-              sourceCount: 1,
-              sourceProviderIds: [1],
-            },
-          ],
-          totalCount: 2,
-          errors: page === 1 ? [] : [{ provider: 'Radarr Main', error: 'Timed out' }],
-          findings: [],
-          mediaPage: 'clear' as const,
-        };
-      })
-    );
+  it("takes the copy's refresh records from the first page", async () => {
+    const records = [
+      {
+        providerId: 1,
+        provider: 'Radarr Main',
+        kind: 'catalog' as const,
+        refreshedAt: 1_794_000_000,
+        failedAt: null,
+        error: null,
+      },
+    ];
+    server.use(mockProcedure(contract.media.browse.movie, () => ({ ...EMPTY_PAGE, records })));
     const { result } = renderHook(() => usePaginatedMedia(api.media.browse.movie), { wrapper });
-    await waitFor(() => expect(result.current.items.length).toBe(1));
-    expect(result.current.sourceErrors).toEqual([]);
-    result.current.fetchMore();
-    await waitFor(() =>
-      expect(result.current.sourceErrors).toEqual([{ provider: 'Radarr Main', error: 'Timed out' }])
-    );
+
+    await waitFor(() => expect(result.current.records).toEqual(records));
   });
 
   it('hasMore is false when all pages are loaded', async () => {
