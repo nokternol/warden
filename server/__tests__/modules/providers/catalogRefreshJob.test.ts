@@ -161,6 +161,50 @@ describe('CatalogRefreshJob', () => {
     ]);
   });
 
+  it('treats a malformed successful answer as a failure: keeps the copies and moves on', async () => {
+    const db = getDb();
+    const radarrA = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 1, tmdbId: 100 })]) };
+    const radarrB = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 2, tmdbId: 200 })]) };
+    const sources = [
+      { providerId: radarrProviderId, name: 'Radarr', provider: radarrA },
+      { providerId: radarr4kProviderId, name: 'Radarr 4k', provider: radarrB },
+    ];
+    await new CatalogRefreshJob({ db, movieSources: sources }).runForMovies();
+
+    radarrA.getMovies.mockResolvedValue({ records: [] });
+    radarrB.getMovies.mockResolvedValue([makeMovie({ id: 3, tmdbId: 300 })]);
+    const job = new CatalogRefreshJob({ db, movieSources: sources });
+    await job.runForMovies();
+
+    expect(job.failedProviders()).toEqual(['Radarr']);
+    const copies = await db.select().from(mediaItems).orderBy(mediaItems.externalId);
+    expect(copies.map((c) => [c.externalId, c.deleted])).toEqual([
+      [1, false],
+      [2, true],
+      [3, false],
+    ]);
+    const failed = (await readRefreshRecords(db)).find((r) => r.providerId === radarrProviderId);
+    expect(failed?.error).toMatch(/malformed/i);
+  });
+
+  it('treats a malformed Plex answer as a failure, keeping its links', async () => {
+    const db = getDb();
+    await db
+      .insert(mediaIdentity)
+      .values({ contentType: 'movie', tmdbId: 100, plexRatingKey: 'a' });
+    const plex = { getAllItems: vi.fn().mockResolvedValue({ MediaContainer: {} }) };
+    const job = new CatalogRefreshJob({
+      db,
+      plexSource: { providerId: plexProviderId, name: 'Plex', provider: plex },
+    });
+
+    await job.runForPlex();
+
+    expect(job.failedProviders()).toEqual(['Plex']);
+    const [title] = await db.select().from(mediaIdentity);
+    expect(title.plexRatingKey).toBe('a');
+  });
+
   it('names a provider once when both its catalog and its lists failed', async () => {
     const db = getDb();
     const down = new Error('Radarr is down');

@@ -60,6 +60,21 @@ interface ListsProvider {
   getLanguageProfiles?(): Promise<Array<{ id: number; name: string }>>;
 }
 
+/** Whether a provider's answer is a list of records, each holding `key` with the expected type. */
+function isListOf(answer: unknown, key: { field: string; type: 'number' | 'string' }): boolean {
+  return (
+    Array.isArray(answer) &&
+    answer.every(
+      (row) =>
+        typeof row === 'object' &&
+        row !== null &&
+        (key.type === 'number'
+          ? typeof (row as Record<string, unknown>)[key.field] === 'number'
+          : typeof (row as Record<string, unknown>)[key.field] === 'string')
+    )
+  );
+}
+
 export class CatalogRefreshJob {
   private readonly failed: string[] = [];
 
@@ -71,17 +86,24 @@ export class CatalogRefreshJob {
   }
 
   /**
-   * Reads one provider for one kind of its data. A failed read is recorded and named among this
-   * run's failures, and answers undefined so the caller keeps what it held; a successful read is
-   * recorded once the caller has stored it.
+   * Reads one provider for one kind of its data. A failed read, or an answer that is not a list of
+   * the records `key` names, is recorded and named among this run's failures, and answers undefined
+   * so the caller keeps what it held; a successful read is recorded once the caller has stored it.
    */
-  private async readProvider<T>(
+  private async readProvider<T extends object>(
     source: { providerId: number; name: string },
     kind: 'catalog' | 'links',
-    read: () => Promise<T>
-  ): Promise<T | undefined> {
+    key: { field: string; type: 'number' | 'string' },
+    read: () => Promise<T[]>
+  ): Promise<T[] | undefined> {
     try {
-      return await read();
+      const answer: unknown = await read();
+      if (!isListOf(answer, key)) {
+        throw new Error(
+          `Malformed answer: expected a list of records with a ${key.type} ${key.field}`
+        );
+      }
+      return answer as T[];
     } catch (err) {
       this.failed.push(source.name);
       await recordRefreshFailed(this.deps.db, source.providerId, kind, failureMessage(err));
@@ -92,7 +114,12 @@ export class CatalogRefreshJob {
   async runForPlex(): Promise<number> {
     const source = this.deps.plexSource;
     if (!source) return 0;
-    const items = await this.readProvider(source, 'links', () => source.provider.getAllItems());
+    const items = await this.readProvider(
+      source,
+      'links',
+      { field: 'ratingKey', type: 'string' },
+      () => source.provider.getAllItems()
+    );
     if (!items) return 0;
     let changed = 0;
     for (const item of items) {
@@ -174,7 +201,9 @@ export class CatalogRefreshJob {
   async runForJellyfin(): Promise<number> {
     const source = this.deps.jellyfinSource;
     if (!source) return 0;
-    const items = await this.readProvider(source, 'links', () => source.provider.getAllItems());
+    const items = await this.readProvider(source, 'links', { field: 'Id', type: 'string' }, () =>
+      source.provider.getAllItems()
+    );
     if (!items) return 0;
     let changed = 0;
     for (const item of items) {
@@ -257,7 +286,12 @@ export class CatalogRefreshJob {
     let firstTVMazeCall = true;
     for (const source of sources) {
       const { providerId, provider } = source;
-      const series = await this.readProvider(source, 'catalog', () => provider.getSeries());
+      const series = await this.readProvider(
+        source,
+        'catalog',
+        { field: 'id', type: 'number' },
+        () => provider.getSeries()
+      );
       if (!series) continue;
       const now = Math.floor(Date.now() / 1000);
       const fetchedExternalIds: number[] = [];
@@ -304,7 +338,12 @@ export class CatalogRefreshJob {
     let total = 0;
     for (const source of sources) {
       const { providerId, provider } = source;
-      const movies = await this.readProvider(source, 'catalog', () => provider.getMovies());
+      const movies = await this.readProvider(
+        source,
+        'catalog',
+        { field: 'id', type: 'number' },
+        () => provider.getMovies()
+      );
       if (!movies) continue;
       const now = Math.floor(Date.now() / 1000);
       const fetchedExternalIds: number[] = [];
