@@ -669,9 +669,9 @@ Earlier entries in this ledger use the names that were current when they healed 
   refresh they depend on failed or never ran. The source read cache, copy recording, the unresolved
   exclude skip, the title key, the live lookups, the staleness window and the provider-metadata route
   are deleted.
-- **Different on purpose:** a run acts on the copy as it stands; refresh after a Warden action, an
-  owner-settable refresh schedule and one shared evaluation are later slices. The Search page still reads
-  live; it is deferred.
+- **Different on purpose:** a run acts on the copy as it stands; refresh after a Warden action and one
+  shared evaluation are later slices. The Search page still reads live; it is deferred. The fixed
+  refresh schedules are not different on purpose: they are the Open "Refresh schedules" entry below.
 
 ### Source instance choice — the identity job chose its own (recorded 2026-11-07 — healed 2026-11-16, MVP slice C16)
 
@@ -681,6 +681,17 @@ Earlier entries in this ledger use the names that were current when they healed 
   active source instances are chosen and read, and `MediaSourceFactory` is deleted.
 
 ## Open
+
+### Refresh schedules — fixed in code, not set by the owner (recorded 2026-11-16)
+
+- **Departure:** north-star belief 6 says refreshing is scheduled work "done by the same automation
+  mechanism that gives Warden its value, so how fresh Warden is can be seen and set by the owner". The
+  catalog refresh and the enrichment job run on cron literals fixed in code
+  ([`server/modules/system/ensureSystemJobs.ts`](ref:path:server/modules/system/ensureSystemJobs.ts):
+  hourly and every six hours), and system jobs cannot be edited, so the owner can see how fresh Warden
+  is (the "As of" line) but cannot set it.
+- **Heals by:** "system jobs declared once" in the automation running slice (#248), which gives the
+  refreshes an owner-settable schedule.
 
 ### Title lookup — two mechanisms, one blocked (recorded 2026-11-01, MVP slice B4)
 
