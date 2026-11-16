@@ -11,12 +11,11 @@ import type {
   SonarrSeries,
 } from '@server/modules/providers';
 import { type FilterReadiness, filterAnswer, findingsFor } from './filterReadiness';
-import type { Library, LibraryCache, LibraryCopy } from './libraryCache';
+import type { CopyRecord, Library, LibraryCache, LibraryCopy } from './libraryCache';
 import { paginateItems } from './media.pagination';
 import { sortMedia } from './media.sort';
 import type { EnrichmentFields } from './mediaFieldProvider';
-import { itemKey } from './mediaItem';
-import type { MediaQueryEngine } from './mediaQueryEngine';
+import type { MediaQueryEngine, SelectedTitle } from './mediaQueryEngine';
 import { resetMediaData } from './mediaReset';
 import { sourceOwnership } from './mediaSourceFactory';
 import type { Filter } from './ruleRegistry';
@@ -58,25 +57,46 @@ interface BrowseView {
 type FromInstance<T> = T & { providerId: number; providerName: string };
 
 /**
- * Groups matched copies into titles by the title group the catalog refresh recorded, so browse
- * says a copy belongs to a title by the same rule as every other feature. Filter semantics are
- * ANY: grouping happens after matching, so a title appears if at least one of its copies matched.
- * The representative is the first matched copy in the current sort order.
+ * The selected titles as browse rows in `sort` order. Each title is placed and shown by its first
+ * copy, in that order, that alone meets the filters, or its first copy in that order when none
+ * does; its copy count is every copy.
  */
-function groupByTitle<R>(
-  sorted: Array<{ copy: LibraryCopy; record: R }>
-): Array<R & { sourceCount: number; sourceProviderIds: number[] }> {
-  const groups = new Map<number, Array<{ copy: LibraryCopy; record: R }>>();
-  for (const entry of sorted) {
-    const copies = groups.get(entry.copy.mediaIdentityId);
-    if (copies) copies.push(entry);
-    else groups.set(entry.copy.mediaIdentityId, [entry]);
-  }
-  return [...groups.values()].map((copies) => ({
-    ...copies[0].record,
-    sourceCount: copies.length,
-    sourceProviderIds: copies.map((c) => c.copy.providerId),
-  }));
+function titleRows<C extends ContentType>(
+  selected: SelectedTitle[],
+  sort: string,
+  contentType: C
+): Array<CopyRecord[C] & { sourceCount: number; sourceProviderIds: number[] }> {
+  const representable = selected.flatMap((title) =>
+    (title.met.length > 0 ? title.met : title.copies).map((copy) => {
+      const {
+        title: name,
+        sortTitle,
+        year,
+      } = copy.record as {
+        title: string;
+        sortTitle?: string;
+        year?: number;
+      };
+      return { selected: title, copy, title: name, sortTitle, year };
+    })
+  );
+  const sorted = sortMedia(representable, sort, ({ copy }) =>
+    contentType === 'movie'
+      ? (copy.record as RadarrMovie).hasFile
+      : (copy.record as SonarrSeries).monitored
+  );
+  const shown = new Set<SelectedTitle>();
+  return sorted.flatMap(({ selected: title, copy }) => {
+    if (shown.has(title)) return [];
+    shown.add(title);
+    return [
+      {
+        ...(copy.record as CopyRecord[C]),
+        sourceCount: title.copies.length,
+        sourceProviderIds: title.copies.map((c) => c.providerId),
+      },
+    ];
+  });
 }
 
 /** Every distinct value of `field` the copy's titles hold, sorted; array facts contribute each item. */
@@ -131,37 +151,22 @@ export function createMediaProcedures(cradle: MediaCradle) {
     return { findings, mediaPage: filterAnswer(findings).mediaPage };
   }
 
-  /** One page of the titles of `contentType` whose copies match `filters`. */
+  /** One page of the titles of `contentType` that `filters` select. */
   async function browse<C extends ContentType>(
     contentType: C,
     filters: Filter[],
     view: BrowseView
   ) {
-    const { copies, source, records } = await cradle.libraryCache.contentOf(contentType);
+    const { copies, records } = await cradle.libraryCache.contentOf(contentType);
     const yearRange = computeYearRange(copies.map((c) => c.record));
-    const matched = await mediaQueryEngine.evaluate({
-      source,
+    const selected = mediaQueryEngine.select(copies, {
       contentType,
-      clauses: [{ filters, role: 'include' }],
+      include: [filters],
+      exclude: [],
     });
-    const matchedKeys = new Set(matched.map((m) => itemKey(m)));
-    const entries = copies
-      .filter((copy) => matchedKeys.has(itemKey(copy.item)))
-      .map((copy) => {
-        const { title, sortTitle, year } = copy.record as {
-          title: string;
-          sortTitle?: string;
-          year?: number;
-        };
-        return { copy, record: copy.record, title, sortTitle, year };
-      });
-    const sorted = sortMedia(entries, view.sort, (e) =>
-      contentType === 'movie'
-        ? (e.record as RadarrMovie).hasFile
-        : (e.record as SonarrSeries).monitored
-    );
+    const rows = titleRows<C>(selected, view.sort, contentType);
     return {
-      ...paginateItems(groupByTitle(sorted), { page: view.page, pageSize: view.pageSize }),
+      ...paginateItems(rows, { page: view.page, pageSize: view.pageSize }),
       yearRange,
       records,
       ...(await readiness(filters, contentType)),
