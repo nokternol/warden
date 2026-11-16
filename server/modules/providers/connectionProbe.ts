@@ -1,7 +1,7 @@
 import { apiUrlOf } from '@contract/providerUrl';
 import type { MetadataProvider, MetadataProviderType } from '@server/database/schema';
 import { HTTPError } from 'ky';
-import winston, { type Logger } from 'winston';
+import winston from 'winston';
 import { PROVIDER_CATALOGUE } from './providerCatalogue';
 import type { IProviderFactory } from './providerFactory';
 
@@ -16,15 +16,13 @@ const SILENT = winston.createLogger({ silent: true });
  * Tests the address and key the owner entered, through the connection runs use: the factory builds
  * it at the host plus the type's API path, and the connection's own `testConnection` makes the call
  * with its own authentication and timeout. Testing a saved provider builds the connection from the
- * saved provider's type, name and settings, with its stored key unless a key was typed. The
- * connection logs to `logger`, silent unless a caller supplies another. Resolves
+ * saved provider's type, name and settings, with its stored key unless a key was typed. Resolves
  * when the provider accepts them, rejects with a message for the owner otherwise.
  */
 export async function probeConnection(
   factory: IProviderFactory,
   request: { type: MetadataProviderType; url: string; apiKey?: string },
-  saved?: MetadataProvider,
-  logger: Logger = SILENT
+  saved?: MetadataProvider
 ): Promise<void> {
   const type = saved?.type ?? request.type;
   const { label, apiPath, apiKeyRequired } = PROVIDER_CATALOGUE[type];
@@ -41,7 +39,7 @@ export async function probeConnection(
       apiKey,
       settings: saved?.settings ?? null,
     },
-    logger
+    SILENT
   );
   try {
     await connection.testConnection();
