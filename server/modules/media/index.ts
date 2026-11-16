@@ -39,12 +39,7 @@ export type { MediaSourceDescriptor } from './mediaSourceFactory';
 
 // Non-source actuator addressing: a copy's title in the actuator's own id space, from the ids
 // the catalog refresh linked.
-export {
-  ADDRESS_COLUMN_BY_TYPE,
-  MEDIA_SERVER_BY_COLUMN,
-  actuatorIdOf,
-  isAddressedActuator,
-} from './actuatorIdResolver';
+export { actuatorIdOf, isAddressedActuator } from './actuatorIdResolver';
 
 // Enrichment roles and the adapters that bind providers' native connections
 // to them.

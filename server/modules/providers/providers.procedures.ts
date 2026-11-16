@@ -6,11 +6,11 @@ import { api } from '@server/kernel/api';
 import { ValidationError } from '@server/kernel/errors';
 import { getChildLogger } from '@server/kernel/logger';
 import { probeConnection } from './connectionProbe';
-import { describeProviderTypes } from './providerCatalogue';
+import { describeProviderTypes, isMediaSourceType } from './providerCatalogue';
 import type { ProviderFactory } from './providerFactory';
 import type { ProviderListsReader } from './providerListsReader';
 import type { ProviderSettingsService } from './providerSettingsService';
-import { isMediaActuator, isMediaSourceType } from './roles';
+import { isMediaActuator } from './roles';
 import { readEnabledTaskIds } from './taskEnablement';
 
 const log = getChildLogger('ProvidersProcedures');

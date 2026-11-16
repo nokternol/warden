@@ -5,7 +5,8 @@ import { MetadataProviderType } from '@server/database/schema';
  *
  * The client must derive "which provider owns this content type, and is it
  * configured" from this projection, never from its own literal RADARR/SONARR
- * checks. The single authority is `SOURCE_OWNER` in providers/roles.ts.
+ * checks. The single authority is `SOURCE_OWNER`, read from the providers' declared `source`
+ * capability.
  *
  * Run: vitest run --project server
  */

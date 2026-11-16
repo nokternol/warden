@@ -21,13 +21,8 @@ export { registerProvidersDependencies } from './providers.registrations';
 export type { ProvidersCradle } from './providers.registrations';
 
 // Provider roles — the capability vocabulary connections implement.
-export type { ActuatorTask, ActuatorTaskDescriptor, MediaActuator } from './roles';
-export {
-  SOURCE_OWNER,
-  isMediaActuator,
-  isMediaSourceType,
-  contentTypeOfSourceType,
-} from './roles';
+export type { ActuatorTask, ActuatorTaskDescriptor, AddressColumn, MediaActuator } from './roles';
+export { isMediaActuator } from './roles';
 
 // Factories: connections from stored settings, sources from connections.
 // ProviderFactory keeps a value export because consumers construct it as an
@@ -43,8 +38,16 @@ export type {
   ProviderSummary,
 } from './providerSettingsService';
 
-// How a provider type is named in anything shown to the user.
-export { providerTypeLabel } from './providerCatalogue';
+// What each provider type declares, read from its connection class: how it is named in anything
+// shown to the user, which type owns each content type's catalog, and how titles are addressed.
+export {
+  ADDRESS_COLUMN_BY_TYPE,
+  MEDIA_SERVER_BY_COLUMN,
+  SOURCE_OWNER,
+  contentTypeOfSourceType,
+  isMediaSourceType,
+  providerTypeLabel,
+} from './providerCatalogue';
 
 // Per-provider task enablement read by automations.
 export { readEnabledTaskIds } from './taskEnablement';

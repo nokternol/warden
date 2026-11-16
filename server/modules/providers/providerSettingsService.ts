@@ -10,7 +10,7 @@ import { NotFoundError, ValidationError } from '@server/kernel/errors';
 import type { DomainEventBus } from '@server/kernel/eventBus';
 import { getChildLogger } from '@server/kernel/logger';
 import { and, eq, inArray } from 'drizzle-orm';
-import { isMediaSourceType } from './roles';
+import { isMediaSourceType } from './providerCatalogue';
 
 const log = getChildLogger('ProviderSettingsService');
 
