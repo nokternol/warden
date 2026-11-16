@@ -7,8 +7,8 @@
  * growing export list is a design smell to challenge.
  *
  * The per-system connection classes and their payload types are part of the
- * contract — media owns the `MediaSource`/`MediaEnricher` ports and builds
- * its adapters directly over these connections' native surface.
+ * contract — media owns the `MediaEnricher` port and builds its adapters
+ * directly over these connections' native surface.
  */
 
 // HTTP surface — this module's procedures of the API contract.

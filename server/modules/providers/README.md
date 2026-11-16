@@ -42,9 +42,10 @@ optional `urlBase` for reverse-proxy installs), a 10-second timeout, JSON `Accep
 logging hooks. Connection config (URL, API key, settings) lives in the `metadata_providers` table.
 
 A connection implements `MediaActuator` (`roles.ts`) directly when it exposes actions on media it owns —
-never by the base class. `MediaSource`/`MediaEnricher` are media-owned roles instead: media's library
-cache and `enrichment/enricherAdapters.ts` bind a connection's data to those roles,
-so a connection implements nothing from media directly. See
+never by the base class. A Radarr or Sonarr connection plays the `MediaSource` role (it owns a catalog,
+`isMediaSourceType`) without implementing anything for it: the catalog refresh stores what it answers.
+`MediaEnricher` is a media-owned port: `enrichment/enricherAdapters.ts` binds a connection's data to
+it, so a connection implements nothing from media directly. See
 `docs/architecture/provider-roles-and-identity.md` for the role model.
 
 ### Auth patterns

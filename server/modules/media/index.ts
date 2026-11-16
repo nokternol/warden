@@ -20,22 +20,16 @@ export { createSearchProcedures } from './media.search.procedures';
 export { registerMediaDependencies } from './media.registrations';
 export type { MediaCradle } from './media.registrations';
 
-// Canonical item shapes every provider role (Source, Enricher) operates on.
-export type { MediaItem, MediaItemSet } from './mediaItem';
-
-// A copy's collision-free key across instances, for matching evaluated items back to copies.
-export { itemKey } from './mediaItem';
+// The canonical item shape a library copy carries and enrichers describe.
+export type { MediaItem } from './mediaItem';
 export type { NormalizedMovie } from './movie';
 export type { NormalizedSeries } from './series';
 
 // Per-provider DTO → canonical shape translation.
 export { normalizeRadarrMovie, normalizeSonarrSeries } from './normalizeMedia';
 
-// The read role the query engine evaluates over.
-export type { MediaSource } from './mediaSource';
-
 // The in-memory copy of the library every feature reads, and the records saying how current it is.
-export { copiesSource, recordsFor } from './libraryCache';
+export { recordsFor } from './libraryCache';
 export type { Library, LibraryCache, LibraryCopy } from './libraryCache';
 
 // Owner-type policy: which provider type owns each content type, and its
@@ -86,9 +80,8 @@ export type {
   ReadinessFacts,
 } from './filterReadiness';
 
-// The query engine — matches a MediaSource against a MediaQuerySpec.
-export { MediaQueryEngine, matchItems } from './mediaQueryEngine';
-export type { MediaQuery, MediaQueryClause, MediaQuerySpec } from './mediaQueryEngine';
+// The one evaluation of the catalog: which titles a set of conditions selects among copies.
+export { MediaQueryEngine } from './mediaQueryEngine';
 
 // Enrichment — the job that stores each provider's facts.
 export { EnrichmentJobFactory } from './enrichmentJobFactory';

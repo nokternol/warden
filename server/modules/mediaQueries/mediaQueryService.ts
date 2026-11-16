@@ -32,11 +32,9 @@ export interface QueryHealth {
 }
 
 /**
- * A persisted query: a `MediaQuerySpec` (contentType + clauses) given a database
- * identity and presentation metadata. The persisted form carries its single
- * include clause as the `filters` convenience accessor
- * (`clauses: [{ filters, role: 'include' }]`); the full multi-clause
- * projection is reserved for the client phase.
+ * A saved query: its name, the content type whose rules apply, and its filters, all of which a
+ * title must meet; with its database identity and whether its filters can be trusted. An
+ * automation uses it as an included or an excluded query.
  */
 export interface MediaQueryRecord {
   id: number;
