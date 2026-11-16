@@ -200,4 +200,17 @@ describe('MediaQueryEngine.select — which titles conditions select', () => {
 
     expect(selected).toEqual([{ mediaIdentityId: 1, copies: [missingOnA, taggedOnB], met: [] }]);
   });
+
+  it('selects nothing with no included query, and every title with an included query of no filters', () => {
+    const copies = [copyOf(1, 1), copyOf(2, 1), copyOf(1, 2)];
+
+    const none = engine.select(copies, { contentType: 'movie', include: [], exclude: [] });
+    const every = engine.select(copies, { contentType: 'movie', include: [[]], exclude: [] });
+
+    expect(none).toEqual([]);
+    expect(every.map((t) => [t.mediaIdentityId, t.copies.length])).toEqual([
+      [1, 2],
+      [2, 1],
+    ]);
+  });
 });
