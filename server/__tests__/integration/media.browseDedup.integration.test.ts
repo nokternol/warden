@@ -276,4 +276,40 @@ describe('Browse display dedup — multiple active Radarr instances', () => {
     expect(data.totalCount).toBe(1);
     expect(data.items[0].sourceProviderIds.sort()).toEqual([radarrId, radarr4kId].sort());
   });
+
+  it('shows a title met only by different copies through its first copy in the requested order', async () => {
+    const row = (id: number, title: string, hasFile: boolean, tags: number[]) => ({
+      id,
+      title,
+      hasFile,
+      monitored: true,
+      tmdbId: 800,
+      profileId: 1,
+      qualityProfileId: 1,
+      tags,
+      folderName: `/m/${id}`,
+      path: `/m/${id}`,
+    });
+    server.use(
+      http.get(`${RADARR_URL}/api/v3/movie`, () =>
+        HttpResponse.json([row(1, 'Zeta Cut', false, [])])
+      ),
+      http.get(`${RADARR_4K_URL}/api/v3/movie`, () =>
+        HttpResponse.json([row(2, 'Alpha Cut', true, [7])])
+      )
+    );
+
+    await refreshCatalog(libraryCradle);
+    const filters = [
+      { ruleKey: 'tagIds', value: { providerId: radarr4kId, ids: [7] } },
+      { ruleKey: 'hasFile', value: false },
+    ];
+    const data = expectSuccessResponse(
+      await client.get(browsePath('movie', filters, { pageSize: 100, sort: 'title_asc' }))
+    );
+
+    expect(data.totalCount).toBe(1);
+    expect(data.items[0].id).toBe(2);
+    expect(data.items[0].sourceCount).toBe(2);
+  });
 });
