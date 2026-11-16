@@ -69,10 +69,8 @@ No value ever crosses from `system` into `providers` or `media`; the enforcement
 type-only edges as exempt from the direction rule for exactly this pattern, and a new type-only reverse
 edge elsewhere is still worth a second look even though the tool won't flag it.
 
-**`media → providers` is now the plain, exception-free default direction.** Earlier in this program,
-providers' role contracts (`MediaSource`, `MediaEnricher`) referenced media's `MediaItem` type directly,
-which was a deliberate but narrow `providers → media` exception — a role contract has to name the shape
-it operates on. That exception no longer exists: `MediaEnricher` is a **media-owned** role contract
+**`media → providers` is the plain, exception-free default direction.** No provider code names
+media's types: `MediaEnricher` is a **media-owned** role contract
 ([`media/enrichment/enricher.ts`](ref:path:server/modules/media/enrichment/enricher.ts)), and
 `MediaSource` names only the catalog-owning role (`isMediaSourceType`), with no read contract: the
 catalog refresh stores what a source answers and the query engine judges the stored copies. Provider
