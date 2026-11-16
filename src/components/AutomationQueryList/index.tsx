@@ -1,7 +1,9 @@
 import Button from '@app/components/Button';
+import CopyAsOf from '@app/components/CopyAsOf';
 import { api } from '@app/lib/api/client';
 import { useApi } from '@app/lib/api/useApi';
 import type { AutomationQueryInput } from '@contract/automations';
+import { copyFreshness } from '@contract/media';
 
 /** An automation query as the list edits it: always in a known position. */
 export type AutomationQueryItem = Required<AutomationQueryInput>;
@@ -12,9 +14,9 @@ export interface AutomationQueryListProps {
   onChange: (automationQueries: AutomationQueryItem[]) => void;
 }
 
-function usePreviewCount(queryId: number): number | null {
+function usePreview(queryId: number) {
   const { data } = useApi(api.mediaQueries.preview, queryId > 0 ? { id: queryId } : null);
-  return data?.count ?? null;
+  return data;
 }
 
 function AutomationQueryRow({
@@ -31,7 +33,8 @@ function AutomationQueryRow({
   onPatch: (patch: Partial<AutomationQueryItem>) => void;
   onRemove: () => void;
 }) {
-  const count = usePreviewCount(automationQuery.queryId);
+  const preview = usePreview(automationQuery.queryId);
+  const count = preview?.count ?? null;
   const position = index + 1;
 
   const countLabel =
@@ -65,6 +68,7 @@ function AutomationQueryRow({
         <option value="exclude">Exclude</option>
       </select>
       {countLabel && <span className="text-xs text-text-muted tabular-nums">{countLabel}</span>}
+      {preview && <CopyAsOf freshness={copyFreshness(preview.records)} />}
       <Button
         type="button"
         variant="secondary"

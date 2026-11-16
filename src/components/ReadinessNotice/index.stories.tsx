@@ -42,6 +42,7 @@ export const NoData: Story = () => (
   </Frame>
 );
 
+/** The data-incomplete finding is informational: the notice leaves it to the As of line. */
 export const Mixed: Story = () => (
   <Frame>
     <ReadinessNotice

@@ -2,6 +2,7 @@ import AutomationQueryList from '@app/components/AutomationQueryList';
 import type { AutomationQueryItem } from '@app/components/AutomationQueryList';
 import Badge from '@app/components/Badge';
 import Button from '@app/components/Button';
+import CopyAsOf from '@app/components/CopyAsOf';
 import EmptyState from '@app/components/EmptyState';
 import { useAutomationPreview } from '@app/hooks/useAutomationPreview';
 import type { CreateAutomationInput } from '@app/hooks/useAutomations';
@@ -13,6 +14,7 @@ import { useProviderTasks } from '@app/hooks/useProviderTasks';
 import { descriptorFor, useProviderTypes } from '@app/hooks/useProviderTypes';
 import { blastRadius } from '@app/lib/blastRadius';
 import { cn } from '@app/lib/utils/cn';
+import { copyFreshness } from '@contract/media';
 import type { ProviderType } from '@contract/providers';
 import { Cron } from 'croner';
 import cronstrue from 'cronstrue';
@@ -435,6 +437,9 @@ export default function AutomationBuilder({
                     : radius.phrase}
               </span>
             </label>
+            {hasInclude && preview.data && (
+              <CopyAsOf freshness={copyFreshness(preview.data.records)} />
+            )}
             {radius?.state === 'failed' && (
               <Button
                 type="button"

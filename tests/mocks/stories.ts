@@ -15,7 +15,7 @@ const storyMocks: Record<string, RequestHandler[]> = {
    * The library's latest read counts 100 movies; a read started now (`fresh=true`) counts 214. A
    * destructive Radarr task is offered, so Run Now asks for confirmation.
    */
-  runNowFreshCount: [
+  runNowStaleCopy: [
     mockProcedure(contract.providers.tasks, () => [
       {
         providerId: 1,
@@ -30,9 +30,7 @@ const storyMocks: Record<string, RequestHandler[]> = {
         ],
       },
     ]),
-    mockProcedure(contract.automations.readiness, ({ request }) =>
-      readiness(new URL(request.url).searchParams.get('fresh') === 'true' ? 214 : 100)
-    ),
+    mockProcedure(contract.automations.readiness, () => readiness(214)),
   ],
 };
 
@@ -44,6 +42,24 @@ function readiness(count: number): AutomationReadiness {
     problems: [],
     count,
     contentType: 'movie',
+    records: [
+      {
+        providerId: 1,
+        provider: 'Radarr',
+        kind: 'catalog',
+        refreshedAt: 1_794_816_000,
+        failedAt: null,
+        error: null,
+      },
+      {
+        providerId: 2,
+        provider: 'Radarr 4K',
+        kind: 'catalog',
+        refreshedAt: 1_794_800_000,
+        failedAt: 1_794_816_000,
+        error: 'Timed out',
+      },
+    ],
   };
 }
 

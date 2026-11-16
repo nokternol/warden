@@ -1,6 +1,8 @@
 import Button from '@app/components/Button';
+import CopyAsOf from '@app/components/CopyAsOf';
 import { blastRadius } from '@app/lib/blastRadius';
 import type { AutomationReadiness } from '@contract/automations';
+import { copyFreshness } from '@contract/media';
 
 /**
  * What a Run Now would do, asked before it runs: findings awaiting sign-off to proceed past for
@@ -82,6 +84,7 @@ export default function RunCheck({
           {radius.state === 'counted' ? `${taskLabel} ${radius.phrase}.` : radius.phrase}
         </p>
       )}
+      {readiness && <CopyAsOf freshness={copyFreshness(readiness.records)} />}
       <div className="flex flex-wrap gap-2">
         {(failed || (readiness && radius.state === 'failed')) && (
           <Button type="button" variant="secondary" size="sm" onClick={onRetry}>

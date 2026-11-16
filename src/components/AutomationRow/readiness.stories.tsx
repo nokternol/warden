@@ -20,7 +20,12 @@ const noData = finding({
   ruleLabel: 'Seerr request status',
   contentType: 'movie',
 });
-const incomplete = finding({ kind: 'data-incomplete', ruleLabel: 'Watched' });
+const unsupplied = finding({
+  kind: 'no-provider',
+  ruleLabel: 'Watched',
+  producerLabels: ['Tautulli', 'Plex', 'Jellyfin'],
+  offered: true,
+});
 const signedOff = finding({ kind: 'no-data', ruleLabel: 'Seerr has issue', contentType: 'movie' });
 
 const readiness = (over: Partial<AutomationReadiness>): AutomationReadiness => ({
@@ -43,7 +48,7 @@ export const BlocksMixed: Story = () => (
   <Frame>
     <ReadinessBlocks
       readiness={readiness({
-        blocks: { needsFix: [incomplete], awaitingSignOff: [noData], signedOff: [signedOff] },
+        blocks: { needsFix: [unsupplied], awaitingSignOff: [noData], signedOff: [signedOff] },
       })}
       onSignOff={noop}
     />
@@ -97,7 +102,7 @@ export const RunCheckStops: Story = () => (
       readiness={readiness({
         schedule: 'blocked',
         runNow: 'stops',
-        blocks: { needsFix: [incomplete], awaitingSignOff: [], signedOff: [] },
+        blocks: { needsFix: [unsupplied], awaitingSignOff: [], signedOff: [] },
       })}
       taskLabel="Unmonitor movie"
       destructive={false}
