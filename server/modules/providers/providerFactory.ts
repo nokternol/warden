@@ -55,8 +55,32 @@ function declaring<
   };
 }
 
-function roleInstance<Role>(row: ProviderRow, provider: Role): RoleInstance<Role> {
-  return { providerId: row.id, name: row.name, provider };
+/**
+ * Every row whose type declares `capability` as `value`, with its connection, typed by the
+ * instances of the classes that declare it.
+ */
+function connectionsDeclaring<
+  Capability extends keyof ProviderCapabilities,
+  const Value extends ProviderCapabilities[Capability],
+>(rows: ProviderRow[], capability: Capability, value: Value, logger: Logger) {
+  return rows.filter(declaring(capability, value)).map((row) => ({
+    providerId: row.id,
+    name: row.name,
+    provider: connect(row, logger),
+  }));
+}
+
+/**
+ * The connection for a row, typed by the class its type maps to. TypeScript cannot follow a
+ * generic key through `new PROVIDER_CLASSES[type]`, so the typed signature is an overload of the
+ * one construction; the class map holds each type's class, so the two agree.
+ */
+function connect<T extends MetadataProviderType>(
+  row: ProviderRow & { type: T },
+  logger: Logger
+): InstanceType<ProviderClasses[T]>;
+function connect(row: ProviderRow, logger: Logger): AnyProvider {
+  return new PROVIDER_CLASSES[row.type](row, logger);
 }
 
 /** Every concrete provider the factory can construct from settings. */
@@ -97,28 +121,22 @@ export class ProviderFactory implements IProviderFactory {
 
   /** Every row whose type declares the movie source, with its connection. */
   movieSourcesOf(rows: ProviderRow[], logger: Logger): Array<RoleInstance<MovieSource>> {
-    return rows
-      .filter(declaring('source', 'movie'))
-      .map((row) => roleInstance(row, new PROVIDER_CLASSES[row.type](row, logger)));
+    return connectionsDeclaring(rows, 'source', 'movie', logger);
   }
 
   /** Every row whose type declares the series source, with its connection. */
   seriesSourcesOf(rows: ProviderRow[], logger: Logger): Array<RoleInstance<SeriesSource>> {
-    return rows
-      .filter(declaring('source', 'series'))
-      .map((row) => roleInstance(row, new PROVIDER_CLASSES[row.type](row, logger)));
+    return connectionsDeclaring(rows, 'source', 'series', logger);
   }
 
   /** The row whose type is the media server for `plexRatingKey` links, with its connection. */
   plexServerOf(rows: ProviderRow[], logger: Logger): RoleInstance<PlexLinks> | undefined {
-    const row = rows.find(declaring('mediaServer', 'plexRatingKey'));
-    return row && roleInstance(row, new PROVIDER_CLASSES[row.type](row, logger));
+    return connectionsDeclaring(rows, 'mediaServer', 'plexRatingKey', logger)[0];
   }
 
   /** The row whose type is the media server for `jellyfinItemId` links, with its connection. */
   jellyfinServerOf(rows: ProviderRow[], logger: Logger): RoleInstance<JellyfinLinks> | undefined {
-    const row = rows.find(declaring('mediaServer', 'jellyfinItemId'));
-    return row && roleInstance(row, new PROVIDER_CLASSES[row.type](row, logger));
+    return connectionsDeclaring(rows, 'mediaServer', 'jellyfinItemId', logger)[0];
   }
 
   /** Resolve a list of active provider settings into typed, named slots. */
