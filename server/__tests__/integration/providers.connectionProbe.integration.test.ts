@@ -16,10 +16,11 @@ import express, { type Express } from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { http, HttpResponse } from 'msw';
 import request from 'supertest';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 describe('GET /api/providers/test', () => {
   let authedApp: Express;
+  let cradle: ReturnType<typeof buildContainer>['cradle'];
 
   beforeAll(async () => {
     const mockConfig = createMockConfig({
@@ -35,6 +36,7 @@ describe('GET /api/providers/test', () => {
     const config = loadConfig();
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
+    cradle = container.cradle;
     const providerRoutes = serveApi({
       providers: createProvidersProcedures(container.cradle),
     });
@@ -240,6 +242,37 @@ describe('GET /api/providers/test', () => {
 
       expect(await lastTestOf(id)).toBeNull();
     });
+  });
+
+  it('tests a saved provider through a connection built with its saved settings', async () => {
+    const url = 'http://jellyfin-saved.local:8096';
+    server.use(http.get(`${url}/System/Info`, () => HttpResponse.json({ Version: '10' })));
+    const created = await request(authedApp)
+      .post('/api/providers')
+      .send({
+        type: MetadataProviderType.JELLYFIN,
+        name: 'Living room',
+        url,
+        apiKey: 'stored',
+        settings: { userId: 'u-1' },
+        isActive: false,
+      });
+    const create = vi.spyOn(cradle.providerFactory, 'create');
+
+    const res = await request(authedApp)
+      .get('/api/providers/test')
+      .query({ type: MetadataProviderType.JELLYFIN, url, id: created.body.data.id });
+
+    expect(res.body.data.ok).toBe(true);
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Living room',
+        apiKey: 'stored',
+        settings: { userId: 'u-1' },
+      }),
+      expect.anything()
+    );
+    create.mockRestore();
   });
 
   it("refuses a test whose type is not the saved provider's, without contacting anything", async () => {
