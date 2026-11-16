@@ -191,7 +191,7 @@ function contentTypeOf(queries: LoadedQuery[]): ContentType {
   return queries[0]?.record.contentType ?? 'movie';
 }
 
-/** "RADARR" as "Radarr". */
+/** A stored provider type as a capitalised word. */
 function providerTypeName(type: string): string {
   return type.charAt(0) + type.slice(1).toLowerCase();
 }

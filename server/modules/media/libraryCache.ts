@@ -6,10 +6,11 @@ import {
   mediaItems,
   metadataProviders,
 } from '@server/database/schema';
-import { MetadataProviderType } from '@server/database/schema';
+import type { MetadataProviderType } from '@server/database/schema';
 import type { DrizzleDb } from '@server/kernel/db';
 import type { DomainEventBus } from '@server/kernel/eventBus';
 import {
+  MEDIA_SERVER_BY_COLUMN,
   type ProviderListsData,
   type ProviderListsReader,
   type RadarrMovie,
@@ -24,6 +25,7 @@ import {
 import { and, eq } from 'drizzle-orm';
 import { EnrichmentQueries } from './enrichment/enrichment.queries';
 import { resolveFacts } from './enrichmentMerge';
+import { FACTS_REFRESHING_TYPES } from './factsRefreshKinds';
 import type { MediaItem } from './mediaItem';
 import { normalizeRadarrMovie, normalizeSonarrSeries } from './normalizeMedia';
 
@@ -66,16 +68,18 @@ export interface Library {
   lists: Map<number, ProviderListsData>;
 }
 
-/** The kinds of data each active provider type refreshes into the copy. */
-const REFRESHED_KINDS: Partial<Record<MetadataProviderType, RefreshKind[]>> = {
-  [MetadataProviderType.RADARR]: ['catalog', 'lists'],
-  [MetadataProviderType.SONARR]: ['catalog', 'lists'],
-  [MetadataProviderType.PLEX]: ['links', 'facts'],
-  [MetadataProviderType.JELLYFIN]: ['links', 'facts'],
-  [MetadataProviderType.TAUTULLI]: ['facts'],
-  [MetadataProviderType.SEERR]: ['facts'],
-  [MetadataProviderType.TMDB]: ['facts'],
-};
+/**
+ * The kinds of data a provider type refreshes into the copy, as it declares: a source refreshes
+ * its catalog and setup lists, a media server the links into it, and a facts supplier its facts.
+ */
+function refreshedKinds(type: MetadataProviderType): RefreshKind[] {
+  const isMediaServer = Object.values(MEDIA_SERVER_BY_COLUMN).includes(type);
+  return [
+    ...(isMediaSourceType(type) ? (['catalog', 'lists'] as const) : []),
+    ...(isMediaServer ? (['links'] as const) : []),
+    ...(FACTS_REFRESHING_TYPES.has(type) ? (['facts'] as const) : []),
+  ];
+}
 
 /**
  * The refresh records a view of `contentType` answers from: the catalog and lists of each active
@@ -86,7 +90,7 @@ export function recordsFor(library: Library, contentType: ContentType): RefreshR
   const owner = SOURCE_OWNER[contentType];
   return library.providers.flatMap((provider) => {
     if (isMediaSourceType(provider.type) && provider.type !== owner) return [];
-    return (REFRESHED_KINDS[provider.type] ?? []).map((kind) => {
+    return refreshedKinds(provider.type).map((kind) => {
       const stored = library.records.find((r) => r.providerId === provider.id && r.kind === kind);
       return {
         providerId: provider.id,

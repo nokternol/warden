@@ -5,7 +5,7 @@ import { Cron } from 'croner';
 import { type SQL, eq, inArray } from 'drizzle-orm';
 import {
   type Automation as AutomationRow,
-  MetadataProviderType,
+  type MetadataProviderType,
   type NewAutomation,
   automationQueries,
   automations,
@@ -14,7 +14,7 @@ import {
 } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
 import { ForbiddenError, NotFoundError, ValidationError } from '../../kernel/errors';
-import { readEnabledTaskIds } from '../providers';
+import { ADDRESS_COLUMN_BY_TYPE, contentTypeOfSourceType, readEnabledTaskIds } from '../providers';
 
 export interface AutomationQueryDraft {
   queryId: number;
@@ -72,20 +72,16 @@ function computeNextRun(schedule: string): string | undefined {
   }
 }
 
-const CONTENT_TYPE_PROVIDERS: Record<ContentType, MetadataProviderType[]> = {
-  movie: [
-    MetadataProviderType.RADARR,
-    MetadataProviderType.PLEX,
-    MetadataProviderType.JELLYFIN,
-    MetadataProviderType.TAUTULLI,
-  ],
-  series: [
-    MetadataProviderType.SONARR,
-    MetadataProviderType.PLEX,
-    MetadataProviderType.JELLYFIN,
-    MetadataProviderType.TAUTULLI,
-  ],
-};
+/**
+ * Whether an action of a provider of `type` can address titles of `contentType`, as the provider
+ * declares: a source addresses its own content type, and a provider that addresses titles by a
+ * link column addresses every content type.
+ */
+function addressesContentType(type: MetadataProviderType, contentType: ContentType): boolean {
+  return (
+    contentTypeOfSourceType(type) === contentType || ADDRESS_COLUMN_BY_TYPE[type] !== undefined
+  );
+}
 
 function rowToDto(
   row: AutomationRow,
@@ -298,8 +294,7 @@ export class AutomationService {
 
       if (queryRow) {
         const contentType = queryRow.contentType as ContentType;
-        const allowed = CONTENT_TYPE_PROVIDERS[contentType] ?? [];
-        if (!allowed.includes(providerType)) {
+        if (!addressesContentType(providerType, contentType)) {
           throw new ValidationError(
             `Provider type "${providerType}" is not compatible with contentType "${contentType}"`
           );
