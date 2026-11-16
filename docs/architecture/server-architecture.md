@@ -72,9 +72,10 @@ edge elsewhere is still worth a second look even though the tool won't flag it.
 **`media → providers` is now the plain, exception-free default direction.** Earlier in this program,
 providers' role contracts (`MediaSource`, `MediaEnricher`) referenced media's `MediaItem` type directly,
 which was a deliberate but narrow `providers → media` exception — a role contract has to name the shape
-it operates on. That exception no longer exists: `MediaSource` and `MediaEnricher` are now **media-owned**
-role contracts ([`media/mediaSource.ts`](ref:path:server/modules/media/mediaSource.ts),
-[`media/enrichment/enricher.ts`](ref:path:server/modules/media/enrichment/enricher.ts)). Provider
+it operates on. That exception no longer exists: `MediaEnricher` is a **media-owned** role contract
+([`media/enrichment/enricher.ts`](ref:path:server/modules/media/enrichment/enricher.ts)), and
+`MediaSource` names only the catalog-owning role (`isMediaSourceType`), with no read contract: the
+catalog refresh stores what a source answers and the query engine judges the stored copies. Provider
 connection classes (`RadarrProvider`, `SonarrProvider`, `PlexProvider`, `TautulliProvider`,
 `SeerrProvider`, `TmdbProvider`) implement nothing directly — they are *bound* to these roles by
 media-owned code (the library cache's normalisation of stored copies,
@@ -100,11 +101,10 @@ server/
                    # provider settings service + instance CRUD and connection probe at
                    # /api/providers, task enablement, identity-resolution job
     media/         # normalize + NormalizedMovie/NormalizedSeries shapes, ruleRegistry,
-                   # MediaSource/MediaEnricher role contracts + their provider adapters,
-                   # mediaQueryEngine, enrichment job + merge, backdrops, search
+                   # MediaEnricher role contract + its provider adapters, library cache,
+                   # mediaQueryEngine (select), enrichment job + merge, backdrops, search
     mediaQueries/  # MediaQueryRecord CRUD + query health
-    automations/   # automation service, executor, run service, combinationEvaluator,
-                   # scheduler
+    automations/   # automation service, executor, run service, scheduler
     auth/          # authService, session store (drizzleStore)
     system/        # health endpoints, systemHealthCheck, ensureSystemJobs,
                    # systemTaskRunner, failedStateMiddleware

@@ -158,23 +158,15 @@ reported them. Precedence between providers is applied when the library cache lo
 [the EAV model](ref:path:docs/architecture/media-enrichment-eav-model.md) and
 `docs/architecture/media-enricher-role.md`.
 
-## The MediaSource read contract
+## The MediaSource role and the copies it supplies
 
-The source role is a typed read contract ([`server/modules/media/mediaSource.ts`](ref:path:server/modules/media/mediaSource.ts)):
-
-```ts
-interface MediaSource {
-  getMediaItems(): Promise<MediaItemSet>;          // already normalized, self-describing provenance
-  idOf(item: NormalizedMovie | NormalizedSeries): number | undefined;
-}
-```
-
-Every item the library cache builds carries `providerId`, its native id, the logical `tmdb`/`imdb`/`tvdb`
-ids, its title group and its facts. `MediaQueryEngine.evaluate` reads `source.getMediaItems()` and pools
-matched items by `itemKey(item)` (`${providerId}:${externalId}`,
-[`server/modules/media/mediaItem.ts`](ref:path:server/modules/media/mediaItem.ts)), collision-free across
-instances. `copiesSource` ([`libraryCache.ts`](ref:path:server/modules/media/libraryCache.ts)) is the one
-source: it serves a list of cached copies. `sourceOwnership`
+`MediaSource` names one thing: the role of a catalog-owning provider type (Radarr, Sonarr;
+`isMediaSourceType`, [`server/modules/providers/roles.ts`](ref:path:server/modules/providers/roles.ts)).
+A source connection implements no media read interface: the catalog refresh stores what it answers,
+and the library cache ([`libraryCache.ts`](ref:path:server/modules/media/libraryCache.ts)) loads each
+stored copy normalised and carrying `providerId`, its native id, the logical `tmdb`/`imdb`/`tvdb` ids,
+its title group and its facts. The query engine judges those copies directly
+([`mediaQueryEngine.ts`](ref:path:server/modules/media/mediaQueryEngine.ts)). `sourceOwnership`
 ([`mediaSourceFactory.ts`](ref:path:server/modules/media/mediaSourceFactory.ts)) projects `SOURCE_OWNER`
 for the client.
 
@@ -183,18 +175,22 @@ for the client.
 The catalog refresh decides which copies are one title, with one rule (`resolveGroup`), and every
 feature reads that grouping:
 
-- **Browse** evaluates the filters over every active instance's copies, sorts the matched copies, then
-  groups them by title group. Filter semantics are ANY: a title appears if at least one of its copies
-  matched. The representative row is the first matched copy in sort order, with `sourceCount` and
-  `sourceProviderIds`; pagination and totals count titles.
-- **Query counts** count title groups.
-- **Exclude protection** works by title for every actuator: a title is protected when any of its copies,
-  on any active instance, matches an excluded query. A Radarr or Sonarr run selects only from its own
-  instance's copies but judges its excludes over every active instance's copies. Tag values belong to
-  their instance, so protecting a film through either instance's "keep" tag takes one excluded query per
-  instance.
+One evaluation, `MediaQueryEngine.select`, answers which titles a set of conditions selects, and every
+reader of the catalog reads its answer (north-star belief 3: a title is every edition of it everywhere,
+and each condition is judged on the title as a whole, for included and excluded queries alike):
+
+- **Browse** shows one row per selected title, represented by its first copy in the requested sort that
+  alone meets the filters (or its first copy in that sort when only different copies together meet
+  them), with `sourceCount` and `sourceProviderIds` counting every copy; pagination and totals count
+  titles.
+- **Query counts** count selected titles.
+- **Exclusion** protects the whole title for every actuator: a title meeting an excluded query, through
+  any instance's copies, is not acted on.
+- **Catalog-owning actuators** (Radarr, Sonarr) act on their own instance's copies of every selected
+  title, including a title selected only through another instance's copy.
 - **Non-source actuators** (Plex, Jellyfin, Tautulli) address a title by the media-server id the catalog
-  refresh linked to it; a title not linked drops out.
+  refresh linked to it, recording the title once; a title not linked drops out. The link model holds one
+  id per title, a departure from belief 3 recorded in the fracture ledger.
 
 ### Destructive runs and the records they depend on
 
@@ -203,10 +199,11 @@ service that has never been read counts as one that failed to answer, and a fact
 service still supplies does not depend on the one that failed). The rule lives in
 [`automationExecutor.ts`](ref:path:server/modules/automations/automationExecutor.ts):
 
-- **Providers it needs, each one.** The `catalog` record of every instance whose copies it evaluates (a
-  source run's own instance, plus every other active instance of the content type when it has excluded
-  queries; any other run, every active instance), and the `links` record of the media server whose ids
-  it addresses. Any of these failed or never read skips the run, naming the provider and the kind.
+- **Providers it needs, each one.** The `catalog` record of the instances it reads: a catalog-owning
+  actuator's own instance (any other actuator: every active source instance of the content type); for
+  each filter whose value names an instance, that instance; for each other filter on a field a source
+  supplies, every active source instance, since any instance's copy may meet it. And the `links` record
+  of the media server whose ids it addresses. Any of these failed or never read skips the run, naming the provider and the kind.
 - **Facts it filters on, once each.** For each rule in its included or excluded queries, the run needs
   one active supplier whose `facts` record succeeded and, for a supplier reached through a media
   server's links, whose server's `links` record succeeded too (derived from `ADDRESS_COLUMN_BY_TYPE` and
@@ -225,21 +222,21 @@ profiles); every other rule (strings, universal facts, computed measures) is una
 instance-scoped rule is an `InstanceScopedValue`, `{ providerId?, ids }`: `providerId` is the configured
 instance whose namespace the `ids` belong to, so a `Filter { ruleKey, value }` stays exactly a rule key
 and a value. Omitting `providerId` means unqualified (today's pre-multi-instance semantics: each id is
-interpreted in the matched item's own namespace, which is exactly correct whenever evaluation is bound
-to one instance, i.e. every automation and every single-instance deployment). The stored value is that
+interpreted in each copy's own instance's namespace). That is exact in a single-instance deployment; with
+several instances of the content type, an unqualified id can be met by another instance's unrelated tag
+or profile that happens to share the number, since every evaluation judges every active instance's
+copies. The stored value is that
 object as JSON in `media_query_filter_values.value` (migration `0029` folded the former `providerId`
-column into it). The gate lives once, in `matchItems`'s predicate loop
+column into it). The gate lives once, where `select` turns a filter into a test of one copy
 ([`server/modules/media/mediaQueryEngine.ts`](ref:path:server/modules/media/mediaQueryEngine.ts)): a
-value that names a `providerId` only matches items whose `_sourceIds.providerId` equals it — it never
-pass-throughs to a different instance's coincidentally-matching id. Filter readiness
+value that names a `providerId` is satisfied only by the copy whose `_sourceIds.providerId` equals it,
+never by a different instance's coincidentally-matching id. The title that copy belongs to is then
+selected as a whole, so a Radarr automation whose query names another instance's tag acts on its own
+copies of the titles that tag selects. Filter readiness
 ([`server/modules/media/filterReadiness.ts`](ref:path:server/modules/media/filterReadiness.ts)) surfaces
-the misconfigurations rather than leaving silent mismatches: `inactive-instance` for a value naming an
+the misconfiguration rather than leaving a silent mismatch: `inactive-instance` for a value naming an
 instance that is not an active source of the content type (inactive, deleted, or of the wrong type),
-for every actuator; and `other-instance` when the automation's provider is itself a source and a value
-in an included query names a different source instance, which the gate above would make match nothing
-in that automation's own catalog. An excluded query may name any active source instance: it protects
-titles through every instance's copies. A non-source actuator acts on the pooled catalogs of every source, so a value
-naming any active source instance is valid for it. Deleting a provider leaves the `providerId` in any
+for every actuator. Deleting a provider leaves the `providerId` in any
 filter value that names it, so the filter matches nothing and its query reports `inactive-instance`; it
 never widens to another instance's ids, which name different tags and profiles.
 

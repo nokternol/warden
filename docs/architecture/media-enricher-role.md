@@ -12,8 +12,7 @@ joined to the catalog by a **shared logical key** (`tmdbId` / `tvdbId` / `imdbId
 decorates the canonical media model and knows nothing about which system *owns* the item, nor the item's
 `contentType`.
 
-The naming is deliberate: the core noun is `MediaItem` (a view is a `MediaItemSet`), so every role that
-acts on media is `Media*` — `MediaSource`, `MediaEnricher`, `MediaActuator`. The role exists to keep
+The naming is deliberate: the core noun is `MediaItem`, so every role that acts on media is `Media*` — `MediaSource`, `MediaEnricher`, `MediaActuator`. The role exists to keep
 enrichment **decoupled from ownership**: a system contributes data about media regardless of who owns it,
 matched only by a logical key both sides speak.
 
