@@ -1,4 +1,5 @@
 import type { MediaSource } from '@server/modules/media';
+import type { LibraryCopy } from '@server/modules/media/libraryCache';
 import { matchItems } from '@server/modules/media/mediaQueryEngine';
 import { MediaQueryEngine } from '@server/modules/media/mediaQueryEngine';
 import type { NormalizedMovie } from '@server/modules/media/movie';
@@ -126,5 +127,44 @@ describe('matchItems — per-entry provider gate', () => {
       'movie'
     );
     expect(result).toHaveLength(0);
+  });
+});
+
+let nextCopyId = 1;
+
+/** One copy of title `title` held by Radarr instance `providerId`, as the library cache loads it. */
+function copyOf(title: number, providerId: number, movie: Partial<RadarrMovie> = {}): LibraryCopy {
+  const record = createRadarrMovie({ id: nextCopyId, title: `Title ${title}`, ...movie });
+  const item = normalizeRadarrMovie(record, providerId);
+  item._sourceIds.identity = title;
+  return {
+    mediaItemId: nextCopyId++,
+    mediaIdentityId: title,
+    providerId,
+    record,
+    links: { plexRatingKey: null, jellyfinItemId: null },
+    item,
+  };
+}
+
+const HAS_FILE = { ruleKey: 'hasFile', value: true };
+
+describe('MediaQueryEngine.select — which titles conditions select', () => {
+  const engine = new MediaQueryEngine();
+
+  it('answers a title selected through one copy once, with all its copies and the copy that met', () => {
+    const missingOnA = copyOf(1, 1, { hasFile: false });
+    const otherTitle = copyOf(2, 1, { hasFile: false });
+    const downloadedOnB = copyOf(1, 2, { hasFile: true });
+
+    const selected = engine.select([missingOnA, otherTitle, downloadedOnB], {
+      contentType: 'movie',
+      include: [[HAS_FILE]],
+      exclude: [],
+    });
+
+    expect(selected).toEqual([
+      { mediaIdentityId: 1, copies: [missingOnA, downloadedOnB], met: [downloadedOnB] },
+    ]);
   });
 });
