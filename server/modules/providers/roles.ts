@@ -1,6 +1,8 @@
 import type { ProviderTypeDescriptor } from '@contract/providers';
 import type { ContentType } from '@contract/schemas';
 import { MetadataProviderType } from '@server/database/schema';
+import type { RadarrMovie } from './connections/radarrProvider';
+import type { SonarrSeries } from './connections/sonarrProvider';
 
 /** A title's media-server id columns, as the catalog refresh links them. */
 export type AddressColumn = 'plexRatingKey' | 'jellyfinItemId';
@@ -28,6 +30,40 @@ export type ProviderTypeEntry = Readonly<Omit<ProviderTypeDescriptor, 'type' | '
   readonly filterData: readonly string[];
   readonly capabilities: ProviderCapabilities;
 };
+
+/**
+ * The source role: a connection that owns a content type's catalog. These are the setup lists the
+ * catalog refresh keeps for it (Sonarr also answers language profiles); `MovieSource` and
+ * `SeriesSource` add the catalog itself. A class declaring `source` must construct one.
+ */
+export interface MediaSource {
+  getTags(): Promise<Array<{ id: number; label: string }>>;
+  getProfiles(): Promise<Array<{ id: number; name: string }>>;
+  getRootFolders(): Promise<Array<{ id: number; path: string }>>;
+  getLanguageProfiles?(): Promise<Array<{ id: number; name: string }>>;
+}
+
+/** The source of the movie catalog. */
+export interface MovieSource extends MediaSource {
+  getMovies(): Promise<RadarrMovie[]>;
+}
+
+/** The source of the series catalog. */
+export interface SeriesSource extends MediaSource {
+  getSeries(): Promise<SonarrSeries[]>;
+}
+
+/** The media server `plexRatingKey` links point into: every item, with the ids that link it. */
+export interface PlexLinks {
+  getAllItems(): Promise<Array<{ ratingKey: string; type?: string; Guid?: { id: string }[] }>>;
+}
+
+/** The media server `jellyfinItemId` links point into: every item, with the ids that link it. */
+export interface JellyfinLinks {
+  getAllItems(): Promise<
+    Array<{ Id: string; Type?: string; ProviderIds?: Record<string, string> }>
+  >;
+}
 
 /** One field within a `fields`-shaped parameter — see `ActuatorTaskParameter`. */
 export interface ActuatorTaskParameterField {

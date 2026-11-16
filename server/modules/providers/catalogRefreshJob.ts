@@ -5,21 +5,10 @@ const defaultDelay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 import type { ContentType } from '@contract/schemas';
 import { mediaIdentity, mediaItemPayload, mediaItems } from '@server/database/schema';
 import type { DrizzleDb } from '@server/kernel/db';
-import type { RadarrProvider } from './connections/radarrProvider';
-import type { SonarrProvider } from './connections/sonarrProvider';
 import { resolveGroup } from './groupResolver';
 import { type ProviderListsData, storeProviderLists } from './providerLists';
 import { failureMessage, recordRefreshFailed, recordRefreshed } from './providerRefresh';
-
-interface PlexBridgeProvider {
-  getAllItems(): Promise<Array<{ ratingKey: string; type?: string; Guid?: { id: string }[] }>>;
-}
-
-interface JellyfinBridgeProvider {
-  getAllItems(): Promise<
-    Array<{ Id: string; Type?: string; ProviderIds?: Record<string, string> }>
-  >;
-}
+import type { JellyfinLinks, MediaSource, MovieSource, PlexLinks, SeriesSource } from './roles';
 
 interface TVMazeLookupProvider {
   lookupByTvdbId(tvdbId: number): Promise<{ id: number } | null>;
@@ -34,30 +23,22 @@ interface Deps {
   movieSources?: Array<{
     providerId: number;
     name: string;
-    provider: Pick<RadarrProvider, 'getMovies'>;
+    provider: Pick<MovieSource, 'getMovies'>;
   }>;
   /** One entry per active Sonarr instance. Never collapsed to one. */
   seriesSources?: Array<{
     providerId: number;
     name: string;
-    provider: Pick<SonarrProvider, 'getSeries'>;
+    provider: Pick<SeriesSource, 'getSeries'>;
   }>;
   /** The active Plex server whose items titles link to. */
-  plexSource?: { providerId: number; name: string; provider: PlexBridgeProvider };
+  plexSource?: { providerId: number; name: string; provider: PlexLinks };
   /** The active Jellyfin server whose items titles link to. */
-  jellyfinSource?: { providerId: number; name: string; provider: JellyfinBridgeProvider };
+  jellyfinSource?: { providerId: number; name: string; provider: JellyfinLinks };
   tvMazeLookup?: TVMazeLookupProvider;
   delay?: (ms: number) => Promise<void>;
   /** One entry per active Radarr or Sonarr instance whose setup lists are kept. */
-  listSources?: Array<{ providerId: number; name: string; provider: ListsProvider }>;
-}
-
-/** The setup lists a Radarr or Sonarr instance answers; Sonarr also has language profiles. */
-interface ListsProvider {
-  getTags(): Promise<Array<{ id: number; label: string }>>;
-  getProfiles(): Promise<Array<{ id: number; name: string }>>;
-  getRootFolders(): Promise<Array<{ id: number; path: string }>>;
-  getLanguageProfiles?(): Promise<Array<{ id: number; name: string }>>;
+  listSources?: Array<{ providerId: number; name: string; provider: MediaSource }>;
 }
 
 /** Whether a provider's answer is a list of records, each holding `key` with the expected type. */
