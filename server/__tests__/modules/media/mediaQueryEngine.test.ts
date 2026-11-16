@@ -182,4 +182,22 @@ describe('MediaQueryEngine.select — which titles conditions select', () => {
     expect(selected.map((t) => t.mediaIdentityId)).toEqual([2]);
     expect(selected[0].met).toEqual([taggedOnB]);
   });
+
+  it('selects a title whose copies meet different filters of one query', () => {
+    const missingOnA = copyOf(1, 1, { hasFile: false, tags: [] });
+    const taggedOnB = copyOf(1, 2, { hasFile: true, tags: [7] });
+
+    const selected = engine.select([missingOnA, taggedOnB], {
+      contentType: 'movie',
+      include: [
+        [
+          { ruleKey: 'tagIds', value: { providerId: 2, ids: [7] } },
+          { ruleKey: 'hasFile', value: false },
+        ],
+      ],
+      exclude: [],
+    });
+
+    expect(selected).toEqual([{ mediaIdentityId: 1, copies: [missingOnA, taggedOnB], met: [] }]);
+  });
 });
