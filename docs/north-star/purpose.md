@@ -76,7 +76,9 @@ should do. It makes whatever they decide possible, safe and repeatable.
    affect a large share of the library, so the owner can review it. What an automation would act on
    now is always one step away, so the owner can review it whenever they choose; reviewing is never
    required. Warden does not run a destructive action when a service it depends on failed to
-   answer, because that is far more likely a fault than the owner's intent. Afterwards, Warden can always say what it did, to which
+   answer, because that is far more likely a fault than the owner's intent. A service that has
+   never been read counts as one that failed to answer. A fact that another connected service
+   still supplies does not depend on the one that failed. Afterwards, Warden can always say what it did, to which
    titles and when, even after those titles are gone from every service.
 
 8. **One meaning per idea.** Each idea in Warden has one name and one way of working, the same in what
