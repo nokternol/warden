@@ -482,7 +482,7 @@ export class AutomationExecutor {
       (plan) => {
         // A run skipped after planning says so here, so Run Now does not confirm a run that won't act.
         problems.push(...whyPlanWontRun(plan));
-        return { count: plan.actuatorIds.length, records: plan.records };
+        return { count: plan.matchedCount, records: plan.records };
       },
       async (err: unknown) => ({
         count: null,
@@ -501,8 +501,8 @@ export class AutomationExecutor {
   }
 
   /**
-   * What an unsaved automation would act on if it ran now: the same plan a run
-   * makes, counted in the actuator's own ids, without running the task.
+   * What an unsaved automation would act on if it ran now: the same plan a run makes, counted
+   * as the run counts what it acts on, without running the task.
    */
   async preview(draft: {
     providerId: number;
@@ -516,7 +516,7 @@ export class AutomationExecutor {
       await this.loadQueries(draft.queries)
     );
     return {
-      count: plan.actuatorIds.length,
+      count: plan.matchedCount,
       contentType: plan.targets.contentType,
       records: plan.records,
     };
