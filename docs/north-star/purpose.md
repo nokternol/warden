@@ -96,7 +96,9 @@ should do. It makes whatever they decide possible, safe and repeatable.
 
 9. **Adding a service adds what Warden knows and can do, and changes nothing else.** A new service
     brings new facts and new actions into the same building blocks. It does not need new kinds of
-    condition, new kinds of automation, or special cases elsewhere.
+    condition, new kinds of automation, or special cases elsewhere. Today each content type is
+    managed by one kind of service; allowing a second kind for the same content type is a later
+    requirement.
 
 ## Constraints
 
