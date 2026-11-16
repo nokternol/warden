@@ -155,7 +155,11 @@ export function createProvidersProcedures(cradle: ProvidersCradle) {
         const apiKey =
           input.apiKey ??
           (stored === undefined ? undefined : await storedKeyFor(stored, input.url));
-        await probeConnection(input.type as MetadataProviderType, input.url, apiKey);
+        await probeConnection(
+          providerFactory,
+          { type: input.type as MetadataProviderType, url: input.url, apiKey },
+          log
+        );
         result = { ok: true };
       } catch (err) {
         result = { ok: false, error: err instanceof Error ? err.message : String(err) };
