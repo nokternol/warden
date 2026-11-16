@@ -151,7 +151,6 @@ export function createProvidersProcedures(cradle: ProvidersCradle) {
         await probeConnection(
           providerFactory,
           { type, url: input.url, apiKey: input.apiKey },
-          log,
           stored
         );
         result = { ok: true };

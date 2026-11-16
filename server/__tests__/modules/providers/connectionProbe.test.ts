@@ -1,13 +1,14 @@
+import { Writable } from 'node:stream';
 import { MetadataProviderType } from '@server/database/schema';
-import { getChildLogger } from '@server/kernel/logger';
+import logger from '@server/kernel/logger';
 import { probeConnection } from '@server/modules/providers/connectionProbe';
 import { ProviderFactory } from '@server/modules/providers/providerFactory';
 import { server } from '@tests/mocks/server';
 import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it } from 'vitest';
+import winston from 'winston';
 
 const factory = new ProviderFactory();
-const log = getChildLogger('TestConnectionProbe');
 
 /**
  * The connection probe: a test of the address and key the owner entered, made through the
@@ -30,16 +31,16 @@ describe('probeConnection', () => {
       })
     );
 
-    await probeConnection(
-      factory,
-      { type: MetadataProviderType.RADARR, url: 'http://h:7878/radarr', apiKey: 'k' },
-      log
-    );
-    await probeConnection(
-      factory,
-      { type: MetadataProviderType.PLEX, url: 'http://h:32400', apiKey: 'tok' },
-      log
-    );
+    await probeConnection(factory, {
+      type: MetadataProviderType.RADARR,
+      url: 'http://h:7878/radarr',
+      apiKey: 'k',
+    });
+    await probeConnection(factory, {
+      type: MetadataProviderType.PLEX,
+      url: 'http://h:32400',
+      apiKey: 'tok',
+    });
 
     expect(seen).toEqual(['k', 'tok']);
   });
@@ -50,11 +51,7 @@ describe('probeConnection', () => {
     server.events.on('request:start', listener);
 
     await expect(
-      probeConnection(
-        factory,
-        { type: MetadataProviderType.TVMAZE, url: 'https://api.tvmaze.com' },
-        log
-      )
+      probeConnection(factory, { type: MetadataProviderType.TVMAZE, url: 'https://api.tvmaze.com' })
     ).resolves.toBeUndefined();
 
     server.events.removeListener('request:start', listener);
@@ -64,11 +61,10 @@ describe('probeConnection', () => {
   describe('a key is proved, not assumed', () => {
     it('fails without a required key, contacting nothing', async () => {
       await expect(
-        probeConnection(
-          factory,
-          { type: MetadataProviderType.PLEX, url: 'http://plex.local:32400' },
-          log
-        )
+        probeConnection(factory, {
+          type: MetadataProviderType.PLEX,
+          url: 'http://plex.local:32400',
+        })
       ).rejects.toThrow(/Enter the API key/);
     });
 
@@ -80,22 +76,22 @@ describe('probeConnection', () => {
         )
       );
       await expect(
-        probeConnection(
-          factory,
-          { type: MetadataProviderType.PLEX, url: 'http://plex.local:32400', apiKey: 'bad' },
-          log
-        )
+        probeConnection(factory, {
+          type: MetadataProviderType.PLEX,
+          url: 'http://plex.local:32400',
+          apiKey: 'bad',
+        })
       ).rejects.toThrow('Plex refused this API key');
     });
 
     it('says the address could not be reached when nothing answered', async () => {
       server.use(http.get('http://plex.local:32400/library/sections', () => HttpResponse.error()));
       await expect(
-        probeConnection(
-          factory,
-          { type: MetadataProviderType.PLEX, url: 'http://plex.local:32400', apiKey: 'tok' },
-          log
-        )
+        probeConnection(factory, {
+          type: MetadataProviderType.PLEX,
+          url: 'http://plex.local:32400',
+          apiKey: 'tok',
+        })
       ).rejects.toThrow("Couldn't reach Plex at this address");
     });
 
@@ -104,12 +100,42 @@ describe('probeConnection', () => {
         http.get('http://seerr.local/api/v1/auth/me', () => new HttpResponse(null, { status: 500 }))
       );
       await expect(
-        probeConnection(
-          factory,
-          { type: MetadataProviderType.SEERR, url: 'http://seerr.local', apiKey: 'k' },
-          log
-        )
+        probeConnection(factory, {
+          type: MetadataProviderType.SEERR,
+          url: 'http://seerr.local',
+          apiKey: 'k',
+        })
       ).rejects.toThrow('Seerr answered with an error (500)');
     });
+  });
+
+  it('logs nothing for a failed test: no entry carries its request URL, which can carry the key', async () => {
+    const written: string[] = [];
+    const capture = new winston.transports.Stream({
+      stream: new Writable({
+        write(chunk, _encoding, done) {
+          written.push(String(chunk));
+          done();
+        },
+      }),
+    });
+    logger.add(capture);
+    server.use(
+      http.get(
+        'http://radarr.local:7878/api/v3/system/status',
+        () => new HttpResponse(null, { status: 401 })
+      )
+    );
+
+    await expect(
+      probeConnection(factory, {
+        type: MetadataProviderType.RADARR,
+        url: 'http://radarr.local:7878',
+        apiKey: 'secret-key',
+      })
+    ).rejects.toThrow('Radarr refused this API key');
+
+    logger.remove(capture);
+    expect(written.filter((entry) => entry.includes('secret-key'))).toEqual([]);
   });
 });

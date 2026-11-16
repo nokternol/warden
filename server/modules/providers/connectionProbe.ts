@@ -1,9 +1,16 @@
 import { apiUrlOf } from '@contract/providerUrl';
 import type { MetadataProvider, MetadataProviderType } from '@server/database/schema';
 import { HTTPError } from 'ky';
-import type { Logger } from 'winston';
+import winston from 'winston';
 import { PROVIDER_CATALOGUE } from './providerCatalogue';
 import type { IProviderFactory } from './providerFactory';
+
+/**
+ * The logger a tested connection writes to. A failed test is answered to the owner through
+ * `describeFailure`, and the connection's own failure log would carry the request URL, which can
+ * carry the key, so a test logs nothing.
+ */
+const SILENT = winston.createLogger({ silent: true });
 
 /**
  * Tests the address and key the owner entered, through the connection runs use: the factory builds
@@ -15,7 +22,6 @@ import type { IProviderFactory } from './providerFactory';
 export async function probeConnection(
   factory: IProviderFactory,
   request: { type: MetadataProviderType; url: string; apiKey?: string },
-  logger: Logger,
   saved?: MetadataProvider
 ): Promise<void> {
   const type = saved?.type ?? request.type;
@@ -33,7 +39,7 @@ export async function probeConnection(
       apiKey,
       settings: saved?.settings ?? null,
     },
-    logger
+    SILENT
   );
   try {
     await connection.testConnection();
