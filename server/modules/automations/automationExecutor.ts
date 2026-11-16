@@ -13,19 +13,11 @@ import {
   MediaQueryEngine,
   actuatorIdOf,
   automationAnswer,
-  copiesSource,
   findingsFor,
   getRule,
   isAddressedActuator,
-  itemKey,
 } from '../media';
-import type {
-  FilterReadiness,
-  Library,
-  LibraryCache,
-  LibraryCopy,
-  MediaQueryClause,
-} from '../media';
+import type { FilterReadiness, Library, LibraryCache, LibraryCopy } from '../media';
 import type { MediaQueryRecord, MediaQueryService } from '../mediaQueries';
 import {
   type ActuatorTask,
@@ -528,9 +520,10 @@ export class AutomationExecutor {
   }
 
   /**
-   * Decides what a user run acts on, from the library copy: the enabled task, the copies the
-   * queries target, and those copies in the actuator's own id space. Running the task is the
-   * caller's step, so the targets are known even if the task fails.
+   * Decides what a user run acts on, from the library copy: the enabled task, the titles the
+   * automation's included and excluded queries select (one evaluation over every active
+   * instance's copies), and what of those titles the actuator acts on, in its own id space.
+   * Running the task is the caller's step, so the targets are known even if the task fails.
    */
   private async planRun(
     taskId: string,
@@ -538,10 +531,6 @@ export class AutomationExecutor {
     automationQueries: LoadedQuery[]
   ): Promise<RunPlan> {
     const contentType = automationQueries[0].record.contentType;
-    const querySpecs = automationQueries.map(({ record, role }) => ({
-      filters: record.filters,
-      role,
-    }));
 
     const provider = this.providerFactory.create(providerSettings, log);
     if (!isMediaActuator(provider)) {
@@ -563,14 +552,13 @@ export class AutomationExecutor {
       this.dependencies(library, providerSettings, contentType, automationQueries)
     );
 
-    const included = (candidates: LibraryCopy[]) =>
-      this.matching(
-        candidates,
-        contentType,
-        querySpecs.filter((spec) => spec.role === 'include')
-      );
-    // An exclude protects the whole title, judged over every active instance's copies.
-    const protectedTitles = await this.protectedTitles(copies, contentType, querySpecs);
+    const filtersOf = (role: TargetingQuery['role']) =>
+      automationQueries.filter((q) => q.role === role).map((q) => q.record.filters);
+    const selected = this.mediaQueryEngine.select(copies, {
+      contentType,
+      include: filtersOf('include'),
+      exclude: filtersOf('exclude'),
+    });
     const freshness = freshnessOf(records);
     const planOf = (
       targets: LibraryCopy[],
@@ -586,15 +574,13 @@ export class AutomationExecutor {
       unrefreshed,
       records,
     });
-    const unprotected = (candidates: LibraryCopy[]) =>
-      candidates.filter((copy) => !protectedTitles.has(copy.mediaIdentityId));
 
     if (isMediaSourceType(providerSettings.type)) {
-      // Catalog-owning actuator: the included queries evaluate against its own copies and their
-      // native ids feed the task directly, one target per native id.
-      const own = copies.filter((copy) => copy.providerId === providerSettings.id);
-      const matched = await included(own);
-      const targets = unprotected(matched);
+      // Catalog-owning actuator: it acts on its own copies of the selected titles, whichever
+      // instance's copy met the conditions, and their native ids feed the task directly.
+      const isOwn = (copy: LibraryCopy) => copy.providerId === providerSettings.id;
+      const own = copies.filter(isOwn);
+      const targets = selected.flatMap((title) => title.copies.filter(isOwn));
       return planOf(
         targets,
         targets.map((c) => c.record.id),
@@ -610,15 +596,14 @@ export class AutomationExecutor {
     if (!isAddressedActuator(providerSettings.type)) {
       throw new Error(`Provider type "${providerSettings.type}" has no actuator addressing space`);
     }
-    const addressed = (await included(copies)).filter(
-      (copy) => actuatorIdOf(copy, providerSettings.type) !== undefined
-    );
-    const targets = unprotected(addressed);
+    const targets = selected
+      .flatMap((title) => title.copies)
+      .filter((copy) => actuatorIdOf(copy, providerSettings.type) !== undefined);
     return planOf(
       targets,
       [...new Set(targets.map((c) => actuatorIdOf(c, providerSettings.type)!))],
       copies.length,
-      addressed.length
+      targets.length
     );
   }
 
@@ -671,40 +656,6 @@ export class AutomationExecutor {
         ),
     }));
     return { required: [...catalogs, ...addressed], facts };
-  }
-
-  /** The copies among `copies` that `clauses` select, by the one query evaluation. */
-  private async matching(
-    copies: LibraryCopy[],
-    contentType: ContentType,
-    clauses: MediaQueryClause[]
-  ): Promise<LibraryCopy[]> {
-    if (clauses.length === 0) return [];
-    const matched = new Set(
-      (
-        await this.mediaQueryEngine.evaluate({
-          source: copiesSource(copies),
-          contentType,
-          clauses,
-        })
-      ).map((item) => itemKey(item))
-    );
-    return copies.filter((copy) => matched.has(itemKey(copy.item)));
-  }
-
-  /** The titles a run's excludes protect: every title the excluded queries select. */
-  private async protectedTitles(
-    copies: LibraryCopy[],
-    contentType: ContentType,
-    querySpecs: MediaQueryClause[]
-  ): Promise<Set<number>> {
-    const excludes = querySpecs.filter((spec) => spec.role === 'exclude').map((s) => s.filters);
-    const excluded = this.mediaQueryEngine.select(copies, {
-      contentType,
-      include: excludes,
-      exclude: [],
-    });
-    return new Set(excluded.map((title) => title.mediaIdentityId));
   }
 
   private async recordResult(
