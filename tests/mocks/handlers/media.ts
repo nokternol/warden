@@ -48,7 +48,6 @@ function browsePage<T>(items: T[], request: Request, yearRange: { min: number; m
     page,
     pageSize,
     yearRange,
-    errors: [],
     records: [],
     findings: [],
     mediaPage: 'clear' as const,

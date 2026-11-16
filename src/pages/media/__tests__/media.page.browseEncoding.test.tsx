@@ -36,7 +36,6 @@ const EMPTY_PAGE = {
   page: 1,
   pageSize: 48,
   yearRange: { min: null, max: null },
-  errors: [],
   records: [],
   findings: [],
   mediaPage: 'clear' as const,

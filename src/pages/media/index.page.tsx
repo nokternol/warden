@@ -1,5 +1,6 @@
 import AppLayout from '@app/components/AppLayout';
 import { LoadError } from '@app/components/AsyncBoundary';
+import CopyAsOf from '@app/components/CopyAsOf';
 import EmptyState from '@app/components/EmptyState';
 import MediaCard from '@app/components/MediaCard';
 import { MediaFilterBar } from '@app/components/MediaFilterBar';
@@ -33,7 +34,7 @@ import { useSeries } from '@app/hooks/useSeries';
 import { toFilters } from '@app/lib/mediaQueryAdapters';
 import { cn } from '@app/lib/utils/cn';
 import { guardPage } from '@app/lib/utils/guardPage';
-import type { MediaRuleDescriptor } from '@contract/media';
+import { type MediaRuleDescriptor, type RefreshRecord, copyFreshness } from '@contract/media';
 import type { ProviderType } from '@contract/providers';
 import { type TitleRating, ratingsOf } from '@contract/ratings';
 import type { ReadinessFinding } from '@contract/readiness';
@@ -425,8 +426,8 @@ export interface MediaSlice<T> {
   fetchMore: () => void;
   error?: Error;
   refresh?: () => unknown;
-  /** Sources that failed while the browse itself succeeded. */
-  sourceErrors?: { provider: string; error: string }[];
+  /** The refresh records of the copy the page answers from; undefined until it answers. */
+  records?: RefreshRecord[];
   /** Why the filters may not select what they describe, from filter readiness. */
   findings?: ReadinessFinding[];
 }
@@ -478,19 +479,12 @@ export interface MediaContentProps {
   onDensityChange: (d: CardDensity) => void;
 }
 
-/** Results may be partial when a source failed, so the failure is stated beside them. */
-function SourceErrors({ errors = [] }: { errors?: { provider: string; error: string }[] }) {
-  if (errors.length === 0) return null;
+/** How current the page's titles are, once the first page has answered. */
+function PageAsOf({ records }: { records?: RefreshRecord[] }) {
+  if (!records) return null;
   return (
-    <div
-      role="alert"
-      className="mb-4 rounded-lg border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-text-primary"
-    >
-      {errors.map(({ provider, error }) => (
-        <p key={provider} className="break-words">
-          {provider}: {error}
-        </p>
-      ))}
+    <div className="mb-4">
+      <CopyAsOf freshness={copyFreshness(records)} />
     </div>
   );
 }
@@ -567,7 +561,7 @@ export function MediaContent({
           className={cn(activeTab !== 'movies' && 'hidden')}
         >
           <h2 className="sr-only">Movies</h2>
-          <SourceErrors errors={movies.sourceErrors} />
+          <PageAsOf records={movies.records} />
           <ReadinessNotice findings={movies.findings ?? []} />
           <VirtualMediaGrid
             items={movies.items}
@@ -643,7 +637,7 @@ export function MediaContent({
           className={cn(activeTab !== 'series' && 'hidden')}
         >
           <h2 className="sr-only">Series</h2>
-          <SourceErrors errors={series.sourceErrors} />
+          <PageAsOf records={series.records} />
           <ReadinessNotice findings={series.findings ?? []} />
           <VirtualMediaGrid
             items={series.items}

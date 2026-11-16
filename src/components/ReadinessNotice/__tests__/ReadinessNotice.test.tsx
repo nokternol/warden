@@ -20,7 +20,7 @@ describe('ReadinessNotice', () => {
             'inactive-instance',
             'Tags filter names Radarr instance 3, which is not an active provider'
           ),
-          finding('data-incomplete', "Watched filter's data has not finished loading"),
+          finding('data-incomplete', "Watched filter's data is incomplete"),
         ]}
       />
     );
@@ -28,7 +28,8 @@ describe('ReadinessNotice', () => {
     expect(notice).toHaveTextContent(
       'Tags filter names Radarr instance 3, which is not an active provider'
     );
-    expect(notice).toHaveTextContent("Watched filter's data has not finished loading");
+    // Informational findings are said by the copy's As of line instead.
+    expect(notice).not.toHaveTextContent("Watched filter's data is incomplete");
   });
 
   it('renders nothing when there is no finding', () => {

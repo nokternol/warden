@@ -1,0 +1,40 @@
+import type { CopyFreshness } from '@contract/media';
+
+const KIND_NOUN: Record<CopyFreshness['stale'][number]['kind'], string> = {
+  catalog: 'library',
+  links: 'links',
+  lists: 'lists',
+  facts: 'data',
+};
+
+const AS_OF = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+
+/** How one stale record reads: what failed, or what has never been refreshed. */
+function staleText({ provider, kind, failed }: CopyFreshness['stale'][number]): string {
+  return failed
+    ? `${provider}'s ${KIND_NOUN[kind]} failed to refresh`
+    : `${provider}'s ${KIND_NOUN[kind]} not refreshed yet`;
+}
+
+/**
+ * The one line every view of library data shows: how current the copy it answers from is, and
+ * which providers failed their last refresh or have never refreshed. Never claims fresher data
+ * than the copy's stalest successful refresh.
+ */
+export default function CopyAsOf({ freshness }: { freshness: CopyFreshness }) {
+  const asOf =
+    freshness.asOf === null
+      ? 'Not refreshed yet'
+      : `As of ${AS_OF.format(new Date(freshness.asOf * 1000))}`;
+  const stale = freshness.stale.map(staleText);
+  const failed = freshness.stale.some((s) => s.failed);
+  return (
+    <p
+      role="status"
+      aria-label="How current this is"
+      className={`text-xs ${failed ? 'text-warning' : 'text-text-muted'}`}
+    >
+      {[asOf, ...stale].join(' · ')}
+    </p>
+  );
+}

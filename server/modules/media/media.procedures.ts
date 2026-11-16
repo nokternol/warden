@@ -60,11 +60,6 @@ interface BrowseView {
   pageSize: number;
 }
 
-export interface MediaError {
-  provider: string;
-  error: string;
-}
-
 /** A provider-owned list entry, tagged with the instance it came from. */
 type FromInstance<T> = T & { providerId: number; providerName: string };
 
@@ -175,7 +170,6 @@ export function createMediaProcedures(cradle: MediaCradle) {
     return {
       ...paginateItems(groupByTitle(sorted), { page: view.page, pageSize: view.pageSize }),
       yearRange,
-      errors: [] as MediaError[],
       records: recordsFor(library, contentType),
       ...(await readiness(filters, contentType)),
     };

@@ -23,7 +23,6 @@ const EMPTY_PAGE = {
   page: 1,
   pageSize: 48,
   yearRange: { min: null, max: null },
-  errors: [],
   records: [],
   findings: [],
   mediaPage: 'clear' as const,
@@ -177,12 +176,20 @@ describe('MediaPage heading order', () => {
 });
 
 describe('MediaPage filter readiness', () => {
-  it('shows findings in their own notice, apart from the source failures', async () => {
+  it("shows findings in their own notice, apart from the copy's As of line", async () => {
     server.use(
       mockProcedure(contract.media.browse.movie, () => ({
         ...EMPTY_PAGE,
-        errors: [{ provider: 'Radarr Main', error: "Couldn't be reached: timed out" }],
-        records: [],
+        records: [
+          {
+            providerId: 1,
+            provider: 'Radarr Main',
+            kind: 'catalog' as const,
+            refreshedAt: 1_794_000_000,
+            failedAt: 1_794_003_600,
+            error: "Couldn't be reached: timed out",
+          },
+        ],
         findings: [
           {
             id: 'no-data::watched:2',
@@ -200,8 +207,11 @@ describe('MediaPage filter readiness', () => {
 
     const notice = await screen.findByRole('status', { name: 'Filter warnings' });
     expect(notice).toHaveTextContent('Watched filter has no data');
-    const alert = screen.getByRole('alert');
-    expect(alert).toHaveTextContent('Radarr Main');
-    expect(alert).not.toHaveTextContent('Watched');
+    const asOf = screen
+      .getAllByRole('status', { name: 'How current this is' })
+      .map((line) => line.textContent)
+      .join('\n');
+    expect(asOf).toContain('Radarr Main');
+    expect(asOf).not.toContain('Watched');
   });
 });
