@@ -195,7 +195,7 @@ describe('AutomationBuilder', () => {
       parameter: {
         type: 'select' as const,
         label: 'Quality profile',
-        optionsRoute: 'quality-profiles',
+        optionsRoute: 'quality-profiles' as const,
       },
     };
     mockApi(
@@ -237,7 +237,7 @@ describe('AutomationBuilder', () => {
       parameter: {
         type: 'select' as const,
         label: 'Quality profile',
-        optionsRoute: 'quality-profiles',
+        optionsRoute: 'quality-profiles' as const,
       },
     };
     mockApi(

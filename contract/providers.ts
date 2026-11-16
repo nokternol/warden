@@ -2,24 +2,19 @@ import { z } from 'zod';
 import { base } from './base';
 import { IdSchema, ProviderSchema, ProviderTypeSchema } from './schemas';
 
-/** The routes a `select`-parameter task names as `optionsRoute`. */
-export const TaskOptionsRouteSchema = z.enum([
-  'quality-profiles',
-  'root-folders',
-  'collections',
-  'language-profiles',
-]);
+/** The routes a `select`-parameter task names as `optionsRoute`: one per list a task chooses from. */
+export const TaskOptionsRouteSchema = z.enum(['quality-profiles', 'tags', 'collections']);
 
 const TaskParameterFieldSchema = z.object({
   key: z.string(),
   label: z.string(),
   kind: z.enum(['select', 'text', 'boolean']),
-  optionsRoute: z.string().optional(),
+  optionsRoute: TaskOptionsRouteSchema.optional(),
 });
 
 /** The value(s) a task takes, captured with the automation that runs it. */
 export const TaskParameterSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('select'), label: z.string(), optionsRoute: z.string() }),
+  z.object({ type: z.literal('select'), label: z.string(), optionsRoute: TaskOptionsRouteSchema }),
   z.object({ type: z.literal('text'), label: z.string() }),
   z.object({
     type: z.literal('fields'),

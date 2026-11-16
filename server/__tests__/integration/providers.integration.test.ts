@@ -135,6 +135,30 @@ describe('Providers API Integration', () => {
       expect(radarrReads).toBe(0);
     });
 
+    it("offers a tag task the instance's stored tags as choices", async () => {
+      const radarr = await providerSettingsService.create({
+        type: MetadataProviderType.RADARR,
+        name: 'Tagged Radarr',
+        url: 'http://localhost:7878/api/v3',
+        apiKey: 'k',
+        isActive: true,
+      });
+      await refreshCatalog(cradle);
+
+      const response = await client.get('/api/providers/task-options/tags');
+      const data = expectSuccessResponse(response) as Array<{
+        providerId: number;
+        type: string;
+        options: Array<{ id: string; label: string }>;
+      }>;
+
+      const entry = data.find((e) => e.providerId === radarr.id);
+      expect(entry?.options).toEqual([
+        { id: '1', label: 'action' },
+        { id: '2', label: 'sci-fi' },
+      ]);
+    });
+
     it('returns an empty options list for collections — no provider fetches real collections yet', async () => {
       const jellyfin = await providerSettingsService.create({
         type: MetadataProviderType.JELLYFIN,

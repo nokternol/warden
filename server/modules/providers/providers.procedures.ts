@@ -1,22 +1,16 @@
 import { apiUrlOf } from '@contract/providerUrl';
 import type { ProviderType, TaskOptionsRoute } from '@contract/providers';
 import { type Scope, isOfferedProviderType, isOfferedTask } from '@contract/scope';
-import { MetadataProviderType } from '@server/database/schema';
-import type { MetadataProvider } from '@server/database/schema';
+import type { MetadataProviderType } from '@server/database/schema';
 import { api } from '@server/kernel/api';
 import { ValidationError } from '@server/kernel/errors';
 import { getChildLogger } from '@server/kernel/logger';
 import { probeConnection } from './connectionProbe';
-import {
-  PROVIDER_CATALOGUE,
-  describeProviderTypes,
-  isMediaSourceType,
-  providerTypeLabel,
-} from './providerCatalogue';
+import { PROVIDER_CATALOGUE, describeProviderTypes, providerTypeLabel } from './providerCatalogue';
 import type { ProviderFactory } from './providerFactory';
 import type { ProviderListsReader } from './providerListsReader';
 import type { ProviderSettingsService } from './providerSettingsService';
-import { isMediaActuator } from './roles';
+import { type MediaActuator, isMediaActuator } from './roles';
 import { readEnabledTaskIds } from './taskEnablement';
 
 const log = getChildLogger('ProvidersProcedures');
@@ -45,34 +39,32 @@ interface TaskOption {
   label: string;
 }
 
+/** Whether one of `actuator`'s tasks takes a value chosen from `route`'s list. */
+function namesRoute(actuator: MediaActuator, route: TaskOptionsRoute): boolean {
+  return actuator.tasks().some(({ parameter }) => {
+    if (parameter?.type === 'select') return parameter.optionsRoute === route;
+    if (parameter?.type === 'fields') return parameter.fields.some((f) => f.optionsRoute === route);
+    return false;
+  });
+}
+
 /**
- * A provider instance's stored choices for a parameterized task's `select` control, from the
- * lists the catalog refresh stored. `undefined` means this provider type has nothing to say about
- * `route`: omitted from the response, not surfaced as an empty list. `collections` and
- * `language-profiles` return `[]` for their owning provider type: the procedure gives the client a
- * stable shape to call, and the empty list is the answer while no task takes those choices.
+ * A provider instance's choices for `route`, from the lists the catalog refresh stored. Collections
+ * have no stored list, so the answer for them is empty.
  */
-async function resolveTaskOptions(
-  provider: MetadataProvider,
+async function storedChoices(
+  providerId: number,
   route: TaskOptionsRoute,
   lists: ProviderListsReader
-): Promise<TaskOption[] | undefined> {
-  const isSource = isMediaSourceType(provider.type);
+): Promise<TaskOption[]> {
+  const stored = await lists.listsOf(providerId);
   switch (route) {
-    case 'quality-profiles': {
-      if (!isSource) return undefined;
-      const profiles = (await lists.listsOf(provider.id))?.qualityProfiles ?? [];
-      return profiles.map((p) => ({ id: String(p.id), label: p.name }));
-    }
-    case 'root-folders': {
-      if (!isSource) return undefined;
-      const folders = (await lists.listsOf(provider.id))?.rootFolders ?? [];
-      return folders.map((f) => ({ id: String(f.id), label: f.path }));
-    }
+    case 'quality-profiles':
+      return (stored?.qualityProfiles ?? []).map((p) => ({ id: String(p.id), label: p.name }));
+    case 'tags':
+      return (stored?.tags ?? []).map((t) => ({ id: String(t.id), label: t.label }));
     case 'collections':
-      return provider.type === MetadataProviderType.JELLYFIN ? [] : undefined;
-    case 'language-profiles':
-      return provider.type === MetadataProviderType.SONARR ? [] : undefined;
+      return [];
   }
 }
 
@@ -191,9 +183,11 @@ export function createProvidersProcedures(cradle: ProvidersCradle) {
 
       const entries = await Promise.all(
         providers.map(async (p) => {
+          // A provider offers choices for a route exactly when one of its tasks names it.
+          const instance = providerFactory.create(p, log);
+          if (!isMediaActuator(instance) || !namesRoute(instance, params.route)) return undefined;
           try {
-            const options = await resolveTaskOptions(p, params.route, libraryCache);
-            if (options === undefined) return undefined;
+            const options = await storedChoices(p.id, params.route, libraryCache);
             return { providerId: p.id, type: p.type, options };
           } catch (err) {
             log.warn('Task options fetch failed', { provider: p.name, route: params.route, err });

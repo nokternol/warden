@@ -1,4 +1,4 @@
-import type { ProviderTypeDescriptor } from '@contract/providers';
+import type { ProviderTypeDescriptor, TaskOptionsRoute } from '@contract/providers';
 import type { ContentType } from '@contract/schemas';
 import type { MetadataProviderType } from '@server/database/schema';
 import type { RadarrMovie } from './connections/radarrProvider';
@@ -76,7 +76,7 @@ export interface ActuatorTaskParameterField {
   label: string;
   kind: 'select' | 'text' | 'boolean';
   /** Present when `kind` is `'select'` — see `ActuatorTaskParameter`'s `optionsRoute`. */
-  optionsRoute?: string;
+  optionsRoute?: TaskOptionsRoute;
 }
 
 /**
@@ -93,7 +93,7 @@ export interface ActuatorTaskParameterField {
  * The value always transports as a string — numeric id spaces parse their own.
  */
 export type ActuatorTaskParameter =
-  | { type: 'select'; label: string; optionsRoute: string }
+  | { type: 'select'; label: string; optionsRoute: TaskOptionsRoute }
   | { type: 'text'; label: string }
   | { type: 'fields'; label: string; fields: ActuatorTaskParameterField[] };
 
