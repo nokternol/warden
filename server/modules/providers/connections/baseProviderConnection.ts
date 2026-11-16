@@ -11,7 +11,9 @@ export interface ProviderConfig {
 /**
  * Shared HTTP-client + config base for every provider. It owns connection
  * concerns (prefix URL, timeout, error logging) — not a metadata or role
- * contract. Role membership is declared by the role interfaces a subclass
+ * contract. The prefix is the stored URL as saved: the address the owner
+ * entered (machine, port, any web-proxy path and the service's own URL base)
+ * plus the type's API path. Role membership is declared by the role interfaces a subclass
  * `implements`, not by extending this class.
  */
 export abstract class BaseProviderConnection {
@@ -23,11 +25,7 @@ export abstract class BaseProviderConnection {
     this.provider = provider;
     this.log = logger;
 
-    const urlBaseSetting = this.provider.settings?.urlBase;
-    const urlBase =
-      typeof urlBaseSetting === 'string' ? urlBaseSetting.replace(/^\/+|\/+$/g, '') : '';
-    const base = this.provider.url.replace(/\/+$/, '');
-    const prefixUrl = urlBase ? `${base}/${urlBase}/` : `${base}/`;
+    const prefixUrl = `${this.provider.url.replace(/\/+$/, '')}/`;
 
     this.client = ky.create({
       prefixUrl,
