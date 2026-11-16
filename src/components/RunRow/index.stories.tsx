@@ -10,7 +10,10 @@ const succeeded: AutomationRunDto = {
   status: 'success',
   itemCount: 5,
   error: null,
-  copy: null,
+  copy: {
+    asOf: 1_780_531_200,
+    stale: [{ provider: 'Tautulli', kind: 'facts', failed: true }],
+  },
   createdAt: '2026-06-04T02:00:00.000Z',
 };
 

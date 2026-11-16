@@ -1,6 +1,7 @@
 import { LoadError, SkeletonRows } from '@app/components/AsyncBoundary';
 import Badge from '@app/components/Badge';
 import Button from '@app/components/Button';
+import CopyAsOf from '@app/components/CopyAsOf';
 import { rowTableStyles as table } from '@app/components/RowTable';
 import type { AutomationRunDto } from '@app/hooks/useAutomationRuns';
 import { type RunItemDto, useRunItems } from '@app/hooks/useRunItems';
@@ -57,6 +58,7 @@ function Root({ run, defaultExpanded = false }: RunRowProps) {
         </td>
         <td className={table.cell} data-label="Ran at">
           {formatDate(run.ranAt)}
+          {run.copy && <CopyAsOf freshness={run.copy} />}
         </td>
         <td className={table.cell} data-label="Items">
           {run.itemCount !== null ? run.itemCount : '—'}
