@@ -17,6 +17,7 @@ import {
   SOURCE_OWNER,
   type SonarrSeries,
   type RefreshRecord as StoredRefreshRecord,
+  isMediaSourceType,
   readProviderLists,
   readRefreshRecords,
 } from '@server/modules/providers';
@@ -75,10 +76,7 @@ const REFRESHED_KINDS: Partial<Record<MetadataProviderType, RefreshKind[]>> = {
 export function recordsFor(library: Library, contentType: ContentType): RefreshRecord[] {
   const owner = SOURCE_OWNER[contentType];
   return library.providers.flatMap((provider) => {
-    const isSource =
-      provider.type === MetadataProviderType.RADARR ||
-      provider.type === MetadataProviderType.SONARR;
-    if (isSource && provider.type !== owner) return [];
+    if (isMediaSourceType(provider.type) && provider.type !== owner) return [];
     return (REFRESHED_KINDS[provider.type] ?? []).map((kind) => {
       const stored = library.records.find((r) => r.providerId === provider.id && r.kind === kind);
       return {

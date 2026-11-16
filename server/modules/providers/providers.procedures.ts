@@ -10,7 +10,7 @@ import { describeProviderTypes } from './providerCatalogue';
 import type { ProviderFactory } from './providerFactory';
 import type { ProviderListsReader } from './providerListsReader';
 import type { ProviderSettingsService } from './providerSettingsService';
-import { isMediaActuator } from './roles';
+import { isMediaActuator, isMediaSourceType } from './roles';
 import { readEnabledTaskIds } from './taskEnablement';
 
 const log = getChildLogger('ProvidersProcedures');
@@ -51,8 +51,7 @@ async function resolveTaskOptions(
   route: TaskOptionsRoute,
   lists: ProviderListsReader
 ): Promise<TaskOption[] | undefined> {
-  const isSource =
-    provider.type === MetadataProviderType.RADARR || provider.type === MetadataProviderType.SONARR;
+  const isSource = isMediaSourceType(provider.type);
   switch (route) {
     case 'quality-profiles': {
       if (!isSource) return undefined;
