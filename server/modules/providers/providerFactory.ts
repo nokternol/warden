@@ -3,11 +3,8 @@ import type { MetadataProviderType } from '@server/database/schema';
 import type { Logger } from 'winston';
 import type { ProviderConfig } from './connections/baseProviderConnection';
 import { JellyfinProvider } from './connections/jellyfinProvider';
-import type { OmdbProvider } from './connections/omdbProvider';
 import { PlexProvider } from './connections/plexProvider';
-import type { RadarrProvider } from './connections/radarrProvider';
 import { SeerrProvider } from './connections/seerrProvider';
-import type { SonarrProvider } from './connections/sonarrProvider';
 import { TautulliProvider } from './connections/tautulliProvider';
 import { TmdbProvider } from './connections/tmdbProvider';
 import { TvMazeProvider } from './connections/tvmazeProvider';
@@ -83,17 +80,8 @@ function connect(row: ProviderRow, logger: Logger): AnyProvider {
   return new PROVIDER_CLASSES[row.type](row, logger);
 }
 
-/** Every concrete provider the factory can construct from settings. */
-export type AnyProvider =
-  | RadarrProvider
-  | SonarrProvider
-  | PlexProvider
-  | JellyfinProvider
-  | TautulliProvider
-  | SeerrProvider
-  | TmdbProvider
-  | OmdbProvider
-  | TvMazeProvider;
+/** Every concrete provider the factory can construct: an instance of any class in the class map. */
+export type AnyProvider = InstanceType<ProviderClasses[keyof ProviderClasses]>;
 
 /**
  * Active providers resolved into typed, named slots — absent types stay undefined.
