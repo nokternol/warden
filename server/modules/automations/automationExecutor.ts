@@ -74,7 +74,10 @@ interface RunPlan {
   task: ActuatorTask;
   targets: RunTargets;
   actuatorIds: Parameters<ActuatorTask['run']>[0];
-  /** How many source copies the query was evaluated against, and how many it matched. */
+  /**
+   * What the actuator could act on, and what it acts on: its own copies for a catalog-owning
+   * actuator, the titles linked to its media server for any other.
+   */
   poolSize: number;
   matchedCount: number;
   /** Each refresh a destructive run depends on that failed or never ran, as a reason not to act. */
@@ -589,21 +592,31 @@ export class AutomationExecutor {
       );
     }
 
-    // Non-source actuator: it owns no catalog, so the included queries evaluate against every
-    // active source instance's copies, and matched copies reach the actuator by the media-server
-    // id the catalog refresh linked to their title. A title not linked drops out: the task never
-    // receives an id it cannot address.
+    // Non-source actuator: it owns no catalog, so it acts on every id the selected titles are
+    // linked to in its media server, as the catalog refresh linked them. A title not linked drops
+    // out: the task never receives an id it cannot address. Each title is recorded once, by its
+    // first copy.
     if (!isAddressedActuator(providerSettings.type)) {
       throw new Error(`Provider type "${providerSettings.type}" has no actuator addressing space`);
     }
-    const targets = selected
-      .flatMap((title) => title.copies)
-      .filter((copy) => actuatorIdOf(copy, providerSettings.type) !== undefined);
+    const linkedIds = (titleCopies: LibraryCopy[]) => [
+      ...new Set(
+        titleCopies
+          .map((copy) => actuatorIdOf(copy, providerSettings.type))
+          .filter((id): id is string => id !== undefined)
+      ),
+    ];
+    const acted = selected.filter((title) => linkedIds(title.copies).length > 0);
+    const linkedTitles = new Set(
+      copies
+        .filter((copy) => actuatorIdOf(copy, providerSettings.type) !== undefined)
+        .map((copy) => copy.mediaIdentityId)
+    );
     return planOf(
-      targets,
-      [...new Set(targets.map((c) => actuatorIdOf(c, providerSettings.type)!))],
-      copies.length,
-      targets.length
+      acted.map((title) => title.copies[0]),
+      [...new Set(acted.flatMap((title) => linkedIds(title.copies)))],
+      linkedTitles.size,
+      acted.length
     );
   }
 

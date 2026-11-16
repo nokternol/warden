@@ -1884,7 +1884,7 @@ describe('non-source actuators — id translation through the identity graph', (
     expect(run.itemCount).toBe(items.data.length);
   });
 
-  it('counts every source copy it recorded when two instances hold one Plex title', async () => {
+  it('records a title once when two instances hold it, acting on its one Plex id', async () => {
     const db = getDb();
     const radarrProv = await seedRadarrProvider(providerSettingsService);
     const radarr4kProv = await seedRadarrProvider(providerSettingsService);
@@ -1935,8 +1935,8 @@ describe('non-source actuators — id translation through the identity graph', (
     expect(deleteFromLibrary.mock.calls[0][0]).toEqual(['rk-5']);
     const [run] = await automationRunService.listRuns({ automationId: automation.id });
     const items = await automationRunService.listRunItems(run.id);
-    expect(items.data).toHaveLength(2);
-    expect(run.itemCount).toBe(2);
+    expect(items.data.map((i) => i.title)).toEqual(['Heat']);
+    expect(run.itemCount).toBe(1);
   });
 
   it('previews only the matches that translate to a Plex id', async () => {
