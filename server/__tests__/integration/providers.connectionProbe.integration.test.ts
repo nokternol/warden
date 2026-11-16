@@ -242,6 +242,30 @@ describe('GET /api/providers/test', () => {
     });
   });
 
+  it("refuses a test whose type is not the saved provider's, without contacting anything", async () => {
+    const url = 'http://seerr-typed.local';
+    const contacted: string[] = [];
+    const listener = ({ request: upstream }: { request: globalThis.Request }) => {
+      if (upstream.url.startsWith(url)) contacted.push(upstream.url);
+    };
+    const created = await request(authedApp).post('/api/providers').send({
+      type: MetadataProviderType.SEERR,
+      name: 'Seerr',
+      url,
+      apiKey: 'stored',
+      isActive: false,
+    });
+    server.events.on('request:start', listener);
+
+    const res = await request(authedApp)
+      .get('/api/providers/test')
+      .query({ type: MetadataProviderType.RADARR, url, id: created.body.data.id });
+
+    server.events.removeListener('request:start', listener);
+    expect(res.status).toBe(400);
+    expect(contacted).toEqual([]);
+  });
+
   it('refuses to probe a type that is not offered, without contacting it', async () => {
     const OMDB_URL = 'http://omdb.local';
     let contacted = false;

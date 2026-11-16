@@ -7,7 +7,12 @@ import { api } from '@server/kernel/api';
 import { ValidationError } from '@server/kernel/errors';
 import { getChildLogger } from '@server/kernel/logger';
 import { probeConnection } from './connectionProbe';
-import { PROVIDER_CATALOGUE, describeProviderTypes, isMediaSourceType } from './providerCatalogue';
+import {
+  PROVIDER_CATALOGUE,
+  describeProviderTypes,
+  isMediaSourceType,
+  providerTypeLabel,
+} from './providerCatalogue';
 import type { ProviderFactory } from './providerFactory';
 import type { ProviderListsReader } from './providerListsReader';
 import type { ProviderSettingsService } from './providerSettingsService';
@@ -72,21 +77,6 @@ async function resolveTaskOptions(
 }
 
 /**
- * A stored key, for probing the address it was saved with. The client never holds this key, so
- * sending it to another host would hand it to whoever runs that host: a changed address needs the
- * key entered again.
- */
-function storedKeyFor(
-  stored: { url: string; apiKey?: string | null },
-  url: string
-): string | undefined {
-  if (new URL(url).origin !== new URL(stored.url).origin) {
-    throw new Error('Enter the API key to test a different address');
-  }
-  return stored.apiKey ?? undefined;
-}
-
-/**
  * The `providers` procedures of the API contract: configured-instance CRUD,
  * connection probing, and provider capabilities.
  */
@@ -141,8 +131,13 @@ export function createProvidersProcedures(cradle: ProvidersCradle) {
 
     test: api.providers.test.handler(async ({ input }) => {
       assertOfferedType(input.type);
+      const type = input.type as MetadataProviderType;
       const stored =
         input.id === undefined ? undefined : await providerSettingsService.findById(input.id);
+      if (stored !== undefined && stored.type !== type) {
+        const [saved, asked] = [providerTypeLabel(stored.type), providerTypeLabel(type)];
+        throw new ValidationError(`Provider ${stored.id} is ${saved}, not ${asked}`);
+      }
       // Only a test of what is saved describes the provider; a test of an address or key being
       // edited says nothing about the saved one, so it is not kept. Callers send the host as the
       // owner entered it, and a saved URL carries its type's API path, so the host is compared
@@ -153,13 +148,11 @@ export function createProvidersProcedures(cradle: ProvidersCradle) {
         apiUrlOf(input.url, PROVIDER_CATALOGUE[stored.type].apiPath) === stored.url;
       let result: { ok: true } | { ok: false; error: string };
       try {
-        const apiKey =
-          input.apiKey ??
-          (stored === undefined ? undefined : await storedKeyFor(stored, input.url));
         await probeConnection(
           providerFactory,
-          { type: input.type as MetadataProviderType, url: input.url, apiKey },
-          log
+          { type, url: input.url, apiKey: input.apiKey },
+          log,
+          stored
         );
         result = { ok: true };
       } catch (err) {
