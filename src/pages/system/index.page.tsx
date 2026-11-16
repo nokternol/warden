@@ -1,6 +1,7 @@
 import AppLayout from '@app/components/AppLayout';
 import AsyncBoundary from '@app/components/AsyncBoundary';
 import AutomationRow, { AUTOMATION_COLUMNS } from '@app/components/AutomationRow';
+import CopyAsOf from '@app/components/CopyAsOf';
 import EmptyState from '@app/components/EmptyState';
 import MediaResetControl from '@app/components/MediaResetControl';
 import RowTable from '@app/components/RowTable';
@@ -11,6 +12,7 @@ import { useMediaReset } from '@app/hooks/useMediaReset';
 import { api } from '@app/lib/api/client';
 import { useApi } from '@app/lib/api/useApi';
 import { guardPage } from '@app/lib/utils/guardPage';
+import { copyFreshness } from '@contract/media';
 import { Monitor } from 'lucide-react';
 import type { GetServerSideProps } from 'next';
 
@@ -26,6 +28,17 @@ export default function SystemPage() {
   const { data: movies } = useApi(api.media.browse.movie, { pageSize: 1 });
   const { data: series } = useApi(api.media.browse.series, { pageSize: 1 });
   const titleCount = movies && series ? movies.totalCount + series.totalCount : undefined;
+  // One provider's record appears in both answers when it serves both content types.
+  const freshness =
+    movies && series
+      ? copyFreshness(
+          Array.from(
+            new Map(
+              [...movies.records, ...series.records].map((r) => [`${r.providerId}:${r.kind}`, r])
+            ).values()
+          )
+        )
+      : undefined;
 
   return (
     <AppLayout sidebar={<SidebarNav />} topBar={<TopBar title="System" />}>
@@ -74,9 +87,14 @@ export default function SystemPage() {
             Media data
           </h2>
           <p className="text-xs text-text-muted mb-4 max-w-prose">
-            Clears Warden's stored identities and enrichment so they can be rebuilt. Your providers
-            and their libraries are not touched.
+            Clears Warden's copy of your library so the scheduled refreshes rebuild it. Your
+            providers and their libraries are not touched.
           </p>
+          {freshness && (
+            <div className="mb-3">
+              <CopyAsOf freshness={freshness} />
+            </div>
+          )}
           <MediaResetControl
             titleCount={titleCount}
             onReset={async () => {
