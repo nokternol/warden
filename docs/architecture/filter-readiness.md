@@ -27,7 +27,8 @@ request:
 
 - every provider instance and whether it is active, through a narrow slice of `ProviderSettingsService`;
 - every enricher's `facts` refresh record: when its facts were last read, and whether the latest
-  attempt failed ([`providerRefresh.ts`](ref:path:server/modules/providers/providerRefresh.ts)).
+  attempt failed, read from the library copy
+  ([`LibraryCache`](ref:path:server/modules/media/libraryCache.ts)), as every feature reads it.
 
 `findingsFor(facts, filterList, automationProvider?)` is pure. The query list judges every saved query
 against one read of the facts. The Media page judges its URL filters, which have no query id. The

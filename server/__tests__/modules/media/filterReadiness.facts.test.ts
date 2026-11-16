@@ -6,13 +6,15 @@
 import { MetadataProviderType, metadataProviders } from '@server/database/schema';
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
+import { DomainEventBus } from '@server/kernel/eventBus';
 import { FilterReadiness } from '@server/modules/media/filterReadiness';
+import { LibraryCache } from '@server/modules/media/libraryCache';
 import {
   ProviderSettingsService,
   recordRefreshFailed,
   recordRefreshed,
 } from '@server/modules/providers';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const testConfig = {
   NODE_ENV: 'test',
@@ -30,7 +32,7 @@ describe('FilterReadiness.readFacts', () => {
     await _resetDatabase();
   });
 
-  it('reads every provider instance and every facts refresh record', async () => {
+  it('reads every provider instance, and every facts refresh record from the library cache', async () => {
     const db = getDb();
     const [radarr, plex, tautulli] = await db
       .insert(metadataProviders)
@@ -43,11 +45,15 @@ describe('FilterReadiness.readFacts', () => {
     await recordRefreshed(db, radarr.id, 'catalog');
     await recordRefreshed(db, plex.id, 'facts');
     await recordRefreshFailed(db, tautulli.id, 'facts', 'down');
+    const libraryCache = new LibraryCache({ db, eventBus: new DomainEventBus() });
+    const read = vi.spyOn(libraryCache, 'read');
 
     const facts = await new FilterReadiness({
       providerSettingsService: new ProviderSettingsService({ db }),
-      db,
+      libraryCache,
     }).readFacts();
+
+    expect(read).toHaveBeenCalledOnce();
 
     expect(facts.providers).toEqual([
       { id: radarr.id, type: MetadataProviderType.RADARR, isActive: true },

@@ -7,13 +7,8 @@ import {
 import { type ContentType, isInstanceScopedValue } from '@contract/schemas';
 import { isOfferedProviderType, scope } from '@contract/scope';
 import type { MetadataProviderType } from '../../database/schema';
-import type { DrizzleDb } from '../../kernel/db';
-import {
-  SOURCE_OWNER,
-  isMediaSourceType,
-  providerTypeLabel,
-  readRefreshRecords,
-} from '../providers';
+import { SOURCE_OWNER, isMediaSourceType, providerTypeLabel } from '../providers';
+import type { LibraryCache } from './libraryCache';
 import { type Filter, type FilterValue, type MediaRule, getRule } from './ruleRegistry';
 
 /** A configured provider instance, as readiness judges filters against it. */
@@ -50,7 +45,8 @@ export interface ProviderInstancesSource {
 export class FilterReadiness {
   private readonly deps: {
     providerSettingsService: ProviderInstancesSource;
-    db: DrizzleDb;
+    /** The library copy, whose refresh records say whose facts are complete. */
+    libraryCache: Pick<LibraryCache, 'read'>;
   };
 
   constructor(deps: FilterReadiness['deps']) {
@@ -58,9 +54,9 @@ export class FilterReadiness {
   }
 
   async readFacts(): Promise<ReadinessFacts> {
-    const [providers, records] = await Promise.all([
+    const [providers, { records }] = await Promise.all([
       this.deps.providerSettingsService.list(),
-      readRefreshRecords(this.deps.db),
+      this.deps.libraryCache.read(),
     ]);
     return {
       providers: providers.map(({ id, type, isActive }) => ({ id, type, isActive })),
