@@ -122,10 +122,12 @@ instance can actually do.
 `AutomationExecutor` binds the specific provider instance by `automation.provider.id`, resolves the task by
 `provider.tasks().find(t => t.id === taskId)`, enforces enablement via
 `readEnabledTaskIds(providerSettings.settings)`, evaluates the query, and calls
-`task.run(ids, automation.taskParameter)` — the runner already bound to the instance. `task.affects`
-drives the `media:changed` event, sent once the task has acted whether or not it then succeeds. When a task
-declares it is a written rule at `ActuatorTaskDescriptor.affects` ([`roles.ts`](ref:path:server/modules/providers/roles.ts)), and
-[`actuatorTaskAffects.test.ts`](ref:path:server/__tests__/modules/providers/actuatorTaskAffects.test.ts) pins every task that leaves it off. `SYSTEM_TASKS` (`system:enrichment`, `system:identity-resolution`) are
+`task.run(ids, automation.taskParameter)` — the runner already bound to the instance. A user run sends
+no `media:changed`: the library copy changes only on the scheduled catalog refresh and enrichment, so
+what a run changed shows after the next refresh. `ActuatorTaskDescriptor.affects` ([`roles.ts`](ref:path:server/modules/providers/roles.ts))
+still declares whether a task has changed library data by the time it returns; nothing reads it yet, and
+it is kept for refreshing what a run just changed (#256).
+[`actuatorTaskAffects.test.ts`](ref:path:server/__tests__/modules/providers/actuatorTaskAffects.test.ts) pins every task that leaves it off. The system jobs (`system:enrichment`, and `system:identity-resolution`, which is the catalog refresh's task id) are
 separate: internal jobs run via `SystemTaskRunner`, not actuator tasks, and absent from the discovery
 surface.
 

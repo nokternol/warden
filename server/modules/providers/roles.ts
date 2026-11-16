@@ -39,18 +39,15 @@ export interface ActuatorTaskDescriptor {
   label: string;
   destructive: boolean;
   /**
-   * `'media'` makes a run that acted on at least one item send `media:changed`, which clears
-   * the media caches. The rule for setting it:
-   * - Declare it when, by the time `run` returns, the task has changed library data in the
-   *   upstream service: which titles exist, monitored state, files, quality profile, tags,
-   *   play state, collection membership, metadata — anything a media cache holds or browse
-   *   and the filters show.
-   * - Leave it off only when the task changes no library data by the time `run` returns,
-   *   such as a task that starts an upstream background command (search, refresh, rescan)
-   *   whose effect lands later. An event at return would clear the caches before the change
-   *   exists; the cache expiry covers it.
-   * - If unsure, declare it. Over-eviction costs one refetch; under-eviction leaves the page
-   *   stale.
+   * `'media'` declares that, by the time `run` returns, the task has changed library data in
+   * the upstream service: which titles exist, monitored state, files, quality profile, tags,
+   * play state, collection membership, metadata — anything the library copy holds. Leave it
+   * off only when the task changes no library data by the time `run` returns, such as a task
+   * that starts an upstream background command (search, refresh, rescan) whose effect lands
+   * later. If unsure, declare it.
+   *
+   * Nothing reads this yet: the library copy changes only on the scheduled catalog refresh and
+   * enrichment. It is the declaration a refresh of what a run just changed will read (#256).
    * `actuatorTaskAffects.test.ts` lists every task that leaves it off, so a new task must
    * take a side.
    */

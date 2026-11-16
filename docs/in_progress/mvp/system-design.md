@@ -105,5 +105,5 @@ page, the client mutation pattern, per-row fetching, and the refresh's write per
 | #243 Small fixes | One container convention, one time helper, the scope declaration read one way, stale docs and narrating comments, unused code. | this design |
 | #250 Remaining duplication | Whatever duplicates are left after the slices above. | all above |
 
-The fracture ledger's "Library reads — one per feature" entry, marked healed, reopens: the shared
-60-second read is a second copy of the library under belief 4.
+The shared 60-second read was a second copy of the library under belief 4. The fracture ledger
+records it as "Library copies — a live 60-second read beside the database", healed by #252.
