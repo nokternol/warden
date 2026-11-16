@@ -1,7 +1,11 @@
 import type { AutomationPreview, AutomationReadiness } from '@contract/automations';
 import { type RefreshRecord, freshnessOf } from '@contract/media';
 import type { ReadinessFinding } from '@contract/readiness';
-import type { AutomationRunStatus, ContentType } from '@contract/schemas';
+import {
+  type AutomationRunStatus,
+  type ContentType,
+  isInstanceScopedValue,
+} from '@contract/schemas';
 import type { MetadataProvider, MetadataProviderType } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
 import { ValidationError } from '../../kernel/errors';
@@ -622,9 +626,10 @@ export class AutomationExecutor {
 
   /**
    * The source catalogs a run on `providerSettings` reads. A catalog-owning actuator acts on its
-   * own catalog's copies, any other actuator on every active source instance's copies. A filter on
-   * a field a source supplies may be met through any instance's copy, so it reads every active
-   * source instance's catalog.
+   * own catalog's copies, any other actuator on every active source instance's copies. A filter
+   * whose value names an instance can be met only through that instance's copy, so it reads that
+   * instance's catalog; any other filter on a field a source supplies may be met through any
+   * instance's copy, so it reads every active source instance's catalog.
    */
   private catalogDependencies(
     library: Library,
@@ -635,12 +640,15 @@ export class AutomationExecutor {
     const sourceType = SOURCE_OWNER[contentType];
     const everySource = library.providers.filter((p) => p.type === sourceType).map((p) => p.id);
     const acting = isMediaSourceType(providerSettings.type) ? [providerSettings.id] : everySource;
-    const filtered = queries.some(({ record }) =>
-      record.filters.some(({ ruleKey }) =>
-        getRule(ruleKey, contentType)?.providers.includes(sourceType)
-      )
+    const filtered = queries.flatMap(({ record }) =>
+      record.filters.flatMap(({ ruleKey, value }) => {
+        if (isInstanceScopedValue(value) && value.providerId !== undefined) {
+          return [value.providerId];
+        }
+        return getRule(ruleKey, contentType)?.providers.includes(sourceType) ? everySource : [];
+      })
     );
-    return [...acting, ...(filtered ? everySource : [])].map((providerId) => ({
+    return [...acting, ...filtered].map((providerId) => ({
       providerId,
       kind: 'catalog' as const,
     }));
