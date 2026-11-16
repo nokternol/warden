@@ -26,10 +26,21 @@ export interface ProviderCapabilities {
  * the type is presented and reached (the contract's provider type descriptor, less `type`, which
  * the class map's key supplies) and what it can do.
  */
-export type ProviderTypeEntry = Readonly<Omit<ProviderTypeDescriptor, 'type' | 'filterData'>> & {
-  readonly filterData: readonly string[];
-  readonly capabilities: ProviderCapabilities;
-};
+export type ProviderTypeEntry = Readonly<
+  Omit<ProviderTypeDescriptor, 'type' | 'filterData' | 'hostPlaceholder' | 'defaultUrl'>
+> &
+  ProviderAddress & {
+    readonly filterData: readonly string[];
+    readonly capabilities: ProviderCapabilities;
+  };
+
+/**
+ * Where a provider type is reached: a self-hosted type gives an example host for the owner to
+ * enter; a hosted type, with no host to enter, carries the one URL every instance uses.
+ */
+type ProviderAddress =
+  | { readonly hostPlaceholder: string; readonly defaultUrl?: undefined }
+  | { readonly defaultUrl: string; readonly hostPlaceholder?: undefined };
 
 /**
  * The source role: a connection that owns a content type's catalog. These are the setup lists the

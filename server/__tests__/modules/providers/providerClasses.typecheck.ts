@@ -27,3 +27,13 @@ class MovieSourceWithoutMovies extends BaseProviderConnection {
 
 // @ts-expect-error a class declaring `source: 'movie'` must construct a MovieSource
 defineProviderClasses({ [MetadataProviderType.RADARR]: MovieSourceWithoutMovies });
+
+/** Hosted (no host to enter) but with no `defaultUrl`, so nothing says where it is reached. */
+export const hostedWithoutAddress = {
+  label: 'Nowhere',
+  apiKeyRequired: false,
+  apiPath: '',
+  filterData: [],
+  capabilities: {},
+  // @ts-expect-error an entry without a host placeholder must carry its `defaultUrl`
+} as const satisfies ProviderTypeEntry;
