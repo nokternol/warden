@@ -42,7 +42,10 @@ should do. It makes whatever they decide possible, safe and repeatable.
 3. **Knowing that items in different services are the same title is Warden's core value.** Each
    service names titles its own way. Warden's job is to know that the film manager's item, the media
    server's item, the watch-history entry and the request are one title. Without that, belief 2 is
-   impossible. Everything that needs to know "is this the same title" gets the same answer.
+   impossible. Everything that needs to know "is this the same title" gets the same answer. A title
+   is every edition of it everywhere: it meets a condition when any service's copy of it does, an
+   action acts on every copy of it the acting service holds, and an exclusion protects all of it.
+   Treating editions separately is a later requirement.
 
 4. **The services own the truth. Warden holds a copy for speed, never as the truth.** The owner's
    services are the record of what exists and what is known about it. Warden keeps a copy so it can
