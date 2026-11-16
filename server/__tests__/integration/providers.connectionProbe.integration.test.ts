@@ -202,6 +202,30 @@ describe('GET /api/providers/test', () => {
       expect(await lastTestOf(id)).toBeNull();
     });
 
+    it('is not changed by testing another path on the saved machine, which is not what is saved', async () => {
+      const host = 'http://radarr-path.local:7878';
+      server.use(
+        http.get(`${host}/other/api/v3/system/status`, () => HttpResponse.json({ version: '5' }))
+      );
+      const created = await request(authedApp)
+        .post('/api/providers')
+        .send({
+          type: MetadataProviderType.RADARR,
+          name: 'Radarr',
+          url: `${host}/radarr/api/v3`,
+          apiKey: 'k',
+          isActive: false,
+        });
+      const id = created.body.data.id as number;
+
+      const res = await request(authedApp)
+        .get('/api/providers/test')
+        .query({ type: MetadataProviderType.RADARR, url: `${host}/other`, id });
+
+      expect(res.body.data.ok).toBe(true);
+      expect(await lastTestOf(id)).toBeNull();
+    });
+
     it('is cleared when the saved address changes', async () => {
       const url = 'http://seerr-moving.local';
       server.use(http.get(`${url}/api/v1/auth/me`, () => HttpResponse.json({ status: 'ok' })));
