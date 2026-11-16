@@ -245,4 +245,15 @@ describe('MediaQueryEngine.select — which titles conditions select', () => {
 
     expect(selected).toEqual([]);
   });
+
+  it('fails on a filter naming no rule before reading any copy, even over no copies', () => {
+    for (const conditions of [
+      { include: [[{ ruleKey: 'retiredRule', value: 'x' }]], exclude: [] },
+      { include: [[]], exclude: [[{ ruleKey: 'retiredRule', value: 'x' }]] },
+    ]) {
+      expect(() => engine.select([], { contentType: 'movie', ...conditions })).toThrow(
+        /no longer exists: retiredRule/
+      );
+    }
+  });
 });
