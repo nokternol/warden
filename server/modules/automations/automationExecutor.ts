@@ -692,22 +692,19 @@ export class AutomationExecutor {
     return copies.filter((copy) => matched.has(itemKey(copy.item)));
   }
 
-  /** The titles a run's excludes protect: every title with a copy any excluded query matches. */
+  /** The titles a run's excludes protect: every title the excluded queries select. */
   private async protectedTitles(
     copies: LibraryCopy[],
     contentType: ContentType,
     querySpecs: MediaQueryClause[]
   ): Promise<Set<number>> {
-    const excludes = querySpecs
-      .filter((spec) => spec.role === 'exclude')
-      .map((spec) => ({ ...spec, role: 'include' as const }));
-    const excluded = new Set<number>();
-    for (const exclude of excludes) {
-      for (const copy of await this.matching(copies, contentType, [exclude])) {
-        excluded.add(copy.mediaIdentityId);
-      }
-    }
-    return excluded;
+    const excludes = querySpecs.filter((spec) => spec.role === 'exclude').map((s) => s.filters);
+    const excluded = this.mediaQueryEngine.select(copies, {
+      contentType,
+      include: excludes,
+      exclude: [],
+    });
+    return new Set(excluded.map((title) => title.mediaIdentityId));
   }
 
   private async recordResult(

@@ -277,4 +277,79 @@ describe('exclude protection', () => {
 
     expect(deleteMovies).toHaveBeenCalledWith([2]);
   });
+
+  it('protects a film from a Radarr run when its copies meet different filters of the exclude', async () => {
+    const db = getDb();
+    const a = await providerSettingsService.create({
+      type: MetadataProviderType.RADARR,
+      name: 'Radarr A',
+      url: 'http://localhost:7878/api/v3',
+      apiKey: 'k',
+      settings: { enabledTasks: ['deleteMovieWithFiles'] },
+    });
+    const b = await radarr('Radarr B');
+    const radarrA = new RadarrProvider(
+      { name: 'Radarr A', url: 'http://localhost:7878/api/v3', apiKey: 'k', settings: {} },
+      getChildLogger('excludeProtection')
+    );
+    const deleteMovies = vi.spyOn(radarrA, 'deleteMovies').mockResolvedValue(undefined);
+    const executor = new AutomationExecutor({
+      automationService,
+      automationRunService,
+      providerSettingsService,
+      mediaQueryService,
+      automationBlockService: new AutomationBlockService({ db }),
+      filterReadiness: filterReadinessOver(db),
+      providerFactory: { create: () => radarrA },
+      libraryCache: libraryCacheHolding([
+        {
+          providerId: a.id,
+          rows: [
+            createRadarrMovie({ id: 1, tmdbId: 100, title: 'Heat', hasFile: false }),
+            createRadarrMovie({ id: 2, tmdbId: 200, title: 'Ronin', hasFile: false }),
+          ],
+        },
+        {
+          providerId: b.id,
+          rows: [
+            createRadarrMovie({
+              id: 9,
+              tmdbId: 100,
+              title: 'Heat',
+              hasFile: true,
+              tags: [KEEP_TAG],
+            }),
+          ],
+        },
+      ]),
+      db,
+    });
+    const everything = await mediaQueryService.create({
+      name: 'Everything',
+      contentType: 'movie',
+      filters: [],
+    });
+    const keptOnBMissingSomewhere = await mediaQueryService.create({
+      name: 'Kept on B, missing a file somewhere',
+      contentType: 'movie',
+      filters: [
+        { ruleKey: 'tagIds', value: { providerId: b.id, ids: [KEEP_TAG] } },
+        { ruleKey: 'hasFile', value: false },
+      ],
+    });
+    const automation = await automationService.create({
+      name: 'Clean Radarr A',
+      queries: [
+        { queryId: everything.id, role: 'include' },
+        { queryId: keptOnBMissingSomewhere.id, role: 'exclude' },
+      ],
+      providerId: a.id,
+      taskId: 'deleteMovieWithFiles',
+      schedule: '0 2 * * *',
+    });
+
+    await executor.execute(automation.id);
+
+    expect(deleteMovies).toHaveBeenCalledWith([2]);
+  });
 });
