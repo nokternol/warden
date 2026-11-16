@@ -1,16 +1,11 @@
 import { api } from '@server/kernel/api';
-import {
-  type LibraryCache,
-  type MediaQueryEngine,
-  copiesSource,
-  recordsFor,
-} from '@server/modules/media';
+import type { LibraryCache, MediaQueryEngine } from '@server/modules/media';
 import type { MediaQueryService } from './mediaQueryService';
 
 interface Cradle {
   mediaQueryService: MediaQueryService;
   mediaQueryEngine: MediaQueryEngine;
-  libraryCache: Pick<LibraryCache, 'read'>;
+  libraryCache: Pick<LibraryCache, 'contentOf'>;
 }
 
 export function createMediaQueryProcedures(cradle: Cradle) {
@@ -34,18 +29,17 @@ export function createMediaQueryProcedures(cradle: Cradle) {
 
     preview: api.mediaQueries.preview.handler(async ({ input }) => {
       const query = await mediaQueryService.getById(input.id);
-      const library = await libraryCache.read();
-      const copies = library.copies[query.contentType];
+      const { source, records } = await libraryCache.contentOf(query.contentType);
       const matched = new Set(
         (
           await mediaQueryEngine.evaluate({
-            source: copiesSource(copies),
+            source,
             contentType: query.contentType,
             clauses: [{ filters: query.filters, role: 'include' }],
           })
         ).map((item) => item._sourceIds.identity)
       );
-      return { count: matched.size, records: recordsFor(library, query.contentType) };
+      return { count: matched.size, records };
     }),
   });
 }

@@ -46,6 +46,18 @@ export interface LibraryCopy<C extends ContentType = ContentType> {
   item: MediaItem;
 }
 
+/** One content type's part of the loaded copy, as a feature evaluates and describes it. */
+export interface LibraryContent<C extends ContentType = ContentType> {
+  /** The whole loaded copy, for what spans content types (providers, refresh records). */
+  library: Library;
+  /** Every active instance's copies of the content type. */
+  copies: LibraryCopy<C>[];
+  /** Those copies, as the query engine evaluates them. */
+  source: MediaSource;
+  /** The refresh records a view of the content type answers from. */
+  records: RefreshRecord[];
+}
+
 /** The in-memory copy of the library, as one load read it from the database. */
 export interface Library {
   copies: { [C in ContentType]: LibraryCopy<C>[] };
@@ -122,6 +134,18 @@ export class LibraryCache implements ProviderListsReader {
       });
     }
     return this.loading;
+  }
+
+  /** One content type's copies, their source and their refresh records, from the loaded copy. */
+  async contentOf<C extends ContentType>(contentType: C): Promise<LibraryContent<C>> {
+    const library = await this.read();
+    const copies = library.copies[contentType] as LibraryCopy<C>[];
+    return {
+      library,
+      copies,
+      source: copiesSource(copies),
+      records: recordsFor(library, contentType),
+    };
   }
 
   /** One provider's stored lists, as the loaded copy holds them. */

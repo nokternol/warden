@@ -11,13 +11,7 @@ import type {
   SonarrSeries,
 } from '@server/modules/providers';
 import { type FilterReadiness, filterAnswer, findingsFor } from './filterReadiness';
-import {
-  type Library,
-  type LibraryCache,
-  type LibraryCopy,
-  copiesSource,
-  recordsFor,
-} from './libraryCache';
+import type { Library, LibraryCache, LibraryCopy } from './libraryCache';
 import { paginateItems } from './media.pagination';
 import { sortMedia } from './media.sort';
 import type { EnrichmentFields } from './mediaFieldProvider';
@@ -49,7 +43,7 @@ interface MediaCradle {
   mediaQueryEngine: MediaQueryEngine;
   eventBus: DomainEventBus;
   filterReadiness: Pick<FilterReadiness, 'readFacts'>;
-  libraryCache: Pick<LibraryCache, 'read'>;
+  libraryCache: Pick<LibraryCache, 'read' | 'contentOf'>;
   db?: DrizzleDb;
 }
 
@@ -143,11 +137,10 @@ export function createMediaProcedures(cradle: MediaCradle) {
     filters: Filter[],
     view: BrowseView
   ) {
-    const library = await cradle.libraryCache.read();
-    const copies = library.copies[contentType] as LibraryCopy<C>[];
+    const { copies, source, records } = await cradle.libraryCache.contentOf(contentType);
     const yearRange = computeYearRange(copies.map((c) => c.record));
     const matched = await mediaQueryEngine.evaluate({
-      source: copiesSource(copies),
+      source,
       contentType,
       clauses: [{ filters, role: 'include' }],
     });
@@ -170,7 +163,7 @@ export function createMediaProcedures(cradle: MediaCradle) {
     return {
       ...paginateItems(groupByTitle(sorted), { page: view.page, pageSize: view.pageSize }),
       yearRange,
-      records: recordsFor(library, contentType),
+      records,
       ...(await readiness(filters, contentType)),
     };
   }

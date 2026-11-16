@@ -18,7 +18,6 @@ import {
   getRule,
   isAddressedActuator,
   itemKey,
-  recordsFor,
 } from '../media';
 import type {
   FilterReadiness,
@@ -58,7 +57,7 @@ interface ExecutorDeps {
   providerFactory?: IProviderFactory;
   mediaQueryEngine?: MediaQueryEngine;
   /** The library copy every plan reads. */
-  libraryCache: Pick<LibraryCache, 'read'>;
+  libraryCache: Pick<LibraryCache, 'contentOf'>;
   db?: DrizzleDb;
   systemTaskRunner?: SystemTaskRunnerLike;
   eventBus?: DomainEventBus;
@@ -157,6 +156,11 @@ function unrefreshedDependencies(
   });
 }
 
+/** The content type an automation's queries select; every query of one automation shares it. */
+function contentTypeOf(queries: LoadedQuery[]): ContentType {
+  return queries[0]?.record.contentType ?? 'movie';
+}
+
 /** "RADARR" as "Radarr". */
 function providerTypeName(type: string): string {
   return type.charAt(0) + type.slice(1).toLowerCase();
@@ -178,7 +182,7 @@ export class AutomationExecutor {
   private readonly mediaQueryEngine: MediaQueryEngine;
   private readonly filterReadiness: Pick<FilterReadiness, 'readFacts'>;
   private readonly automationBlockService: Pick<AutomationBlockService, 'reconcile'>;
-  private readonly libraryCache: Pick<LibraryCache, 'read'>;
+  private readonly libraryCache: Pick<LibraryCache, 'contentOf'>;
   private readonly db?: DrizzleDb;
   private readonly systemTaskRunner?: SystemTaskRunnerLike;
   private readonly eventBus?: DomainEventBus;
@@ -278,11 +282,12 @@ export class AutomationExecutor {
             started.trigger === 'runNow' ||
             !(await this.lastRunSkippedFor(automationId, reason))
           ) {
-            const contentType = queries[0]?.record.contentType ?? 'movie';
+            const contentType = contentTypeOf(queries);
+            const { records } = await this.libraryCache.contentOf(contentType);
             await this.recordSkip(automationId, taskId, reason, {
               contentType,
               mediaItemIds: [],
-              copy: copyFreshness(recordsFor(await this.libraryCache.read(), contentType)),
+              copy: copyFreshness(records),
             });
           }
           return;
@@ -456,10 +461,7 @@ export class AutomationExecutor {
       async (err: unknown) => ({
         count: null,
         countError: err instanceof Error ? err.message : 'Unknown error',
-        records: recordsFor(
-          await this.libraryCache.read(),
-          queries[0]?.record.contentType ?? 'movie'
-        ),
+        records: (await this.libraryCache.contentOf(contentTypeOf(queries))).records,
       })
     );
     return {
@@ -467,7 +469,7 @@ export class AutomationExecutor {
       runNow: problems.length > 0 ? 'stops' : answer.runNow,
       blocks: answer.blocks,
       problems,
-      contentType: queries[0]?.record.contentType ?? 'movie',
+      contentType: contentTypeOf(queries),
       ...counted,
     };
   }
@@ -523,8 +525,7 @@ export class AutomationExecutor {
       );
     }
 
-    const library = await this.libraryCache.read();
-    const copies = library.copies[contentType] as LibraryCopy[];
+    const { library, copies, records } = await this.libraryCache.contentOf(contentType);
     const unrefreshed = unrefreshedDependencies(
       library,
       task,
@@ -539,7 +540,6 @@ export class AutomationExecutor {
       );
     // An exclude protects the whole title, judged over every active instance's copies.
     const protectedTitles = await this.protectedTitles(copies, contentType, querySpecs);
-    const records = recordsFor(library, contentType);
     const copy = copyFreshness(records);
     const unprotected = (candidates: LibraryCopy[]) =>
       candidates.filter((copy) => !protectedTitles.has(copy.mediaIdentityId));
