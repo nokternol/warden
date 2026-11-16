@@ -1,5 +1,6 @@
 import { MetadataProviderType } from '@server/database/schema';
 import { PROVIDER_CLASSES } from '@server/modules/providers/providerClasses';
+import type { ProviderCapabilities } from '@server/modules/providers/roles';
 import { describe, expect, it } from 'vitest';
 
 /**
@@ -26,5 +27,14 @@ describe('the provider class map', () => {
       [MetadataProviderType.OMDB]: {},
       [MetadataProviderType.TVMAZE]: {},
     });
+  });
+
+  it('has exactly one source per content type, the current rule (north-star belief 9)', () => {
+    const sources = Object.values(PROVIDER_CLASSES).flatMap((connection) => {
+      const declared: ProviderCapabilities = connection.catalogueEntry.capabilities;
+      return declared.source === undefined ? [] : [declared.source];
+    });
+
+    expect([...sources].sort()).toEqual(['movie', 'series']);
   });
 });
