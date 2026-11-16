@@ -58,16 +58,6 @@ describe('describeFinding', () => {
       /naming a Radarr instance/,
     ],
     [
-      {
-        kind: 'other-instance',
-        ruleLabel: 'Tags',
-        instance: { id: 2, typeLabel: 'Radarr' },
-        automationProvider: { id: 1, typeLabel: 'Radarr' },
-      },
-      "Tags filter names Radarr instance 2, which is not this automation's provider (Radarr instance 1)",
-      /Radarr instance 1/,
-    ],
-    [
       { kind: 'data-incomplete', ruleLabel: 'Watched' },
       "Watched filter's data is incomplete: a provider that supplies it has not refreshed",
       /next refreshes successfully/,

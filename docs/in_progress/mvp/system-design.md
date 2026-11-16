@@ -38,6 +38,9 @@ per-lookup caches in the media procedures.
 - The refresh decides which copies are one title, with one rule, and records it in the copy.
 - Every feature that needs titles reads that grouping: the Media page, counts, exclude protection,
   and translating a title into a service's id for a task.
+- A title is every edition of it everywhere (#247): each condition, included or excluded, is judged
+  on the title as a whole, and the acting service acts on every copy of the title it holds. A
+  Radarr or Sonarr run acts on its own copy of a title selected through any instance's copy.
 
 ## 3. Facts (beliefs 2, 8, 10)
 
@@ -76,7 +79,7 @@ per-lookup caches in the media procedures.
   destructive action would affect a large share of the library is flagged for review instead.
 - **Run history** records what each run targeted, with title and year, and outlives the copy.
 
-## 6. Reading the catalog (beliefs 3, 8)
+## 6. Reading the catalog (beliefs 3, 8) — built (#247)
 
 - **One evaluation.** The Media page, query counts, the automation-matches view and runs all ask
   the same thing of the cache: which titles do these conditions select. One evaluation answers it.

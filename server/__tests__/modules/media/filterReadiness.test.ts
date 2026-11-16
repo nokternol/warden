@@ -108,18 +108,6 @@ describe('findingsFor', () => {
       expect(kinds(movies([tagsOn(2)]), f)).toEqual(['inactive-instance']);
     });
 
-    it("raises other-instance when a source automation's filter names a different source instance", () => {
-      const f = facts([active(1, RADARR), active(2, RADARR)]);
-      expect(findingsFor(f, movies([tagsOn(2)]), { id: 1, type: RADARR })).toMatchObject([
-        { kind: 'other-instance', ruleKey: 'tagIds', providerIds: [2, 1] },
-      ]);
-    });
-
-    it('raises nothing for a non-source automation whose filter names an active source instance', () => {
-      const f = facts([active(1, RADARR), active(3, PLEX)]);
-      expect(findingsFor(f, movies([tagsOn(1)]), { id: 3, type: PLEX })).toEqual([]);
-    });
-
     it('raises nothing when the instance is an active source of the content type', () => {
       expect(kinds(movies([tagsOn(1)]), facts([active(1, RADARR)]))).toEqual([]);
     });

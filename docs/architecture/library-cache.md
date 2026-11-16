@@ -53,23 +53,25 @@ A load reads, for active providers only:
 
 Everything that shows or uses library data:
 
-- **Browse** ([`media.procedures.ts`](ref:path:server/modules/media/media.procedures.ts)) evaluates
-  filters over the copies, sorts, then groups matched copies by title group, so a row is a title by the
-  same rule as everywhere else.
+- **Browse** ([`media.procedures.ts`](ref:path:server/modules/media/media.procedures.ts)) lists the titles
+  the query engine's `select` answers over the copies, one row per title.
 - **Filter choices**: genres, networks, release groups and collection names from the stored records;
   studio, file details and labels from the stored facts; tags and profiles from the stored lists.
 - **Query counts** ([`mediaQueries.procedures.ts`](ref:path:server/modules/mediaQueries/mediaQueries.procedures.ts))
-  count title groups.
+  count the titles `select` answers.
 - **Task parameter choices** ([`providers.procedures.ts`](ref:path:server/modules/providers/providers.procedures.ts))
   read stored lists through the type-only
   [`ProviderListsReader`](ref:path:server/modules/providers/providerListsReader.ts), which the cache
   implements and the container injects, so `providers` never imports `media`.
 - **Runs, previews and Run Now checks**
   ([`automationExecutor.ts`](ref:path:server/modules/automations/automationExecutor.ts)) plan on the
-  copy as it stands and address titles by their linked ids. A run records the `media_item` ids it
+  copy as it stands, from one `select` over every active instance's copies, and address titles by their
+  linked ids. A run records the `media_item` ids it
   targeted, and the copy's freshness.
 
-`copiesSource` adapts a list of copies into the `MediaSource` the query engine evaluates.
+`contentOf(contentType)` hands each reader one content type's `copies` and the `records` saying how
+current they are; the query engine judges those copies directly, so the cache hands out no other
+view of them.
 
 ## Saying how current it is
 

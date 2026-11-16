@@ -3,8 +3,8 @@
 **Status:** INTENT (future state, not built). Recorded from a design conversation scoping one target
 `MediaQuery`: movies added to the media player (downloaded) over 90 days ago, tagged with one of a set of
 Radarr tags, that are not on the watchlist of any of a chosen set of Plex-server consumers. Two of the
-three predicates already exist (Radarr `tagIds`, `docs/architecture/media-query-engine.md`'s `role: 'exclude'`
-source mechanism for the "not on any" shape); this doc covers the remaining one — the third predicate,
+three predicates already exist (Radarr `tagIds`, and an automation's excluded query for the "not on
+any" shape, `docs/architecture/media-query-engine.md`); this doc covers the remaining one — the third predicate,
 "downloaded X days ago" via Plex's own `addedAt`, is built as the `plexAddedDaysAgo` rule.
 
 ## Per-consumer watchlist, not a flattened boolean
@@ -12,8 +12,8 @@ source mechanism for the "not on any" shape); this doc covers the remaining one 
 The original ask was explicitly **not** "is this on a watchlist somewhere" (`INVENTORY.md`'s
 `mediaInfo.watchlists` framing) — it's "not on the watchlist of any of a chosen set of *my* consumers, where
 choosing all consumers is just selecting all of them." That shape already exists in the engine: `tagIds`
-(`ruleRegistry.ts`) is `instance-ids`, "item's tag list intersects the selected ids," and the `MediaQueryClause`
-`role: 'exclude'` (`mediaQueryEngine.ts`) already handles "exclude if any selected value matches." A
+(`ruleRegistry.ts`) is `instance-ids`, "item's tag list intersects the selected ids," and an excluded
+query (`Conditions.exclude`, `mediaQueryEngine.ts`) already handles "exclude if any selected value matches." A
 `watchlistUserIds: number[]` field consumed by the same `instance-ids` shape needs no new engine mechanism — only
 the data.
 

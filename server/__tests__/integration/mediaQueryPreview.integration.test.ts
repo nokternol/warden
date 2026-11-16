@@ -140,3 +140,68 @@ describe('GET /api/media-queries/:id/preview', () => {
     expect(expectSuccessResponse(res).count).toBe(0);
   });
 });
+
+describe('GET /api/media-queries/:id/preview — a title held by two instances', () => {
+  const RADARR_B_URL = 'http://localhost:7879';
+  let client: ReturnType<typeof createApiClient>;
+  let cradle: ReturnType<typeof buildContainer>['cradle'];
+  let mediaQueryService: MediaQueryService;
+  let radarrB: number;
+
+  beforeAll(async () => {
+    const config = loadConfig();
+    const db = await initializeDatabase(config);
+    cradle = buildContainer({ config, db }).cradle;
+    mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
+    for (const [name, url] of [
+      ['Radarr A', RADARR_URL],
+      ['Radarr B', RADARR_B_URL],
+    ]) {
+      const { id } = await cradle.providerSettingsService.create({
+        type: MetadataProviderType.RADARR,
+        name,
+        url: `${url}/api/v3`,
+        apiKey: 'k',
+      });
+      radarrB = id;
+    }
+    const app: Express = express();
+    app.use(express.json());
+    app.use(requestIdMiddleware);
+    app.use((req, _res, next) => {
+      req.user = { id: 1 } as unknown as NonNullable<typeof req.user>;
+      next();
+    });
+    app.use(serveApi({ mediaQueries: createMediaQueryProcedures(cradle) }));
+    app.use(errorHandlerMiddleware);
+    client = createApiClient(app);
+  });
+
+  afterAll(async () => {
+    await closeDatabase();
+  });
+
+  it('counts a title whose copies meet different filters of the query, once', async () => {
+    server.use(
+      http.get(`${RADARR_URL}/api/v3/movie`, () =>
+        HttpResponse.json([createRadarrMovie({ id: 1, tmdbId: 700, hasFile: false, tags: [] })])
+      ),
+      http.get(`${RADARR_B_URL}/api/v3/movie`, () =>
+        HttpResponse.json([createRadarrMovie({ id: 2, tmdbId: 700, hasFile: true, tags: [7] })])
+      )
+    );
+    await refreshCatalog(cradle);
+    const query = await mediaQueryService.create({
+      name: 'Tagged on B, missing somewhere',
+      contentType: 'movie',
+      filters: [
+        { ruleKey: 'tagIds', value: { providerId: radarrB, ids: [7] } },
+        { ruleKey: 'hasFile', value: false },
+      ],
+    });
+
+    const data = expectSuccessResponse(await client.get(`/api/media-queries/${query.id}/preview`));
+
+    expect(data.count).toBe(1);
+  });
+});

@@ -1,70 +1,90 @@
-# MediaQueryEngine — the single owner of "what does this query match"
+# MediaQueryEngine: the one evaluation of the catalog
 
-[`server/modules/media/mediaQueryEngine.ts`](ref:path:server/modules/media/mediaQueryEngine.ts) is the single owner of query
-evaluation.
+Every part of Warden that reads the catalog asks one question: which titles do these conditions
+select? The Media page asks it to list titles, a saved query's preview asks it to count them, and an
+automation asks it to decide what a run, its preview and its Run Now check act on.
+[`MediaQueryEngine.select`](ref:path:server/modules/media/mediaQueryEngine.ts) answers it, and nothing
+else answers it another way (north-star belief 8).
 
-## The three concepts
+## Input: `Conditions`
 
-The set of media a query defines is not a stored entity — it is the *result* of evaluating a query
-specification against live source data.
+`select(copies, conditions)` takes the copies to judge (a content type's `copies` from one
+[`libraryCache.contentOf`](ref:path:server/modules/media/libraryCache.ts) read) and the `Conditions`:
 
-- **`MediaQuery`** — the specification: a **bound provider instance**, a `contentType`
-  (`'movie' | 'series'`), and one-or-more **clauses** (`MediaQueryClause`), each `{ filters, role: 'include' | 'exclude' }`
-  where `filters` is a list of `Filter { ruleKey, value }`. A query is a single-clause include
-  `MediaQuery`; the browse view is the same, with the `filters` its request carries as JSON-encoded
-  `Filter` entries (the encoding a saved query stores; see `api-contract.md`).
-- **`MediaQueryEngine.evaluate(query): Promise<MediaItemSet>`** — the owner. Fetches the bound provider's
-  items, normalizes them, merges DB enrichment, applies the rule registry per clause (`matchItems`),
-  and combines include/exclude across clauses (`evaluateCombination`).
-- **`MediaItemSet`** — the transient result: the matched normalized items (`NormalizedMovie |
-  NormalizedSeries`). Callers project ids to act, or paginate/sort to display. No table.
+- `contentType`: picks the rule set, which an evaluation over no copies still needs.
+- `include`: the filters of each included query, one `Filter[]` per query.
+- `exclude`: the filters of each excluded query, the same shape.
 
-## Why a bound provider *instance*, not provider settings
+Callers build them from saved queries by role (an automation's included and excluded queries), or from
+the Media page's URL filters (`include: [filters]`, `exclude: []`). A `Filter` is `{ ruleKey, value }`,
+the encoding a saved query stores.
 
-`MediaQuery.provider` is an already-constructed provider, not `MetadataProvider` settings + a factory.
-This keeps provider construction to **exactly one `ProviderFactory.create` per execution**: the executor
-builds the provider once, hands the instance to `evaluate`, and reuses the *same* instance for
-`task.run`. The engine never news a provider — each caller owns that decision:
+## Answer: `SelectedTitle[]`
 
-| Caller | Builds the provider via | Uses the result for |
+One `SelectedTitle` per selected title, in the order its first copy appears in the given copies:
+
+- `mediaIdentityId`: the title group the catalog refresh recorded.
+- `copies`: every copy of the title among the given copies, in the given order.
+- `met`: the copies that alone meet every filter of an included query the title meets. It may be
+  empty, and it serves only to choose which copy represents the title on the Media page. It never
+  decides whether a title is selected or what a run acts on.
+
+## What "meets" means
+
+The rule is north-star belief 3: a title is every edition of it everywhere, and each condition is
+judged on the title as a whole. It is the same for included and excluded queries.
+
+- A title meets a filter when any of its copies satisfies it. A value naming an instance
+  (`providerId` set) is satisfied only by that instance's copy.
+- A title meets a query when it meets every filter of it; different filters may be met by different
+  copies. "Tagged X in instance B AND has no file" is met by a title whose B copy carries the tag
+  and whose A copy has no file.
+- A title is selected when it meets at least one included query and no excluded query.
+  `include: []` selects nothing; a query with no filters (`[[]]`) is met by every title.
+
+Belief 3 names the problem this rule leaves unsolved, on purpose: when a title's editions are in
+different states (one has a file, another has none), the title can meet conditions that contradict
+each other, and an automation cannot reliably act on one edition's state. Treating editions
+separately is a later requirement; `select` does not attempt it.
+
+## Rules resolved once
+
+Each filter becomes a test of one copy, its rule looked up in the
+[`ruleRegistry`](ref:path:server/modules/media/ruleRegistry.ts) once per evaluation, before any copy
+is read. A filter naming a rule that no longer exists throws `ValidationError`, even over no copies:
+treating it as met would widen an include, and treating it as unmet would widen through an exclude.
+
+`select` is synchronous, owns no data and reads nothing else: each copy already carries its
+normalised record and its title's facts from the library cache.
+
+## Callers
+
+| Caller | Conditions | Reads from the answer |
 |---|---|---|
-| `AutomationExecutor.planRun` | `providerFactory.create(providerSettings)` | the run's target items and their actuator ids; `execute` passes the ids to `task.run` |
-| `GET /media-queries/:id/preview` | `copiesSource` over the content type's copies in the library cache ([`libraryCache.ts`](ref:path:server/modules/media/libraryCache.ts)) | `{ count, records }`: matches counted in **title groups**, with the copy's refresh records |
-| `media.browse.movie`/`media.browse.series` (`browse` in `media.procedures.ts`) | `copiesSource` over every active instance's copies in the library cache | matched copies → sort → group by title group → paginate |
+| Media page (`browse` in [`media.procedures.ts`](ref:path:server/modules/media/media.procedures.ts)) | the URL filters as one included query | one row per selected title, placed and shown by its first `met` copy in the requested sort, or its first copy in that sort when `met` is empty; `sourceCount`/`sourceProviderIds` from all `copies` |
+| Query preview ([`mediaQueries.procedures.ts`](ref:path:server/modules/mediaQueries/mediaQueries.procedures.ts)) | the saved query's filters as one included query | the number of selected titles |
+| Run planning ([`automationExecutor.ts`](ref:path:server/modules/automations/automationExecutor.ts)) | the automation's included and excluded queries, over every active instance's copies | what the actuator acts on (below); the preview and the Run Now check count the same |
 
-Every item comes from the library cache already normalised and carrying its facts, so the engine owns
-only match → combine; the procedure's own post-match step groups the surviving copies into one row per
-title (see `docs/architecture/provider-roles-and-identity.md`).
+Each caller keeps the `records` of the `contentOf` read it evaluated, so every answer says how current
+the copy was (belief 6).
 
-## Internals
+## What a run acts on
 
-- **`matchItems(items, filters, contentType)`** — the shared filter primitive: the subset
-  satisfying every predicate under `getRule`. A filter whose value names a `providerId` also fails any item from another instance. An empty `filters` matches all items (`[].every`
-  is vacuously true). Exported for direct reuse.
-- **`combine`** (private) — maps each clause through `matchItems`, projects item keys, runs
-  `evaluateCombination` (include union minus exclude), and returns the surviving normalized items.
-- Unknown `contentType` resolves to an empty `MediaItemSet`.
-- Depends on [`ruleRegistry`](ref:path:server/modules/media/ruleRegistry.ts) (rule set) and `combinationEvaluator` (combination contract) — both
-  internal domain, never mocked. The engine reads no database: facts arrive on the items.
+An automation acts only in its own service, so per-instance targeting is the choice of actuator, not a
+condition:
+
+- A catalog-owning actuator (Radarr, Sonarr) acts on its own instance's copies of the selected titles,
+  including a title selected only through another instance's copy: one target per copy, one actuator
+  id per native id.
+- Any other actuator (Plex, Jellyfin, Tautulli) acts on every id the selected titles are linked to in
+  its media server, drops titles not linked, and records one target per title (its first copy). The
+  link model holds one media-server id per title, which departs from belief 3 ("an action acts on
+  every copy of it the acting service holds") when a media server holds several editions of a title;
+  the fracture ledger records it.
 
 ## Registration
 
-`mediaQueryEngine` is registered in the awilix container ([`server/container.ts`](ref:path:server/container.ts)) and injected into the
-executor, the saved-query preview handler, and the media browse procedures. The executor falls back to
-`new MediaQueryEngine()` when no engine is injected (unit tests).
-
-## Convergence achieved
-
-Before this engine, "which items match these filter values" was owned by three sites that disagreed:
-the executor's private `applyFilters`, the browse handler's duplicated `filterViaRegistry`, and a
-`/preview` that returned a hardcoded `{ count: 0 }`. Both duplicated loops are deleted; `/preview`
-returns the engine's real count. All three sites now resolve through `evaluate` and cannot diverge.
-
-## Current invariant
-
-`MediaItemSet`'s element is the provider's normalized item, self-describing its provenance via
-`_sourceIds.providerId`. The single-active-provider invariant no longer holds for `movie`/`series`
-(`RADARR`/`SONARR` — the `MediaSource` role, `isMediaSourceType`): any number of instances may be active,
-and `evaluate` is called once per instance by each caller that fans out (preview, per-instance browse
-sublists). Every other provider type (TMDB, Seerr, Tautulli, Plex-as-enricher, Jellyfin) keeps the
-invariant — at most one active instance, so those lookups stay unambiguous.
+`mediaQueryEngine` is registered as a singleton in
+[`media.registrations.ts`](ref:path:server/modules/media/media.registrations.ts) and injected into the
+Media page procedures, the query procedures and the automation executor. The executor falls back to
+`new MediaQueryEngine()` when none is injected.

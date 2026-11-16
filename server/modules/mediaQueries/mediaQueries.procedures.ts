@@ -29,17 +29,13 @@ export function createMediaQueryProcedures(cradle: Cradle) {
 
     preview: api.mediaQueries.preview.handler(async ({ input }) => {
       const query = await mediaQueryService.getById(input.id);
-      const { source, records } = await libraryCache.contentOf(query.contentType);
-      const matched = new Set(
-        (
-          await mediaQueryEngine.evaluate({
-            source,
-            contentType: query.contentType,
-            clauses: [{ filters: query.filters, role: 'include' }],
-          })
-        ).map((item) => item._sourceIds.identity)
-      );
-      return { count: matched.size, records };
+      const { copies, records } = await libraryCache.contentOf(query.contentType);
+      const selected = mediaQueryEngine.select(copies, {
+        contentType: query.contentType,
+        include: [query.filters],
+        exclude: [],
+      });
+      return { count: selected.length, records };
     }),
   });
 }

@@ -680,7 +680,49 @@ Earlier entries in this ledger use the names that were current when they healed 
 - **Healed by:** features no longer read source instances at all. The catalog refresh is the one place
   active source instances are chosen and read, and `MediaSourceFactory` is deleted.
 
+### Reading the catalog — each reader answering "which titles" its own way (recorded and healed 2026-11-16, MVP slice C12)
+
+- **Fracture:** north-star belief 3 says everything that needs to know "is this the same title" gets the
+  same answer, and belief 8 that two ways of answering one question is a defect. Every reader of the
+  catalog asks which titles a set of conditions selects, but the query evaluation answered which of one
+  service's items match, a shape left from reading Radarr and Sonarr live. So each reader worked out
+  titles its own way: browse matched by item key and grouped copies into titles; query counts counted
+  distinct titles from items; run planning mapped items back to copies, acted only on its own instance's
+  matching copies, and ran a second matching pass per excluded query. Exclude had two meanings
+  (copy-level in the engine, title-level in runs), readiness blocked an automation whose include named
+  another instance because it assumed the copy-level rule, and "MediaSource" named both the
+  catalog-owning role and the engine's read interface.
+- **Healed by:** one evaluation, `MediaQueryEngine.select(copies, conditions)`, answers with the titles
+  selected, each condition (included or excluded) judged on the title as a whole. Browse, query counts,
+  automation previews, the Run Now check and runs read that answer; a catalog-owning actuator acts on
+  its own copies of every selected title, any other on the ids the titles are linked to. The item-level
+  evaluation, the copy-level exclude, the second exclude pass, browse's grouping, the item-key helpers,
+  the `MediaSource` read interface and the `other-instance` finding are deleted.
+- **Different on purpose:** editions of one title in different states (one with a file, one without)
+  can make the title meet contradicting conditions. Belief 3 leaves this unsolved by choice; treating
+  editions separately is a later requirement.
+
 ## Open
+
+### Media-server links — one id per title (recorded 2026-11-16, MVP slice C12)
+
+- **Departure:** north-star belief 3 says "an action acts on every copy of it the acting service holds".
+  The catalog refresh links each title to one Plex and one Jellyfin id
+  ([`server/modules/providers/catalogRefreshJob.ts`](ref:path:server/modules/providers/catalogRefreshJob.ts),
+  `stampIdentity`: one `plexRatingKey`/`jellyfinItemId` column per title, overwritten by the latest
+  match), so a media-server run acts on one of a title's items when the server holds several editions
+  of it. Only one Plex instance's items are linked (`runForPlex` reads a single Plex source).
+- **Heals by:** the link model holding every id a media server has for a title.
+
+### Media-server run history joins a source copy's state (recorded 2026-11-16, MVP slice C12)
+
+- **Departure:** north-star belief 7 says "Afterwards, Warden can always say what it did, to which titles
+  and when". A media-server run records each title it acted on by the title's first source copy, and the
+  run's history reads that copy's removed flag
+  ([`server/modules/automations/automationRunService.ts`](ref:path:server/modules/automations/automationRunService.ts),
+  `listRunItems`), so a Plex run's item reads "removed" when that Radarr copy leaves Radarr, though Plex
+  may still hold the title.
+- **Heals by:** a run recording what it acted on in the acting service's own terms.
 
 ### Refresh schedules — fixed in code, not set by the owner (recorded 2026-11-16)
 

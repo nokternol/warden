@@ -148,7 +148,7 @@ Choosing a different task, or changing the queries, clears the confirmation: the
 
 The automation row's Run Now counts through the same `planRun`, by automation id (`automations.readiness`, [`AutomationExecutor.readiness`](ref:path:server/modules/automations/automationExecutor.ts)), together with the automation's filter readiness findings: a user automation's destructive task, or one the catalogue no longer describes, or one with findings, checks inline before it runs ([`src/components/AutomationRow/index.tsx`](ref:path:src/components/AutomationRow/index.tsx)). The findings are answered before the count, so a failed count is stated, with a retry, without hiding them or stopping the run being started. Opening that check, and its retry, ask readiness with `fresh: true`, which re-reads the library before counting, and the answer is written into the row's existing readiness entry, so the count a user confirms comes from the read their confirmation started: until that read answers nothing is confirmable, and if the read itself fails no earlier answer is shown, only the failure and a retry. The run then refreshes its own read right before it plans, after its status and blocking checks, and plans on that read; nothing is carried from the confirmation to the run.
 
-**Run safety.** A run is written as `running`, with its targets, before its task acts, and finished in place, so a restart mid-task leaves a record: startup closes any run still `running` as failed, stating some items may have changed. A run's outcome is one status, so a failure can mean a task changed some of its items. Before acting, a user run is skipped with its reason while any query, included or excluded, has a filter readiness finding that stops its trigger ([`server/modules/media/filterReadiness.ts`](ref:path:server/modules/media/filterReadiness.ts)): among them an enrichment-only filter no connected provider can supply, or whose latest enrichment run did not finish cleanly, since a title with no stored value matches neither side of a filter, so an include misses it and an exclude on it protects nothing. A field no title holds a value for stops the schedule until a user signs it off, and Run Now only past the findings the user chose to proceed past. A destructive task is skipped if it matches more than half the source copies it was evaluated against (20 or more), since nobody is watching a scheduled run; the guard counts copies on both sides, so the ratio holds when two instances mirror one library, and its reason says copies. Run Now's check reports that verdict among its problems, so the dialog says the run will be skipped before the user confirms it. Runs through one provider take turns, each using the automation as it stands when its turn comes. An exclude on any copy of a title protects that title from a non-source actuator, judged on the same read as the includes and at actuator-id level: an actuator id is protected when any copy resolving to it is excluded, or carries the title key (TMDB id for a movie, TVDB id for a series) of an excluded copy, which covers a copy the identity job has not recorded yet. The ids passed to the task and the run's recorded targets both come from that one protected set. An excluded copy with neither a primary id nor a recorded identity cannot be placed by either route, so the run is skipped, saying an excluded title is not resolved yet; it runs once identity resolution has seen that copy. A Radarr or Sonarr automation matches only its own instance, so excludes there act on that instance's copies alone. A second Run Now on a running automation answers 409.
+**Run safety.** A run is written as `running`, with its targets, before its task acts, and finished in place, so a restart mid-task leaves a record: startup closes any run still `running` as failed, stating some items may have changed. A run's outcome is one status, so a failure can mean a task changed some of its items. Before acting, a user run is skipped with its reason while any query, included or excluded, has a filter readiness finding that stops its trigger ([`server/modules/media/filterReadiness.ts`](ref:path:server/modules/media/filterReadiness.ts)): among them an enrichment-only filter no connected provider can supply, or whose latest enrichment run did not finish cleanly, since a title with no stored value matches neither side of a filter, so an include misses it and an exclude on it protects nothing. A field no title holds a value for stops the schedule until a user signs it off, and Run Now only past the findings the user chose to proceed past. A destructive task is skipped if it would act on more than half of what it could act on (20 or more): its own copies for a catalog-owning actuator, the titles linked to its media server for any other. Its reason says titles. Run Now's check reports that verdict among its problems, so the dialog says the run will be skipped before the user confirms it. Runs through one provider take turns, each using the automation as it stands when its turn comes. An excluded query protects the whole title from every actuator: a title that meets it, through any active instance's copies, is not selected (north-star belief 3). A second Run Now on a running automation answers 409.
 
 ## Non-source execution: id translation through the identity graph
 
@@ -160,19 +160,22 @@ the executor branches on `isMediaSourceType(providerSettings.type)`
 Both plan on the library copy ([`LibraryCache`](ref:path:server/modules/media/libraryCache.ts)) as it
 stands; no run reads a provider's library live.
 
-- **Source actuator (Radarr/Sonarr):** the included queries evaluate against the instance's own copies,
-  never a sibling instance's, and their native ids feed the task directly, one target per native id.
-- **Non-source actuator (Plex/Jellyfin/Tautulli):** it owns no catalog, so the included queries
-  evaluate against every active source instance's copies, and each matched copy reaches the actuator by
-  its title's media-server id, read by `actuatorIdOf`
-  ([`server/modules/media/actuatorIdResolver.ts`](ref:path:server/modules/media/actuatorIdResolver.ts)).
-  A title the catalog refresh has not linked drops out (there is no id to address), and copies of one
-  title collapse to a single id. The matched copies that reached an id are the run's targets, recorded
-  as its run items by their `media_item` ids, so two instance copies of one title count as two targeted
-  items even though the task receives one id.
+Both start from one evaluation: `MediaQueryEngine.select` over every active source instance's copies
+with the automation's included and excluded queries, answering the titles selected (north-star
+belief 3: a title meets a condition when any copy of it does, and an exclusion protects all of it). An
+automation acts only in its own service, so the actuator decides what of those titles it acts on:
 
-For every actuator, an exclude protects the whole title: a title with any copy, on any active
-instance, matching an excluded query is left out.
+- **Source actuator (Radarr/Sonarr):** its own instance's copies of the selected titles, including a
+  title selected only through another instance's copy; their native ids feed the task directly, one
+  target per copy.
+- **Non-source actuator (Plex/Jellyfin/Tautulli):** it owns no catalog, so it acts on every id the
+  selected titles are linked to in its media server, read by `actuatorIdOf`
+  ([`server/modules/media/actuatorIdResolver.ts`](ref:path:server/modules/media/actuatorIdResolver.ts)).
+  A title the catalog refresh has not linked drops out (there is no id to address). Each title acted on
+  is one target, recorded as one run item by its first copy's `media_item` id, so the run's item count,
+  its history and its preview count the same titles. The link model holds one media-server id per
+  title, which departs from belief 3 when a media server holds several editions of a title; the
+  fracture ledger records it, and that a media-server run's history reads a source copy's state.
 
 Translation is keyed by **addressing space, not provider**: Tautulli has no id space of its own — it
 reports entirely against Plex rating keys — so it shares Plex's `plexRatingKey` column

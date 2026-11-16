@@ -31,7 +31,8 @@ import { AutomationService } from '@server/modules/automations/automationService
 import type { MediaEnricher, MediaItem } from '@server/modules/media';
 import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.queries';
 import { EnrichmentJob } from '@server/modules/media/enrichmentJob';
-import { matchItems } from '@server/modules/media/mediaQueryEngine';
+import type { LibraryCopy } from '@server/modules/media/libraryCache';
+import { MediaQueryEngine } from '@server/modules/media/mediaQueryEngine';
 import type { Filter, NormalizedMovie } from '@server/modules/media/ruleRegistry';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { PlexProvider, ProviderSettingsService } from '@server/modules/providers';
@@ -397,7 +398,22 @@ describe('a non-source actuator whose query names a source instance', () => {
       schedule: '0 2 * * *',
     });
 
-    expect(matchItems(items as unknown as NormalizedMovie[], [filter], 'movie')).toHaveLength(2);
+    const copies = items.map(
+      (item, i) =>
+        ({
+          mediaItemId: i + 1,
+          mediaIdentityId: i + 1,
+          providerId: radarr.id,
+          item: item as unknown as NormalizedMovie,
+        }) as LibraryCopy
+    );
+    expect(
+      new MediaQueryEngine().select(copies, {
+        contentType: 'movie',
+        include: [[filter]],
+        exclude: [],
+      })
+    ).toHaveLength(2);
 
     await executor.execute(automation.id);
 

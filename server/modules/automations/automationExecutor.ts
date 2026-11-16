@@ -1,7 +1,11 @@
 import type { AutomationPreview, AutomationReadiness } from '@contract/automations';
 import { type RefreshRecord, freshnessOf } from '@contract/media';
 import type { ReadinessFinding } from '@contract/readiness';
-import type { AutomationRunStatus, ContentType } from '@contract/schemas';
+import {
+  type AutomationRunStatus,
+  type ContentType,
+  isInstanceScopedValue,
+} from '@contract/schemas';
 import type { MetadataProvider, MetadataProviderType } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
 import { ValidationError } from '../../kernel/errors';
@@ -13,19 +17,11 @@ import {
   MediaQueryEngine,
   actuatorIdOf,
   automationAnswer,
-  copiesSource,
   findingsFor,
   getRule,
   isAddressedActuator,
-  itemKey,
 } from '../media';
-import type {
-  FilterReadiness,
-  Library,
-  LibraryCache,
-  LibraryCopy,
-  MediaQueryClause,
-} from '../media';
+import type { FilterReadiness, Library, LibraryCache, LibraryCopy } from '../media';
 import type { MediaQueryRecord, MediaQueryService } from '../mediaQueries';
 import {
   type ActuatorTask,
@@ -82,7 +78,10 @@ interface RunPlan {
   task: ActuatorTask;
   targets: RunTargets;
   actuatorIds: Parameters<ActuatorTask['run']>[0];
-  /** How many source copies the query was evaluated against, and how many it matched. */
+  /**
+   * What the actuator could act on, and what it acts on: its own copies for a catalog-owning
+   * actuator, the titles linked to its media server for any other.
+   */
   poolSize: number;
   matchedCount: number;
   /** Each refresh a destructive run depends on that failed or never ran, as a reason not to act. */
@@ -105,7 +104,7 @@ export function excessiveReach({
 }: Pick<RunPlan, 'task' | 'matchedCount' | 'poolSize'>): string | undefined {
   if (!task.destructive || matchedCount < REACH_CHECK_MIN_ITEMS) return undefined;
   if (matchedCount * 2 <= poolSize) return undefined;
-  return `Not run: this would act on ${matchedCount} of ${poolSize} copies, more than half the library. Narrow its queries if that is intended.`;
+  return `Not run: this would act on ${matchedCount} of ${poolSize} titles, more than half the library. Narrow its queries if that is intended.`;
 }
 
 /** Why a planned run will not act, one line per reason; empty when it will. */
@@ -452,12 +451,8 @@ export class AutomationExecutor {
       );
     }
     const facts = await this.filterReadiness.readFacts();
-    const findings = automationQueries.flatMap(({ queryId, role, record }) =>
-      findingsFor(
-        facts,
-        { queryId, role, contentType: record.contentType, filters: record.filters },
-        { id: automationProvider.id, type: automationProvider.type }
-      )
+    const findings = automationQueries.flatMap(({ queryId, record }) =>
+      findingsFor(facts, { queryId, contentType: record.contentType, filters: record.filters })
     );
     // Before any sign-off is known, every finding a user could accept awaits sign-off.
     const signOffable = automationAnswer(findings, new Set()).blocks.awaitingSignOff;
@@ -487,7 +482,7 @@ export class AutomationExecutor {
       (plan) => {
         // A run skipped after planning says so here, so Run Now does not confirm a run that won't act.
         problems.push(...whyPlanWontRun(plan));
-        return { count: plan.actuatorIds.length, records: plan.records };
+        return { count: plan.matchedCount, records: plan.records };
       },
       async (err: unknown) => ({
         count: null,
@@ -506,8 +501,8 @@ export class AutomationExecutor {
   }
 
   /**
-   * What an unsaved automation would act on if it ran now: the same plan a run
-   * makes, counted in the actuator's own ids, without running the task.
+   * What an unsaved automation would act on if it ran now: the same plan a run makes, counted
+   * as the run counts what it acts on, without running the task.
    */
   async preview(draft: {
     providerId: number;
@@ -521,16 +516,17 @@ export class AutomationExecutor {
       await this.loadQueries(draft.queries)
     );
     return {
-      count: plan.actuatorIds.length,
+      count: plan.matchedCount,
       contentType: plan.targets.contentType,
       records: plan.records,
     };
   }
 
   /**
-   * Decides what a user run acts on, from the library copy: the enabled task, the copies the
-   * queries target, and those copies in the actuator's own id space. Running the task is the
-   * caller's step, so the targets are known even if the task fails.
+   * Decides what a user run acts on, from the library copy: the enabled task, the titles the
+   * automation's included and excluded queries select (one evaluation over every active
+   * instance's copies), and what of those titles the actuator acts on, in its own id space.
+   * Running the task is the caller's step, so the targets are known even if the task fails.
    */
   private async planRun(
     taskId: string,
@@ -538,10 +534,6 @@ export class AutomationExecutor {
     automationQueries: LoadedQuery[]
   ): Promise<RunPlan> {
     const contentType = automationQueries[0].record.contentType;
-    const querySpecs = automationQueries.map(({ record, role }) => ({
-      filters: record.filters,
-      role,
-    }));
 
     const provider = this.providerFactory.create(providerSettings, log);
     if (!isMediaActuator(provider)) {
@@ -563,14 +555,13 @@ export class AutomationExecutor {
       this.dependencies(library, providerSettings, contentType, automationQueries)
     );
 
-    const included = (candidates: LibraryCopy[]) =>
-      this.matching(
-        candidates,
-        contentType,
-        querySpecs.filter((spec) => spec.role === 'include')
-      );
-    // An exclude protects the whole title, judged over every active instance's copies.
-    const protectedTitles = await this.protectedTitles(copies, contentType, querySpecs);
+    const filtersOf = (role: TargetingQuery['role']) =>
+      automationQueries.filter((q) => q.role === role).map((q) => q.record.filters);
+    const selected = this.mediaQueryEngine.select(copies, {
+      contentType,
+      include: filtersOf('include'),
+      exclude: filtersOf('exclude'),
+    });
     const freshness = freshnessOf(records);
     const planOf = (
       targets: LibraryCopy[],
@@ -586,15 +577,13 @@ export class AutomationExecutor {
       unrefreshed,
       records,
     });
-    const unprotected = (candidates: LibraryCopy[]) =>
-      candidates.filter((copy) => !protectedTitles.has(copy.mediaIdentityId));
 
     if (isMediaSourceType(providerSettings.type)) {
-      // Catalog-owning actuator: the included queries evaluate against its own copies and their
-      // native ids feed the task directly, one target per native id.
-      const own = copies.filter((copy) => copy.providerId === providerSettings.id);
-      const matched = await included(own);
-      const targets = unprotected(matched);
+      // Catalog-owning actuator: it acts on its own copies of the selected titles, whichever
+      // instance's copy met the conditions, and their native ids feed the task directly.
+      const isOwn = (copy: LibraryCopy) => copy.providerId === providerSettings.id;
+      const own = copies.filter(isOwn);
+      const targets = selected.flatMap((title) => title.copies.filter(isOwn));
       return planOf(
         targets,
         targets.map((c) => c.record.id),
@@ -603,30 +592,68 @@ export class AutomationExecutor {
       );
     }
 
-    // Non-source actuator: it owns no catalog, so the included queries evaluate against every
-    // active source instance's copies, and matched copies reach the actuator by the media-server
-    // id the catalog refresh linked to their title. A title not linked drops out: the task never
-    // receives an id it cannot address.
+    // Non-source actuator: it owns no catalog, so it acts on every id the selected titles are
+    // linked to in its media server, as the catalog refresh linked them. A title not linked drops
+    // out: the task never receives an id it cannot address. Each title is recorded once, by its
+    // first copy.
     if (!isAddressedActuator(providerSettings.type)) {
       throw new Error(`Provider type "${providerSettings.type}" has no actuator addressing space`);
     }
-    const addressed = (await included(copies)).filter(
-      (copy) => actuatorIdOf(copy, providerSettings.type) !== undefined
+    const linkedIds = (titleCopies: LibraryCopy[]) => [
+      ...new Set(
+        titleCopies
+          .map((copy) => actuatorIdOf(copy, providerSettings.type))
+          .filter((id): id is string => id !== undefined)
+      ),
+    ];
+    const acted = selected.filter((title) => linkedIds(title.copies).length > 0);
+    const linkedTitles = new Set(
+      copies
+        .filter((copy) => actuatorIdOf(copy, providerSettings.type) !== undefined)
+        .map((copy) => copy.mediaIdentityId)
     );
-    const targets = unprotected(addressed);
     return planOf(
-      targets,
-      [...new Set(targets.map((c) => actuatorIdOf(c, providerSettings.type)!))],
-      copies.length,
-      addressed.length
+      acted.map((title) => title.copies[0]),
+      [...new Set(acted.flatMap((title) => linkedIds(title.copies)))],
+      linkedTitles.size,
+      acted.length
     );
   }
 
   /**
-   * The refreshes a run on `providerSettings` reads. It needs every one of: the catalog of each
-   * instance whose copies it evaluates (a source run: its own, plus every other active instance of
-   * the content type when it has excluded queries; any other run: every active instance) and the
-   * links of the media server whose ids it addresses. For each rule its queries use it needs one
+   * The source catalogs a run on `providerSettings` reads. A catalog-owning actuator acts on its
+   * own catalog's copies, any other actuator on every active source instance's copies. A filter
+   * whose value names an instance can be met only through that instance's copy, so it reads that
+   * instance's catalog; any other filter on a field a source supplies may be met through any
+   * instance's copy, so it reads every active source instance's catalog.
+   */
+  private catalogDependencies(
+    library: Library,
+    providerSettings: MetadataProvider,
+    contentType: ContentType,
+    queries: LoadedQuery[]
+  ): Dependency[] {
+    const sourceType = SOURCE_OWNER[contentType];
+    const everySource = library.providers.filter((p) => p.type === sourceType).map((p) => p.id);
+    const acting = isMediaSourceType(providerSettings.type) ? [providerSettings.id] : everySource;
+    const filtered = queries.flatMap(({ record }) =>
+      record.filters.flatMap(({ ruleKey, value }) => {
+        if (isInstanceScopedValue(value) && value.providerId !== undefined) {
+          return [value.providerId];
+        }
+        return getRule(ruleKey, contentType)?.providers.includes(sourceType) ? everySource : [];
+      })
+    );
+    return [...acting, ...filtered].map((providerId) => ({
+      providerId,
+      kind: 'catalog' as const,
+    }));
+  }
+
+  /**
+   * The refreshes a run on `providerSettings` reads. It needs every one of: the source catalogs
+   * its actuator and filters read (`catalogDependencies`) and the links of the media server whose
+   * ids it addresses. For each rule its queries use it needs one
    * active supplier with refreshed facts (and, for a supplier reached through a media server's
    * links, refreshed links).
    */
@@ -642,12 +669,8 @@ export class AutomationExecutor {
       const column = ADDRESS_COLUMN_BY_TYPE[type];
       return column ? active(MEDIA_SERVER_BY_COLUMN[column]) : [];
     };
-    const sourceType = SOURCE_OWNER[contentType];
     const isSource = isMediaSourceType(providerSettings.type);
-    const evaluatesEveryInstance = !isSource || queries.some((q) => q.role === 'exclude');
-    const catalogs = (evaluatesEveryInstance ? active(sourceType) : [providerSettings.id]).map(
-      (providerId) => ({ providerId, kind: 'catalog' as const })
-    );
+    const catalogs = this.catalogDependencies(library, providerSettings, contentType, queries);
     const addressed = isSource
       ? []
       : linkProviders(providerSettings.type).map((providerId) => ({
@@ -671,43 +694,6 @@ export class AutomationExecutor {
         ),
     }));
     return { required: [...catalogs, ...addressed], facts };
-  }
-
-  /** The copies among `copies` that `clauses` select, by the one query evaluation. */
-  private async matching(
-    copies: LibraryCopy[],
-    contentType: ContentType,
-    clauses: MediaQueryClause[]
-  ): Promise<LibraryCopy[]> {
-    if (clauses.length === 0) return [];
-    const matched = new Set(
-      (
-        await this.mediaQueryEngine.evaluate({
-          source: copiesSource(copies),
-          contentType,
-          clauses,
-        })
-      ).map((item) => itemKey(item))
-    );
-    return copies.filter((copy) => matched.has(itemKey(copy.item)));
-  }
-
-  /** The titles a run's excludes protect: every title with a copy any excluded query matches. */
-  private async protectedTitles(
-    copies: LibraryCopy[],
-    contentType: ContentType,
-    querySpecs: MediaQueryClause[]
-  ): Promise<Set<number>> {
-    const excludes = querySpecs
-      .filter((spec) => spec.role === 'exclude')
-      .map((spec) => ({ ...spec, role: 'include' as const }));
-    const excluded = new Set<number>();
-    for (const exclude of excludes) {
-      for (const copy of await this.matching(copies, contentType, [exclude])) {
-        excluded.add(copy.mediaIdentityId);
-      }
-    }
-    return excluded;
   }
 
   private async recordResult(

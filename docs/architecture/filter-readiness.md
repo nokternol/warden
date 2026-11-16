@@ -30,10 +30,12 @@ request:
   attempt failed, read from the library copy
   ([`LibraryCache`](ref:path:server/modules/media/libraryCache.ts)), as every feature reads it.
 
-`findingsFor(facts, filterList, automationProvider?)` is pure. The query list judges every saved query
-against one read of the facts. The Media page judges its URL filters, which have no query id. The
-executor judges each targeted query with the automation's provider, inside the provider turn, so a long
-wait cannot leave it judging stale facts.
+`findingsFor(facts, filterList)` is pure. The query list judges every saved query against one read of
+the facts. The Media page judges its URL filters, which have no query id. The executor judges each
+query an automation targets, inside the provider turn, so a long wait cannot leave it judging stale
+facts. A filter list is judged the same whichever automation uses it: under north-star belief 3 a
+value naming any active source instance is a valid condition for every actuator, since it selects
+titles that each actuator then acts on in its own service.
 
 ## The findings
 
@@ -49,7 +51,6 @@ labels, and an instance by its own type, so a deleted instance reads "Provider i
 | `no-provider` | No active, offered provider can supply the rule. A source supplies only the content type it owns (`SOURCE_OWNER`); enrichers serve every content type. A rule only a deferred provider type produces always raises it, and saving such a query is refused. |
 | `unknown-rule` | A stored filter names a rule that is no longer registered. The engine's own throw stays as a backstop. |
 | `inactive-instance` | A filter value names an instance that is not an active source of the content type: inactive, deleted, or active but of the wrong type (a Sonarr tag on a movie query). This applies to every actuator. |
-| `other-instance` | The automation's provider is a source, and a filter value in an included query names a different source instance, which matches nothing in that automation's own catalog. An excluded query may name any active source instance: it protects titles through every instance's copies. |
 | `data-incomplete` | An enrichment-only filter, and an active supplier's latest `facts` refresh failed or never ran. Names those suppliers. Informational (below). |
 | `no-data` | No longer raised. Warden believes a supplier's successful refresh, so a fact no title holds is the truth (north-star belief 6). The kind and the sign-off path it fed remain in the code, unreachable. |
 

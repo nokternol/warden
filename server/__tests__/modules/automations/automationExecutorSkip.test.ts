@@ -159,7 +159,13 @@ describe('AutomationExecutor — invalid automations', () => {
     );
   });
 
-  it("skips an automation whose filter names an instance other than the automation's own", async () => {
+  it('runs an automation whose filter names another instance, acting on its own copies of the titles selected', async () => {
+    // Both instances answer from one URL; a fixed TMDB id makes their copies one title.
+    server.use(
+      http.get(`${RADARR_URL}/api/v3/movie`, () =>
+        HttpResponse.json([createRadarrMovie({ id: 1, tmdbId: 501, tags: [1] })])
+      )
+    );
     const own = await seedRadarr('Own Radarr');
     const other = await seedRadarr('Other Radarr');
     const automation = await seedAutomationOver(own.id, [tagsOf(other.id)]);
@@ -167,11 +173,9 @@ describe('AutomationExecutor — invalid automations', () => {
     await executor.execute(automation.id);
 
     const [run] = await getDb().select().from(automationRuns);
-    expect(run.status).toBe('skipped');
-    expect(run.error).toBe(
-      `Tags filter names Radarr instance ${other.id}, which is not this automation's provider (Radarr instance ${own.id})`
-    );
-    expect(unmonitorCalls).toBe(0);
+    expect(run.status).toBe('success');
+    expect(run.itemCount).toBe(1);
+    expect(unmonitorCalls).toBe(1);
   });
 
   it('skips an automation whose own provider has been deactivated, naming that provider', async () => {
@@ -382,7 +386,7 @@ describe('AutomationExecutor — invalid automations', () => {
 
       const [run] = await getDb().select().from(automationRuns);
       expect(run.status).toBe('skipped');
-      expect(run.error).toMatch(/40 of 40 copies/);
+      expect(run.error).toMatch(/40 of 40 titles/);
       expect(deletes).toBe(0);
     });
 
@@ -393,7 +397,17 @@ describe('AutomationExecutor — invalid automations', () => {
       const readiness = await executor.readiness(automation.id);
 
       expect(readiness.runNow).toBe('stops');
-      expect(readiness.problems).toEqual([expect.stringMatching(/40 of 40 copies/)]);
+      expect(readiness.problems).toEqual([expect.stringMatching(/40 of 40 titles/)]);
+    });
+
+    it('tells Run Now how current the copy it counted from is', async () => {
+      const automation = await destructiveAutomation();
+
+      const readiness = await executor.readiness(automation.id);
+
+      expect(readiness.records).toContainEqual(
+        expect.objectContaining({ kind: 'catalog', refreshedAt: expect.any(Number) })
+      );
     });
 
     it('records a run as running before its task acts', async () => {
@@ -457,9 +471,9 @@ describe('AutomationExecutor — invalid automations', () => {
       expect(runs.map((r) => r.status)).toEqual(['success', 'success']);
     });
 
-    it('judges reach on copies, since copies of one title share an actuator id', () => {
+    it('judges reach on what the run would act on, against what it could', () => {
       const task = { destructive: true } as never;
-      expect(excessiveReach({ task, matchedCount: 80, poolSize: 80 })).toMatch(/80 of 80/);
+      expect(excessiveReach({ task, matchedCount: 80, poolSize: 80 })).toMatch(/80 of 80 titles/);
       expect(excessiveReach({ task, matchedCount: 40, poolSize: 80 })).toBeUndefined();
       expect(excessiveReach({ task, matchedCount: 10, poolSize: 10 })).toBeUndefined();
     });

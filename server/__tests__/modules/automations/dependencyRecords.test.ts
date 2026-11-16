@@ -206,6 +206,22 @@ describe('runs and the refresh records they depend on', () => {
     expect(acted).toBe(true);
   });
 
+  it("skips a destructive Radarr A run filtering an unqualified Radarr field, naming Radarr B, while B's catalog failed", async () => {
+    await recordRefreshFailed(getDb(), radarrB, 'catalog', 'down');
+    const { connection, deleteMovies } = radarrConnection();
+
+    const { run, acted } = await runOnce({
+      providerId: radarrA,
+      connection,
+      act: deleteMovies,
+      taskId: 'deleteMovieWithFiles',
+      include: [{ ruleKey: 'hasFile', value: true }],
+    });
+
+    expect(acted).toBe(false);
+    expect(run.error).toMatch(/Radarr B/);
+  });
+
   it("skips a destructive Radarr A task with an exclude, naming Radarr B, while B's catalog failed", async () => {
     await recordRefreshFailed(getDb(), radarrB, 'catalog', 'down');
     const { connection, deleteMovies } = radarrConnection();
@@ -330,6 +346,27 @@ describe('runs and the refresh records they depend on', () => {
 
     expect(run.error).toBeNull();
     expect(acted).toBe(true);
+  });
+
+  it("runs a destructive Radarr A task filtering Radarr A's tag and a fact from another service while Radarr B's catalog failed", async () => {
+    const { plex } = await mediaServers();
+    await recordRefreshed(getDb(), plex, 'facts');
+    await recordRefreshFailed(getDb(), radarrB, 'catalog', 'down');
+    const { connection, deleteMovies } = radarrConnection();
+
+    const { run } = await runOnce({
+      providerId: radarrA,
+      connection,
+      act: deleteMovies,
+      taskId: 'deleteMovieWithFiles',
+      include: [
+        { ruleKey: 'tagIds', value: { providerId: radarrA, ids: [1] } },
+        { ruleKey: 'watched', value: true },
+      ],
+    });
+
+    expect(run.error).toBeNull();
+    expect(run.status).toBe('success');
   });
 
   it('skips, naming the fact and its suppliers, when no supplier of a fact it filters on is refreshed', async () => {

@@ -140,6 +140,6 @@ describe('media caches after an automation run', () => {
     const readiness = await cradle.automationExecutor.readiness(automation.id);
 
     expect(readiness.count).toBe(25);
-    expect(readiness.problems).toContainEqual(expect.stringContaining('act on 25 of 25 copies'));
+    expect(readiness.problems).toContainEqual(expect.stringContaining('act on 25 of 25 titles'));
   }, 15_000);
 });

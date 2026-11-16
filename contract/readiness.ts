@@ -10,7 +10,6 @@ export const READINESS_KINDS = [
   'no-provider',
   'unknown-rule',
   'inactive-instance',
-  'other-instance',
   'data-incomplete',
   'no-data',
 ] as const;
@@ -61,12 +60,6 @@ export type FindingDescription =
       instance: NamedInstance;
       /** Set when the instance is active but is not a source of the query's content type. */
       expectedLabel?: string;
-    }
-  | {
-      kind: 'other-instance';
-      ruleLabel: string;
-      instance: NamedInstance;
-      automationProvider: NamedInstance;
     }
   | { kind: 'data-incomplete'; ruleLabel: string }
   | { kind: 'no-data'; ruleLabel: string; contentType: ContentType };
@@ -135,11 +128,6 @@ export function describeFinding(description: FindingDescription): {
           : RECREATE,
       };
     }
-    case 'other-instance':
-      return {
-        message: `${description.ruleLabel} filter names ${instanceName(description.instance)}, which is not this automation's provider (${instanceName(description.automationProvider)})`,
-        clears: `Recreate the automation on ${instanceName(description.instance)}, or its query naming ${instanceName(description.automationProvider)}.`,
-      };
     case 'data-incomplete':
       return {
         message: `${description.ruleLabel} filter's data is incomplete: a provider that supplies it has not refreshed`,

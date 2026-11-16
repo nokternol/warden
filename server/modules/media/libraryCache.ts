@@ -24,8 +24,7 @@ import {
 import { and, eq } from 'drizzle-orm';
 import { EnrichmentQueries } from './enrichment/enrichment.queries';
 import { resolveFacts } from './enrichmentMerge';
-import { type MediaItem, externalIdOf } from './mediaItem';
-import type { MediaSource } from './mediaSource';
+import type { MediaItem } from './mediaItem';
 import { normalizeRadarrMovie, normalizeSonarrSeries } from './normalizeMedia';
 
 /** The provider's own record of a copy, by the content type its provider owns. */
@@ -52,8 +51,6 @@ export interface LibraryContent<C extends ContentType = ContentType> {
   library: Library;
   /** Every active instance's copies of the content type. */
   copies: LibraryCopy<C>[];
-  /** Those copies, as the query engine evaluates them. */
-  source: MediaSource;
   /** The refresh records a view of the content type answers from. */
   records: RefreshRecord[];
 }
@@ -136,14 +133,13 @@ export class LibraryCache implements ProviderListsReader {
     return this.loading;
   }
 
-  /** One content type's copies, their source and their refresh records, from the loaded copy. */
+  /** One content type's copies and their refresh records, from the loaded copy. */
   async contentOf<C extends ContentType>(contentType: C): Promise<LibraryContent<C>> {
     const library = await this.read();
     const copies = library.copies[contentType] as LibraryCopy<C>[];
     return {
       library,
       copies,
-      source: copiesSource(copies),
       records: recordsFor(library, contentType),
     };
   }
@@ -219,12 +215,4 @@ export class LibraryCache implements ProviderListsReader {
     }
     return library;
   }
-}
-
-/** A source over library copies already loaded: the query engine reads their items. */
-export function copiesSource(copies: LibraryCopy[]): MediaSource {
-  return {
-    getMediaItems: async () => copies.map((c) => c.item),
-    idOf: externalIdOf,
-  };
 }
