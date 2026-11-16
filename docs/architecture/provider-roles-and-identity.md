@@ -198,15 +198,24 @@ feature reads that grouping:
 
 ### Destructive runs and the records they depend on
 
-A destructive run does not act when any refresh it reads failed its latest attempt or never ran, and
-records a skip naming the provider and the kind (north-star belief 7). It reads: the `catalog` record of
-every instance whose copies it evaluates (a source run's own instance, plus every other active instance of
-the content type when it has excluded queries; any other run, every active instance); the `links` record
-of the media server whose ids it addresses; and, for each rule in its queries, the `facts` record of each
-active supplier and the `links` record of the media server those facts attach through, derived from
-`ADDRESS_COLUMN_BY_TYPE` and `MEDIA_SERVER_BY_COLUMN`
-([`actuatorIdResolver.ts`](ref:path:server/modules/media/actuatorIdResolver.ts)). Non-destructive runs
-proceed, and nothing here judges a run by how much it would affect.
+A destructive run checks the refresh records of what it reads before acting (north-star belief 7: a
+service that has never been read counts as one that failed to answer, and a fact another connected
+service still supplies does not depend on the one that failed). The rule lives in
+[`automationExecutor.ts`](ref:path:server/modules/automations/automationExecutor.ts):
+
+- **Providers it needs, each one.** The `catalog` record of every instance whose copies it evaluates (a
+  source run's own instance, plus every other active instance of the content type when it has excluded
+  queries; any other run, every active instance), and the `links` record of the media server whose ids
+  it addresses. Any of these failed or never read skips the run, naming the provider and the kind.
+- **Facts it filters on, once each.** For each rule in its included or excluded queries, the run needs
+  one active supplier whose `facts` record succeeded and, for a supplier reached through a media
+  server's links, whose server's `links` record succeeded too (derived from `ADDRESS_COLUMN_BY_TYPE` and
+  `MEDIA_SERVER_BY_COLUMN`, [`actuatorIdResolver.ts`](ref:path:server/modules/media/actuatorIdResolver.ts);
+  Seerr has no links dependency). Play count from Plex and Jellyfin survives Plex failing while
+  Jellyfin refreshed. Only a rule none of whose suppliers is good skips the run, naming the fact and why
+  each supplier failed.
+
+Non-destructive runs proceed, and nothing here judges a run by how much it would affect.
 
 **Instance-scoped filter values.** `qualityProfileIds`, `languageProfileIds` and `tagIds` are
 provider-*minted* numeric id spaces — each instance numbers its own profiles/tags independently, so

@@ -294,6 +294,63 @@ describe('runs and the refresh records they depend on', () => {
     expect(run.status).toBe('success');
   });
 
+  /** Active Plex and Jellyfin servers, both with refreshed links, supplying play count. */
+  async function mediaServers() {
+    const db = getDb();
+    const { id: plex } = await providerSettingsService.create({
+      type: MetadataProviderType.PLEX,
+      name: 'Plex',
+      url: 'http://localhost:32400',
+      apiKey: 'token',
+    });
+    const { id: jellyfin } = await providerSettingsService.create({
+      type: MetadataProviderType.JELLYFIN,
+      name: 'Jellyfin',
+      url: 'http://localhost:8096',
+      apiKey: 'k',
+      settings: { userId: 'u' },
+    });
+    for (const id of [plex, jellyfin]) await recordRefreshed(db, id, 'links');
+    return { plex, jellyfin };
+  }
+
+  it('acts when a fact it filters on is still supplied by another refreshed provider', async () => {
+    const { plex, jellyfin } = await mediaServers();
+    await recordRefreshFailed(getDb(), plex, 'facts', 'Plex timed out');
+    await recordRefreshed(getDb(), jellyfin, 'facts');
+    const { connection, deleteMovies } = radarrConnection();
+
+    const { run, acted } = await runOnce({
+      providerId: radarrA,
+      connection,
+      act: deleteMovies,
+      taskId: 'deleteMovieWithFiles',
+      exclude: [{ ruleKey: 'watched', value: true }],
+    });
+
+    expect(run.error).toBeNull();
+    expect(acted).toBe(true);
+  });
+
+  it('skips, naming the fact and its suppliers, when no supplier of a fact it filters on is refreshed', async () => {
+    const { plex } = await mediaServers();
+    await recordRefreshFailed(getDb(), plex, 'facts', 'Plex timed out');
+    const { connection, deleteMovies } = radarrConnection();
+
+    const { run, acted } = await runOnce({
+      providerId: radarrA,
+      connection,
+      act: deleteMovies,
+      taskId: 'deleteMovieWithFiles',
+      exclude: [{ ruleKey: 'watched', value: true }],
+    });
+
+    expect(acted).toBe(false);
+    expect(run.error).toMatch(/Watched/);
+    expect(run.error).toMatch(/Plex/);
+    expect(run.error).toMatch(/Jellyfin/);
+  });
+
   it('skips a destructive run that depends on a provider never refreshed', async () => {
     await getDb().delete(automationRuns);
     await providerSettingsService.create({

@@ -97,8 +97,8 @@ The answer is one place, not a complete one. These are known and not checked:
 - **An unreachable source shows through its refresh record**, not as a finding: the "As of" line names
   it, and a destructive run depending on it skips.
 - **Some reasons a run stops belong to the automation, not its filters**: the automation's own provider
-  being inactive, the reach guard, a provider a destructive run depends on that failed or never
-  refreshed, and a task that is not enabled. They are not findings and cannot be signed off. The first
+  being inactive, the reach guard, a provider a destructive run depends on that failed or was never
+  read, or a fact it filters on that no refreshed provider supplies, and a task that is not enabled. They are not findings and cannot be signed off. The first
   three are also listed among
   the readiness check's problems, so Run Now says the run will be skipped; a task that is not enabled
   shows as a failed count and as the run's outcome.

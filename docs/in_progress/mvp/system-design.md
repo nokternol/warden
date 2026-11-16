@@ -69,7 +69,9 @@ per-lookup caches in the media procedures.
   demand for fresh data.
 - **One step to see what an automation would act on now:** its includes minus its excludes, from
   the copy, whenever the owner chooses. Viewing it is never required.
-- **A destructive run does not act when a service it depends on failed its last refresh.** Nothing
+- **A destructive run does not act when a service it depends on failed its last refresh,** or has
+  never been read. A fact another connected service still supplies does not depend on the one that
+  failed: the run needs one refreshed supplier per fact it filters on (north-star belief 7). Nothing
   skips a run because of how much it would affect (north-star belief 7): an automation whose
   destructive action would affect a large share of the library is flagged for review instead.
 - **Run history** records what each run targeted, with title and year, and outlives the copy.

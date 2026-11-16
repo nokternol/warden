@@ -119,41 +119,72 @@ interface Dependency {
   kind: 'catalog' | 'links' | 'facts';
 }
 
+/**
+ * A fact a destructive run's queries filter on, and the active providers that supply it. A
+ * supplier reached through a media server's links (Tautulli and Plex through Plex, Jellyfin through
+ * Jellyfin) lists that server's instances in `via`.
+ */
+interface FactDependency {
+  label: string;
+  suppliers: Array<{ providerId: number; via: number[] }>;
+}
+
+/** What a destructive run depends on: providers it needs every one of, and facts it needs once. */
+interface Dependencies {
+  required: Dependency[];
+  facts: FactDependency[];
+}
+
 const KIND_NOUN: Record<Dependency['kind'], string> = {
   catalog: 'catalog',
   links: 'links',
   facts: 'facts',
 };
 
+/** Why one provider's data of one kind cannot be relied on; undefined when it can. */
+function unrefreshed(library: Library, { providerId, kind }: Dependency): string | undefined {
+  const name = library.providers.find((p) => p.id === providerId)?.name ?? `Provider ${providerId}`;
+  const record = library.records.find((r) => r.providerId === providerId && r.kind === kind);
+  if (record?.failedAt != null) {
+    return `${name}'s ${KIND_NOUN[kind]} refresh failed (${record.error ?? 'no answer'})`;
+  }
+  if (record?.refreshedAt == null) return `${name}'s ${KIND_NOUN[kind]} is not refreshed yet`;
+  return undefined;
+}
+
 /**
- * Why a destructive run must not act on the copy: a provider it depends on failed its latest
- * refresh, or has never refreshed, which is far more likely a fault than the owner's intent
- * (north-star belief 7). One line per provider and kind; empty for a non-destructive task.
+ * Why a destructive run must not act on the copy (north-star belief 7), one line per reason; empty
+ * for a non-destructive task. A provider the run needs that failed its latest refresh, or was never
+ * read, stops it. A fact its queries filter on stops it only when none of the fact's active
+ * suppliers has a good refresh: a fact another connected service still supplies does not depend on
+ * the one that failed.
  */
 function unrefreshedDependencies(
   library: Library,
   task: Pick<ActuatorTask, 'destructive'>,
-  dependencies: Dependency[]
+  { required, facts }: Dependencies
 ): string[] {
   if (!task.destructive) return [];
   const seen = new Set<string>();
-  return dependencies.flatMap(({ providerId, kind }) => {
-    const key = `${providerId}:${kind}`;
+  const missing = required.flatMap((dependency) => {
+    const key = `${dependency.providerId}:${dependency.kind}`;
     if (seen.has(key)) return [];
     seen.add(key);
-    const name =
-      library.providers.find((p) => p.id === providerId)?.name ?? `Provider ${providerId}`;
-    const record = library.records.find((r) => r.providerId === providerId && r.kind === kind);
-    if (record?.failedAt != null) {
-      return [
-        `Not run: ${name}'s ${KIND_NOUN[kind]} refresh failed (${record.error ?? 'no answer'})`,
-      ];
-    }
-    if (record?.refreshedAt == null) {
-      return [`Not run: ${name}'s ${KIND_NOUN[kind]} is not refreshed yet`];
-    }
-    return [];
+    const reason = unrefreshed(library, dependency);
+    return reason ? [`Not run: ${reason}`] : [];
   });
+  const unsupplied = facts.flatMap(({ label, suppliers }) => {
+    if (suppliers.length === 0) return [];
+    const reasons = suppliers.map(({ providerId, via }) => {
+      const facts = unrefreshed(library, { providerId, kind: 'facts' });
+      if (facts) return facts;
+      const links = via.map((id) => unrefreshed(library, { providerId: id, kind: 'links' }));
+      return via.length > 0 && links.every((r) => r !== undefined) ? links[0] : undefined;
+    });
+    if (reasons.some((r) => r === undefined)) return [];
+    return [`Not run: no provider supplying ${label} has refreshed (${reasons.join('; ')})`];
+  });
+  return [...missing, ...unsupplied];
 }
 
 /** The content type an automation's queries select; every query of one automation shares it. */
@@ -592,28 +623,24 @@ export class AutomationExecutor {
   }
 
   /**
-   * The refreshes a run on `providerSettings` reads: the catalog of every instance whose copies
-   * it evaluates (a source run: its own, plus every other active instance of the content type
-   * when it has excluded queries; any other run: every active instance), the links of the media
-   * server whose ids it addresses, and for each rule its queries use, the facts of each active
-   * supplier and the links of the media server those facts attach through.
+   * The refreshes a run on `providerSettings` reads. It needs every one of: the catalog of each
+   * instance whose copies it evaluates (a source run: its own, plus every other active instance of
+   * the content type when it has excluded queries; any other run: every active instance) and the
+   * links of the media server whose ids it addresses. For each rule its queries use it needs one
+   * active supplier with refreshed facts (and, for a supplier reached through a media server's
+   * links, refreshed links).
    */
   private dependencies(
     library: Library,
     providerSettings: MetadataProvider,
     contentType: ContentType,
     queries: LoadedQuery[]
-  ): Dependency[] {
+  ): Dependencies {
     const active = (type: MetadataProviderType) =>
       library.providers.filter((p) => p.type === type).map((p) => p.id);
-    const linksOf = (type: MetadataProviderType): Dependency[] => {
+    const linkProviders = (type: MetadataProviderType): number[] => {
       const column = ADDRESS_COLUMN_BY_TYPE[type];
-      return column
-        ? active(MEDIA_SERVER_BY_COLUMN[column]).map((providerId) => ({
-            providerId,
-            kind: 'links' as const,
-          }))
-        : [];
+      return column ? active(MEDIA_SERVER_BY_COLUMN[column]) : [];
     };
     const sourceType = SOURCE_OWNER[contentType];
     const isSource = isMediaSourceType(providerSettings.type);
@@ -621,17 +648,29 @@ export class AutomationExecutor {
     const catalogs = (evaluatesEveryInstance ? active(sourceType) : [providerSettings.id]).map(
       (providerId) => ({ providerId, kind: 'catalog' as const })
     );
-    const rules = queries.flatMap(({ record }) =>
-      record.filters.flatMap(({ ruleKey }) => getRule(ruleKey, contentType) ?? [])
+    const addressed = isSource
+      ? []
+      : linkProviders(providerSettings.type).map((providerId) => ({
+          providerId,
+          kind: 'links' as const,
+        }));
+    const rules = new Map(
+      queries.flatMap(({ record }) =>
+        record.filters.flatMap(({ ruleKey }) => {
+          const rule = getRule(ruleKey, contentType);
+          return rule ? [[rule.key, rule] as const] : [];
+        })
+      )
     );
-    const suppliers = [...new Set(rules.flatMap((rule) => rule.providers))].filter(
-      (type) => !isMediaSourceType(type)
-    );
-    const facts = suppliers.flatMap((type) => [
-      ...active(type).map((providerId) => ({ providerId, kind: 'facts' as const })),
-      ...linksOf(type),
-    ]);
-    return [...catalogs, ...(isSource ? [] : linksOf(providerSettings.type)), ...facts];
+    const facts = [...rules.values()].map((rule) => ({
+      label: rule.label,
+      suppliers: rule.providers
+        .filter((type) => !isMediaSourceType(type))
+        .flatMap((type) =>
+          active(type).map((providerId) => ({ providerId, via: linkProviders(type) }))
+        ),
+    }));
+    return { required: [...catalogs, ...addressed], facts };
   }
 
   /** The copies among `copies` that `clauses` select, by the one query evaluation. */
