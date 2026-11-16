@@ -621,10 +621,35 @@ export class AutomationExecutor {
   }
 
   /**
-   * The refreshes a run on `providerSettings` reads. It needs every one of: the catalog of each
-   * instance whose copies it evaluates (a source run: its own, plus every other active instance of
-   * the content type when it has excluded queries; any other run: every active instance) and the
-   * links of the media server whose ids it addresses. For each rule its queries use it needs one
+   * The source catalogs a run on `providerSettings` reads. A catalog-owning actuator acts on its
+   * own catalog's copies, any other actuator on every active source instance's copies. A filter on
+   * a field a source supplies may be met through any instance's copy, so it reads every active
+   * source instance's catalog.
+   */
+  private catalogDependencies(
+    library: Library,
+    providerSettings: MetadataProvider,
+    contentType: ContentType,
+    queries: LoadedQuery[]
+  ): Dependency[] {
+    const sourceType = SOURCE_OWNER[contentType];
+    const everySource = library.providers.filter((p) => p.type === sourceType).map((p) => p.id);
+    const acting = isMediaSourceType(providerSettings.type) ? [providerSettings.id] : everySource;
+    const filtered = queries.some(({ record }) =>
+      record.filters.some(({ ruleKey }) =>
+        getRule(ruleKey, contentType)?.providers.includes(sourceType)
+      )
+    );
+    return [...acting, ...(filtered ? everySource : [])].map((providerId) => ({
+      providerId,
+      kind: 'catalog' as const,
+    }));
+  }
+
+  /**
+   * The refreshes a run on `providerSettings` reads. It needs every one of: the source catalogs
+   * its actuator and filters read (`catalogDependencies`) and the links of the media server whose
+   * ids it addresses. For each rule its queries use it needs one
    * active supplier with refreshed facts (and, for a supplier reached through a media server's
    * links, refreshed links).
    */
@@ -640,12 +665,8 @@ export class AutomationExecutor {
       const column = ADDRESS_COLUMN_BY_TYPE[type];
       return column ? active(MEDIA_SERVER_BY_COLUMN[column]) : [];
     };
-    const sourceType = SOURCE_OWNER[contentType];
     const isSource = isMediaSourceType(providerSettings.type);
-    const evaluatesEveryInstance = !isSource || queries.some((q) => q.role === 'exclude');
-    const catalogs = (evaluatesEveryInstance ? active(sourceType) : [providerSettings.id]).map(
-      (providerId) => ({ providerId, kind: 'catalog' as const })
-    );
+    const catalogs = this.catalogDependencies(library, providerSettings, contentType, queries);
     const addressed = isSource
       ? []
       : linkProviders(providerSettings.type).map((providerId) => ({

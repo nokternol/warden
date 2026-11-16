@@ -206,6 +206,22 @@ describe('runs and the refresh records they depend on', () => {
     expect(acted).toBe(true);
   });
 
+  it("skips a destructive Radarr A run filtering an unqualified Radarr field, naming Radarr B, while B's catalog failed", async () => {
+    await recordRefreshFailed(getDb(), radarrB, 'catalog', 'down');
+    const { connection, deleteMovies } = radarrConnection();
+
+    const { run, acted } = await runOnce({
+      providerId: radarrA,
+      connection,
+      act: deleteMovies,
+      taskId: 'deleteMovieWithFiles',
+      include: [{ ruleKey: 'hasFile', value: true }],
+    });
+
+    expect(acted).toBe(false);
+    expect(run.error).toMatch(/Radarr B/);
+  });
+
   it("skips a destructive Radarr A task with an exclude, naming Radarr B, while B's catalog failed", async () => {
     await recordRefreshFailed(getDb(), radarrB, 'catalog', 'down');
     const { connection, deleteMovies } = radarrConnection();
