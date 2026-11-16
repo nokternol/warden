@@ -1,3 +1,4 @@
+import type { ProviderTypeEntry } from '../roles';
 import { BaseProviderConnection } from './baseProviderConnection';
 
 export interface SeerrRequestedBy {
@@ -45,6 +46,16 @@ interface SeerrSearchResponse {
 const SEERR_PAGE_SIZE = 100;
 
 export class SeerrProvider extends BaseProviderConnection {
+  /** How this provider type is presented, reached and what it can do. */
+  static readonly catalogueEntry = {
+    label: 'Seerr',
+    apiKeyRequired: true,
+    hostPlaceholder: 'http://localhost:5055',
+    apiPath: '',
+    filterData: ['Request queue'],
+    capabilities: {},
+  } as const satisfies ProviderTypeEntry;
+
   private get authHeader() {
     return { 'X-Api-Key': this.provider.apiKey ?? '' };
   }

@@ -1,5 +1,10 @@
 import { MetadataProviderType } from '@server/database/schema';
-import { type ActuatorTask, type MediaActuator, requireParameter } from '../roles';
+import {
+  type ActuatorTask,
+  type MediaActuator,
+  type ProviderTypeEntry,
+  requireParameter,
+} from '../roles';
 import { BaseProviderConnection } from './baseProviderConnection';
 
 export interface JellyfinLibrary {
@@ -63,6 +68,16 @@ interface JellyfinItemsResponse {
 }
 
 export class JellyfinProvider extends BaseProviderConnection implements MediaActuator {
+  /** How this provider type is presented, reached and what it can do. */
+  static readonly catalogueEntry = {
+    label: 'Jellyfin',
+    apiKeyRequired: true,
+    hostPlaceholder: 'http://localhost:8096',
+    apiPath: '',
+    filterData: ['Library contents', 'Item metadata'],
+    capabilities: { mediaServer: 'jellyfinItemId' },
+  } as const satisfies ProviderTypeEntry;
+
   public readonly actuatorType = MetadataProviderType.JELLYFIN;
 
   public tasks(): ActuatorTask[] {

@@ -1,83 +1,27 @@
 import type { ProviderTypeDescriptor } from '@contract/providers';
-import { MetadataProviderType } from '@server/database/schema';
-
-/** How a provider type is presented and reached when it is configured. */
-export type ProviderTypeEntry = Omit<ProviderTypeDescriptor, 'type'>;
+import type { MetadataProviderType } from '@server/database/schema';
+import { PROVIDER_CLASSES } from './providerClasses';
+import type { ProviderTypeEntry } from './roles';
 
 /**
- * Every provider type Warden knows, in display order. `satisfies` keeps each
- * entry's own shape, so a hosted type's `defaultUrl` is known to be present.
+ * Every provider type Warden knows with its catalogue entry, in display order: each entry is the
+ * one its connection class declares, read from the class map.
  */
-export const PROVIDER_CATALOGUE = {
-  [MetadataProviderType.PLEX]: {
-    label: 'Plex',
-    apiKeyRequired: true,
-    hostPlaceholder: 'http://localhost:32400',
-    apiPath: '',
-    filterData: ['Library contents', 'Item metadata'],
-  },
-  [MetadataProviderType.JELLYFIN]: {
-    label: 'Jellyfin',
-    apiKeyRequired: true,
-    hostPlaceholder: 'http://localhost:8096',
-    apiPath: '',
-    filterData: ['Library contents', 'Item metadata'],
-  },
-  [MetadataProviderType.RADARR]: {
-    label: 'Radarr',
-    apiKeyRequired: true,
-    hostPlaceholder: 'http://localhost:7878',
-    apiPath: '/api/v3',
-    filterData: ['Movie library', 'Quality profiles', 'Tags'],
-  },
-  [MetadataProviderType.SONARR]: {
-    label: 'Sonarr',
-    apiKeyRequired: true,
-    hostPlaceholder: 'http://localhost:8989',
-    apiPath: '/api/v3',
-    filterData: ['Series library', 'Quality profiles', 'Tags'],
-  },
-  [MetadataProviderType.TAUTULLI]: {
-    label: 'Tautulli',
-    apiKeyRequired: true,
-    hostPlaceholder: 'http://localhost:8181',
-    apiPath: '',
-    filterData: ['Watch history', 'Play statistics', 'User activity'],
-  },
-  [MetadataProviderType.SEERR]: {
-    label: 'Seerr',
-    apiKeyRequired: true,
-    hostPlaceholder: 'http://localhost:5055',
-    apiPath: '',
-    filterData: ['Request queue'],
-  },
-  [MetadataProviderType.TMDB]: {
-    label: 'TMDB',
-    apiKeyRequired: true,
-    apiPath: '',
-    defaultUrl: 'https://api.themoviedb.org/3',
-    filterData: ['Metadata'],
-  },
-  [MetadataProviderType.OMDB]: {
-    label: 'OMDB',
-    apiKeyRequired: true,
-    apiPath: '',
-    defaultUrl: 'http://www.omdbapi.com',
-    filterData: [],
-  },
-  [MetadataProviderType.TVMAZE]: {
-    label: 'TVmaze',
-    apiKeyRequired: false,
-    apiPath: '',
-    defaultUrl: 'https://api.tvmaze.com',
-    filterData: ['Network'],
-  },
-} satisfies Record<MetadataProviderType, ProviderTypeEntry>;
+export const PROVIDER_CATALOGUE = Object.fromEntries(
+  Object.entries(PROVIDER_CLASSES).map(([type, connection]): [string, ProviderTypeEntry] => [
+    type,
+    connection.catalogueEntry,
+  ])
+) as Record<MetadataProviderType, ProviderTypeEntry>;
 
-/** Each provider type with its catalogue entry, in display order. */
+/** Each provider type as the setup screens see it, in display order; capabilities stay here. */
 export function describeProviderTypes(): ProviderTypeDescriptor[] {
   return (Object.entries(PROVIDER_CATALOGUE) as [MetadataProviderType, ProviderTypeEntry][]).map(
-    ([type, entry]) => ({ type, ...entry })
+    ([type, { capabilities: _capabilities, filterData, ...entry }]) => ({
+      type,
+      ...entry,
+      filterData: [...filterData],
+    })
   );
 }
 

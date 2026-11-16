@@ -10,7 +10,6 @@ import { SonarrProvider } from './connections/sonarrProvider';
 import { TautulliProvider } from './connections/tautulliProvider';
 import { TmdbProvider } from './connections/tmdbProvider';
 import { TvMazeProvider } from './connections/tvmazeProvider';
-import { PROVIDER_CATALOGUE } from './providerCatalogue';
 
 /** Every concrete provider the factory can construct from settings. */
 export type AnyProvider =
@@ -96,7 +95,7 @@ export class ProviderFactory implements IProviderFactory {
    * keyless, so no configured provider is required.
    */
   createTvMaze(logger: Logger): TvMazeProvider {
-    const { label, defaultUrl } = PROVIDER_CATALOGUE[MetadataProviderType.TVMAZE];
+    const { label, defaultUrl } = TvMazeProvider.catalogueEntry;
     return new TvMazeProvider(
       { name: label, url: defaultUrl, apiKey: null, settings: null },
       logger

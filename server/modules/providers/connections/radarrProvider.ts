@@ -1,5 +1,10 @@
 import { MetadataProviderType } from '@server/database/schema';
-import { type ActuatorTask, type MediaActuator, requireParameter } from '../roles';
+import {
+  type ActuatorTask,
+  type MediaActuator,
+  type ProviderTypeEntry,
+  requireParameter,
+} from '../roles';
 import { BaseProviderConnection } from './baseProviderConnection';
 
 export type RadarrImage = {
@@ -88,6 +93,16 @@ export type RadarrTag = {
 };
 
 export class RadarrProvider extends BaseProviderConnection implements MediaActuator {
+  /** How this provider type is presented, reached and what it can do. */
+  static readonly catalogueEntry = {
+    label: 'Radarr',
+    apiKeyRequired: true,
+    hostPlaceholder: 'http://localhost:7878',
+    apiPath: '/api/v3',
+    filterData: ['Movie library', 'Quality profiles', 'Tags'],
+    capabilities: { source: 'movie' },
+  } as const satisfies ProviderTypeEntry;
+
   public readonly actuatorType = MetadataProviderType.RADARR;
 
   private get apiParams() {

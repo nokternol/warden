@@ -1,5 +1,33 @@
+import type { ProviderTypeDescriptor } from '@contract/providers';
 import type { ContentType } from '@contract/schemas';
 import { MetadataProviderType } from '@server/database/schema';
+
+/** A title's media-server id columns, as the catalog refresh links them. */
+export type AddressColumn = 'plexRatingKey' | 'jellyfinItemId';
+
+/**
+ * What a provider type can do beyond running tasks, declared once on its connection class:
+ *  - `source`: owns that content type's catalog;
+ *  - `mediaServer`: is the media server that titles' `<column>` links point into, and addresses
+ *    titles by that column;
+ *  - `addressedBy`: addresses titles by a column it is not the media server for.
+ * Running tasks is declared by implementing `MediaActuator`.
+ */
+export interface ProviderCapabilities {
+  readonly source?: ContentType;
+  readonly mediaServer?: AddressColumn;
+  readonly addressedBy?: AddressColumn;
+}
+
+/**
+ * A provider type's catalogue entry, carried by its connection class as `catalogueEntry`: how
+ * the type is presented and reached (the contract's provider type descriptor, less `type`, which
+ * the class map's key supplies) and what it can do.
+ */
+export type ProviderTypeEntry = Readonly<Omit<ProviderTypeDescriptor, 'type' | 'filterData'>> & {
+  readonly filterData: readonly string[];
+  readonly capabilities: ProviderCapabilities;
+};
 
 /** One field within a `fields`-shaped parameter — see `ActuatorTaskParameter`. */
 export interface ActuatorTaskParameterField {
