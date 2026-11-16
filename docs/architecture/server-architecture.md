@@ -77,7 +77,13 @@ media's types: `MediaEnricher` is a **media-owned** role contract
 providers, reads from a connection declaring `source`; media never reads a source connection, only the
 stored copies the query engine judges. Each connection class declares what it can do on itself
 (`catalogueEntry`, the role interfaces it implements); the providers module derives everything else from
-those declarations, and callers in media and automations ask for a capability, never a provider type.
+those declarations. The refresh kinds the library cache reports, the content types an automation's
+action can address, the filter-choice lists and the catalog refresh's inputs ask those declarations,
+never a provider type. Facts are still keyed by provider type (`activeFieldSet.ts`,
+`factsRefreshKinds.ts`, the enricher adapters, the rule registry's `providers`), and the automation
+executor reads the derived addressing tables by type: a departure from north-star belief 9 recorded
+in the [fracture ledger](ref:path:docs/architecture/fracture-ledger.md)'s Open section ("Capabilities
+still keyed by provider type").
 For media's own roles, provider connection classes (`PlexProvider`, `TautulliProvider`,
 `SeerrProvider`, `TmdbProvider`, `JellyfinProvider`) implement nothing directly — they are *bound* by
 media-owned code (the library cache's normalisation of stored copies,

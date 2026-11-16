@@ -63,7 +63,9 @@ Everything else is read from those declarations, never re-declared:
 - [`providerCatalogue.ts`](ref:path:server/modules/providers/providerCatalogue.ts) derives
   `PROVIDER_CATALOGUE`, the setup type list and the type labels; `SOURCE_OWNER`, `isMediaSourceType`
   and `contentTypeOfSourceType` from `source`; `ADDRESS_COLUMN_BY_TYPE` from `mediaServer` or
-  `addressedBy`; and `MEDIA_SERVER_BY_COLUMN` from `mediaServer`.
+  `addressedBy`; and `isMediaServerType` and `MEDIA_SERVER_BY_COLUMN` from `mediaServer`. An entry
+  carries either a `hostPlaceholder` (a self-hosted type) or a `defaultUrl` (a hosted type), never
+  neither.
 - The factory ([`providerFactory.ts`](ref:path:server/modules/providers/providerFactory.ts)) constructs
   from the map, and answers one query per role (`movieSourcesOf`, `seriesSourcesOf`, `plexServerOf`,
   `jellyfinServerOf`): each keeps the provider rows whose type declares that role and returns
