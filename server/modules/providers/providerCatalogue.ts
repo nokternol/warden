@@ -62,6 +62,11 @@ export const MEDIA_SERVER_BY_COLUMN = Object.fromEntries(
   DECLARED.flatMap(({ type, mediaServer }) => (mediaServer ? [[mediaServer, type]] : []))
 ) as Record<AddressColumn, MetadataProviderType>;
 
+/** Whether a provider type is a media server titles link into (declares `mediaServer`). */
+export function isMediaServerType(type: MetadataProviderType): boolean {
+  return PROVIDER_CATALOGUE[type].capabilities.mediaServer !== undefined;
+}
+
 /** Whether a provider type owns a media catalog (declares `source`). */
 export function isMediaSourceType(type: MetadataProviderType): boolean {
   return contentTypeOfSourceType(type) !== undefined;

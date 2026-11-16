@@ -5,6 +5,7 @@ import {
   PROVIDER_CATALOGUE,
   SOURCE_OWNER,
   contentTypeOfSourceType,
+  isMediaServerType,
   isMediaSourceType,
 } from '@server/modules/providers/providerCatalogue';
 import { describe, expect, it } from 'vitest';
@@ -63,5 +64,14 @@ describe('contentTypeOfSourceType', () => {
 
   it('is undefined for a provider type that owns no catalog', () => {
     expect(contentTypeOfSourceType(MetadataProviderType.TMDB)).toBeUndefined();
+  });
+});
+
+describe('isMediaServerType', () => {
+  it('is true for the types declaring a media server, and false for one addressed by its column', () => {
+    expect(isMediaServerType(MetadataProviderType.PLEX)).toBe(true);
+    expect(isMediaServerType(MetadataProviderType.JELLYFIN)).toBe(true);
+    expect(isMediaServerType(MetadataProviderType.TAUTULLI)).toBe(false);
+    expect(isMediaServerType(MetadataProviderType.RADARR)).toBe(false);
   });
 });

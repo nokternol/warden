@@ -45,6 +45,7 @@ export {
   MEDIA_SERVER_BY_COLUMN,
   SOURCE_OWNER,
   contentTypeOfSourceType,
+  isMediaServerType,
   isMediaSourceType,
   providerTypeLabel,
 } from './providerCatalogue';

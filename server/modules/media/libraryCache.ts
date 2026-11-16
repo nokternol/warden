@@ -10,7 +10,6 @@ import type { MetadataProviderType } from '@server/database/schema';
 import type { DrizzleDb } from '@server/kernel/db';
 import type { DomainEventBus } from '@server/kernel/eventBus';
 import {
-  MEDIA_SERVER_BY_COLUMN,
   type ProviderListsData,
   type ProviderListsReader,
   type RadarrMovie,
@@ -18,6 +17,7 @@ import {
   SOURCE_OWNER,
   type SonarrSeries,
   type StoredRefreshRecord,
+  isMediaServerType,
   isMediaSourceType,
   readProviderLists,
   readRefreshRecords,
@@ -73,10 +73,9 @@ export interface Library {
  * its catalog and setup lists, a media server the links into it, and a facts supplier its facts.
  */
 function refreshedKinds(type: MetadataProviderType): RefreshKind[] {
-  const isMediaServer = Object.values(MEDIA_SERVER_BY_COLUMN).includes(type);
   return [
     ...(isMediaSourceType(type) ? (['catalog', 'lists'] as const) : []),
-    ...(isMediaServer ? (['links'] as const) : []),
+    ...(isMediaServerType(type) ? (['links'] as const) : []),
     ...(FACTS_REFRESHING_TYPES.has(type) ? (['facts'] as const) : []),
   ];
 }
