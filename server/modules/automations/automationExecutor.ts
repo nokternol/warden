@@ -451,12 +451,8 @@ export class AutomationExecutor {
       );
     }
     const facts = await this.filterReadiness.readFacts();
-    const findings = automationQueries.flatMap(({ queryId, role, record }) =>
-      findingsFor(
-        facts,
-        { queryId, role, contentType: record.contentType, filters: record.filters },
-        { id: automationProvider.id, type: automationProvider.type }
-      )
+    const findings = automationQueries.flatMap(({ queryId, record }) =>
+      findingsFor(facts, { queryId, contentType: record.contentType, filters: record.filters })
     );
     // Before any sign-off is known, every finding a user could accept awaits sign-off.
     const signOffable = automationAnswer(findings, new Set()).blocks.awaitingSignOff;

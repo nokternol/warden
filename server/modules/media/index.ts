@@ -80,7 +80,6 @@ export { automationAnswer, filterAnswer, findingsFor } from './filterReadiness';
 export type {
   AutomationAnswer,
   AutomationBlocks,
-  AutomationProvider,
   FilterAnswer,
   FilterList,
   FilterReadiness,

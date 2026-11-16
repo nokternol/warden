@@ -72,14 +72,6 @@ export interface FilterList {
   queryId?: number;
   contentType: ContentType;
   filters: readonly Filter[];
-  /** How an automation uses the query; an excluded query protects titles on any instance. */
-  role?: 'include' | 'exclude';
-}
-
-/** The provider an automation acts through. */
-export interface AutomationProvider {
-  id: number;
-  type: MetadataProviderType;
 }
 
 /**
@@ -111,16 +103,11 @@ interface Judging {
   /** The provider type that owns the list's content type's catalog. */
   sourceType: MetadataProviderType;
   libraryMissing: boolean;
-  automationProvider?: AutomationProvider;
   hasActive(type: MetadataProviderType): boolean;
 }
 
 /** Every reason `list` cannot be trusted to select the titles it describes, against `facts`. */
-export function findingsFor(
-  facts: ReadinessFacts,
-  list: FilterList,
-  automationProvider?: AutomationProvider
-): ReadinessFinding[] {
+export function findingsFor(facts: ReadinessFacts, list: FilterList): ReadinessFinding[] {
   const sourceType = SOURCE_OWNER[list.contentType];
   const hasActive = (type: MetadataProviderType) =>
     facts.providers.some((p) => p.isActive && p.type === type);
@@ -129,7 +116,6 @@ export function findingsFor(
     list,
     sourceType,
     libraryMissing: !hasActive(sourceType),
-    automationProvider,
     hasActive,
   };
   const library = judging.libraryMissing
@@ -210,10 +196,7 @@ function supplyFindings(judging: Judging, rule: MediaRule): ReadinessFinding[] {
   ];
 }
 
-/**
- * Whether the instance a filter value names is an active source of the list's content type and,
- * for a source automation, its own instance.
- */
+/** Whether the instance a filter value names is an active source of the list's content type. */
 function instanceFindings(
   judging: Judging,
   rule: MediaRule,
@@ -223,39 +206,13 @@ function instanceFindings(
   const { providerId } = value;
   const named = judging.facts.providers.find((p) => p.id === providerId);
   const instance = { id: providerId, typeLabel: named && providerTypeLabel(named.type) };
-  const about = { ruleKey: rule.key, providerIds: [providerId] };
-  if (!named?.isActive || named.type !== judging.sourceType) {
-    const expectedLabel = named?.isActive ? providerTypeLabel(judging.sourceType) : undefined;
-    return [
-      finding(
-        judging.list,
-        { kind: 'inactive-instance', ruleLabel: rule.label, instance, expectedLabel },
-        about
-      ),
-    ];
-  }
-  // A source automation's included queries select from its own catalog only, so a value naming
-  // another instance matches nothing there; its excluded queries protect titles through every
-  // instance's copies, and any other actuator acts on the pooled catalogs of every source.
-  const automation = judging.automationProvider;
-  if (
-    !automation ||
-    !isMediaSourceType(automation.type) ||
-    automation.id === providerId ||
-    judging.list.role === 'exclude'
-  ) {
-    return [];
-  }
+  if (named?.isActive && named.type === judging.sourceType) return [];
+  const expectedLabel = named?.isActive ? providerTypeLabel(judging.sourceType) : undefined;
   return [
     finding(
       judging.list,
-      {
-        kind: 'other-instance',
-        ruleLabel: rule.label,
-        instance,
-        automationProvider: { id: automation.id, typeLabel: providerTypeLabel(automation.type) },
-      },
-      { ...about, providerIds: [providerId, automation.id] }
+      { kind: 'inactive-instance', ruleLabel: rule.label, instance, expectedLabel },
+      { ruleKey: rule.key, providerIds: [providerId] }
     ),
   ];
 }
