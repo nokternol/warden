@@ -77,18 +77,22 @@ Tests of deferred code that go through the HTTP layer inject a declaration that 
 open the ratings panel mock `@contract/scope` to offer its section.
 
 The probe itself, `probeConnection` ([`connectionProbe.ts`](ref:path:server/modules/providers/connectionProbe.ts)),
-still knows every type. Its TVMAZE case is tested against the probe directly
+tests any type through the connection the factory builds for it. Its TVMAZE case is tested against the probe directly
 ([`connectionProbe.test.ts`](ref:path:server/__tests__/modules/providers/connectionProbe.test.ts)), so
 the deferred code stays covered while no route reaches it.
 
 ## The provider-type catalogue
 
-[`providerCatalogue.ts`](ref:path:server/modules/providers/providerCatalogue.ts) describes every
-`MetadataProviderType` once: its `label`, the `apiPath` appended to the host the user enters, the
-`defaultUrl` of a hosted service, and its `filterData`: short phrases saying what it makes filterable.
-It `satisfies` a `Record` keyed by type, so a type without an entry fails to compile, while each entry
-keeps its own shape: `ProviderFactory.createTvMaze` reads TVmaze's `defaultUrl` as a guaranteed string.
-Its insertion order is the display order. The connection probe reads `apiPath` from it.
+Each connection class declares its type's catalogue entry once, as `catalogueEntry`: its `label`, the
+`apiPath` appended to the host the user enters, the `defaultUrl` of a hosted service, and its
+`filterData`: short phrases saying what it makes filterable, plus its capabilities. The entry is
+`as const satisfies ProviderTypeEntry`, so each keeps its own shape: `ProviderFactory.tvMazeLookup`
+reads TVmaze's `defaultUrl` as a guaranteed string.
+[`providerCatalogue.ts`](ref:path:server/modules/providers/providerCatalogue.ts) reads the entries from
+the class map ([`providerClasses.ts`](ref:path:server/modules/providers/providerClasses.ts)), whose
+order is the display order; the factory indexes the same map by every `MetadataProviderType`, so a type
+without a class fails to compile. `GET /api/providers/types` sends each entry's descriptor fields, never
+its capabilities. The connection probe reads `apiPath` from the catalogue.
 
 A stored provider URL is the host the user enters with the type's `apiPath` appended.
 [`contract/providerUrl.ts`](ref:path:contract/providerUrl.ts) holds that join, `apiUrlOf`, and its

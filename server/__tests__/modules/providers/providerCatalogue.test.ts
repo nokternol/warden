@@ -1,5 +1,13 @@
 import { MetadataProviderType } from '@server/database/schema';
-import { PROVIDER_CATALOGUE } from '@server/modules/providers/providerCatalogue';
+import {
+  ADDRESS_COLUMN_BY_TYPE,
+  MEDIA_SERVER_BY_COLUMN,
+  PROVIDER_CATALOGUE,
+  SOURCE_OWNER,
+  contentTypeOfSourceType,
+  isMediaServerType,
+  isMediaSourceType,
+} from '@server/modules/providers/providerCatalogue';
 import { describe, expect, it } from 'vitest';
 
 describe('the provider catalogue', () => {
@@ -15,5 +23,55 @@ describe('the provider catalogue', () => {
     expect(PROVIDER_CATALOGUE[MetadataProviderType.SONARR].hostPlaceholder).toBe(
       'http://localhost:8989'
     );
+  });
+
+  it("reads each content type's source owner from the declared sources", () => {
+    expect(SOURCE_OWNER).toEqual({
+      movie: MetadataProviderType.RADARR,
+      series: MetadataProviderType.SONARR,
+    });
+  });
+
+  it('reads how each type addresses titles, and each column’s media server, from the declarations', () => {
+    expect(ADDRESS_COLUMN_BY_TYPE).toEqual({
+      [MetadataProviderType.PLEX]: 'plexRatingKey',
+      [MetadataProviderType.JELLYFIN]: 'jellyfinItemId',
+      [MetadataProviderType.TAUTULLI]: 'plexRatingKey',
+    });
+    expect(MEDIA_SERVER_BY_COLUMN).toEqual({
+      plexRatingKey: MetadataProviderType.PLEX,
+      jellyfinItemId: MetadataProviderType.JELLYFIN,
+    });
+  });
+});
+
+describe('isMediaSourceType', () => {
+  it('is true for the two catalog-owning provider types', () => {
+    expect(isMediaSourceType(MetadataProviderType.RADARR)).toBe(true);
+    expect(isMediaSourceType(MetadataProviderType.SONARR)).toBe(true);
+  });
+
+  it('is false for a provider type that does not own a catalog', () => {
+    expect(isMediaSourceType(MetadataProviderType.TMDB)).toBe(false);
+  });
+});
+
+describe('contentTypeOfSourceType', () => {
+  it('maps a catalog-owning provider type to its media kind', () => {
+    expect(contentTypeOfSourceType(MetadataProviderType.RADARR)).toBe('movie');
+    expect(contentTypeOfSourceType(MetadataProviderType.SONARR)).toBe('series');
+  });
+
+  it('is undefined for a provider type that owns no catalog', () => {
+    expect(contentTypeOfSourceType(MetadataProviderType.TMDB)).toBeUndefined();
+  });
+});
+
+describe('isMediaServerType', () => {
+  it('is true for the types declaring a media server, and false for one addressed by its column', () => {
+    expect(isMediaServerType(MetadataProviderType.PLEX)).toBe(true);
+    expect(isMediaServerType(MetadataProviderType.JELLYFIN)).toBe(true);
+    expect(isMediaServerType(MetadataProviderType.TAUTULLI)).toBe(false);
+    expect(isMediaServerType(MetadataProviderType.RADARR)).toBe(false);
   });
 });

@@ -36,6 +36,8 @@ export const authHandlers = [
 - **Location**: `__tests__/` folders colocated with source
 - **Run**: `yarn test` or `yarn test:run`
 - **MSW**: Initialized in `tests/setup/vitest.ts`
+- **Type-level fixtures**: `*.typecheck.ts` files under `server/__tests__/` hold compile-time checks
+  (`// @ts-expect-error` lines); vitest never runs them, `yarn typecheck:server` enforces them.
 
 ```bash
 yarn test              # Watch mode

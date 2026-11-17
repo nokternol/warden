@@ -1,3 +1,4 @@
+import type { ProviderTypeEntry } from '../roles';
 import { BaseProviderConnection } from './baseProviderConnection';
 
 export interface TmdbMovieDetails {
@@ -164,6 +165,21 @@ function extractTvCertification(
 }
 
 export class TmdbProvider extends BaseProviderConnection {
+  /** How this provider type is presented, reached and what it can do. */
+  static readonly catalogueEntry = {
+    label: 'TMDB',
+    apiKeyRequired: true,
+    apiPath: '',
+    defaultUrl: 'https://api.themoviedb.org/3',
+    filterData: ['Metadata'],
+    capabilities: {},
+  } as const satisfies ProviderTypeEntry;
+
+  /** One call that needs the key, so a wrong key fails the test. */
+  async testConnection(): Promise<void> {
+    await this.client.get('configuration', { searchParams: this.apiParams }).json();
+  }
+
   private get apiParams() {
     return { api_key: this.provider.apiKey || '' };
   }

@@ -12,8 +12,6 @@ import { ValidationError } from '../../kernel/errors';
 import type { DomainEventBus } from '../../kernel/eventBus';
 import { getChildLogger } from '../../kernel/logger';
 import {
-  ADDRESS_COLUMN_BY_TYPE,
-  MEDIA_SERVER_BY_COLUMN,
   MediaQueryEngine,
   actuatorIdOf,
   automationAnswer,
@@ -24,8 +22,10 @@ import {
 import type { FilterReadiness, Library, LibraryCache, LibraryCopy } from '../media';
 import type { MediaQueryRecord, MediaQueryService } from '../mediaQueries';
 import {
+  ADDRESS_COLUMN_BY_TYPE,
   type ActuatorTask,
   type IProviderFactory,
+  MEDIA_SERVER_BY_COLUMN,
   ProviderFactory,
   type ProviderSettingsService,
   SOURCE_OWNER,
@@ -191,7 +191,7 @@ function contentTypeOf(queries: LoadedQuery[]): ContentType {
   return queries[0]?.record.contentType ?? 'movie';
 }
 
-/** "RADARR" as "Radarr". */
+/** A stored provider type as a capitalised word. */
 function providerTypeName(type: string): string {
   return type.charAt(0) + type.slice(1).toLowerCase();
 }

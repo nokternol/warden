@@ -6,9 +6,9 @@
  * contract, not a barrel. Anything not exported is module-private, and a
  * growing export list is a design smell to challenge.
  *
- * The per-system connection classes and their payload types are part of the
- * contract — media owns the `MediaEnricher` port and builds its adapters
- * directly over these connections' native surface.
+ * Each provider type declares what it can do on its connection class
+ * (`catalogueEntry` and the role interfaces it implements); callers ask for a
+ * capability, never a provider type.
  */
 
 // HTTP surface — this module's procedures of the API contract.
@@ -21,19 +21,14 @@ export { registerProvidersDependencies } from './providers.registrations';
 export type { ProvidersCradle } from './providers.registrations';
 
 // Provider roles — the capability vocabulary connections implement.
-export type { ActuatorTask, ActuatorTaskDescriptor, MediaActuator } from './roles';
-export {
-  SOURCE_OWNER,
-  isMediaActuator,
-  isMediaSourceType,
-  contentTypeOfSourceType,
-} from './roles';
+export type { ActuatorTask, ActuatorTaskDescriptor, AddressColumn, MediaActuator } from './roles';
+export { isMediaActuator } from './roles';
 
 // Factories: connections from stored settings, sources from connections.
 // ProviderFactory keeps a value export because consumers construct it as an
 // injection fallback; the container-only classes are types here.
 export { ProviderFactory } from './providerFactory';
-export type { IProviderFactory, ProviderInstance } from './providerFactory';
+export type { IProviderFactory } from './providerFactory';
 
 // Provider settings — persistence and projection of configured providers.
 export { ProviderSettingsService } from './providerSettingsService';
@@ -43,8 +38,17 @@ export type {
   ProviderSummary,
 } from './providerSettingsService';
 
-// How a provider type is named in anything shown to the user.
-export { providerTypeLabel } from './providerCatalogue';
+// What each provider type declares, read from its connection class: how it is named in anything
+// shown to the user, which type owns each content type's catalog, and how titles are addressed.
+export {
+  ADDRESS_COLUMN_BY_TYPE,
+  MEDIA_SERVER_BY_COLUMN,
+  SOURCE_OWNER,
+  contentTypeOfSourceType,
+  isMediaServerType,
+  isMediaSourceType,
+  providerTypeLabel,
+} from './providerCatalogue';
 
 // Per-provider task enablement read by automations.
 export { readEnabledTaskIds } from './taskEnablement';
@@ -68,8 +72,11 @@ export { readProviderLists } from './providerLists';
 export type { ProviderListsData } from './providerLists';
 export type { ProviderListsReader } from './providerListsReader';
 
-// Connection classes + payload types still consumed outside the module
-// (search handler, media handler, enrichment mappers) until Phase 4.
+// Connection classes and the payload types callers read. Search (#238) and the
+// enricher adapters (#246) import the classes directly; every other caller
+// asks for a capability through the role interfaces and the factory's role
+// queries. Payload types that only the connections use (profiles, tags) are
+// module-private.
 export { JellyfinProvider } from './connections/jellyfinProvider';
 export type {
   JellyfinItem,
@@ -83,9 +90,9 @@ export type { SeerrIssue, SeerrRequest } from './connections/seerrProvider';
 export { PlexProvider } from './connections/plexProvider';
 export type { PlexMedia, PlexMediaItem, PlexMediaPart } from './connections/plexProvider';
 export { RadarrProvider } from './connections/radarrProvider';
-export type { RadarrMovie, RadarrProfile, RadarrTag } from './connections/radarrProvider';
+export type { RadarrMovie } from './connections/radarrProvider';
 export { SonarrProvider } from './connections/sonarrProvider';
-export type { SonarrProfile, SonarrSeries, SonarrTag } from './connections/sonarrProvider';
+export type { SonarrSeries } from './connections/sonarrProvider';
 export { TautulliProvider } from './connections/tautulliProvider';
 export type { TautulliHistoryItem } from './connections/tautulliProvider';
 export { TmdbProvider } from './connections/tmdbProvider';

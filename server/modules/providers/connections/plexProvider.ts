@@ -1,5 +1,5 @@
 import { MetadataProviderType } from '@server/database/schema';
-import type { ActuatorTask, MediaActuator } from '../roles';
+import type { ActuatorTask, MediaActuator, ProviderTypeEntry } from '../roles';
 import { BaseProviderConnection } from './baseProviderConnection';
 
 export interface PlexLibrary {
@@ -46,6 +46,21 @@ export interface PlexMediaItem {
  * Auth token validation against plex.tv lives in services/plexService.ts (PlexService).
  */
 export class PlexProvider extends BaseProviderConnection implements MediaActuator {
+  /** How this provider type is presented, reached and what it can do. */
+  static readonly catalogueEntry = {
+    label: 'Plex',
+    apiKeyRequired: true,
+    hostPlaceholder: 'http://localhost:32400',
+    apiPath: '',
+    filterData: ['Library contents', 'Item metadata'],
+    capabilities: { mediaServer: 'plexRatingKey' },
+  } as const satisfies ProviderTypeEntry;
+
+  /** One call that needs the key, so a wrong key fails the test. */
+  async testConnection(): Promise<void> {
+    await this.client.get('library/sections', { headers: this.authHeader }).json();
+  }
+
   public readonly actuatorType = MetadataProviderType.PLEX;
 
   public tasks(): ActuatorTask[] {

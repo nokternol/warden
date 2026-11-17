@@ -68,9 +68,10 @@ describe('ProviderFactory.create', () => {
     );
   });
 
-  it('throws an error for an unsupported provider type', () => {
-    const unsupported = makeProvider(MetadataProviderType.TVMAZE);
-    expect(() => factory.create(unsupported, log)).toThrow('Unsupported provider type: TVMAZE');
+  it('builds every provider type from its class in the class map, TVmaze included', () => {
+    expect(factory.create(makeProvider(MetadataProviderType.TVMAZE), log)).toBeInstanceOf(
+      TvMazeProvider
+    );
   });
 });
 
@@ -105,30 +106,53 @@ describe('ProviderFactory.createMany', () => {
   });
 });
 
-describe('ProviderFactory.createInstances', () => {
+describe('ProviderFactory role queries', () => {
   const factory = new ProviderFactory();
+  const row = (id: number, type: MetadataProviderType) => ({
+    ...makeProvider(type),
+    id,
+    name: `${type} ${id}`,
+  });
+  const rows = [
+    row(1, MetadataProviderType.RADARR),
+    row(2, MetadataProviderType.SONARR),
+    row(3, MetadataProviderType.PLEX),
+    row(4, MetadataProviderType.JELLYFIN),
+    row(5, MetadataProviderType.TAUTULLI),
+    row(6, MetadataProviderType.RADARR),
+  ];
+  const named = (entries: Array<{ providerId: number; name: string; provider: object }>) =>
+    entries.map(({ providerId, name, provider }) => ({
+      providerId,
+      name,
+      kind: provider.constructor,
+    }));
 
-  it('constructs one instance per configured provider, never collapsing same-type entries', () => {
-    const first = makeProvider(MetadataProviderType.RADARR);
-    const second = { ...makeProvider(MetadataProviderType.RADARR), id: 2, name: '4k Radarr' };
-
-    const instances = factory.createInstances([first, second], log);
-
-    expect(instances).toHaveLength(2);
-    expect(instances[0].settings.id).toBe(first.id);
-    expect(instances[0].provider).toBeInstanceOf(RadarrProvider);
-    expect(instances[1].settings.id).toBe(second.id);
-    expect(instances[1].provider).toBeInstanceOf(RadarrProvider);
+  it('answers, for each role, the rows whose type declares it, each with its connection', () => {
+    expect(named(factory.movieSourcesOf(rows, log))).toEqual([
+      { providerId: 1, name: 'RADARR 1', kind: RadarrProvider },
+      { providerId: 6, name: 'RADARR 6', kind: RadarrProvider },
+    ]);
+    expect(named(factory.seriesSourcesOf(rows, log))).toEqual([
+      { providerId: 2, name: 'SONARR 2', kind: SonarrProvider },
+    ]);
+    expect(named([factory.plexServerOf(rows, log)].flatMap((s) => (s ? [s] : [])))).toEqual([
+      { providerId: 3, name: 'PLEX 3', kind: PlexProvider },
+    ]);
+    expect(named([factory.jellyfinServerOf(rows, log)].flatMap((s) => (s ? [s] : [])))).toEqual([
+      { providerId: 4, name: 'JELLYFIN 4', kind: JellyfinProvider },
+    ]);
+    expect(factory.plexServerOf([row(5, MetadataProviderType.TAUTULLI)], log)).toBeUndefined();
   });
 });
 
-describe('ProviderFactory.createTvMaze', () => {
+describe('ProviderFactory.tvMazeLookup', () => {
   const factory = new ProviderFactory();
 
   afterEach(() => server.resetHandlers());
 
   it('returns a TvMazeProvider wired to the public TVmaze API', async () => {
-    const provider = factory.createTvMaze(log);
+    const provider = factory.tvMazeLookup(log);
     expect(provider).toBeInstanceOf(TvMazeProvider);
 
     server.use(

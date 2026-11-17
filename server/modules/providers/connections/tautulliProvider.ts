@@ -1,5 +1,5 @@
 import { MetadataProviderType } from '@server/database/schema';
-import type { ActuatorTask, MediaActuator } from '../roles';
+import type { ActuatorTask, MediaActuator, ProviderTypeEntry } from '../roles';
 import { BaseProviderConnection } from './baseProviderConnection';
 
 export interface TautulliLibraryStat {
@@ -62,6 +62,23 @@ interface TautulliResponse<T> {
 const HISTORY_PAGE_SIZE = 1000;
 
 export class TautulliProvider extends BaseProviderConnection implements MediaActuator {
+  /** How this provider type is presented, reached and what it can do. */
+  static readonly catalogueEntry = {
+    label: 'Tautulli',
+    apiKeyRequired: true,
+    hostPlaceholder: 'http://localhost:8181',
+    apiPath: '',
+    filterData: ['Watch history', 'Play statistics', 'User activity'],
+    capabilities: { addressedBy: 'plexRatingKey' },
+  } as const satisfies ProviderTypeEntry;
+
+  /** One call that needs the key, so a wrong key fails the test. */
+  async testConnection(): Promise<void> {
+    await this.client
+      .get('api/v2', { searchParams: { ...this.baseParams, cmd: 'get_server_info' } })
+      .json();
+  }
+
   public readonly actuatorType = MetadataProviderType.TAUTULLI;
 
   public tasks(): ActuatorTask[] {

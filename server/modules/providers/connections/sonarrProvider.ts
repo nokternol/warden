@@ -1,5 +1,10 @@
 import { MetadataProviderType } from '@server/database/schema';
-import { type ActuatorTask, type MediaActuator, requireParameter } from '../roles';
+import {
+  type ActuatorTask,
+  type MediaActuator,
+  type ProviderTypeEntry,
+  requireParameter,
+} from '../roles';
 import { BaseProviderConnection } from './baseProviderConnection';
 
 export interface SonarrSeason {
@@ -66,6 +71,21 @@ export type SonarrTag = {
 };
 
 export class SonarrProvider extends BaseProviderConnection implements MediaActuator {
+  /** How this provider type is presented, reached and what it can do. */
+  static readonly catalogueEntry = {
+    label: 'Sonarr',
+    apiKeyRequired: true,
+    hostPlaceholder: 'http://localhost:8989',
+    apiPath: '/api/v3',
+    filterData: ['Series library', 'Quality profiles', 'Tags'],
+    capabilities: { source: 'series' },
+  } as const satisfies ProviderTypeEntry;
+
+  /** One call that needs the key, so a wrong key fails the test. */
+  async testConnection(): Promise<void> {
+    await this.client.get('system/status', { searchParams: this.apiParams }).json();
+  }
+
   public readonly actuatorType = MetadataProviderType.SONARR;
 
   private get apiParams() {

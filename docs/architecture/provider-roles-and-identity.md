@@ -1,6 +1,6 @@
 # Provider Roles & the Media Identity Model
 
-As of 2026-07-12, this documents the model the code *actually* implements today, including its
+As of 2026-11-16, this documents the model the code *actually* implements today, including its
 remaining limits — recorded as architecture rather than intent because the hierarchy and the
 multi-instance identity model described below are real and load-bearing, not an unstarted plan.
 
@@ -33,22 +33,63 @@ every other surface derives from it — never re-declares it.
 With no Radarr and no Sonarr configured, the app is effectively empty: browse lists, identity
 resolution, and enrichment all short-circuit to nothing (see the pipeline below).
 
-## The single authority for catalog ownership
+## How a provider type declares what it can do
 
-[`providers/roles.ts`](ref:path:server/modules/providers/roles.ts) declares `SOURCE_OWNER: Record<ContentType, MetadataProviderType>`
-(`movie → RADARR`, `series → SONARR`) plus `isMediaSourceType`/`contentTypeOfSourceType` derived from it. This is
-the *only* place that fact is declared:
+Each connection class carries a static `catalogueEntry`: how its provider type is presented and
+reached (label, API path, host placeholder or default URL, key requirement, filter data) and its
+`capabilities` ([`ProviderCapabilities`](ref:path:server/modules/providers/roles.ts)):
 
-- `media/mediaSourceFactory.ts`'s `sourceOwnership()` (the `GET /api/media/sources` wire projection) and
-  the rule registry's per-content-type scoping both build on it — media never
-  re-declares the map, only imports it (the one legal `media → providers` direction).
-- `ProviderSettingsService.assertNoActiveConflict` reads `isMediaSourceType` to decide whether the
-  single-active-provider invariant (D8) applies — see below.
-- The catalog refresh reads `SOURCE_OWNER`/`contentTypeOfSourceType` to know which provider types to fetch
-  and which content type (`contentType`) to resolve their items under.
+| Capability | Meaning | Declared by (today) |
+|---|---|---|
+| `source: ContentType` | Owns that content type's catalog | Radarr `movie`, Sonarr `series` |
+| `mediaServer: AddressColumn` | Is the media server titles' `<column>` links point into, and addresses titles by it | Plex `plexRatingKey`, Jellyfin `jellyfinItemId` |
+| `addressedBy: AddressColumn` | Addresses titles by a column it is not the media server for | Tautulli `plexRatingKey` |
 
-A type graduating into the `MediaSource` role (Plex, per the still-open intent doc) would extend this one
-map; every consumer above inherits the change without its own edit.
+Running tasks is declared by implementing `MediaActuator` (see the actuator doc). The entry is
+`as const`, so the declared values stay visible to the type checker.
+
+[`providerClasses.ts`](ref:path:server/modules/providers/providerClasses.ts) holds the one map from
+provider type to connection class, in display order, built through `defineProviderClasses`. Its type
+reads each class's declared capabilities and requires the matching role interface
+([`roles.ts`](ref:path:server/modules/providers/roles.ts)): `source: 'movie'` a `MovieSource`,
+`source: 'series'` a `SeriesSource`, `mediaServer: 'plexRatingKey'` a `PlexLinks`,
+`mediaServer: 'jellyfinItemId'` a `JellyfinLinks`. A class declaring a capability it cannot serve does
+not compile; a `@ts-expect-error` fixture
+([`providerClasses.typecheck.ts`](ref:path:server/__tests__/modules/providers/providerClasses.typecheck.ts))
+keeps that check honest under `yarn typecheck:server`.
+
+Everything else is read from those declarations, never re-declared:
+
+- [`providerCatalogue.ts`](ref:path:server/modules/providers/providerCatalogue.ts) derives
+  `PROVIDER_CATALOGUE`, the setup type list and the type labels; `SOURCE_OWNER`, `isMediaSourceType`
+  and `contentTypeOfSourceType` from `source`; `ADDRESS_COLUMN_BY_TYPE` from `mediaServer` or
+  `addressedBy`; and `isMediaServerType` and `MEDIA_SERVER_BY_COLUMN` from `mediaServer`. An entry
+  carries either a `hostPlaceholder` (a self-hosted type) or a `defaultUrl` (a hosted type), never
+  neither.
+- The factory ([`providerFactory.ts`](ref:path:server/modules/providers/providerFactory.ts)) constructs
+  from the map, and answers one query per role (`movieSourcesOf`, `seriesSourcesOf`, `plexServerOf`,
+  `jellyfinServerOf`): each keeps the provider rows whose type declares that role and returns
+  `{ providerId, name, provider }` typed by the role, narrowed by a type predicate over the map's
+  declarations, so neither the queries nor their callers cast.
+- Callers ask for the capability: media's `sourceOwnership()` and the rule registry's content-type
+  scoping read `SOURCE_OWNER`; the catalog refresh reads the role queries; the refresh kinds a provider
+  writes, the content types an automation's action can address and the filter-choice lists all read the
+  declarations. A guard test
+  ([`providerTypeNames.test.ts`](ref:path:server/__tests__/modules/providerTypeNames.test.ts)) fails if
+  any non-test file in `server/modules` outside one allowlist names a provider type.
+
+**One source per content type is the current rule** (north-star belief 9: "Today each content type is
+managed by one kind of service; allowing a second kind for the same content type is a later
+requirement."). A unit test over the real class map
+([`providerClasses.test.ts`](ref:path:server/__tests__/modules/providers/providerClasses.test.ts))
+holds it.
+
+**Adding a provider** that is a source, an actuator addressed by an existing column, or a fact supplier
+is its type identity (the `MetadataProviderType` member and the contract's provider-type value), its
+connection class (with `catalogueEntry` and the role interfaces it implements) and its entry in the
+class map. Two departures from belief 9 remain, recorded in the fracture ledger: a new *media server*
+still needs its own role query, link interface, link slot in the catalog refresh and database column;
+and facts are still declared by provider type in media's own tables, not on the connection classes.
 
 ## Multi-instance is real: Radarr/Sonarr may have any number of active instances
 
@@ -58,9 +99,9 @@ Every other provider type (TMDB, Seerr, Tautulli, Plex-as-enricher, Jellyfin) st
 most one active instance, or `assertNoActiveConflict` throws `ValidationError`. This is role-scoped, not
 type-hardcoded, so it reads directly off the one authority above.
 
-`ProviderFactory.createInstances(providers, logger)` ([`server/modules/providers/providerFactory.ts`](ref:path:server/modules/providers/providerFactory.ts))
-is the structural half of this: it returns one `{ settings, provider }` entry per configured row, never
-collapsing same-type entries into a single slot. `ProviderSet` (the older `createMany` result) has no
+The factory's role queries are the structural half of this: `movieSourcesOf`/`seriesSourcesOf`
+return one entry per configured row, never collapsing same-type entries into a single slot.
+`ProviderSet` (the `createMany` result, which the enrichment job still reads) has no
 `radarr`/`sonarr` slots at all — the type system cannot express "the Radarr instance" any more, so no
 future consumer can silently reintroduce last-one-wins.
 
@@ -95,8 +136,10 @@ two-table split between the logical title and each instance's concrete copy of i
 [`catalogRefreshJobFactory.ts`](ref:path:server/modules/providers/catalogRefreshJobFactory.ts)), runs as
 the "Catalog refresh" system automation (stored task id `system:identity-resolution`). It is the only code
 that reads Radarr, Sonarr, Plex and Jellyfin library data; every feature reads what it stores through the
-library cache. It loops every active instance per type, never collapsed to one, and refreshes each
-provider on its own:
+library cache. Its factory loads the active rows of every type declaring `source` or `mediaServer` and
+takes its inputs from the factory's role queries, each typed by its role interface (`MovieSource`,
+`SeriesSource`, `PlexLinks`, `JellyfinLinks`, and `TitleLookup` for TVmaze). It loops every active
+instance per type, never collapsed to one, and refreshes each provider on its own:
 
 - **Copies.** `runForMovies`/`runForSeries` resolve each listed item's group via `resolveGroup`, upsert
   its `media_item` row on `(providerId, externalId)` with the provider's own record as its payload
@@ -160,15 +203,18 @@ reported them. Precedence between providers is applied when the library cache lo
 
 ## The MediaSource role and the copies it supplies
 
-`MediaSource` names one thing: the role of a catalog-owning provider type (Radarr, Sonarr;
-`isMediaSourceType`, [`server/modules/providers/roles.ts`](ref:path:server/modules/providers/roles.ts)).
-A source connection implements no media read interface: the catalog refresh stores what it answers,
-and the library cache ([`libraryCache.ts`](ref:path:server/modules/media/libraryCache.ts)) loads each
+`MediaSource` is the source role's interface
+([`roles.ts`](ref:path:server/modules/providers/roles.ts)): the setup lists a catalog-owning
+connection answers (tags, quality profiles, root folders, and Sonarr's language profiles), extended by
+`MovieSource` (`getMovies`) and `SeriesSource` (`getSeries`). It is what the catalog refresh reads from
+a connection declaring `source`; no other code reads a source connection. The library cache
+([`libraryCache.ts`](ref:path:server/modules/media/libraryCache.ts)) loads each
 stored copy normalised and carrying `providerId`, its native id, the logical `tmdb`/`imdb`/`tvdb` ids,
 its title group and its facts. The query engine judges those copies directly
 ([`mediaQueryEngine.ts`](ref:path:server/modules/media/mediaQueryEngine.ts)). `sourceOwnership`
 ([`mediaSourceFactory.ts`](ref:path:server/modules/media/mediaSourceFactory.ts)) projects `SOURCE_OWNER`
-for the client.
+for the client. The source role interfaces are typed by Radarr's and Sonarr's own payloads
+(`RadarrMovie`, `SonarrSeries`), a departure from belief 9 recorded in the fracture ledger.
 
 ## Same title everywhere
 
@@ -206,8 +252,9 @@ service still supplies does not depend on the one that failed). The rule lives i
   of the media server whose ids it addresses. Any of these failed or never read skips the run, naming the provider and the kind.
 - **Facts it filters on, once each.** For each rule in its included or excluded queries, the run needs
   one active supplier whose `facts` record succeeded and, for a supplier reached through a media
-  server's links, whose server's `links` record succeeded too (derived from `ADDRESS_COLUMN_BY_TYPE` and
-  `MEDIA_SERVER_BY_COLUMN`, [`actuatorIdResolver.ts`](ref:path:server/modules/media/actuatorIdResolver.ts);
+  server's links, whose server's `links` record succeeded too (from `ADDRESS_COLUMN_BY_TYPE` and
+  `MEDIA_SERVER_BY_COLUMN`, derived from the providers' declarations in
+  [`providerCatalogue.ts`](ref:path:server/modules/providers/providerCatalogue.ts);
   Seerr has no links dependency). Play count from Plex and Jellyfin survives Plex failing while
   Jellyfin refreshed. Only a rule none of whose suppliers is good skips the run, naming the fact and why
   each supplier failed.

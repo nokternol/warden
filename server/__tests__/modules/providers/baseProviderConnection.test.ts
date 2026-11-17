@@ -1,35 +1,38 @@
 import { type MetadataProvider, MetadataProviderType } from '@server/database/schema';
 import { getChildLogger } from '@server/kernel/logger';
-import { BaseProviderConnection } from '@server/modules/providers/connections/baseProviderConnection';
-import { describe, expect, it } from 'vitest';
+import { RadarrProvider } from '@server/modules/providers/connections/radarrProvider';
+import { server } from '@tests/mocks/server';
+import { http, HttpResponse } from 'msw';
+import { afterEach, describe, expect, it } from 'vitest';
 
 const mockLogger = getChildLogger('TestBaseProviderConnection');
 
-class TestProvider extends BaseProviderConnection {}
-
-const mockEntity: MetadataProvider = {
+const savedBehindProxy: MetadataProvider = {
   id: 1,
   type: MetadataProviderType.RADARR,
   name: 'Test Radarr',
-  url: 'http://localhost:7878',
+  url: 'http://h:7878/radarr/api/v3',
   apiKey: 'my-secret-key',
-  settings: { useSsl: false },
+  settings: { urlBase: '/radarr' },
   isActive: true,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
 
 describe('BaseProviderConnection', () => {
-  it('can be instantiated with a MetadataProvider entity', () => {
-    const provider = new TestProvider(mockEntity, mockLogger);
-    expect(provider).toBeDefined();
-  });
+  afterEach(() => server.resetHandlers());
 
-  it('can be instantiated with a urlBase setting', () => {
-    const provider = new TestProvider(
-      { ...mockEntity, settings: { urlBase: '/radarr' } },
-      mockLogger
+  it('reaches exactly the stored address: what the owner entered plus the API path', async () => {
+    const reached: string[] = [];
+    server.use(
+      http.get('http://h:7878/*', ({ request }) => {
+        reached.push(new URL(request.url).pathname);
+        return HttpResponse.json([]);
+      })
     );
-    expect(provider).toBeDefined();
+
+    await new RadarrProvider(savedBehindProxy, mockLogger).getMovies();
+
+    expect(reached).toEqual(['/radarr/api/v3/movie']);
   });
 });

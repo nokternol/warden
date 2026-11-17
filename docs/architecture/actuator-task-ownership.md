@@ -76,7 +76,14 @@ provider-native id, transported as a string** (numeric for Radarr/Sonarr profile
 Jellyfin collection ids — each provider parses its own).
 
 - The descriptor declares it (`parameter: { label }`), so discovery surfaces know a value must be
-  captured with the task.
+  captured with the task. A `select` parameter names the list its value is chosen from as
+  `optionsRoute`, typed by the contract's `TaskOptionsRoute`: `quality-profiles`, `tags` or
+  `collections`, exactly the routes some task names.
+- `GET /api/providers/task-options/{route}` answers, per configured instance, its choices for that
+  route. A provider offers choices for a route exactly when one of its tasks names it; the procedure
+  builds each provider's connection and asks its tasks, never its type. The choices are the instance's
+  stored list for the route from the catalog refresh (quality profiles by name, tags by label); a
+  Jellyfin collection has no stored list, so its choices are empty.
 - The automation stores the value (`automations.taskParameter`, nullable) and the executor threads it
   into `run` alongside the ids.
 - A parameterized task invoked without its value rejects loudly via `requireParameter` — a missing value
@@ -114,8 +121,8 @@ leaving out any task the scope declaration defers (`isOfferedTask`, in
 task ids are unique only within a type. A deferred task is refused on write as well: a provider update whose
 `settings.enabledTasks` names one answers 400, and `AutomationService.create` rejects one even if it
 was enabled before it was deferred.
-Non-actuators and non-constructable types emit nothing — the surface advertises only what some configured
-instance can actually do.
+Non-actuators emit nothing (every provider type is constructable from the factory's class map) — the
+surface advertises only what some configured instance can actually do.
 
 ## The executor dispatches through the instance
 
@@ -154,7 +161,8 @@ The automation row's Run Now counts through the same `planRun`, by automation id
 
 Earlier phases derived target ids by evaluating the automation's query against the provider instance **as
 a `MediaSource`** — valid only while the actuator is also a catalog owner. That conflation is resolved:
-the executor branches on `isMediaSourceType(providerSettings.type)`
+the executor branches on `isMediaSourceType(providerSettings.type)`, which reads the provider type's
+declared `source` capability
 ([`server/modules/automations/automationExecutor.ts`](ref:path:server/modules/automations/automationExecutor.ts)).
 
 Both plan on the library copy ([`LibraryCache`](ref:path:server/modules/media/libraryCache.ts)) as it
@@ -178,8 +186,11 @@ automation acts only in its own service, so the actuator decides what of those t
   fracture ledger records it, and that a media-server run's history reads a source copy's state.
 
 Translation is keyed by **addressing space, not provider**: Tautulli has no id space of its own — it
-reports entirely against Plex rating keys — so it shares Plex's `plexRatingKey` column
-(`ADDRESS_COLUMN_BY_TYPE`). The catalog refresh links titles to Plex and Jellyfin items (`runForPlex`,
+reports entirely against Plex rating keys — so it declares `addressedBy: 'plexRatingKey'` and shares
+Plex's column, while Plex and Jellyfin declare `mediaServer` for theirs. `ADDRESS_COLUMN_BY_TYPE` and
+`MEDIA_SERVER_BY_COLUMN` are derived from those declarations
+([`providerCatalogue.ts`](ref:path:server/modules/providers/providerCatalogue.ts)); the executor still
+reads them as tables keyed by provider type, a departure recorded in the fracture ledger. The catalog refresh links titles to Plex and Jellyfin items (`runForPlex`,
 `runForJellyfin`, [`server/modules/providers/catalogRefreshJob.ts`](ref:path:server/modules/providers/catalogRefreshJob.ts))
 and clears links the server no longer lists.
 
@@ -194,10 +205,11 @@ and clears links the server no longer lists.
 - [`server/modules/media/actuatorIdResolver.ts`](ref:path:server/modules/media/actuatorIdResolver.ts) — non-source id translation through the identity graph.
 - [`server/modules/providers/taskEnablement.ts`](ref:path:server/modules/providers/taskEnablement.ts) — `readEnabledTaskIds`, the one authority both create and the
   executor consult.
-- [`server/modules/providers/providerFactory.ts`](ref:path:server/modules/providers/providerFactory.ts) — constructs every configured type so discovery can ask any
-  instance for its role.
+- [`server/modules/providers/providerFactory.ts`](ref:path:server/modules/providers/providerFactory.ts) — constructs every configured type from the class map so
+  discovery can ask any instance for its role.
 - [`server/modules/automations/automationService.ts`](ref:path:server/modules/automations/automationService.ts), [`automationExecutor.ts`](ref:path:server/modules/automations/automationExecutor.ts) — create-time and run-time enablement.
-- [`server/modules/providers/providers.procedures.ts`](ref:path:server/modules/providers/providers.procedures.ts) — instance-keyed discovery.
+- [`server/modules/providers/providers.procedures.ts`](ref:path:server/modules/providers/providers.procedures.ts) — instance-keyed discovery of tasks and of each task's
+  parameter choices.
 
 ## The client derives, holds no catalogue
 

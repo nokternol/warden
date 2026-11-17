@@ -42,7 +42,7 @@ per-lookup caches in the media procedures.
   on the title as a whole, and the acting service acts on every copy of the title it holds. A
   Radarr or Sonarr run acts on its own copy of a title selected through any instance's copy.
 
-## 3. Facts (beliefs 2, 8, 10)
+## 3. Facts (beliefs 2, 8, 9)
 
 - **Each service declares once which facts it supplies.** The fact list, the refresh's write, the
   rules that read a fact and the services a rule depends on all follow from that one declaration.
@@ -51,13 +51,16 @@ per-lookup caches in the media procedures.
   supplies a fact (play count; studio and file details when Plex and Jellyfin are both active),
   precedence picks one value when the cache loads.
 
-## 4. Providers (beliefs 2, 8, 10)
+## 4. Providers (beliefs 2, 8, 9)
 
 - **What a provider can do is declared by that provider:** supply the library, supply facts, run
-  tasks, list choices for a task's parameter, test its connection, search. Callers ask for a
+  tasks, list choices for a task's parameter, test its connection. Callers ask for a
   capability, never for a provider type, and never cast.
-- **Every connection is built in one place,** and carries its own address, URL base, credentials
-  and timeout. Testing a connection uses that connection.
+- **Every connection is built in one place,** and carries its own address (any web-proxy path and URL
+  base included), credentials and timeout. Testing a connection uses that connection.
+- **The owner enters where a service is reached — the machine, the port and any web-proxy path — never
+  the service's API path; Warden adds it.** The owner also enters the service's own URL base, if it
+  has one.
 - **Adding a service** is that service's connection and declarations, and nothing outside it.
 
 ## 5. Automations (beliefs 1, 6, 7, 8)

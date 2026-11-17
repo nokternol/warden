@@ -702,6 +702,34 @@ Earlier entries in this ledger use the names that were current when they healed 
   can make the title meet contradicting conditions. Belief 3 leaves this unsolved by choice; treating
   editions separately is a later requirement.
 
+### Provider capabilities — a table per capability, kept by each caller (recorded and healed 2026-11-16, MVP slice C9)
+
+- **Fracture:** north-star belief 9 says adding a service "changes nothing else" and needs no "special
+  cases elsewhere"; belief 2 that where an action can be taken "depends only on whether the services can
+  address the same title, never on which services they are"; design §4 that what a provider can do is
+  declared by that provider and callers ask for a capability, never a provider type. A connection could
+  declare only its tasks. Every other capability was a table keyed by provider type, kept by whichever
+  caller first needed it: catalog ownership (`SOURCE_OWNER` in `roles.ts`), addressing
+  (`ADDRESS_COLUMN_BY_TYPE`/`MEDIA_SERVER_BY_COLUMN` in media), the content types an action reaches
+  (`CONTENT_TYPE_PROVIDERS` in automations), refresh kinds (`REFRESHED_KINDS` in the library cache),
+  task-parameter choices (a route-and-type switch), the catalog refresh's inputs (a type list,
+  `instanceof` and casts), the filter-choice lists (by provider name) and the provider catalogue (a
+  hand-written table). The connection test was a second way of reaching a provider: its own per-type
+  switch repeating each provider's address path and authentication, with its own timeout, and blind to
+  the `urlBase` setting a run used.
+- **Healed by:** each connection class carries its `catalogueEntry` (presentation, address and
+  `capabilities`: `source`, `mediaServer`, `addressedBy`); one class map, built through
+  `defineProviderClasses`, checks at compile time that each class implements the role interfaces its
+  capabilities require. The catalogue, source ownership and addressing columns are derived from the
+  declarations; the factory constructs from the map and answers one query per role; the catalog refresh,
+  the refresh kinds, the content types an action can address and the filter-choice lists ask the
+  declarations. Task-parameter choices come from the routes a provider's tasks name. Every connection
+  implements `testConnection`, and the connection test runs it on a connection the factory builds, at
+  the stored address the owner entered (the unused `urlBase` setting is gone). A guard test fails if a
+  non-test file outside one allowlist names a provider type.
+- **Left on purpose:** facts are still declared by provider type in media's tables, and Search still
+  builds its own connections; both are allowlisted in the guard test and recorded as Open below.
+
 ## Open
 
 ### Media-server links — one id per title (recorded 2026-11-16, MVP slice C12)
@@ -743,3 +771,43 @@ Earlier entries in this ledger use the names that were current when they healed 
   "One title lookup" in `docs/in_progress/mvp/plan.md` decides whether they do one job or two and
   settles it, and the MVP does not close until it merges.
 
+### A new media server needs more than its connection (recorded 2026-11-16, MVP slice C9)
+
+- **Departure:** north-star belief 9 says adding a service "changes nothing else … It does not need …
+  special cases elsewhere." A new source, an actuator addressed by an existing column or a fact supplier
+  is its type identity, its connection class and its class-map entry. A new *media server* also needs a
+  role query on the factory (one per `mediaServer` value: `plexServerOf`, `jellyfinServerOf`), a link
+  interface (`PlexLinks`, `JellyfinLinks`, each its server's own payload shape), a link slot and code
+  path in the catalog refresh (`plexSource`/`jellyfinSource`, `runForPlex`/`runForJellyfin`), and a
+  database column for its links (`AddressColumn` is tied to `media_identity`'s columns)
+  ([`server/modules/providers/providerFactory.ts`](ref:path:server/modules/providers/providerFactory.ts),
+  [`server/modules/providers/catalogRefreshJob.ts`](ref:path:server/modules/providers/catalogRefreshJob.ts)).
+- **Heals by:** links held per media server rather than per column, so one link role serves every
+  media server.
+
+### Capabilities still keyed by provider type (recorded 2026-11-16, MVP slice C9)
+
+- **Departure:** north-star belief 9 (no special cases elsewhere) and belief 2 (where a fact can be used
+  and an action taken never depends on which services they are). These remain keyed by provider type
+  rather than read from a declaration:
+  - facts: which provider types supply which fields and refresh facts (`activeFieldSet.ts`,
+    `factsRefreshKinds.ts`, the enricher adapters, `enrichmentJobFactory.ts` with `ProviderSet`/
+    `createMany`, `ruleRegistry` `providers`), and the primary media server's `'PLEX' | 'JELLYFIN'`
+    precedence setting ([`server/modules/media/factsRefreshKinds.ts`](ref:path:server/modules/media/factsRefreshKinds.ts));
+  - the filter-choice contract keyed `radarr`/`sonarr`
+    ([`server/modules/media/media.procedures.ts`](ref:path:server/modules/media/media.procedures.ts));
+  - the source role interfaces typed by Radarr's and Sonarr's own payloads (`RadarrMovie`,
+    `SonarrSeries`) ([`server/modules/providers/roles.ts`](ref:path:server/modules/providers/roles.ts));
+  - `actuatorType` on each actuator connection, and the executor reading the derived addressing tables
+    by type and comparing a row's type with the derived source owner, as the library cache does
+    ([`server/modules/automations/automationExecutor.ts`](ref:path:server/modules/automations/automationExecutor.ts),
+    [`server/modules/media/libraryCache.ts`](ref:path:server/modules/media/libraryCache.ts));
+  - "runs tasks" detected by a runtime check (`isMediaActuator`) while every other capability is
+    declared on the class;
+  - the setup form's per-type special cases (Jellyfin's `userId`, which the connection test does not
+    check).
+- **Departure (belief 8, one way of reaching a provider):** a stored key is sent to a test of any path on
+  the origin it was saved for, because `storedKeyFor` compares origins only
+  ([`server/modules/providers/connectionProbe.ts`](ref:path:server/modules/providers/connectionProbe.ts)).
+- **Heals by:** facts declared on the connection classes like the other capabilities (the facts slice,
+  #246, inherits the guard test's allowlist entries), and each remaining caller asking a declaration.

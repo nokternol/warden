@@ -1,27 +1,48 @@
 import { apiUrlOf } from '@contract/providerUrl';
-import { MetadataProviderType } from '@server/database/schema';
-import ky, { HTTPError } from 'ky';
+import type { MetadataProvider, MetadataProviderType } from '@server/database/schema';
+import { HTTPError } from 'ky';
+import winston from 'winston';
 import { PROVIDER_CATALOGUE } from './providerCatalogue';
+import type { IProviderFactory } from './providerFactory';
 
 /**
- * Probes a provider's connection details with one cheap call to its upstream API; resolves when
- * the provider accepts them, rejects otherwise. Each call uses an endpoint that demands the key,
- * since a public one would pass with any key or none. TVmaze is public and keyless, so it resolves
- * without a call.
+ * The logger a tested connection writes to. A failed test is answered to the owner through
+ * `describeFailure`, and the connection's own failure log would carry the request URL, which can
+ * carry the key, so a test logs nothing.
+ */
+const SILENT = winston.createLogger({ silent: true });
+
+/**
+ * Tests the address and key the owner entered, through the connection runs use: the factory builds
+ * it at the host plus the type's API path, and the connection's own `testConnection` makes the call
+ * with its own authentication and timeout. Testing a saved provider builds the connection from the
+ * saved provider's type, name and settings, with its stored key unless a key was typed. Resolves
+ * when the provider accepts them, rejects with a message for the owner otherwise.
  */
 export async function probeConnection(
-  type: MetadataProviderType,
-  host: string,
-  apiKey?: string
+  factory: IProviderFactory,
+  request: { type: MetadataProviderType; url: string; apiKey?: string },
+  saved?: MetadataProvider
 ): Promise<void> {
-  const base = apiUrlOf(host, PROVIDER_CATALOGUE[type].apiPath);
-  const key = apiKey ?? '';
-  if (PROVIDER_CATALOGUE[type].apiKeyRequired && key === '') {
+  const type = saved?.type ?? request.type;
+  const { label, apiPath, apiKeyRequired } = PROVIDER_CATALOGUE[type];
+  const apiKey =
+    request.apiKey ?? (saved === undefined ? '' : (storedKeyFor(saved, request.url) ?? ''));
+  if (apiKeyRequired && apiKey === '') {
     throw new Error('Enter the API key to test this connection');
   }
-  const { label } = PROVIDER_CATALOGUE[type];
+  const connection = factory.create(
+    {
+      type,
+      name: saved?.name ?? label,
+      url: apiUrlOf(request.url, apiPath),
+      apiKey,
+      settings: saved?.settings ?? null,
+    },
+    SILENT
+  );
   try {
-    await callProvider(type, base, key);
+    await connection.testConnection();
   } catch (err) {
     throw new Error(describeFailure(err, label));
   }
@@ -35,51 +56,14 @@ function describeFailure(err: unknown, label: string): string {
   return `${label} answered with an error (${status})`;
 }
 
-async function callProvider(type: MetadataProviderType, base: string, key: string): Promise<void> {
-  const timeout = 8000;
-
-  switch (type) {
-    case MetadataProviderType.SONARR:
-    case MetadataProviderType.RADARR:
-      await ky.get(`${base}/system/status`, { searchParams: { apikey: key }, timeout }).json();
-      break;
-    case MetadataProviderType.PLEX:
-      await ky
-        .get(`${base}/library/sections`, {
-          headers: { 'X-Plex-Token': key, Accept: 'application/json' },
-          timeout,
-        })
-        .json();
-      break;
-    case MetadataProviderType.JELLYFIN:
-      await ky
-        .get(`${base}/System/Info`, {
-          headers: { 'X-Emby-Authorization': `MediaBrowser Token="${key}"` },
-          timeout,
-        })
-        .json();
-      break;
-    case MetadataProviderType.TAUTULLI:
-      await ky
-        .get(`${base}/api/v2`, { searchParams: { cmd: 'get_server_info', apikey: key }, timeout })
-        .json();
-      break;
-    case MetadataProviderType.SEERR:
-      await ky.get(`${base}/api/v1/auth/me`, { headers: { 'X-Api-Key': key }, timeout }).json();
-      break;
-    case MetadataProviderType.TVMAZE:
-      return;
-    case MetadataProviderType.TMDB:
-      await ky.get(`${base}/configuration`, { searchParams: { api_key: key }, timeout }).json();
-      break;
-    case MetadataProviderType.OMDB:
-      await ky.get(base, { searchParams: { apikey: key, t: 'test' }, timeout }).json();
-      break;
-    default: {
-      // TypeScript exhaustiveness guard — if a new MetadataProviderType is added
-      // without a corresponding case above, this line will produce a compile error.
-      const _exhaustive: never = type;
-      throw new Error(`Unsupported provider type: ${_exhaustive}`);
-    }
+/**
+ * A stored key, for probing the address it was saved with. The client never holds this key, so
+ * sending it to another host would hand it to whoever runs that host: a changed address needs the
+ * key entered again.
+ */
+function storedKeyFor(stored: { url: string; apiKey: string | null }, url: string): string | null {
+  if (new URL(url).origin !== new URL(stored.url).origin) {
+    throw new Error('Enter the API key to test a different address');
   }
+  return stored.apiKey;
 }

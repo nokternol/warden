@@ -1,5 +1,85 @@
+import type { ProviderTypeDescriptor, TaskOptionsRoute } from '@contract/providers';
 import type { ContentType } from '@contract/schemas';
-import { MetadataProviderType } from '@server/database/schema';
+import type { MetadataProviderType } from '@server/database/schema';
+import type { RadarrMovie } from './connections/radarrProvider';
+import type { SonarrSeries } from './connections/sonarrProvider';
+
+/** A title's media-server id columns, as the catalog refresh links them. */
+export type AddressColumn = 'plexRatingKey' | 'jellyfinItemId';
+
+/**
+ * What a provider type can do beyond running tasks, declared once on its connection class:
+ *  - `source`: owns that content type's catalog;
+ *  - `mediaServer`: is the media server that titles' `<column>` links point into, and addresses
+ *    titles by that column;
+ *  - `addressedBy`: addresses titles by a column it is not the media server for.
+ * Running tasks is declared by implementing `MediaActuator`.
+ */
+export interface ProviderCapabilities {
+  readonly source?: ContentType;
+  readonly mediaServer?: AddressColumn;
+  readonly addressedBy?: AddressColumn;
+}
+
+/**
+ * A provider type's catalogue entry, carried by its connection class as `catalogueEntry`: how
+ * the type is presented and reached (the contract's provider type descriptor, less `type`, which
+ * the class map's key supplies) and what it can do.
+ */
+export type ProviderTypeEntry = Readonly<
+  Omit<ProviderTypeDescriptor, 'type' | 'filterData' | 'hostPlaceholder' | 'defaultUrl'>
+> &
+  ProviderAddress & {
+    readonly filterData: readonly string[];
+    readonly capabilities: ProviderCapabilities;
+  };
+
+/**
+ * Where a provider type is reached: a self-hosted type gives an example host for the owner to
+ * enter; a hosted type, with no host to enter, carries the one URL every instance uses.
+ */
+type ProviderAddress =
+  | { readonly hostPlaceholder: string; readonly defaultUrl?: undefined }
+  | { readonly defaultUrl: string; readonly hostPlaceholder?: undefined };
+
+/**
+ * The source role: a connection that owns a content type's catalog. These are the setup lists the
+ * catalog refresh keeps for it (Sonarr also answers language profiles); `MovieSource` and
+ * `SeriesSource` add the catalog itself. A class declaring `source` must construct one.
+ */
+export interface MediaSource {
+  getTags(): Promise<Array<{ id: number; label: string }>>;
+  getProfiles(): Promise<Array<{ id: number; name: string }>>;
+  getRootFolders(): Promise<Array<{ id: number; path: string }>>;
+  getLanguageProfiles?(): Promise<Array<{ id: number; name: string }>>;
+}
+
+/** The source of the movie catalog. */
+export interface MovieSource extends MediaSource {
+  getMovies(): Promise<RadarrMovie[]>;
+}
+
+/** The source of the series catalog. */
+export interface SeriesSource extends MediaSource {
+  getSeries(): Promise<SonarrSeries[]>;
+}
+
+/** The media server `plexRatingKey` links point into: every item, with the ids that link it. */
+export interface PlexLinks {
+  getAllItems(): Promise<Array<{ ratingKey: string; type?: string; Guid?: { id: string }[] }>>;
+}
+
+/** The media server `jellyfinItemId` links point into: every item, with the ids that link it. */
+export interface JellyfinLinks {
+  getAllItems(): Promise<
+    Array<{ Id: string; Type?: string; ProviderIds?: Record<string, string> }>
+  >;
+}
+
+/** Resolves a series' TVmaze id from its TheTVDB id, for the catalog refresh. */
+export interface TitleLookup {
+  lookupByTvdbId(tvdbId: number): Promise<{ id: number } | null>;
+}
 
 /** One field within a `fields`-shaped parameter — see `ActuatorTaskParameter`. */
 export interface ActuatorTaskParameterField {
@@ -7,7 +87,7 @@ export interface ActuatorTaskParameterField {
   label: string;
   kind: 'select' | 'text' | 'boolean';
   /** Present when `kind` is `'select'` — see `ActuatorTaskParameter`'s `optionsRoute`. */
-  optionsRoute?: string;
+  optionsRoute?: TaskOptionsRoute;
 }
 
 /**
@@ -24,7 +104,7 @@ export interface ActuatorTaskParameterField {
  * The value always transports as a string — numeric id spaces parse their own.
  */
 export type ActuatorTaskParameter =
-  | { type: 'select'; label: string; optionsRoute: string }
+  | { type: 'select'; label: string; optionsRoute: TaskOptionsRoute }
   | { type: 'text'; label: string }
   | { type: 'fields'; label: string; fields: ActuatorTaskParameterField[] };
 
@@ -110,28 +190,4 @@ export interface MediaActuator {
 /** Whether a constructed provider plays the `MediaActuator` role. */
 export function isMediaActuator(provider: object): provider is MediaActuator {
   return typeof (provider as Partial<MediaActuator>).tasks === 'function';
-}
-
-/**
- * The single authority for `MediaSource` role membership: which provider type
- * owns which content type's catalog. Every other surface derives from this map
- * rather than re-declaring it.
- */
-export const SOURCE_OWNER: Record<ContentType, MetadataProviderType> = {
-  movie: MetadataProviderType.RADARR,
-  series: MetadataProviderType.SONARR,
-};
-
-const SOURCE_TYPES = new Set<MetadataProviderType>(Object.values(SOURCE_OWNER));
-
-/** Whether a provider type owns a media catalog (plays the `MediaSource` role). */
-export function isMediaSourceType(type: MetadataProviderType): boolean {
-  return SOURCE_TYPES.has(type);
-}
-
-/** The content type a catalog-owning provider type owns, if any. */
-export function contentTypeOfSourceType(type: MetadataProviderType): ContentType | undefined {
-  return (Object.keys(SOURCE_OWNER) as ContentType[]).find(
-    (contentType) => SOURCE_OWNER[contentType] === type
-  );
 }

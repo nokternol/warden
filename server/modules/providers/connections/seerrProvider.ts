@@ -1,3 +1,4 @@
+import type { ProviderTypeEntry } from '../roles';
 import { BaseProviderConnection } from './baseProviderConnection';
 
 export interface SeerrRequestedBy {
@@ -45,6 +46,21 @@ interface SeerrSearchResponse {
 const SEERR_PAGE_SIZE = 100;
 
 export class SeerrProvider extends BaseProviderConnection {
+  /** How this provider type is presented, reached and what it can do. */
+  static readonly catalogueEntry = {
+    label: 'Seerr',
+    apiKeyRequired: true,
+    hostPlaceholder: 'http://localhost:5055',
+    apiPath: '',
+    filterData: ['Request queue'],
+    capabilities: {},
+  } as const satisfies ProviderTypeEntry;
+
+  /** One call that needs the key, so a wrong key fails the test. */
+  async testConnection(): Promise<void> {
+    await this.client.get('api/v1/auth/me', { headers: this.authHeader }).json();
+  }
+
   private get authHeader() {
     return { 'X-Api-Key': this.provider.apiKey ?? '' };
   }

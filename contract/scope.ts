@@ -45,7 +45,8 @@ export const scope: Scope = {
       // No consumer until per-source ratings have an identity-keyed store;
       // see docs/intent/media-ratings-provider.md.
       'OMDB',
-      // Not buildable through ProviderFactory: its API key is lost.
+      // The owner does not configure it: it is keyless, and used only as the catalog refresh's
+      // title lookup.
       'TVMAZE',
     ],
     rules: [

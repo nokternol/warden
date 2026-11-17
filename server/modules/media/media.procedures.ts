@@ -1,14 +1,15 @@
 import type { ContentType } from '@contract/schemas';
-import { MetadataProviderType } from '@server/database/schema';
+import type { MetadataProviderType } from '@server/database/schema';
 import { api } from '@server/kernel/api';
 import type { DrizzleDb } from '@server/kernel/db';
 import type { DomainEventBus } from '@server/kernel/eventBus';
 import { getChildLogger } from '@server/kernel/logger';
-import type {
-  ProviderListsData,
-  ProviderSettingsService,
-  RadarrMovie,
-  SonarrSeries,
+import {
+  type ProviderListsData,
+  type ProviderSettingsService,
+  type RadarrMovie,
+  SOURCE_OWNER,
+  type SonarrSeries,
 } from '@server/modules/providers';
 import { type FilterReadiness, filterAnswer, findingsFor } from './filterReadiness';
 import type { CopyRecord, Library, LibraryCache, LibraryCopy } from './libraryCache';
@@ -190,20 +191,20 @@ export function createMediaProcedures(cradle: MediaCradle) {
 
     tags: api.media.tags.handler(
       fromLibrary((library) => ({
-        radarr: listOf(library, MetadataProviderType.RADARR, 'tags'),
-        sonarr: listOf(library, MetadataProviderType.SONARR, 'tags'),
+        radarr: listOf(library, SOURCE_OWNER.movie, 'tags'),
+        sonarr: listOf(library, SOURCE_OWNER.series, 'tags'),
       }))
     ),
 
     qualityProfiles: api.media.qualityProfiles.handler(
       fromLibrary((library) => ({
-        radarr: listOf(library, MetadataProviderType.RADARR, 'qualityProfiles'),
-        sonarr: listOf(library, MetadataProviderType.SONARR, 'qualityProfiles'),
+        radarr: listOf(library, SOURCE_OWNER.movie, 'qualityProfiles'),
+        sonarr: listOf(library, SOURCE_OWNER.series, 'qualityProfiles'),
       }))
     ),
 
     languageProfiles: api.media.languageProfiles.handler(
-      fromLibrary((library) => listOf(library, MetadataProviderType.SONARR, 'languageProfiles'))
+      fromLibrary((library) => listOf(library, SOURCE_OWNER.series, 'languageProfiles'))
     ),
 
     genres: api.media.genres.handler(
