@@ -86,5 +86,5 @@ condition:
 
 `mediaQueryEngine` is registered as a singleton in
 [`media.registrations.ts`](ref:path:server/modules/media/media.registrations.ts) and injected into the
-Media page procedures, the query procedures and the automation executor. The executor falls back to
-`new MediaQueryEngine()` when none is injected.
+Media page procedures, the query procedures and the automation executor, each of which requires it.
+The media index exports it as a type only: nothing outside the container constructs it.

@@ -6,17 +6,16 @@ consumer does with it. Consumers keep no rules of their own.
 
 ## Why it exists
 
-Four places used to answer that question, each with its own rules and wording: saved-query health, the
-Media page's "no data" warning, the executor's pre-run check, and the query list's client-side reasons.
-They contradicted each other. A query showed healthy while the Media page warned about it. An
-automation was skipped for a reason no other screen showed. The Media page's warning travelled as a
-provider failure named after a rule. Reviews of the unified design also found two safety defects, both
-now closed here:
+Every screen that shows a filter list, and the executor before it runs one, needs the same answer.
+Saved-query health, the Media page's "no data" warning, the executor's pre-run check and the query
+list's reasons all read it from here, so a query cannot show healthy on one screen while another warns
+about it, and an automation is never skipped for a reason no screen shows. Two safety rules hold
+here:
 
-- A Plex, Jellyfin or Tautulli automation was refused whenever a filter named a source instance, though
-  the engine matches such a filter on the pooled catalog by each title's own source instance.
-- Deleting a query an automation used silently dropped it from the automation, so a dropped exclude
-  widened what a destructive task acted on. The database now refuses that delete: the
+- A Plex, Jellyfin or Tautulli automation is not refused because a filter names a source instance: the
+  engine matches such a filter on the pooled catalog by each title's own source instance.
+- A query an automation uses cannot be deleted, so an exclude can never drop out from under a
+  destructive task and widen what it acts on. The database refuses that delete: the
   `automation_queries.queryId` foreign key restricts it
   ([`server/database/schema.ts`](ref:path:server/database/schema.ts)), and the query row shows why.
 

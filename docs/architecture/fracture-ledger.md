@@ -730,6 +730,38 @@ Earlier entries in this ledger use the names that were current when they healed 
 - **Left on purpose:** facts are still declared by provider type in media's tables, and Search still
   builds its own connections; both are allowlisted in the guard test and recorded as Open below.
 
+### Collaborators reached several ways (recorded and healed 2026-11-21, MVP slice C8)
+
+- **Fracture:** north-star belief 8 says "each idea in Warden has one name and one way of working … in
+  how Warden is built. Two ways of answering one question is a defect, however well each works." How a
+  piece received what it depended on had four answers. Some collaborators were required from the
+  container. The automation executor made its provider factory, query engine, system task runner and
+  event bus optional and built a factory and an engine of its own when one was missing. The provider
+  settings service, the active field set cache and the catalog refresh took their event bus, precedence
+  check or TVmaze lookup as optional and silently skipped the work without one. The jobs' per-run lists
+  were optional keys with `?? []` fallbacks, and the catalog refresh supplied its own TVmaze delay at the
+  point of use. Six procedure factories declared private cradle types beside each module's registered
+  one, two of them under the same names (`MediaCradle`, `ProvidersCradle`) with different members, one
+  making `db` optional behind a runtime guard.
+- **How it misled:** a piece could quietly run without something it relied on. A provider service built
+  without a bus never told the library cache or the active field set that a provider changed (belief 4:
+  the cache is never a second source of answers), and one built without a validator saved providers
+  unchecked. Each fallback existed only for the tests of its day, so production and tests exercised
+  different ways of working, and a reader of a procedure's cradle type could not tell which module's
+  slice it described.
+- **Healed by:** one rule, stated in the modules README: every collaborator and every piece of run data
+  a piece receives is required; a setting may arrive with a default at construction, but the class never
+  supplies its own value at the point of use; a service or procedure takes a `Pick` of the registered
+  module cradles and `KernelCradle`; only a module's registrations file declares a cradle type. The
+  executor, the provider settings service, the active field set cache and both refresh jobs require
+  their collaborators and run data; the precedence check is registered by media, which owns the
+  precedence it checks, so assembly registers nothing inline. Tests build pieces with test
+  collaborators from one helper file. `ProviderFactory` and `MediaQueryEngine` are type-only exports,
+  since nothing outside the container constructs them.
+- **Left on purpose:** the automation service's default for the scope declaration is the one remaining
+  constructor default on a collaborator; the scope declaration is being reframed as feature flags, which
+  decide how it is received.
+
 ## Open
 
 ### Media-server links — one id per title (recorded 2026-11-16, MVP slice C12)

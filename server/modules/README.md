@@ -2,6 +2,30 @@
 
 Feature modules. Each module owns its part of the API contract's procedures (e.g., media, automations, providers), and — per `docs/architecture/server-architecture.md` — its domain logic too, exposed through a deliberately crafted public interface (`index.ts`, never a wholesale re-export). `providers/`, `media/`, `mediaQueries/`, `automations/`, `auth/`, `system/`, and `appSettings/` have converged: each owns its services/jobs behind its `index.ts` and a `<module>.registrations.ts` (a `<Module>Cradle` + `register<Module>Dependencies()`, composed into `server/container.ts`); everything outside a module imports only its `index.ts`. The module-boundary and direction rules this convergence produced are enforced by `yarn depcruise:ci` (`.dependency-cruiser.cjs`), and `server/__tests__/boundaries.test.ts` fails when a module directory has no direction rule; the fracture ledger's "Server layering" entry (`docs/architecture/fracture-ledger.md`) is the historical record of how it converged.
 
+## What a piece receives
+
+One rule for how every service, procedure and job in `server/modules` gets what it depends on:
+
+- **Every collaborator and every piece of run data is required.** No optional collaborator, no
+  fallback that builds one (`deps.x ?? new X()`), no optional call (`this.x?.emit(...)`) and no skip or
+  runtime guard when one is missing. Production always supplies it; a test supplies a test one
+  (`tests/helpers/collaborators.ts`, `tests/helpers/library.ts`).
+- **A setting is a dependency too.** It may arrive through the constructor with a default value, so a
+  caller need not pass it, but the class takes that default when it is constructed. It never supplies
+  its own value at the point of use (`this.deps.x ?? fallback`), and never reads a setting from
+  anywhere except what it was given. `CatalogRefreshJob`'s `delay` is the example: defaulted in its
+  constructor, called as `this.deps.delay(500)`.
+- **A required member may be typed narrowly** (`Pick<LibraryCache, 'contentOf'>`) as a test seam.
+- **A service or procedure receives container members:** a `Pick` of the registered module cradles and
+  `KernelCradle`, or a literal of the same keys. A procedure's needs are never a second type of its own.
+- **A job receives what its factory passes for one run.** A value that can be absent is a required key,
+  typed `X | undefined` or an empty list, never a missing key.
+- **Only a module's `<module>.registrations.ts` declares a `*Cradle` type** in `server/modules`;
+  assembly's `Cradle` (`server/container.ts`) and the kernel's `KernelCradle` are the other two.
+- **Which modules a piece may take types from** is the direction graph in `.dependency-cruiser.cjs`. A
+  value from a module it may not import is typed by its own module (dependency inversion), as
+  providers' `ProviderListsReader` types media's library copy and system's `*Like` types do.
+
 ## Transport: procedures of the API contract
 
 The HTTP API is declared once in the top-level `contract/` folder (oRPC, contract-first; see
