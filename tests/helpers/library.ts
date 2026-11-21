@@ -13,7 +13,6 @@ import type { EnrichmentFields } from '@server/modules/media';
 import { LibraryCache } from '@server/modules/media/libraryCache';
 import {
   type IProviderFactory,
-  ProviderFactory,
   type ProviderSettingsService,
   type RadarrMovie,
   type RadarrProvider,
@@ -24,6 +23,7 @@ import {
   recordRefreshed,
 } from '@server/modules/providers';
 import { CatalogRefreshJob } from '@server/modules/providers/catalogRefreshJob';
+import { ProviderFactory } from '@server/modules/providers/providerFactory';
 import { emptyCatalogRun } from '@tests/helpers/collaborators';
 import { and, eq } from 'drizzle-orm';
 

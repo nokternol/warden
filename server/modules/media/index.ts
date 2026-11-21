@@ -76,22 +76,14 @@ export type {
 } from './filterReadiness';
 
 // The one evaluation of the catalog: which titles a set of conditions selects among copies.
-export { MediaQueryEngine } from './mediaQueryEngine';
+export type { MediaQueryEngine } from './mediaQueryEngine';
 
 // Enrichment — the job that stores each provider's facts.
 export { EnrichmentJobFactory } from './enrichmentJobFactory';
 export type { EnrichmentJobFactoryDeps } from './enrichmentJobFactory';
 
-// Precedence — per-field resolution order for a contested field, and the
-// fail-fast guardrail the composition root wires into
-// ProviderSettingsService's precedenceCoverageValidator hook.
-export {
-  assertContestedFieldsCovered,
-  contestedFieldPrecedence,
-} from './enrichment/precedence';
+// Precedence — the per-field resolution order for a contested field.
 export type { ContestedFieldPrecedence } from './enrichment/precedence';
 
-// Field ownership — which provider type produces which EnrichmentFields key,
-// and the cache the composition root derives providers/gating from.
-export { fieldsByProviderType, ActiveFieldSetCache } from './activeFieldSet';
+// The facts a title can carry beyond its catalog record.
 export type { EnrichmentFields } from './mediaFieldProvider';
