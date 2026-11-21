@@ -1,14 +1,11 @@
 import { api } from '@server/kernel/api';
-import type { LibraryCache, MediaQueryEngine } from '@server/modules/media';
-import type { MediaQueryService } from './mediaQueryService';
+import type { MediaCradle } from '@server/modules/media';
+import type { MediaQueriesCradle } from './mediaQueries.registrations';
 
-interface Cradle {
-  mediaQueryService: MediaQueryService;
-  mediaQueryEngine: MediaQueryEngine;
-  libraryCache: Pick<LibraryCache, 'contentOf'>;
-}
-
-export function createMediaQueryProcedures(cradle: Cradle) {
+export function createMediaQueryProcedures(
+  cradle: Pick<MediaQueriesCradle, 'mediaQueryService'> &
+    Pick<MediaCradle, 'mediaQueryEngine' | 'libraryCache'>
+) {
   const { mediaQueryService, mediaQueryEngine, libraryCache } = cradle;
 
   return api.mediaQueries.router({

@@ -1,15 +1,15 @@
 import { apiUrlOf } from '@contract/providerUrl';
 import type { ProviderType, TaskOptionsRoute } from '@contract/providers';
-import { type Scope, isOfferedProviderType, isOfferedTask } from '@contract/scope';
+import { isOfferedProviderType, isOfferedTask } from '@contract/scope';
 import type { MetadataProviderType } from '@server/database/schema';
 import { api } from '@server/kernel/api';
+import type { KernelCradle } from '@server/kernel/container';
 import { ValidationError } from '@server/kernel/errors';
 import { getChildLogger } from '@server/kernel/logger';
 import { probeConnection } from './connectionProbe';
 import { PROVIDER_CATALOGUE, describeProviderTypes, providerTypeLabel } from './providerCatalogue';
-import type { ProviderFactory } from './providerFactory';
 import type { ProviderListsReader } from './providerListsReader';
-import type { ProviderSettingsService } from './providerSettingsService';
+import type { ProvidersCradle } from './providers.registrations';
 import { type MediaActuator, isMediaActuator } from './roles';
 import { readEnabledTaskIds } from './taskEnablement';
 
@@ -25,14 +25,6 @@ type ProviderTypesAgree = [ProviderType] extends [`${MetadataProviderType}`]
     : never
   : never;
 const _providerTypesAgree: ProviderTypesAgree = true;
-
-interface ProvidersCradle {
-  providerSettingsService: ProviderSettingsService;
-  providerFactory: ProviderFactory;
-  /** The library copy's stored lists, which task parameter choices are read from. */
-  libraryCache: ProviderListsReader;
-  scope: Scope;
-}
 
 interface TaskOption {
   id: string;
@@ -72,7 +64,14 @@ async function storedChoices(
  * The `providers` procedures of the API contract: configured-instance CRUD,
  * connection probing, and provider capabilities.
  */
-export function createProvidersProcedures(cradle: ProvidersCradle) {
+/**
+ * `libraryCache` is media's library copy, which providers may not import: it is typed by the
+ * stored lists task parameter choices are read from.
+ */
+export function createProvidersProcedures(
+  cradle: Pick<ProvidersCradle, 'providerSettingsService' | 'providerFactory'> &
+    Pick<KernelCradle, 'scope'> & { libraryCache: ProviderListsReader }
+) {
   const { providerSettingsService, providerFactory, libraryCache, scope } = cradle;
 
   /** Refuses a provider type the scope declaration defers. */

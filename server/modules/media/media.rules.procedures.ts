@@ -1,7 +1,8 @@
 import type { ContentType } from '@contract/schemas';
-import { type Scope, isOfferedProviderType, isOfferedRule } from '@contract/scope';
+import { isOfferedProviderType, isOfferedRule } from '@contract/scope';
 import { api } from '@server/kernel/api';
-import type { ActiveFieldSetCache } from './activeFieldSet';
+import type { KernelCradle } from '@server/kernel/container';
+import type { MediaCradle } from './media.registrations';
 import { MEDIA_RULES, toDescriptor } from './ruleRegistry';
 import type { MediaRule, MediaRuleDescriptor } from './ruleRegistry';
 
@@ -12,12 +13,9 @@ import type { MediaRule, MediaRuleDescriptor } from './ruleRegistry';
 // handler needs.
 const RULES: readonly MediaRule[] = MEDIA_RULES;
 
-interface RulesCradle {
-  activeFieldSetCache: ActiveFieldSetCache;
-  scope: Scope;
-}
-
-export function createRulesProcedures(cradle: RulesCradle) {
+export function createRulesProcedures(
+  cradle: Pick<MediaCradle, 'activeFieldSetCache'> & Pick<KernelCradle, 'scope'>
+) {
   const { activeFieldSetCache, scope } = cradle;
 
   async function gatedDescriptors(contentType?: ContentType): Promise<MediaRuleDescriptor[]> {
