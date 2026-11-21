@@ -15,6 +15,7 @@ import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryServic
 import { ProviderSettingsService } from '@server/modules/providers';
 import { createMockConfig, createRadarrMovie } from '@tests/factories';
 import { createApiClient, expectErrorResponse, expectSuccessResponse } from '@tests/helpers/api';
+import { providerSettingsCollaborators } from '@tests/helpers/collaborators';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { refreshCatalog } from '@tests/helpers/library';
 import { server } from '@tests/mocks/server';
@@ -47,7 +48,10 @@ describe('POST /api/automations/preview', () => {
     const container = buildContainer({ config, db });
     cradle = container.cradle;
 
-    const radarr = await new ProviderSettingsService({ db }).create({
+    const radarr = await new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db,
+    }).create({
       type: MetadataProviderType.RADARR,
       name: 'Test Radarr',
       url: RADARR_URL,

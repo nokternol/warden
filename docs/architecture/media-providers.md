@@ -86,8 +86,7 @@ titles by the Plex column without being the media server for it.
 endpoint).
 
 **What the app can pull today** ([`connections/tautulliProvider.ts`](ref:path:server/modules/providers/connections/tautulliProvider.ts)):
-`getLibraryStats()`, `getHomeStats()`, `getHistory()` (every row, paged 1000 at a time),
-`searchHistory(title)`. History rows leave the provider with `rating_key`/`grandparent_rating_key`
+`getHistory()` (every row, paged 1000 at a time) and `searchHistory(title)`. History rows leave the provider with `rating_key`/`grandparent_rating_key`
 as text: Tautulli sends them as numbers, and every other Plex key in Warden is text, so a numeric
 key would never match a Plex item.
 

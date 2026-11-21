@@ -49,6 +49,10 @@ owns it. A module is a vertical slice of the product, not an HTTP surface.
   `KernelCradle` and every module's `<Module>Cradle`, calls `createKernelContainer()` then each module's
   `register<Module>Dependencies()`, and owns nothing domain-specific itself — its inline registration
   block is empty; every `Cradle` entry comes from a kernel or module registrations file.
+- **What a piece receives follows one rule**, stated in
+  [`server/modules/README.md`](ref:path:server/modules/README.md): every collaborator and piece of run
+  data is required, a setting is defaulted at construction and never at the point of use, and a
+  service or procedure takes a `Pick` of the registered cradles rather than a cradle type of its own.
 - No event-driven ceremony for synchronous flows: when automations needs to evaluate media rules, it
   imports the media module's public API directly. The event bus is for genuinely asynchronous domain
   events, not a mandatory indirection.

@@ -9,6 +9,7 @@ import { ProviderSettingsService } from '@server/modules/providers';
 import { createProvidersProcedures } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient, expectErrorResponse, expectSuccessResponse } from '@tests/helpers/api';
+import { providerSettingsCollaborators } from '@tests/helpers/collaborators';
 import { refreshCatalog } from '@tests/helpers/library';
 import { proceduresOffered } from '@tests/helpers/scope';
 import { server } from '@tests/mocks/server';
@@ -38,7 +39,10 @@ describe('Providers API Integration', () => {
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
     cradle = container.cradle;
-    providerSettingsService = new ProviderSettingsService({ db });
+    providerSettingsService = new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db,
+    });
 
     app = express();
     app.use(express.json());

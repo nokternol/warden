@@ -7,29 +7,6 @@ export const tautulliHandlers = [
     const url = new URL(request.url);
     const cmd = url.searchParams.get('cmd');
 
-    if (cmd === 'get_libraries_table') {
-      return HttpResponse.json({
-        response: {
-          result: 'success',
-          data: {
-            data: [
-              { section_id: 1, section_name: 'Movies', section_type: 'movie', count: 100 },
-              { section_id: 2, section_name: 'TV Shows', section_type: 'show', count: 50 },
-            ],
-          },
-        },
-      });
-    }
-
-    if (cmd === 'get_home_stats') {
-      return HttpResponse.json({
-        response: {
-          result: 'success',
-          data: [{ stat_id: 'top_movies', rows: [{ title: 'The Matrix', total_plays: 10 }] }],
-        },
-      });
-    }
-
     // Shapes as a live Tautulli v2 server sends them: keys are numbers, the play's times are
     // `date`/`started`/`stopped` in Unix seconds, and a grouped row merges several sessions.
     if (cmd === 'get_history') {

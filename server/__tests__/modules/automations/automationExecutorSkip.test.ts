@@ -1,9 +1,3 @@
-/**
- * An automation that can no longer run is skipped, not run: the run is recorded as
- * `skipped` with the reason, and nothing reaches the actuator.
- *
- * Run: vitest run --project server
- */
 import {
   MetadataProviderType,
   automationRunItems,
@@ -21,6 +15,13 @@ import { AutomationService } from '@server/modules/automations/automationService
 import type { Filter } from '@server/modules/media/ruleRegistry';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
+/**
+ * An automation that can no longer run is skipped, not run: the run is recorded as
+ * `skipped` with the reason, and nothing reaches the actuator.
+ *
+ * Run: vitest run --project server
+ */
+import { executorCollaborators, providerSettingsCollaborators } from '@tests/helpers/collaborators';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { libraryCacheHolding, libraryCacheOver } from '@tests/helpers/library';
 import { http, HttpResponse } from 'msw';
@@ -55,9 +56,13 @@ describe('AutomationExecutor — invalid automations', () => {
     await initializeDatabase(testConfig);
     const db = getDb();
     automationService = new AutomationService({ db });
-    providerSettingsService = new ProviderSettingsService({ db });
+    providerSettingsService = new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db,
+    });
     mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
     executor = new AutomationExecutor({
+      ...executorCollaborators(),
       automationService,
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
@@ -65,7 +70,6 @@ describe('AutomationExecutor — invalid automations', () => {
       mediaQueryService,
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),
-      db,
     });
     unmonitorCalls = 0;
     server.use(
@@ -212,6 +216,7 @@ describe('AutomationExecutor — invalid automations', () => {
     bus.on('run:completed', (event) => completed.push(event));
     const db = getDb();
     const publishing = new AutomationExecutor({
+      ...executorCollaborators(),
       automationService,
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,

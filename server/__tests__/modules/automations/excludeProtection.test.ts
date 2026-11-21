@@ -1,7 +1,3 @@
-/**
- * Exclude protection works by title for every actuator: an exclude matching any copy of a title,
- * on any active instance, protects that title.
- */
 import { MetadataProviderType, mediaIdentity, mediaItems } from '@server/database/schema';
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
@@ -13,6 +9,11 @@ import { AutomationService } from '@server/modules/automations/automationService
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { PlexProvider, ProviderSettingsService, RadarrProvider } from '@server/modules/providers';
 import { createRadarrMovie } from '@tests/factories';
+/**
+ * Exclude protection works by title for every actuator: an exclude matching any copy of a title,
+ * on any active instance, protects that title.
+ */
+import { executorCollaborators, providerSettingsCollaborators } from '@tests/helpers/collaborators';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { libraryCacheHolding } from '@tests/helpers/library';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -51,7 +52,10 @@ describe('exclude protection', () => {
   beforeEach(async () => {
     await initializeDatabase(testConfig);
     const db = getDb();
-    providerSettingsService = new ProviderSettingsService({ db });
+    providerSettingsService = new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db,
+    });
     automationService = new AutomationService({ db });
     mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
     automationRunService = new AutomationRunService({ db });
@@ -108,6 +112,7 @@ describe('exclude protection', () => {
       .spyOn(plexInstance, 'deleteFromLibrary')
       .mockResolvedValue(undefined);
     const executor = new AutomationExecutor({
+      ...executorCollaborators(),
       automationService,
       automationRunService,
       providerSettingsService,
@@ -130,7 +135,6 @@ describe('exclude protection', () => {
             ),
         }))
       ),
-      db,
     });
     const everything = await mediaQueryService.create({
       name: 'Everything',
@@ -230,6 +234,7 @@ describe('exclude protection', () => {
     );
     const deleteMovies = vi.spyOn(radarrA, 'deleteMovies').mockResolvedValue(undefined);
     const executor = new AutomationExecutor({
+      ...executorCollaborators(),
       automationService,
       automationRunService,
       providerSettingsService,
@@ -250,7 +255,6 @@ describe('exclude protection', () => {
           rows: [createRadarrMovie({ id: 9, tmdbId: 100, title: 'Heat', tags: [KEEP_TAG] })],
         },
       ]),
-      db,
     });
     const everything = await mediaQueryService.create({
       name: 'Everything',
@@ -294,6 +298,7 @@ describe('exclude protection', () => {
     );
     const deleteMovies = vi.spyOn(radarrA, 'deleteMovies').mockResolvedValue(undefined);
     const executor = new AutomationExecutor({
+      ...executorCollaborators(),
       automationService,
       automationRunService,
       providerSettingsService,
@@ -322,7 +327,6 @@ describe('exclude protection', () => {
           ],
         },
       ]),
-      db,
     });
     const everything = await mediaQueryService.create({
       name: 'Everything',

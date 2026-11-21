@@ -1,6 +1,8 @@
-import { type AwilixContainer, type NameAndRegistrationPair, asClass } from 'awilix';
-import { ActiveFieldSetCache } from './activeFieldSet';
+import { type AwilixContainer, type NameAndRegistrationPair, asClass, asValue } from 'awilix';
+import type { PrecedenceCoverageValidator } from '../providers';
+import { ActiveFieldSetCache, fieldsByProviderType } from './activeFieldSet';
 import { EnrichmentQueries } from './enrichment/enrichment.queries';
+import { assertContestedFieldsCovered, contestedFieldPrecedence } from './enrichment/precedence';
 import { EnrichmentJobFactory } from './enrichmentJobFactory';
 import { FilterReadiness } from './filterReadiness';
 import { LibraryCache } from './libraryCache';
@@ -18,6 +20,12 @@ export interface MediaCradle {
   activeFieldSetCache: ActiveFieldSetCache;
   filterReadiness: FilterReadiness;
   libraryCache: LibraryCache;
+  /**
+   * The check `ProviderSettingsService` runs before activating a provider: every contested field's
+   * precedence order keeps an active producer. Media owns the precedence it checks; providers
+   * types the hook and never imports media.
+   */
+  precedenceCoverageValidator: PrecedenceCoverageValidator;
 }
 
 /**
@@ -35,6 +43,9 @@ export function registerMediaDependencies<TCradle extends MediaCradle>(
     activeFieldSetCache: asClass(ActiveFieldSetCache).singleton(),
     filterReadiness: asClass(FilterReadiness).singleton(),
     libraryCache: asClass(LibraryCache).singleton(),
+    precedenceCoverageValidator: asValue((activeTypes) =>
+      assertContestedFieldsCovered(activeTypes, contestedFieldPrecedence, fieldsByProviderType)
+    ),
   };
   // TCradle extends MediaCradle, so the slice's keys and resolver types
   // are a subset of the app pair type.

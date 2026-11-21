@@ -103,9 +103,9 @@ export class ActiveFieldSetCache {
   private cachedActiveTypes: Set<MetadataProviderType> | null = null;
   private generation = 0;
 
-  constructor(deps: { providerSettingsService: ActiveTypesSource; eventBus?: DomainEventBus }) {
+  constructor(deps: { providerSettingsService: ActiveTypesSource; eventBus: DomainEventBus }) {
     this.source = deps.providerSettingsService;
-    deps.eventBus?.on('provider:changed', () => {
+    deps.eventBus.on('provider:changed', () => {
       this.generation++;
       this.cached = null;
       this.cachedActiveTypes = null;

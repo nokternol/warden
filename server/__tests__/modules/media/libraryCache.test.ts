@@ -5,6 +5,7 @@ import { DomainEventBus } from '@server/kernel/eventBus';
 import { LibraryCache } from '@server/modules/media/libraryCache';
 import { CatalogRefreshJob } from '@server/modules/providers/catalogRefreshJob';
 import { createRadarrMovie } from '@tests/factories';
+import { emptyCatalogRun } from '@tests/helpers/collaborators';
 import { seedFacts } from '@tests/helpers/library';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -32,6 +33,7 @@ describe('LibraryCache', () => {
 
   async function refresh(titles: string[]) {
     await new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db: getDb(),
       movieSources: [
         {

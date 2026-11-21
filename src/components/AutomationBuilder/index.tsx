@@ -14,9 +14,9 @@ import { useProviderTasks } from '@app/hooks/useProviderTasks';
 import { descriptorFor, useProviderTypes } from '@app/hooks/useProviderTypes';
 import { blastRadius } from '@app/lib/blastRadius';
 import { cn } from '@app/lib/utils/cn';
+import { relativeTime, safeHumanSchedule } from '@app/lib/utils/time';
 import type { ProviderType } from '@contract/providers';
 import { Cron } from 'croner';
-import cronstrue from 'cronstrue';
 import { Clock, TriangleAlert, Zap } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -29,14 +29,6 @@ const SCHEDULE_PRESETS = [
   { label: 'Monthly', value: '0 2 1 * *' },
 ];
 
-function safeHumanSchedule(cron: string): string {
-  try {
-    return cronstrue.toString(cron, { use24HourTimeFormat: true });
-  } catch {
-    return 'Invalid cron expression';
-  }
-}
-
 function safeNextRun(cron: string): Date | null {
   try {
     const job = new Cron(cron, { paused: true });
@@ -46,25 +38,6 @@ function safeNextRun(cron: string): Date | null {
   } catch {
     return null;
   }
-}
-
-function relativeTime(isoOrDate: string | Date): string {
-  const date = typeof isoOrDate === 'string' ? new Date(isoOrDate) : isoOrDate;
-  const diffMs = date.getTime() - Date.now();
-  const abs = Math.abs(diffMs);
-  const past = diffMs < 0;
-
-  if (abs < 60_000) return past ? 'just now' : 'in <1m';
-  if (abs < 3_600_000) {
-    const m = Math.round(abs / 60_000);
-    return past ? `${m}m ago` : `in ${m}m`;
-  }
-  if (abs < 86_400_000) {
-    const h = Math.round(abs / 3_600_000);
-    return past ? `${h}h ago` : `in ${h}h`;
-  }
-  const d = Math.round(abs / 86_400_000);
-  return past ? `${d}d ago` : `in ${d}d`;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────

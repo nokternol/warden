@@ -10,6 +10,7 @@ import { AutomationService } from '@server/modules/automations/automationService
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
+import { providerSettingsCollaborators } from '@tests/helpers/collaborators';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import express, { type Express } from 'express';
 import request from 'supertest';
@@ -50,7 +51,10 @@ describe('serveApi — the contract served over HTTP', () => {
     const db = await initializeDatabase(config);
     const container = buildContainer({ config, db });
 
-    const provider = await new ProviderSettingsService({ db }).create({
+    const provider = await new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db,
+    }).create({
       type: MetadataProviderType.RADARR,
       name: 'Test Radarr',
       url: 'http://localhost:7878/api/v3',

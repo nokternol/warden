@@ -14,6 +14,7 @@ import {
   recordRefreshFailed,
   recordRefreshed,
 } from '@server/modules/providers';
+import { providerSettingsCollaborators } from '@tests/helpers/collaborators';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const testConfig = {
@@ -49,7 +50,10 @@ describe('FilterReadiness.readFacts', () => {
     const read = vi.spyOn(libraryCache, 'read');
 
     const facts = await new FilterReadiness({
-      providerSettingsService: new ProviderSettingsService({ db }),
+      providerSettingsService: new ProviderSettingsService({
+        ...providerSettingsCollaborators(),
+        db,
+      }),
       libraryCache,
     }).readFacts();
 

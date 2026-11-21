@@ -172,15 +172,15 @@ parameterized over `precedence`/`fieldsByType` rather than reading the module's 
 it's testable against synthetic data independent of today's fixed 3-provider contested set.
 
 `ProviderSettingsService` ([`providerSettingsService.ts`](ref:path:server/modules/providers/providerSettingsService.ts))
-exposes an optional `precedenceCoverageValidator` injection point — invoked with the prospective
-active-type set (current active types plus the type being activated) from `assertPrecedenceCovered`,
-run alongside the existing single-active-per-type check
+requires a `precedenceCoverageValidator`, typed by providers' own `PrecedenceCoverageValidator` and
+invoked with the prospective active-type set (current active types plus the type being activated)
+from `assertPrecedenceCovered`, run alongside the single-active-per-type check
 (`assertNoActiveConflict`) via `assertActivationIsValid`, both at `create`/`update`'s hook point. The
-class itself stays ignorant of `EnrichmentFields`/`media` entirely — the real validator (closing over
-`contestedFieldPrecedence` and `fieldsByProviderType`) is wired as a cradle value in
-[`server/container.ts`](ref:path:server/container.ts), the one place allowed to import from both
-`providers` and `media`, keeping `providers → media` illegal in both directions
-(enforced by a `depcruise` rule).
+class itself stays ignorant of `EnrichmentFields`/`media` entirely. Media registers the real
+validator (closing over `contestedFieldPrecedence` and `fieldsByProviderType`) in its own cradle
+([`media.registrations.ts`](ref:path:server/modules/media/media.registrations.ts)): media owns the
+precedence it checks and may import providers, and providers never imports media (enforced by the
+`depcruise` direction rules).
 
 The fail-fast path is unreachable with today's real data — both real contested fields already list
 every real producer (Tautulli, Plex, and now Jellyfin) — verified only against synthetic data. It

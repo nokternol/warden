@@ -24,11 +24,9 @@ export type { ProvidersCradle } from './providers.registrations';
 export type { ActuatorTask, ActuatorTaskDescriptor, AddressColumn, MediaActuator } from './roles';
 export { isMediaActuator } from './roles';
 
-// Factories: connections from stored settings, sources from connections.
-// ProviderFactory keeps a value export because consumers construct it as an
-// injection fallback; the container-only classes are types here.
-export { ProviderFactory } from './providerFactory';
-export type { IProviderFactory } from './providerFactory';
+// Factories: connections from stored settings, sources from connections. The container
+// constructs the factory; consumers receive it and type it from here.
+export type { IProviderFactory, ProviderFactory } from './providerFactory';
 
 // Provider settings — persistence and projection of configured providers.
 export { ProviderSettingsService } from './providerSettingsService';

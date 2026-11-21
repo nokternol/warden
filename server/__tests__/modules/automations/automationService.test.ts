@@ -6,6 +6,7 @@ import { ForbiddenError, ValidationError } from '@server/kernel/errors';
 import { AutomationService } from '@server/modules/automations/automationService';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
+import { providerSettingsCollaborators } from '@tests/helpers/collaborators';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -51,7 +52,10 @@ describe('AutomationService', () => {
     await initializeDatabase(testConfig);
     const db = getDb();
     automationService = new AutomationService({ db });
-    providerSettingsService = new ProviderSettingsService({ db });
+    providerSettingsService = new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db,
+    });
     mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
   });
 

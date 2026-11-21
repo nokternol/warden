@@ -3,7 +3,9 @@ import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.queries';
 import { EnrichmentJobFactory } from '@server/modules/media/enrichmentJobFactory';
-import { ProviderFactory, ProviderSettingsService } from '@server/modules/providers';
+import { ProviderSettingsService } from '@server/modules/providers';
+import { ProviderFactory } from '@server/modules/providers/providerFactory';
+import { providerSettingsCollaborators } from '@tests/helpers/collaborators';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { server } from '../../../../tests/mocks/server';
@@ -29,7 +31,10 @@ function makeFactory(): EnrichmentJobFactory {
   return new EnrichmentJobFactory({
     db,
     enrichmentQueries: new EnrichmentQueries({ db }),
-    providerSettingsService: new ProviderSettingsService({ db }),
+    providerSettingsService: new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db,
+    }),
     providerFactory: new ProviderFactory(),
   });
 }
@@ -46,7 +51,10 @@ describe('EnrichmentJobFactory', () => {
 
   it('wires the active Tautulli provider so the job persists play counts', async () => {
     const db = getDb();
-    const providerSettingsService = new ProviderSettingsService({ db });
+    const providerSettingsService = new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db,
+    });
     await providerSettingsService.create({
       type: MetadataProviderType.TAUTULLI,
       name: 'Test Tautulli',
@@ -80,7 +88,10 @@ describe('EnrichmentJobFactory', () => {
   it('wires the active Jellyfin provider so the job persists isFavorite', async () => {
     const JELLYFIN_URL = 'http://localhost:8096';
     const db = getDb();
-    const providerSettingsService = new ProviderSettingsService({ db });
+    const providerSettingsService = new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db,
+    });
     await providerSettingsService.create({
       type: MetadataProviderType.JELLYFIN,
       name: 'Test Jellyfin',

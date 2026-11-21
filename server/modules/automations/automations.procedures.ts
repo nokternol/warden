@@ -1,23 +1,20 @@
 import { api } from '@server/kernel/api';
 import { ConflictError } from '@server/kernel/errors';
 import { getChildLogger } from '@server/kernel/logger';
-import type { AutomationBlockService } from './automationBlockService';
-import type { AutomationExecutor } from './automationExecutor';
-import type { AutomationRunService } from './automationRunService';
-import type { AutomationScheduler } from './automationScheduler';
-import type { AutomationService } from './automationService';
+import type { AutomationsCradle } from './automations.registrations';
 
 const log = getChildLogger('AutomationProcedures');
 
-interface Cradle {
-  automationService: AutomationService;
-  automationRunService: AutomationRunService;
-  automationScheduler: AutomationScheduler;
-  automationExecutor: AutomationExecutor;
-  automationBlockService: AutomationBlockService;
-}
-
-export function createAutomationProcedures(cradle: Cradle) {
+export function createAutomationProcedures(
+  cradle: Pick<
+    AutomationsCradle,
+    | 'automationService'
+    | 'automationRunService'
+    | 'automationScheduler'
+    | 'automationExecutor'
+    | 'automationBlockService'
+  >
+) {
   const {
     automationService,
     automationRunService,

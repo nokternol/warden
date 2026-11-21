@@ -13,6 +13,7 @@ import { ValidationError } from '@server/kernel/errors';
 import { DomainEventBus } from '@server/kernel/eventBus';
 import { ActiveFieldSetCache } from '@server/modules/media/activeFieldSet';
 import { ProviderSettingsService } from '@server/modules/providers/providerSettingsService';
+import { providerSettingsCollaborators } from '@tests/helpers/collaborators';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const testConfig: AppConfig = {
@@ -34,7 +35,7 @@ describe('ProviderSettingsService', () => {
 
   beforeEach(async () => {
     await initializeDatabase(testConfig);
-    service = new ProviderSettingsService({ db: getDb() });
+    service = new ProviderSettingsService({ ...providerSettingsCollaborators(), db: getDb() });
   });
 
   afterEach(async () => {
@@ -385,7 +386,11 @@ describe('ProviderSettingsService', () => {
 
   it('emits provider:changed on create', async () => {
     const events = new DomainEventBus();
-    const withBus = new ProviderSettingsService({ db: getDb(), eventBus: events });
+    const withBus = new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db: getDb(),
+      eventBus: events,
+    });
     const listener = vi.fn();
     events.on('provider:changed', listener);
 
@@ -400,7 +405,11 @@ describe('ProviderSettingsService', () => {
 
   it('emits provider:changed on update', async () => {
     const events = new DomainEventBus();
-    const withBus = new ProviderSettingsService({ db: getDb(), eventBus: events });
+    const withBus = new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db: getDb(),
+      eventBus: events,
+    });
     const created = await withBus.create({
       type: MetadataProviderType.RADARR,
       name: 'Radarr',
@@ -416,7 +425,11 @@ describe('ProviderSettingsService', () => {
 
   it('deleting the only active Plex removes its fields from the active field set', async () => {
     const events = new DomainEventBus();
-    const withBus = new ProviderSettingsService({ db: getDb(), eventBus: events });
+    const withBus = new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db: getDb(),
+      eventBus: events,
+    });
     const fieldSet = new ActiveFieldSetCache({
       providerSettingsService: withBus,
       eventBus: events,
@@ -443,6 +456,7 @@ describe('ProviderSettingsService', () => {
       throw new ValidationError('TAUTULLI covers playCount but PLEX does not');
     });
     const withValidator = new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
       db: getDb(),
       precedenceCoverageValidator,
     });

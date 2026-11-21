@@ -6,7 +6,7 @@ import { getChildLogger } from '@server/kernel/logger';
 import {
   JellyfinProvider,
   PlexProvider,
-  type ProviderSettingsService,
+  type ProvidersCradle,
   RadarrProvider,
   SeerrProvider,
   SonarrProvider,
@@ -14,10 +14,6 @@ import {
 } from '@server/modules/providers';
 
 const log = getChildLogger('SearchProcedures');
-
-interface SearchCradle {
-  providerSettingsService: ProviderSettingsService;
-}
 
 const SEARCHABLE_TYPES = [
   MetadataProviderType.SONARR,
@@ -86,7 +82,7 @@ async function searchProvider(provider: MetadataProvider, title: string): Promis
   }
 }
 
-export function createSearchProcedures(cradle: SearchCradle) {
+export function createSearchProcedures(cradle: Pick<ProvidersCradle, 'providerSettingsService'>) {
   const { providerSettingsService } = cradle;
 
   return {

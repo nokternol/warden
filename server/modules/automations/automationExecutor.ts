@@ -1,18 +1,17 @@
 import type { AutomationPreview, AutomationReadiness } from '@contract/automations';
 import { type RefreshRecord, freshnessOf } from '@contract/media';
-import type { ReadinessFinding } from '@contract/readiness';
+import { type ReadinessFinding, instanceName } from '@contract/readiness';
 import {
   type AutomationRunStatus,
   type ContentType,
   isInstanceScopedValue,
 } from '@contract/schemas';
 import type { MetadataProvider, MetadataProviderType } from '../../database/schema';
-import type { DrizzleDb } from '../../kernel/db';
 import { ValidationError } from '../../kernel/errors';
 import type { DomainEventBus } from '../../kernel/eventBus';
 import { getChildLogger } from '../../kernel/logger';
 import {
-  MediaQueryEngine,
+  type MediaQueryEngine,
   actuatorIdOf,
   automationAnswer,
   findingsFor,
@@ -26,11 +25,11 @@ import {
   type ActuatorTask,
   type IProviderFactory,
   MEDIA_SERVER_BY_COLUMN,
-  ProviderFactory,
   type ProviderSettingsService,
   SOURCE_OWNER,
   isMediaActuator,
   isMediaSourceType,
+  providerTypeLabel,
   readEnabledTaskIds,
 } from '../providers';
 import type { AutomationBlockService } from './automationBlockService';
@@ -50,13 +49,12 @@ interface ExecutorDeps {
   mediaQueryService: MediaQueryService;
   filterReadiness: Pick<FilterReadiness, 'readFacts'>;
   automationBlockService: Pick<AutomationBlockService, 'reconcile'>;
-  providerFactory?: IProviderFactory;
-  mediaQueryEngine?: MediaQueryEngine;
+  providerFactory: IProviderFactory;
+  mediaQueryEngine: MediaQueryEngine;
   /** The library copy every plan reads. */
   libraryCache: Pick<LibraryCache, 'contentOf'>;
-  db?: DrizzleDb;
-  systemTaskRunner?: SystemTaskRunnerLike;
-  eventBus?: DomainEventBus;
+  systemTaskRunner: SystemTaskRunnerLike;
+  eventBus: DomainEventBus;
 }
 
 /**
@@ -191,16 +189,6 @@ function contentTypeOf(queries: LoadedQuery[]): ContentType {
   return queries[0]?.record.contentType ?? 'movie';
 }
 
-/** A stored provider type as a capitalised word. */
-function providerTypeName(type: string): string {
-  return type.charAt(0) + type.slice(1).toLowerCase();
-}
-
-/** "Radarr instance 3" — a provider instance named by its type and id. */
-function instanceName(type: string | undefined, providerId: number): string {
-  return `${type ? providerTypeName(type) : 'Provider'} instance ${providerId}`;
-}
-
 // ─── Executor ─────────────────────────────────────────────────────────────────
 
 export class AutomationExecutor {
@@ -213,9 +201,8 @@ export class AutomationExecutor {
   private readonly filterReadiness: Pick<FilterReadiness, 'readFacts'>;
   private readonly automationBlockService: Pick<AutomationBlockService, 'reconcile'>;
   private readonly libraryCache: Pick<LibraryCache, 'contentOf'>;
-  private readonly db?: DrizzleDb;
-  private readonly systemTaskRunner?: SystemTaskRunnerLike;
-  private readonly eventBus?: DomainEventBus;
+  private readonly systemTaskRunner: SystemTaskRunnerLike;
+  private readonly eventBus: DomainEventBus;
   private readonly inFlight = new Set<number>();
   private readonly providerTurns = new Map<number, Promise<void>>();
 
@@ -224,12 +211,11 @@ export class AutomationExecutor {
     this.automationRunService = deps.automationRunService;
     this.providerSettingsService = deps.providerSettingsService;
     this.mediaQueryService = deps.mediaQueryService;
-    this.providerFactory = deps.providerFactory ?? new ProviderFactory();
-    this.mediaQueryEngine = deps.mediaQueryEngine ?? new MediaQueryEngine();
+    this.providerFactory = deps.providerFactory;
+    this.mediaQueryEngine = deps.mediaQueryEngine;
     this.filterReadiness = deps.filterReadiness;
     this.automationBlockService = deps.automationBlockService;
     this.libraryCache = deps.libraryCache;
-    this.db = deps.db;
     this.systemTaskRunner = deps.systemTaskRunner;
     this.eventBus = deps.eventBus;
   }
@@ -252,7 +238,7 @@ export class AutomationExecutor {
       kind = automation.kind;
       taskId = automation.taskId;
 
-      this.eventBus?.emit('run:started', {
+      this.eventBus.emit('run:started', {
         automationId,
         kind,
         taskId: automation.taskId,
@@ -260,14 +246,11 @@ export class AutomationExecutor {
       });
 
       if (automation.kind === 'system') {
-        if (!this.systemTaskRunner) {
-          throw new Error('System automation requires a systemTaskRunner');
-        }
         try {
           itemCount = await this.systemTaskRunner.run(automation.taskId);
         } finally {
           // A refresh job rewrites the library copy whether it succeeds or fails partway.
-          this.eventBus?.emit('media:changed', {});
+          this.eventBus.emit('media:changed', {});
         }
         await this.recordResult(automationId, taskId, { itemCount, status: 'success', kind });
 
@@ -447,7 +430,7 @@ export class AutomationExecutor {
     const problems: string[] = [];
     if (!automationProvider.isActive) {
       problems.push(
-        `${instanceName(automationProvider.type, automationProvider.id)}, this automation's provider, is not an active provider`
+        `${instanceName({ id: automationProvider.id, typeLabel: providerTypeLabel(automationProvider.type) })}, this automation's provider, is not an active provider`
       );
     }
     const facts = await this.filterReadiness.readFacts();
@@ -726,7 +709,7 @@ export class AutomationExecutor {
           }),
     ]);
 
-    this.eventBus?.emit('run:completed', {
+    this.eventBus.emit('run:completed', {
       automationId,
       kind: result.kind,
       taskId,

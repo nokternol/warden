@@ -11,6 +11,7 @@ import { ProviderFactory } from '@server/modules/providers/providerFactory';
 import { ProviderSettingsService } from '@server/modules/providers/providerSettingsService';
 import type { CatalogRefreshJobLike } from '@server/modules/system/systemTaskRunner';
 import { createRadarrMovie, createSonarrSeries } from '@tests/factories';
+import { providerSettingsCollaborators } from '@tests/helpers/collaborators';
 import { server } from '@tests/mocks/server';
 import { eq } from 'drizzle-orm';
 import { http, HttpResponse } from 'msw';
@@ -45,7 +46,10 @@ function makeFactory(): CatalogRefreshJobFactory {
   const db = getDb();
   return new CatalogRefreshJobFactory({
     db,
-    providerSettingsService: new ProviderSettingsService({ db }),
+    providerSettingsService: new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db,
+    }),
     providerFactory: new ProviderFactory(),
   });
 }
@@ -62,7 +66,10 @@ describe('CatalogRefreshJobFactory', () => {
 
   it('resolves the active Radarr provider and populates identities; absent Plex does not throw', async () => {
     const db = getDb();
-    const providerSettingsService = new ProviderSettingsService({ db });
+    const providerSettingsService = new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db,
+    });
     await providerSettingsService.create({
       type: MetadataProviderType.RADARR,
       name: 'Test Radarr',
@@ -139,7 +146,10 @@ describe('CatalogRefreshJobFactory', () => {
 
   it('resolves the active Plex provider and writes plexRatingKey for matching identities', async () => {
     const db = getDb();
-    const providerSettingsService = new ProviderSettingsService({ db });
+    const providerSettingsService = new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db,
+    });
     await providerSettingsService.create({
       type: MetadataProviderType.PLEX,
       name: 'Test Plex',
@@ -167,7 +177,10 @@ describe('CatalogRefreshJobFactory', () => {
 
   it('resolves the active Jellyfin provider and writes jellyfinItemId for matching identities', async () => {
     const db = getDb();
-    const providerSettingsService = new ProviderSettingsService({ db });
+    const providerSettingsService = new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db,
+    });
     const jellyfinUrl = 'http://localhost:8096';
     await providerSettingsService.create({
       type: MetadataProviderType.JELLYFIN,
@@ -195,7 +208,10 @@ describe('CatalogRefreshJobFactory', () => {
 
   it('backfills tvMazeId for a Sonarr series via the tvMaze lookup', async () => {
     const db = getDb();
-    const providerSettingsService = new ProviderSettingsService({ db });
+    const providerSettingsService = new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db,
+    });
     await providerSettingsService.create({
       type: MetadataProviderType.SONARR,
       name: 'Test Sonarr',

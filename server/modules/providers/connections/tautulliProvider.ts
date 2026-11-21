@@ -2,23 +2,6 @@ import { MetadataProviderType } from '@server/database/schema';
 import type { ActuatorTask, MediaActuator, ProviderTypeEntry } from '../roles';
 import { BaseProviderConnection } from './baseProviderConnection';
 
-export interface TautulliLibraryStat {
-  section_id: number;
-  section_name: string;
-  section_type: string;
-  count: number;
-}
-
-export interface TautulliHomeStatRow {
-  title: string;
-  total_plays: number;
-}
-
-export interface TautulliHomeStat {
-  stat_id: string;
-  rows: TautulliHomeStatRow[];
-}
-
 export interface TautulliHistoryItem {
   /** `null` on a row with no stored history id yet, such as a stream still playing. */
   row_id?: number | null;
@@ -102,15 +85,6 @@ export class TautulliProvider extends BaseProviderConnection implements MediaAct
       .get('api/v2', { searchParams: { ...this.baseParams, cmd, ...extra } })
       .json<TautulliResponse<T>>();
     return resp.response.data;
-  }
-
-  public async getLibraryStats(): Promise<TautulliLibraryStat[]> {
-    const data = await this.command<{ data: TautulliLibraryStat[] }>('get_libraries_table');
-    return data.data;
-  }
-
-  public async getHomeStats(): Promise<TautulliHomeStat[]> {
-    return this.command<TautulliHomeStat[]>('get_home_stats');
   }
 
   /** Every play on record. Tautulli answers with 25 rows unless asked for more. */

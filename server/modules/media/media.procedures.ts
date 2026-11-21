@@ -1,22 +1,22 @@
 import type { ContentType } from '@contract/schemas';
 import type { MetadataProviderType } from '@server/database/schema';
 import { api } from '@server/kernel/api';
-import type { DrizzleDb } from '@server/kernel/db';
-import type { DomainEventBus } from '@server/kernel/eventBus';
+import type { KernelCradle } from '@server/kernel/container';
 import { getChildLogger } from '@server/kernel/logger';
 import {
   type ProviderListsData,
-  type ProviderSettingsService,
+  type ProvidersCradle,
   type RadarrMovie,
   SOURCE_OWNER,
   type SonarrSeries,
 } from '@server/modules/providers';
-import { type FilterReadiness, filterAnswer, findingsFor } from './filterReadiness';
-import type { CopyRecord, Library, LibraryCache, LibraryCopy } from './libraryCache';
+import { filterAnswer, findingsFor } from './filterReadiness';
+import type { CopyRecord, Library, LibraryCopy } from './libraryCache';
 import { paginateItems } from './media.pagination';
+import type { MediaCradle } from './media.registrations';
 import { sortMedia } from './media.sort';
 import type { EnrichmentFields } from './mediaFieldProvider';
-import type { MediaQueryEngine, SelectedTitle } from './mediaQueryEngine';
+import type { SelectedTitle } from './mediaQueryEngine';
 import { resetMediaData } from './mediaReset';
 import { sourceOwnership } from './mediaSourceFactory';
 import type { Filter } from './ruleRegistry';
@@ -34,17 +34,6 @@ function computeYearRange(items: Array<{ year?: number }>): {
     .filter((y): y is number => y !== undefined && y !== null && y >= 1888);
   if (years.length === 0) return { min: null, max: null };
   return { min: Math.min(...years), max: Math.max(...years) };
-}
-
-// ─── Handler cradle ────────────────────────────────────────────────────────────
-
-interface MediaCradle {
-  providerSettingsService: ProviderSettingsService;
-  mediaQueryEngine: MediaQueryEngine;
-  eventBus: DomainEventBus;
-  filterReadiness: Pick<FilterReadiness, 'readFacts'>;
-  libraryCache: Pick<LibraryCache, 'read' | 'contentOf'>;
-  db?: DrizzleDb;
 }
 
 /** How a browse page is ordered and which slice of the matches it holds. */
@@ -135,7 +124,11 @@ function listOf<K extends keyof ProviderListsData>(
     );
 }
 
-export function createMediaProcedures(cradle: MediaCradle) {
+export function createMediaProcedures(
+  cradle: Pick<MediaCradle, 'mediaQueryEngine' | 'filterReadiness' | 'libraryCache'> &
+    Pick<ProvidersCradle, 'providerSettingsService'> &
+    Pick<KernelCradle, 'eventBus' | 'db'>
+) {
   const { providerSettingsService, mediaQueryEngine } = cradle;
 
   /** A procedure answering from the library copy as the cache holds it now. */
@@ -242,9 +235,6 @@ export function createMediaProcedures(cradle: MediaCradle) {
     }),
 
     reset: api.media.reset.handler(async () => {
-      if (!cradle.db) {
-        throw new Error('resetMedia requires a database handle');
-      }
       const result = await resetMediaData(cradle.db);
       log.warn('Media data reset', { deletedIdentities: result.deletedIdentities });
       cradle.eventBus.emit('media:changed', {});

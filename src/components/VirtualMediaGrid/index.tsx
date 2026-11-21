@@ -10,8 +10,8 @@ const SKELETON_KEYS = Array.from({ length: 96 }, (_, i) => `skel-${i}`);
 
 // ─── Column breakpoints ────────────────────────────────────────────────────────
 // Uses container width (not viewport) so sidebar-narrowed areas get correct cols.
-// 520px threshold prevents the "2 huge columns" problem at tablet (sidebar ~220px
-// narrows a 768px viewport to ~548px, which was previously trapped at 2 cols).
+// The 480px threshold gives a tablet 3 columns at normal density: the ~220px sidebar
+// narrows a 768px viewport to ~548px, which would otherwise show 2 oversized columns.
 
 function getColumnCount(width: number, density: CardDensity = 'normal'): number {
   if (density === 'large') {

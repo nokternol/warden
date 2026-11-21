@@ -18,7 +18,8 @@ export interface EnricherSource {
 interface Deps {
   db: DrizzleDb;
   enrichmentQueries: EnrichmentQueries;
-  enrichers?: EnricherSource[];
+  /** Every active enricher; an empty list when none is active. */
+  enrichers: EnricherSource[];
 }
 
 /**
@@ -55,7 +56,7 @@ export class EnrichmentJob {
     const identities = await this.deps.db.select().from(mediaIdentity);
     const items = identities.map(hydrate);
 
-    for (const { providerId, name, enricher } of this.deps.enrichers ?? []) {
+    for (const { providerId, name, enricher } of this.deps.enrichers) {
       let result: Awaited<ReturnType<MediaEnricher['enrich']>>;
       try {
         result = await enricher.enrich(items);
