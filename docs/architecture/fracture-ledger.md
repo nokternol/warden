@@ -760,9 +760,24 @@ Earlier entries in this ledger use the names that were current when they healed 
   since nothing outside the container constructs them.
 - **Left on purpose:** the automation service's default for the scope declaration is the one remaining
   constructor default on a collaborator; the scope declaration is being reframed as feature flags, which
-  decide how it is received.
+  decide how it is received. Recorded as Open below ("The scope declaration — reached three ways").
 
 ## Open
+
+### The scope declaration — reached three ways (recorded 2026-11-21, MVP slice C8)
+
+- **Departure:** north-star belief 8 says "Each idea in Warden has one name and one way of working … in
+  how Warden is built. Two ways of answering one question is a defect, however well each works." The
+  scope declaration (what Warden offers) reaches its server readers three ways: injected from the
+  container (`providers.procedures.ts`, `media.rules.procedures.ts`), a constructor default that falls
+  back to the module constant
+  ([`server/modules/automations/automationService.ts`](ref:path:server/modules/automations/automationService.ts)),
+  and a direct import of the constant
+  ([`server/modules/media/filterReadiness.ts`](ref:path:server/modules/media/filterReadiness.ts),
+  [`server/modules/mediaQueries/mediaQueryService.ts`](ref:path:server/modules/mediaQueries/mediaQueryService.ts)).
+  A test or configuration that injects a different scope is obeyed by some readers and ignored by others.
+- **Heals by:** the feature-flags slice (#262), which reframes the scope declaration as feature flags and
+  decides the one way they are received.
 
 ### Media-server links — one id per title (recorded 2026-11-16, MVP slice C12)
 

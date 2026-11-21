@@ -208,6 +208,14 @@ await waitForLoadingToFinish();
 const element = getByTestId(container, 'my-element');
 ```
 
+#### Test Collaborators (`tests/helpers/collaborators.ts`)
+
+Services, jobs and procedures require every collaborator, so a test supplies stand-ins rather than leaving one out. Spread a helper first, then pass whichever collaborator the test observes:
+
+- `executorCollaborators()`: a real provider factory and query engine, a fresh event bus, and a system task runner that runs nothing, for `AutomationExecutor`.
+- `providerSettingsCollaborators()`: a fresh event bus and a precedence coverage check that accepts every active-type set, for `ProviderSettingsService`.
+- `emptyCatalogRun()`: a catalog refresh run with no sources, no active media server, a TVmaze lookup that finds nothing and no pause between lookups, for `CatalogRefreshJob`.
+
 #### Test Factories (`tests/factories/index.ts`)
 
 ```typescript

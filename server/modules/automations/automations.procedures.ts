@@ -5,7 +5,16 @@ import type { AutomationsCradle } from './automations.registrations';
 
 const log = getChildLogger('AutomationProcedures');
 
-export function createAutomationProcedures(cradle: AutomationsCradle) {
+export function createAutomationProcedures(
+  cradle: Pick<
+    AutomationsCradle,
+    | 'automationService'
+    | 'automationRunService'
+    | 'automationScheduler'
+    | 'automationExecutor'
+    | 'automationBlockService'
+  >
+) {
   const {
     automationService,
     automationRunService,

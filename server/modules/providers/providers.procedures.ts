@@ -63,8 +63,7 @@ async function storedChoices(
 /**
  * The `providers` procedures of the API contract: configured-instance CRUD,
  * connection probing, and provider capabilities.
- */
-/**
+ *
  * `libraryCache` is media's library copy, which providers may not import: it is typed by the
  * stored lists task parameter choices are read from.
  */
