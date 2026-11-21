@@ -37,6 +37,7 @@ import type { Filter, NormalizedMovie } from '@server/modules/media/ruleRegistry
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { PlexProvider, ProviderSettingsService } from '@server/modules/providers';
 import { CatalogRefreshJob } from '@server/modules/providers/catalogRefreshJob';
+import { executorCollaborators } from '@tests/helpers/collaborators';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { seedFacts } from '@tests/helpers/library';
 import { libraryCacheHolding, libraryCacheOver } from '@tests/helpers/library';
@@ -76,6 +77,7 @@ describe('filter readiness, as automations see it', () => {
     providerSettingsService = new ProviderSettingsService({ db });
     mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
     executor = new AutomationExecutor({
+      ...executorCollaborators(),
       automationService,
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
@@ -83,7 +85,6 @@ describe('filter readiness, as automations see it', () => {
       mediaQueryService,
       automationBlockService: new AutomationBlockService({ db: getDb() }),
       filterReadiness: filterReadinessOver(getDb()),
-      db,
     });
     unmonitorCalls = 0;
     server.use(
@@ -341,6 +342,7 @@ describe('a non-source actuator whose query names a source instance', () => {
       .spyOn(plexInstance, 'deleteFromLibrary')
       .mockResolvedValue(undefined);
     const executor = new AutomationExecutor({
+      ...executorCollaborators(),
       automationService,
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
@@ -356,7 +358,6 @@ describe('a non-source actuator whose query names a source instance', () => {
           ),
         },
       ]),
-      db,
     });
     return {
       db,

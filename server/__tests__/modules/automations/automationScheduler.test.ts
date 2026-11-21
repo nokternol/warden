@@ -9,21 +9,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('AutomationScheduler', () => {
   describe('construction', () => {
-    it('throws at construction time when automationExecutor is missing', () => {
-      expect(
-        () => new AutomationScheduler({} as ConstructorParameters<typeof AutomationScheduler>[0])
-      ).toThrow(/executor/i);
-    });
-
-    it('throws when automationExecutor is explicitly undefined', () => {
-      expect(
-        () =>
-          new AutomationScheduler({
-            automationExecutor: undefined,
-          } as unknown as ConstructorParameters<typeof AutomationScheduler>[0])
-      ).toThrow(/executor/i);
-    });
-
     it('constructs successfully with a valid executor', () => {
       const executor = { execute: vi.fn().mockResolvedValue(undefined) };
       expect(() => new AutomationScheduler({ automationExecutor: executor })).not.toThrow();

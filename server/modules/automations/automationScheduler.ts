@@ -17,9 +17,6 @@ export class AutomationScheduler {
   private readonly executor: Executor;
 
   constructor(deps: SchedulerDeps) {
-    if (!deps?.automationExecutor) {
-      throw new Error('AutomationScheduler requires an executor');
-    }
     this.executor = deps.automationExecutor;
   }
 

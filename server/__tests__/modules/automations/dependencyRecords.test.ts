@@ -1,8 +1,3 @@
-/**
- * A destructive run does not act when a provider it depends on failed its last refresh or has
- * never refreshed (north-star belief 7); a non-destructive run proceeds. Nothing here judges a
- * run by how much it would affect.
- */
 import { MetadataProviderType, automationRuns } from '@server/database/schema';
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
@@ -23,6 +18,12 @@ import {
   recordRefreshed,
 } from '@server/modules/providers';
 import { createRadarrMovie } from '@tests/factories';
+/**
+ * A destructive run does not act when a provider it depends on failed its last refresh or has
+ * never refreshed (north-star belief 7); a non-destructive run proceeds. Nothing here judges a
+ * run by how much it would affect.
+ */
+import { executorCollaborators } from '@tests/helpers/collaborators';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { refreshCopies } from '@tests/helpers/library';
 import { eq } from 'drizzle-orm';
@@ -86,6 +87,7 @@ describe('runs and the refresh records they depend on', () => {
   }) {
     const db = getDb();
     const executor = new AutomationExecutor({
+      ...executorCollaborators(),
       automationService,
       automationRunService: new AutomationRunService({ db }),
       providerSettingsService,
@@ -94,7 +96,6 @@ describe('runs and the refresh records they depend on', () => {
       filterReadiness: filterReadinessOver(db),
       providerFactory: { create: () => opts.connection },
       libraryCache: new LibraryCache({ db, eventBus: new DomainEventBus() }),
-      db,
     });
     const included = await mediaQueryService.create({
       name: 'Included',

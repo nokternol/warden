@@ -16,6 +16,7 @@ import { AutomationService } from '@server/modules/automations/automationService
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
 import { CatalogRefreshJob } from '@server/modules/providers/catalogRefreshJob';
+import { executorCollaborators } from '@tests/helpers/collaborators';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { libraryCacheHolding, libraryCacheOver } from '@tests/helpers/library';
 import { http, HttpResponse } from 'msw';
@@ -54,6 +55,7 @@ describe('AutomationExecutor writes to automation_runs', () => {
     providerSettingsService = new ProviderSettingsService({ db });
     mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
     executor = new AutomationExecutor({
+      ...executorCollaborators(),
       automationService,
       automationRunService,
       providerSettingsService,

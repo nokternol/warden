@@ -1,8 +1,3 @@
-/**
- * A run acts on the titles its automation's conditions select (north-star belief 3): a title is
- * every edition of it everywhere, so it is selected when any instance's copy meets a condition,
- * and the acting service acts on every copy of it the service holds.
- */
 import { MetadataProviderType } from '@server/database/schema';
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
@@ -19,6 +14,12 @@ import {
   RadarrProvider,
 } from '@server/modules/providers';
 import { createRadarrMovie } from '@tests/factories';
+/**
+ * A run acts on the titles its automation's conditions select (north-star belief 3): a title is
+ * every edition of it everywhere, so it is selected when any instance's copy meets a condition,
+ * and the acting service acts on every copy of it the service holds.
+ */
+import { executorCollaborators } from '@tests/helpers/collaborators';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { libraryCacheHolding } from '@tests/helpers/library';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -82,6 +83,7 @@ describe('runs act on the titles their conditions select', () => {
     );
     const deleteMovies = vi.spyOn(radarrA, 'deleteMovies').mockResolvedValue(undefined);
     const executor = new AutomationExecutor({
+      ...executorCollaborators(),
       automationService,
       automationRunService,
       providerSettingsService,
@@ -93,7 +95,6 @@ describe('runs act on the titles their conditions select', () => {
         { providerId: ids.a, rows: held.a },
         { providerId: ids.b, rows: held.b },
       ]),
-      db,
     });
     const query = await mediaQueryService.create({ name: 'Q', contentType: 'movie', filters });
     const automation = await automationService.create({
