@@ -47,10 +47,12 @@ should do. It makes whatever they decide possible, safe and repeatable.
    action acts on every copy of it the acting service holds, and an exclusion protects all of it.
    Each condition is judged on the title as a whole: a title meets it when any copy does, and
    different conditions may be met by different copies. This is the simplest rule, chosen on
-   purpose. It leaves a problem unsolved: when a title's editions are in different states (one has
-   a file, another has none), the title can meet conditions that contradict each other, and an
+   purpose. It leaves a problem unsolved: when a title's editions are in different states (one has a
+   file, another has none), the title can meet conditions that contradict each other, and an
    automation cannot reliably act on one edition's state. Treating editions separately is a later
-   requirement that needs deliberate design.
+   requirement that needs deliberate design. Each fact has one value per title. Where more than one
+   service reports the same fact about a title, a fixed precedence decides whose value Warden takes,
+   because nothing can act on a title whose facts disagree.
 
 4. **The services own the truth. Warden holds a copy for speed, never as the truth.** The owner's
    services are the record of what exists and what is known about it. Warden keeps a copy so it can
