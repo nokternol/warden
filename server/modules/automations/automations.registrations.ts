@@ -17,7 +17,6 @@ export interface AutomationsCradle {
   automationBlockService: AutomationBlockService;
   automationExecutor: AutomationExecutor;
   automationScheduler: AutomationScheduler;
-  /** `media`'s filter readiness reads the enrichment outcome through this. */
 }
 
 /**
