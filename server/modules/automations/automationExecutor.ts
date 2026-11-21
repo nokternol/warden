@@ -1,6 +1,6 @@
 import type { AutomationPreview, AutomationReadiness } from '@contract/automations';
 import { type RefreshRecord, freshnessOf } from '@contract/media';
-import type { ReadinessFinding } from '@contract/readiness';
+import { type ReadinessFinding, instanceName } from '@contract/readiness';
 import {
   type AutomationRunStatus,
   type ContentType,
@@ -29,6 +29,7 @@ import {
   SOURCE_OWNER,
   isMediaActuator,
   isMediaSourceType,
+  providerTypeLabel,
   readEnabledTaskIds,
 } from '../providers';
 import type { AutomationBlockService } from './automationBlockService';
@@ -186,16 +187,6 @@ function unrefreshedDependencies(
 /** The content type an automation's queries select; every query of one automation shares it. */
 function contentTypeOf(queries: LoadedQuery[]): ContentType {
   return queries[0]?.record.contentType ?? 'movie';
-}
-
-/** A stored provider type as a capitalised word. */
-function providerTypeName(type: string): string {
-  return type.charAt(0) + type.slice(1).toLowerCase();
-}
-
-/** "Radarr instance 3" — a provider instance named by its type and id. */
-function instanceName(type: string | undefined, providerId: number): string {
-  return `${type ? providerTypeName(type) : 'Provider'} instance ${providerId}`;
 }
 
 // ─── Executor ─────────────────────────────────────────────────────────────────
@@ -439,7 +430,7 @@ export class AutomationExecutor {
     const problems: string[] = [];
     if (!automationProvider.isActive) {
       problems.push(
-        `${instanceName(automationProvider.type, automationProvider.id)}, this automation's provider, is not an active provider`
+        `${instanceName({ id: automationProvider.id, typeLabel: providerTypeLabel(automationProvider.type) })}, this automation's provider, is not an active provider`
       );
     }
     const facts = await this.filterReadiness.readFacts();

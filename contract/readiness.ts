@@ -65,7 +65,7 @@ export type FindingDescription =
   | { kind: 'no-data'; ruleLabel: string; contentType: ContentType };
 
 /** "Radarr instance 3", or "Provider instance 3" for an instance that no longer exists. */
-function instanceName({ id, typeLabel }: NamedInstance): string {
+export function instanceName({ id, typeLabel }: NamedInstance): string {
   return `${typeLabel ?? 'Provider'} instance ${id}`;
 }
 
