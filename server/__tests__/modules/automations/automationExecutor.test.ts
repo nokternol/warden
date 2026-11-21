@@ -30,7 +30,7 @@ import {
   TautulliProvider,
 } from '@server/modules/providers';
 import type { ProviderConfig } from '@server/modules/providers/connections/baseProviderConnection';
-import { executorCollaborators } from '@tests/helpers/collaborators';
+import { executorCollaborators, providerSettingsCollaborators } from '@tests/helpers/collaborators';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { seedFacts } from '@tests/helpers/library';
 import { libraryCacheHolding, libraryCacheOver } from '@tests/helpers/library';
@@ -202,7 +202,10 @@ describe('AutomationExecutor', () => {
     await initializeDatabase(testConfig);
     const db = getDb();
     automationService = new AutomationService({ db });
-    providerSettingsService = new ProviderSettingsService({ db });
+    providerSettingsService = new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db,
+    });
     mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
     executor = new AutomationExecutor({
       ...executorCollaborators(),
@@ -1769,7 +1772,10 @@ describe('non-source actuators — id translation through the identity graph', (
     await initializeDatabase(testConfig);
     const db = getDb();
     automationService = new AutomationService({ db });
-    providerSettingsService = new ProviderSettingsService({ db });
+    providerSettingsService = new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db,
+    });
     mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
   });
 
@@ -2188,7 +2194,10 @@ describe('task parameters — stored on the automation, threaded into run', () =
     await initializeDatabase(testConfig);
     const db = getDb();
     automationService = new AutomationService({ db });
-    providerSettingsService = new ProviderSettingsService({ db });
+    providerSettingsService = new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db,
+    });
     mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
   });
 

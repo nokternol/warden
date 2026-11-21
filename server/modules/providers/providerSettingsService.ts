@@ -87,8 +87,8 @@ export type PrecedenceCoverageValidator = (activeTypes: Set<MetadataProviderType
  */
 export class ProviderSettingsService {
   private readonly db: DrizzleDb;
-  private readonly eventBus?: DomainEventBus;
-  private readonly precedenceCoverageValidator?: PrecedenceCoverageValidator;
+  private readonly eventBus: DomainEventBus;
+  private readonly precedenceCoverageValidator: PrecedenceCoverageValidator;
 
   constructor({
     db,
@@ -96,8 +96,8 @@ export class ProviderSettingsService {
     precedenceCoverageValidator,
   }: {
     db: DrizzleDb;
-    eventBus?: DomainEventBus;
-    precedenceCoverageValidator?: PrecedenceCoverageValidator;
+    eventBus: DomainEventBus;
+    precedenceCoverageValidator: PrecedenceCoverageValidator;
   }) {
     this.db = db;
     this.eventBus = eventBus;
@@ -134,14 +134,13 @@ export class ProviderSettingsService {
   }
 
   /**
-   * Runs the injected `precedenceCoverageValidator` (if any) against the
+   * Runs the injected `precedenceCoverageValidator` against the
    * prospective active-type set — current active types plus `type`, the one
    * being activated. Fails loudly here, at provider-activation time, if
    * activating `type` would leave a contested field's precedence order
    * missing an active producer.
    */
   private async assertPrecedenceCovered(type: MetadataProviderType): Promise<void> {
-    if (!this.precedenceCoverageValidator) return;
     const prospective = await this.activeTypes();
     prospective.add(type);
     this.precedenceCoverageValidator(prospective);
@@ -171,7 +170,7 @@ export class ProviderSettingsService {
     };
 
     const [raw] = await this.db.insert(metadataProviders).values(insert).returning();
-    this.eventBus?.emit('provider:changed', {});
+    this.eventBus.emit('provider:changed', {});
     log.debug('Provider created', { id: raw.id, type: raw.type });
     return summarize(raw);
   }
@@ -206,7 +205,7 @@ export class ProviderSettingsService {
       throw new NotFoundError(`Provider with id ${id} not found`);
     }
 
-    this.eventBus?.emit('provider:changed', {});
+    this.eventBus.emit('provider:changed', {});
     log.debug('Provider updated', { id });
     return summarize(raw);
   }
@@ -225,7 +224,7 @@ export class ProviderSettingsService {
 
   async delete(id: number): Promise<void> {
     await this.db.delete(metadataProviders).where(eq(metadataProviders.id, id));
-    this.eventBus?.emit('provider:changed', {});
+    this.eventBus.emit('provider:changed', {});
     log.debug('Provider deleted', { id });
   }
 

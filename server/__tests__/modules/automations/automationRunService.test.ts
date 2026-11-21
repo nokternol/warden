@@ -18,6 +18,7 @@ import type { NormalizedMovie } from '@server/modules/media';
 import { resetMediaData } from '@server/modules/media/mediaReset';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { ProviderSettingsService } from '@server/modules/providers';
+import { providerSettingsCollaborators } from '@tests/helpers/collaborators';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -42,7 +43,7 @@ const testConfig: AppConfig = {
 
 async function seedFixtures() {
   const db = getDb();
-  const providerService = new ProviderSettingsService({ db });
+  const providerService = new ProviderSettingsService({ ...providerSettingsCollaborators(), db });
   const mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
   const automationService = new AutomationService({ db });
 
@@ -211,7 +212,10 @@ describe('AutomationRunService', () => {
 
     it('filters runs by automationId', async () => {
       const db = getDb();
-      const providerService = new ProviderSettingsService({ db });
+      const providerService = new ProviderSettingsService({
+        ...providerSettingsCollaborators(),
+        db,
+      });
       const mediaQueryService = new MediaQueryService({
         db,
         filterReadiness: filterReadinessOver(db),

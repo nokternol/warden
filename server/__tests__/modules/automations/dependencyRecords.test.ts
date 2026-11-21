@@ -23,7 +23,7 @@ import { createRadarrMovie } from '@tests/factories';
  * never refreshed (north-star belief 7); a non-destructive run proceeds. Nothing here judges a
  * run by how much it would affect.
  */
-import { executorCollaborators } from '@tests/helpers/collaborators';
+import { executorCollaborators, providerSettingsCollaborators } from '@tests/helpers/collaborators';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { refreshCopies } from '@tests/helpers/library';
 import { eq } from 'drizzle-orm';
@@ -48,7 +48,10 @@ describe('runs and the refresh records they depend on', () => {
   beforeEach(async () => {
     await initializeDatabase(testConfig);
     const db = getDb();
-    providerSettingsService = new ProviderSettingsService({ db });
+    providerSettingsService = new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db,
+    });
     automationService = new AutomationService({ db });
     mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
     const tasks = { enabledTasks: ['deleteMovieWithFiles', 'triggerSearch'] };

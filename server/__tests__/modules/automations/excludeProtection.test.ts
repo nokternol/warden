@@ -13,7 +13,7 @@ import { createRadarrMovie } from '@tests/factories';
  * Exclude protection works by title for every actuator: an exclude matching any copy of a title,
  * on any active instance, protects that title.
  */
-import { executorCollaborators } from '@tests/helpers/collaborators';
+import { executorCollaborators, providerSettingsCollaborators } from '@tests/helpers/collaborators';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { libraryCacheHolding } from '@tests/helpers/library';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -52,7 +52,10 @@ describe('exclude protection', () => {
   beforeEach(async () => {
     await initializeDatabase(testConfig);
     const db = getDb();
-    providerSettingsService = new ProviderSettingsService({ db });
+    providerSettingsService = new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db,
+    });
     automationService = new AutomationService({ db });
     mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
     automationRunService = new AutomationRunService({ db });

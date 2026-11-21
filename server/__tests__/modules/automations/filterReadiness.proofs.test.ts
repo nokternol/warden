@@ -37,7 +37,7 @@ import type { Filter, NormalizedMovie } from '@server/modules/media/ruleRegistry
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import { PlexProvider, ProviderSettingsService } from '@server/modules/providers';
 import { CatalogRefreshJob } from '@server/modules/providers/catalogRefreshJob';
-import { executorCollaborators } from '@tests/helpers/collaborators';
+import { executorCollaborators, providerSettingsCollaborators } from '@tests/helpers/collaborators';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { seedFacts } from '@tests/helpers/library';
 import { libraryCacheHolding, libraryCacheOver } from '@tests/helpers/library';
@@ -74,7 +74,10 @@ describe('filter readiness, as automations see it', () => {
     await initializeDatabase(testConfig);
     const db = getDb();
     automationService = new AutomationService({ db });
-    providerSettingsService = new ProviderSettingsService({ db });
+    providerSettingsService = new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db,
+    });
     mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
     executor = new AutomationExecutor({
       ...executorCollaborators(),
@@ -294,7 +297,10 @@ describe('a non-source actuator whose query names a source instance', () => {
   /** A Plex actuator over one Radarr instance's pooled catalog of two tagged movies. */
   async function plexOverPooledRadarr() {
     const db = getDb();
-    const providerSettingsService = new ProviderSettingsService({ db });
+    const providerSettingsService = new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db,
+    });
     const automationService = new AutomationService({ db });
     const mediaQueryService = new MediaQueryService({
       db,

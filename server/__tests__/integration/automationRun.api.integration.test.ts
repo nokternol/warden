@@ -15,6 +15,7 @@ import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryServic
 import { ProviderSettingsService } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
 import { createApiClient } from '@tests/helpers/api';
+import { providerSettingsCollaborators } from '@tests/helpers/collaborators';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import express, { type Express } from 'express';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -127,7 +128,7 @@ describe('POST /api/automations/:id/run — Phase 3', () => {
 
   it('records a skipped run, not a success, for an automation that is no longer valid', async () => {
     const db = getDb();
-    const providers = new ProviderSettingsService({ db });
+    const providers = new ProviderSettingsService({ ...providerSettingsCollaborators(), db });
     const provider = await providers.create({
       type: MetadataProviderType.RADARR,
       name: 'Radarr',

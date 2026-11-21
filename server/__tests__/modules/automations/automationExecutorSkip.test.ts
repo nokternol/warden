@@ -21,7 +21,7 @@ import { ProviderSettingsService } from '@server/modules/providers';
  *
  * Run: vitest run --project server
  */
-import { executorCollaborators } from '@tests/helpers/collaborators';
+import { executorCollaborators, providerSettingsCollaborators } from '@tests/helpers/collaborators';
 import { filterReadinessOver } from '@tests/helpers/filterReadiness';
 import { libraryCacheHolding, libraryCacheOver } from '@tests/helpers/library';
 import { http, HttpResponse } from 'msw';
@@ -56,7 +56,10 @@ describe('AutomationExecutor — invalid automations', () => {
     await initializeDatabase(testConfig);
     const db = getDb();
     automationService = new AutomationService({ db });
-    providerSettingsService = new ProviderSettingsService({ db });
+    providerSettingsService = new ProviderSettingsService({
+      ...providerSettingsCollaborators(),
+      db,
+    });
     mediaQueryService = new MediaQueryService({ db, filterReadiness: filterReadinessOver(db) });
     executor = new AutomationExecutor({
       ...executorCollaborators(),
