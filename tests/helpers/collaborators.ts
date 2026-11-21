@@ -28,3 +28,20 @@ export function providerSettingsCollaborators() {
     precedenceCoverageValidator: (_activeTypes: Set<MetadataProviderType>) => {},
   };
 }
+
+/**
+ * A catalog refresh run with nothing to read: no sources, no active media server, a TVmaze lookup
+ * that finds nothing and no pause between lookups. A test spreads this first and passes the
+ * sources it reads.
+ */
+export function emptyCatalogRun() {
+  return {
+    movieSources: [],
+    seriesSources: [],
+    listSources: [],
+    plexSource: undefined,
+    jellyfinSource: undefined,
+    tvMazeLookup: { lookupByTvdbId: async (_tvdbId: number) => null },
+    delay: async (_ms: number) => {},
+  };
+}

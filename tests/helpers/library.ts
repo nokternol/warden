@@ -24,6 +24,7 @@ import {
   recordRefreshed,
 } from '@server/modules/providers';
 import { CatalogRefreshJob } from '@server/modules/providers/catalogRefreshJob';
+import { emptyCatalogRun } from '@tests/helpers/collaborators';
 import { and, eq } from 'drizzle-orm';
 
 const log = getChildLogger('TestLibrary');
@@ -91,6 +92,7 @@ export async function refreshCopies(db: DrizzleDb, libraries: InstanceLibrary[])
       .filter((l) => (l.contentType ?? 'movie') === contentType)
       .map(({ providerId, name = 'Instance', rows }) => ({ providerId, name, rows }));
   const job = new CatalogRefreshJob({
+    ...emptyCatalogRun(),
     db,
     movieSources: of('movie').map(({ providerId, name, rows }) => ({
       providerId,

@@ -15,6 +15,7 @@ import type { RadarrMovie } from '@server/modules/providers/connections/radarrPr
 import type { SonarrSeries } from '@server/modules/providers/connections/sonarrProvider';
 import { readProviderLists } from '@server/modules/providers/providerLists';
 import { readRefreshRecords } from '@server/modules/providers/providerRefresh';
+import { emptyCatalogRun } from '@tests/helpers/collaborators';
 import { server } from '@tests/mocks/server';
 import { eq } from 'drizzle-orm';
 import { http, HttpResponse } from 'msw';
@@ -119,6 +120,7 @@ describe('CatalogRefreshJob', () => {
     };
 
     const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       plexSource: { providerId: plexProviderId, name: 'Plex', provider: plexProvider },
     });
@@ -142,15 +144,15 @@ describe('CatalogRefreshJob', () => {
       ]),
     };
     const plexSource = { providerId: plexId, name: 'Plex', provider: plex };
-    await new CatalogRefreshJob({ db, plexSource }).runForPlex();
+    await new CatalogRefreshJob({ ...emptyCatalogRun(), db, plexSource }).runForPlex();
 
     plex.getAllItems.mockResolvedValue([{ ratingKey: 'a', Guid: [{ id: 'tmdb://100' }] }]);
-    await new CatalogRefreshJob({ db, plexSource }).runForPlex();
+    await new CatalogRefreshJob({ ...emptyCatalogRun(), db, plexSource }).runForPlex();
     const afterRemoval = await db.select().from(mediaIdentity).orderBy(mediaIdentity.tmdbId);
     expect(afterRemoval.map((r) => r.plexRatingKey)).toEqual(['a', null]);
 
     plex.getAllItems.mockRejectedValue(new Error('Plex is down'));
-    const failing = new CatalogRefreshJob({ db, plexSource });
+    const failing = new CatalogRefreshJob({ ...emptyCatalogRun(), db, plexSource });
     await failing.runForPlex();
     const afterFailure = await db.select().from(mediaIdentity).orderBy(mediaIdentity.tmdbId);
     expect(afterFailure.map((r) => r.plexRatingKey)).toEqual(['a', null]);
@@ -169,11 +171,11 @@ describe('CatalogRefreshJob', () => {
       { providerId: radarrProviderId, name: 'Radarr', provider: radarrA },
       { providerId: radarr4kProviderId, name: 'Radarr 4k', provider: radarrB },
     ];
-    await new CatalogRefreshJob({ db, movieSources: sources }).runForMovies();
+    await new CatalogRefreshJob({ ...emptyCatalogRun(), db, movieSources: sources }).runForMovies();
 
     radarrA.getMovies.mockResolvedValue({ records: [] });
     radarrB.getMovies.mockResolvedValue([makeMovie({ id: 3, tmdbId: 300 })]);
-    const job = new CatalogRefreshJob({ db, movieSources: sources });
+    const job = new CatalogRefreshJob({ ...emptyCatalogRun(), db, movieSources: sources });
     await job.runForMovies();
 
     expect(job.failedProviders()).toEqual(['Radarr']);
@@ -194,6 +196,7 @@ describe('CatalogRefreshJob', () => {
       .values({ contentType: 'movie', tmdbId: 100, plexRatingKey: 'a' });
     const plex = { getAllItems: vi.fn().mockResolvedValue({ MediaContainer: {} }) };
     const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       plexSource: { providerId: plexProviderId, name: 'Plex', provider: plex },
     });
@@ -215,7 +218,12 @@ describe('CatalogRefreshJob', () => {
       getRootFolders: vi.fn().mockRejectedValue(down),
     };
     const source = { providerId: radarrProviderId, name: 'Radarr', provider };
-    const job = new CatalogRefreshJob({ db, movieSources: [source], listSources: [source] });
+    const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
+      db,
+      movieSources: [source],
+      listSources: [source],
+    });
 
     await job.runForMovies();
     await job.runForLists();
@@ -231,11 +239,11 @@ describe('CatalogRefreshJob', () => {
       getRootFolders: vi.fn().mockResolvedValue([{ id: 2, path: '/movies' }]),
     };
     const listSources = [{ providerId: radarrProviderId, name: 'Radarr', provider: radarr }];
-    await new CatalogRefreshJob({ db, listSources }).runForLists();
+    await new CatalogRefreshJob({ ...emptyCatalogRun(), db, listSources }).runForLists();
 
     radarr.getTags.mockRejectedValue(new Error('tags timed out'));
     radarr.getProfiles.mockResolvedValue([{ id: 5, name: '4K' }]);
-    const job = new CatalogRefreshJob({ db, listSources });
+    const job = new CatalogRefreshJob({ ...emptyCatalogRun(), db, listSources });
     await job.runForLists();
 
     expect((await readProviderLists(db)).get(radarrProviderId)).toEqual({
@@ -265,6 +273,7 @@ describe('CatalogRefreshJob', () => {
     };
 
     const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       jellyfinSource: {
         providerId: jellyfinProviderId,
@@ -297,6 +306,7 @@ describe('CatalogRefreshJob', () => {
     };
 
     const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       jellyfinSource: {
         providerId: jellyfinProviderId,
@@ -312,7 +322,7 @@ describe('CatalogRefreshJob', () => {
 
   it('runForJellyfin returns 0 without a Jellyfin provider and counts rows actually changed', async () => {
     const db = getDb();
-    expect(await new CatalogRefreshJob({ db }).runForJellyfin()).toBe(0);
+    expect(await new CatalogRefreshJob({ ...emptyCatalogRun(), db }).runForJellyfin()).toBe(0);
 
     await db.insert(mediaIdentity).values({ contentType: 'movie', tmdbId: 100 });
     const jellyfinProvider = {
@@ -324,6 +334,7 @@ describe('CatalogRefreshJob', () => {
     };
 
     const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       jellyfinSource: {
         providerId: jellyfinProviderId,
@@ -346,6 +357,7 @@ describe('CatalogRefreshJob', () => {
     };
 
     const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       plexSource: { providerId: plexProviderId, name: 'Plex', provider: plexProvider },
     });
@@ -358,6 +370,7 @@ describe('CatalogRefreshJob', () => {
     const radarrProvider = { getMovies: vi.fn().mockResolvedValue([makeMovie()]) };
 
     const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarrProvider }],
     });
@@ -384,6 +397,7 @@ describe('CatalogRefreshJob', () => {
     };
 
     const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       movieSources: [
         { providerId: radarrProviderId, name: 'Instance', provider: radarrA },
@@ -408,6 +422,7 @@ describe('CatalogRefreshJob', () => {
     const radarrB = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 55, tmdbId: 603 })]) };
 
     const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       movieSources: [
         { providerId: radarrProviderId, name: 'Instance', provider: radarrA },
@@ -434,12 +449,14 @@ describe('CatalogRefreshJob', () => {
         ]),
     };
     await new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarr }],
     }).runForMovies();
 
     radarr.getMovies.mockResolvedValue([makeMovie({ id: 2, tmdbId: 200, title: 'Ronin' })]);
     await new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarr }],
     }).runForMovies();
@@ -457,6 +474,7 @@ describe('CatalogRefreshJob', () => {
     const db = getDb();
     const radarr = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 1, tmdbId: 100 })]) };
     const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarr }],
     });
@@ -488,6 +506,7 @@ describe('CatalogRefreshJob', () => {
     setImmediate(countTurns);
 
     await new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarr }],
     }).runForMovies();
@@ -500,6 +519,7 @@ describe('CatalogRefreshJob', () => {
     const db = getDb();
     const radarr = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 1, tmdbId: 100 })]) };
     const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarr }],
     });
@@ -522,6 +542,7 @@ describe('CatalogRefreshJob', () => {
     };
     const radarrB = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 2, tmdbId: 200 })]) };
     const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       movieSources: [
         { providerId: radarrProviderId, name: 'Instance', provider: radarrA },
@@ -535,6 +556,7 @@ describe('CatalogRefreshJob', () => {
       getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 3, tmdbId: 300 })]),
     };
     const job2 = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       movieSources: [
         { providerId: radarrProviderId, name: 'Instance', provider: radarrANowEmpty },
@@ -556,6 +578,7 @@ describe('CatalogRefreshJob', () => {
     const radarrA = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 1, tmdbId: 100 })]) };
     const radarrB = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 2, tmdbId: 200 })]) };
     await new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       movieSources: [
         { providerId: radarrProviderId, name: 'Instance', provider: radarrA },
@@ -566,6 +589,7 @@ describe('CatalogRefreshJob', () => {
 
     await db.delete(metadataProviders).where(eq(metadataProviders.id, radarrProviderId));
     await new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       movieSources: [{ providerId: radarr4kProviderId, name: 'Instance', provider: radarrB }],
     }).runForMovies();
@@ -583,6 +607,7 @@ describe('CatalogRefreshJob', () => {
     };
     const radarrB = { getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 1, tmdbId: 603 })]) };
     const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       movieSources: [
         { providerId: radarrProviderId, name: 'Instance', provider: radarrA },
@@ -595,6 +620,7 @@ describe('CatalogRefreshJob', () => {
       getMovies: vi.fn().mockResolvedValue([makeMovie({ id: 3, tmdbId: 300 })]),
     };
     const job2 = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       movieSources: [
         { providerId: radarrProviderId, name: 'Instance', provider: radarrAEmpty },
@@ -641,6 +667,7 @@ describe('CatalogRefreshJob', () => {
     };
 
     await new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       seriesSources: [{ providerId: sonarrProviderId, name: 'Instance', provider: sonarrProvider }],
     }).runForSeries();
@@ -656,6 +683,7 @@ describe('CatalogRefreshJob', () => {
     const sonarrProvider = { getSeries: vi.fn().mockResolvedValue([makeSeries()]) };
 
     const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       seriesSources: [{ providerId: sonarrProviderId, name: 'Instance', provider: sonarrProvider }],
     });
@@ -685,6 +713,7 @@ describe('CatalogRefreshJob', () => {
     };
 
     const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       seriesSources: [
         { providerId: sonarrProviderId, name: 'Instance', provider: sonarrA },
@@ -710,6 +739,7 @@ describe('CatalogRefreshJob', () => {
         ]),
     };
     const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       seriesSources: [{ providerId: sonarrProviderId, name: 'Instance', provider: sonarrA }],
     });
@@ -720,6 +750,7 @@ describe('CatalogRefreshJob', () => {
       getSeries: vi.fn().mockResolvedValue([makeSeries({ id: 11, tvdbId: 201 })]),
     };
     const job2 = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       seriesSources: [{ providerId: sonarrProviderId, name: 'Instance', provider: sonarrAEmpty }],
     });
@@ -746,6 +777,7 @@ describe('CatalogRefreshJob', () => {
     };
 
     const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       plexSource: { providerId: plexProviderId, name: 'Plex', provider: plexProvider },
     });
@@ -775,6 +807,7 @@ describe('CatalogRefreshJob', () => {
     };
 
     const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       plexSource: { providerId: plexProviderId, name: 'Plex', provider: plexProvider },
     });
@@ -805,6 +838,7 @@ describe('CatalogRefreshJob', () => {
     const delay = vi.fn().mockResolvedValue(undefined);
 
     const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       seriesSources: [{ providerId: sonarrProviderId, name: 'Instance', provider: sonarrProvider }],
       tvMazeLookup,
@@ -827,6 +861,7 @@ describe('CatalogRefreshJob', () => {
     };
 
     const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       seriesSources: [{ providerId: sonarrProviderId, name: 'Instance', provider: sonarrProvider }],
       tvMazeLookup,
@@ -847,6 +882,7 @@ describe('CatalogRefreshJob', () => {
     };
 
     const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarrProvider }],
     });
@@ -856,7 +892,7 @@ describe('CatalogRefreshJob', () => {
 
   it('runForMovies returns 0 when no Radarr instance is configured', async () => {
     const db = getDb();
-    const job = new CatalogRefreshJob({ db });
+    const job = new CatalogRefreshJob({ ...emptyCatalogRun(), db });
 
     expect(await job.runForMovies()).toBe(0);
   });
@@ -873,6 +909,7 @@ describe('CatalogRefreshJob', () => {
     };
 
     const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       seriesSources: [{ providerId: sonarrProviderId, name: 'Instance', provider: sonarrProvider }],
     });
@@ -882,7 +919,7 @@ describe('CatalogRefreshJob', () => {
 
   it('runForSeries returns 0 when no Sonarr instance is configured', async () => {
     const db = getDb();
-    const job = new CatalogRefreshJob({ db });
+    const job = new CatalogRefreshJob({ ...emptyCatalogRun(), db });
 
     expect(await job.runForSeries()).toBe(0);
   });
@@ -892,6 +929,7 @@ describe('CatalogRefreshJob', () => {
     const radarrProvider = { getMovies: vi.fn().mockResolvedValue([makeMovie()]) };
 
     const job = new CatalogRefreshJob({
+      ...emptyCatalogRun(),
       db,
       movieSources: [{ providerId: radarrProviderId, name: 'Instance', provider: radarrProvider }],
     });
@@ -939,6 +977,7 @@ describe('CatalogRefreshJob', () => {
       );
 
       await new CatalogRefreshJob({
+        ...emptyCatalogRun(),
         db,
         plexSource: { providerId: plexProviderId, name: 'Plex', provider: plexProvider },
       }).runForPlex();
@@ -969,6 +1008,7 @@ describe('CatalogRefreshJob', () => {
       );
 
       const changed = await new CatalogRefreshJob({
+        ...emptyCatalogRun(),
         db,
         plexSource: { providerId: plexProviderId, name: 'Plex', provider: plexProvider },
       }).runForPlex();

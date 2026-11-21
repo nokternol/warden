@@ -1,10 +1,8 @@
-import { and, eq, isNotNull, isNull, ne, notInArray, or } from 'drizzle-orm';
-import { yieldToEventLoop } from '../../kernel/yieldToEventLoop';
-
-const defaultDelay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 import type { ContentType } from '@contract/schemas';
 import { mediaIdentity, mediaItemPayload, mediaItems } from '@server/database/schema';
 import type { DrizzleDb } from '@server/kernel/db';
+import { and, eq, isNotNull, isNull, ne, notInArray, or } from 'drizzle-orm';
+import { yieldToEventLoop } from '../../kernel/yieldToEventLoop';
 import { resolveGroup } from './groupResolver';
 import { type ProviderListsData, storeProviderLists } from './providerLists';
 import { failureMessage, recordRefreshFailed, recordRefreshed } from './providerRefresh';
@@ -20,29 +18,40 @@ import type {
 const PLEX_CONTENT_TYPE: Record<string, ContentType> = { movie: 'movie', show: 'series' };
 const JELLYFIN_CONTENT_TYPE: Record<string, ContentType> = { Movie: 'movie', Series: 'series' };
 
+/** The pause between TVmaze lookups, unless the job is given another. */
+const defaultDelay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/**
+ * What one run reads. Every key is required: a role with no active instance is an empty list, and
+ * a media server that is not active is `undefined`.
+ */
 interface Deps {
   db: DrizzleDb;
   /** One entry per active Radarr instance. Never collapsed to one. */
-  movieSources?: Array<{
+  movieSources: Array<{
     providerId: number;
     name: string;
     provider: Pick<MovieSource, 'getMovies'>;
   }>;
   /** One entry per active Sonarr instance. Never collapsed to one. */
-  seriesSources?: Array<{
+  seriesSources: Array<{
     providerId: number;
     name: string;
     provider: Pick<SeriesSource, 'getSeries'>;
   }>;
   /** The active Plex server whose items titles link to. */
-  plexSource?: { providerId: number; name: string; provider: PlexLinks };
+  plexSource: { providerId: number; name: string; provider: PlexLinks } | undefined;
   /** The active Jellyfin server whose items titles link to. */
-  jellyfinSource?: { providerId: number; name: string; provider: JellyfinLinks };
-  tvMazeLookup?: TitleLookup;
-  delay?: (ms: number) => Promise<void>;
+  jellyfinSource: { providerId: number; name: string; provider: JellyfinLinks } | undefined;
+  tvMazeLookup: TitleLookup;
+  /** Waits between TVmaze lookups. */
+  delay: (ms: number) => Promise<void>;
   /** One entry per active Radarr or Sonarr instance whose setup lists are kept. */
-  listSources?: Array<{ providerId: number; name: string; provider: MediaSource }>;
+  listSources: Array<{ providerId: number; name: string; provider: MediaSource }>;
 }
+
+/** What a caller passes: every run dependency, and the TVmaze delay if not the real pause. */
+type CatalogRefreshJobDeps = Omit<Deps, 'delay'> & Partial<Pick<Deps, 'delay'>>;
 
 /** Whether a provider's answer is a list of records, each holding `key` with the expected type. */
 function isListOf(answer: unknown, key: { field: string; type: 'number' | 'string' }): boolean {
@@ -62,7 +71,11 @@ function isListOf(answer: unknown, key: { field: string; type: 'number' | 'strin
 export class CatalogRefreshJob {
   private readonly failed: string[] = [];
 
-  constructor(private deps: Deps) {}
+  private readonly deps: Deps;
+
+  constructor({ delay = defaultDelay, ...deps }: CatalogRefreshJobDeps) {
+    this.deps = { ...deps, delay };
+  }
 
   /** The providers this run could not refresh, each named once, in the order they first failed. */
   failedProviders(): string[] {
@@ -224,7 +237,7 @@ export class CatalogRefreshJob {
    * last successful value and fails the instance's `lists` record, and the other parts update.
    */
   async runForLists(): Promise<number> {
-    const sources = this.deps.listSources ?? [];
+    const sources = this.deps.listSources;
     for (const { providerId, name, provider } of sources) {
       const named = (rows: Array<{ id: number; name: string }>) =>
         rows.map(({ id, name }) => ({ id, name }));
@@ -263,7 +276,7 @@ export class CatalogRefreshJob {
   }
 
   async runForSeries(): Promise<number> {
-    const sources = this.deps.seriesSources ?? [];
+    const sources = this.deps.seriesSources;
     if (sources.length === 0) return 0;
 
     let total = 0;
@@ -292,9 +305,9 @@ export class CatalogRefreshJob {
         await this.upsertMediaItem(providerId, s.id, identityId, now, s);
         fetchedExternalIds.push(s.id);
 
-        if (!s.tvMazeId && this.deps.tvMazeLookup && s.tvdbId) {
+        if (!s.tvMazeId && s.tvdbId) {
           if (!firstTVMazeCall) {
-            await (this.deps.delay ?? defaultDelay)(500);
+            await this.deps.delay(500);
           }
           firstTVMazeCall = false;
           const result = await this.deps.tvMazeLookup.lookupByTvdbId(s.tvdbId);
@@ -316,7 +329,7 @@ export class CatalogRefreshJob {
   }
 
   async runForMovies(): Promise<number> {
-    const sources = this.deps.movieSources ?? [];
+    const sources = this.deps.movieSources;
     if (sources.length === 0) return 0;
 
     let total = 0;
