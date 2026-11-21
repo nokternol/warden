@@ -83,7 +83,10 @@ describe('activeFieldSet', () => {
 describe('ActiveFieldSetCache', () => {
   it('computes once and reuses the cached value on a second get()', async () => {
     const activeTypes = vi.fn().mockResolvedValue(new Set([MetadataProviderType.RADARR]));
-    const cache = new ActiveFieldSetCache({ providerSettingsService: { activeTypes } });
+    const cache = new ActiveFieldSetCache({
+      providerSettingsService: { activeTypes },
+      eventBus: new DomainEventBus(),
+    });
 
     await cache.get();
     await cache.get();
@@ -105,7 +108,10 @@ describe('ActiveFieldSetCache', () => {
 
   it('getActiveTypes() returns the underlying active provider-type set, cached', async () => {
     const activeTypes = vi.fn().mockResolvedValue(new Set([MetadataProviderType.RADARR]));
-    const cache = new ActiveFieldSetCache({ providerSettingsService: { activeTypes } });
+    const cache = new ActiveFieldSetCache({
+      providerSettingsService: { activeTypes },
+      eventBus: new DomainEventBus(),
+    });
 
     const result = await cache.getActiveTypes();
     await cache.getActiveTypes();
