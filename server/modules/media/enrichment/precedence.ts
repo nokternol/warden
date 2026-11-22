@@ -1,7 +1,7 @@
 import { MetadataProviderType } from '../../../database/schema';
 import { ValidationError } from '../../../kernel/errors';
 import type { ReportedFacts } from '../../providers';
-import type { EnrichableField } from './enricher';
+import type { ReportedFactKey as EnrichableField } from '../../providers';
 
 export type { EnrichableField };
 

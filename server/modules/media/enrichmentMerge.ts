@@ -1,6 +1,6 @@
 import type { MetadataProviderType } from '../../database/schema';
 import type { ReportedFacts } from '../providers';
-import type { EnrichableField } from './enrichment/enricher';
+import type { ReportedFactKey as EnrichableField } from '../providers';
 import type { StoredFact } from './enrichment/enrichment.queries';
 import { contestedFieldPrecedence } from './enrichment/precedence';
 

@@ -82,7 +82,7 @@ function refreshedKinds(type: MetadataProviderType): RefreshKind[] {
 
 /**
  * The refresh records a view of `contentType` answers from: the catalog and lists of each active
- * instance owning it, and the links and facts of every active media server and enricher. A kind
+ * instance owning it, and the links and facts of every active media server and fact reporter. A kind
  * never refreshed has a record with neither time, so it reads as not refreshed yet.
  */
 export function recordsFor(library: Library, contentType: ContentType): RefreshRecord[] {

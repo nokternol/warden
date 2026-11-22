@@ -1,12 +1,6 @@
-import type { MetadataProvider } from '@server/database/schema';
 import type { MetadataProviderType } from '@server/database/schema';
 import type { Logger } from 'winston';
 import type { ProviderConfig } from './connections/baseProviderConnection';
-import { JellyfinProvider } from './connections/jellyfinProvider';
-import { PlexProvider } from './connections/plexProvider';
-import { SeerrProvider } from './connections/seerrProvider';
-import { TautulliProvider } from './connections/tautulliProvider';
-import { TmdbProvider } from './connections/tmdbProvider';
 import { TvMazeProvider } from './connections/tvmazeProvider';
 import type { ReportedFactKey } from './facts';
 import { titleIdColumnOf } from './providerCatalogue';
@@ -87,20 +81,6 @@ function connect(row: ProviderRow, logger: Logger): AnyProvider {
 /** Every concrete provider the factory can construct: an instance of any class in the class map. */
 export type AnyProvider = InstanceType<ProviderClasses[keyof ProviderClasses]>;
 
-/**
- * Active providers resolved into typed, named slots — absent types stay undefined.
- * Carries only the types the single-active invariant still guarantees are singular;
- * catalog sources are constructed by the role queries instead, which never collapse
- * same-type instances into one slot.
- */
-export interface ProviderSet {
-  plex?: PlexProvider;
-  jellyfin?: JellyfinProvider;
-  tautulli?: TautulliProvider;
-  seerr?: SeerrProvider;
-  tmdb?: TmdbProvider;
-}
-
 export interface IProviderFactory {
   create(provider: { type: MetadataProviderType } & ProviderConfig, logger: Logger): AnyProvider;
 }
@@ -160,20 +140,6 @@ export class ProviderFactory implements IProviderFactory {
         },
       ];
     });
-  }
-
-  /** Resolve a list of active provider settings into typed, named slots. */
-  createMany(providers: MetadataProvider[], logger: Logger): ProviderSet {
-    const set: ProviderSet = {};
-    for (const settings of providers) {
-      const provider = this.create(settings, logger);
-      if (provider instanceof PlexProvider) set.plex = provider;
-      else if (provider instanceof JellyfinProvider) set.jellyfin = provider;
-      else if (provider instanceof TautulliProvider) set.tautulli = provider;
-      else if (provider instanceof SeerrProvider) set.seerr = provider;
-      else if (provider instanceof TmdbProvider) set.tmdb = provider;
-    }
-    return set;
   }
 
   /**

@@ -18,7 +18,7 @@ export interface ProviderFact {
   isActive: boolean;
 }
 
-/** One enricher's `facts` refresh record, as readiness judges its facts with it. */
+/** One fact reporter's `facts` refresh record, as readiness judges its facts with it. */
 export interface FactsRecord {
   providerId: number;
   refreshedAt: number | null;

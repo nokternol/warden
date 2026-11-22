@@ -20,7 +20,7 @@ export { createSearchProcedures } from './media.search.procedures';
 export { registerMediaDependencies } from './media.registrations';
 export type { MediaCradle } from './media.registrations';
 
-// The canonical item shape a library copy carries and enrichers describe.
+// The canonical item shape a library copy carries: its catalog record and reported facts.
 export type { MediaItem } from './mediaItem';
 export type { NormalizedMovie } from './movie';
 export type { NormalizedSeries } from './series';
@@ -41,16 +41,8 @@ export type { MediaSourceDescriptor } from './mediaSourceFactory';
 // the catalog refresh linked.
 export { actuatorIdOf, isAddressedActuator } from './actuatorIdResolver';
 
-// Enrichment roles and the adapters that bind providers' native connections
-// to them.
+// Enrichment's data access: each reporter's stored facts.
 export { EnrichmentQueries } from './enrichment/enrichment.queries';
-export type { EnrichableField, EnrichmentResult, MediaEnricher } from './enrichment/enricher';
-export {
-  seerrEnricher,
-  plexEnricher,
-  tautulliEnricher,
-  tmdbEnricher,
-} from './enrichment/enricherAdapters';
 
 // The rule vocabulary and its client-facing projection.
 export type {

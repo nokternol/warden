@@ -84,9 +84,8 @@ export { readProviderLists } from './providerLists';
 export type { ProviderListsData } from './providerLists';
 export type { ProviderListsReader } from './providerListsReader';
 
-// Connection classes and the payload types callers read. Search (#238) and the
-// enricher adapters (#246) import the classes directly; every other caller
-// asks for a capability through the role interfaces and the factory's role
+// Connection classes and the payload types callers read. Search (#238) imports
+// the classes directly; every other caller asks for a capability through the role interfaces and the factory's role
 // queries. Payload types that only the connections use (profiles, tags) are
 // module-private.
 export { JellyfinProvider } from './connections/jellyfinProvider';

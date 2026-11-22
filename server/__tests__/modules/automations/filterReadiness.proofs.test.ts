@@ -28,9 +28,6 @@ import { AutomationBlockService } from '@server/modules/automations/automationBl
 import { AutomationExecutor } from '@server/modules/automations/automationExecutor';
 import { AutomationRunService } from '@server/modules/automations/automationRunService';
 import { AutomationService } from '@server/modules/automations/automationService';
-import type { MediaEnricher, MediaItem } from '@server/modules/media';
-import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.queries';
-import { EnrichmentJob } from '@server/modules/media/enrichmentJob';
 import type { LibraryCopy } from '@server/modules/media/libraryCache';
 import { MediaQueryEngine } from '@server/modules/media/mediaQueryEngine';
 import type { Filter, NormalizedMovie } from '@server/modules/media/ruleRegistry';

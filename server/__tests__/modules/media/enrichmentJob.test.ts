@@ -1,9 +1,9 @@
 import { MetadataProviderType, mediaIdentity, metadataProviders } from '@server/database/schema';
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
-import type { MediaEnricher, MediaItem } from '@server/modules/media';
 import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.queries';
 import { EnrichmentJob } from '@server/modules/media/enrichmentJob';
+import type { ReportedFactKey, ReportedFacts, TitleIdColumn } from '@server/modules/providers';
 import { readRefreshRecords } from '@server/modules/providers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -14,22 +14,16 @@ const testConfig = {
   LOG_LEVEL: 'error',
 } as AppConfig;
 
-/** A MediaEnricher that decorates whatever items it is handed with the fields `decorate` gives. */
-function fakeEnricher(
-  provider: MetadataProviderType,
-  decorate: (item: MediaItem) => Partial<MediaItem> | undefined
-): MediaEnricher & { enrich: ReturnType<typeof vi.fn> } {
-  return {
-    enrich: vi.fn(async (items: MediaItem[]) => ({
-      provider,
-      items: items
-        .map((item) => {
-          const fields = decorate(item);
-          return fields ? ({ ...item, ...fields } as MediaItem) : undefined;
-        })
-        .filter((i): i is MediaItem => i !== undefined),
-    })),
-  };
+/** A reporter answering `answer` for the ids it is asked about, matched by `titleIdColumn`. */
+function fakeReporter(
+  providerId: number,
+  name: string,
+  titleIdColumn: TitleIdColumn,
+  reports: readonly ReportedFactKey[],
+  answer: (ids: readonly (string | number)[]) => Map<string | number, Partial<ReportedFacts>>
+) {
+  const readReportedFacts = vi.fn(async (ids: readonly (string | number)[]) => answer(ids));
+  return { providerId, name, titleIdColumn, reports, provider: { readReportedFacts } };
 }
 
 describe('EnrichmentJob', () => {
@@ -61,22 +55,28 @@ describe('EnrichmentJob', () => {
     return row.id;
   }
 
-  function job(enrichers: Array<{ providerId: number; name: string; enricher: MediaEnricher }>) {
-    return new EnrichmentJob({ db: getDb(), enrichmentQueries: queries, enrichers });
+  function job(reporters: ReturnType<typeof fakeReporter>[]) {
+    return new EnrichmentJob({ db: getDb(), enrichmentQueries: queries, reporters });
   }
 
-  it("stores each enricher's facts under its own provider and records the refresh", async () => {
+  it("stores each reporter's facts under its own provider and records the refresh", async () => {
     const id = await title();
-    const tautulli = fakeEnricher(MetadataProviderType.TAUTULLI, () => ({ playCount: 5 }));
-    const plex = fakeEnricher(MetadataProviderType.PLEX, () => ({
-      playCount: 2,
-      studio: 'Legendary',
-    }));
+    const tautulli = fakeReporter(
+      tautulliId,
+      'Tautulli',
+      'plexRatingKey',
+      ['playCount'],
+      () => new Map([['k', { playCount: 5 }]])
+    );
+    const plex = fakeReporter(
+      plexId,
+      'Plex',
+      'plexRatingKey',
+      ['playCount', 'studio'],
+      () => new Map([['k', { playCount: 2, studio: 'Legendary' }]])
+    );
 
-    await job([
-      { providerId: tautulliId, name: 'Tautulli', enricher: tautulli },
-      { providerId: plexId, name: 'Plex', enricher: plex },
-    ]).run();
+    await job([tautulli, plex]).run();
 
     expect(await queries.allFacts()).toEqual(
       expect.arrayContaining([
@@ -94,22 +94,28 @@ describe('EnrichmentJob', () => {
     );
   });
 
-  it("keeps a failing enricher's facts, records its failure and names it, and writes the others", async () => {
+  it("keeps a failing reporter's facts, records its failure and names it, and writes the others", async () => {
     const id = await title();
-    const tautulli = fakeEnricher(MetadataProviderType.TAUTULLI, () => ({ playCount: 5 }));
-    const plex = fakeEnricher(MetadataProviderType.PLEX, () => ({ studio: 'Legendary' }));
-    const enrichers = [
-      { providerId: tautulliId, name: 'Tautulli', enricher: tautulli },
-      { providerId: plexId, name: 'Plex', enricher: plex },
-    ];
-    await job(enrichers).run();
+    const tautulli = fakeReporter(
+      tautulliId,
+      'Tautulli',
+      'plexRatingKey',
+      ['playCount'],
+      () => new Map([['k', { playCount: 5 }]])
+    );
+    let studio = 'Legendary';
+    const plex = fakeReporter(
+      plexId,
+      'Plex',
+      'plexRatingKey',
+      ['studio'],
+      () => new Map([['k', { studio }]])
+    );
+    await job([tautulli, plex]).run();
 
-    tautulli.enrich.mockRejectedValue(new Error('Tautulli timed out'));
-    plex.enrich.mockImplementation(async (items: MediaItem[]) => ({
-      provider: MetadataProviderType.PLEX,
-      items: items.map((item) => ({ ...item, studio: 'Warner' })),
-    }));
-    const second = job(enrichers);
+    tautulli.provider.readReportedFacts.mockRejectedValue(new Error('Tautulli timed out'));
+    studio = 'Warner';
+    const second = job([tautulli, plex]);
     await second.run();
 
     expect(second.failedProviders()).toEqual(['Tautulli']);
@@ -130,44 +136,56 @@ describe('EnrichmentJob', () => {
     expect(failed?.error).toBe('Tautulli timed out');
   });
 
-  it('removes the facts a provider no longer reports for a title', async () => {
+  it('removes the facts a reporter no longer reports for a title', async () => {
     const id = await title();
     let watched = true;
-    const tautulli = fakeEnricher(MetadataProviderType.TAUTULLI, () =>
-      watched ? { playCount: 1 } : undefined
+    const tautulli = fakeReporter(tautulliId, 'Tautulli', 'plexRatingKey', ['playCount'], () =>
+      watched ? new Map([['k', { playCount: 1 }]]) : new Map()
     );
-    const enrichers = [{ providerId: tautulliId, name: 'Tautulli', enricher: tautulli }];
-    await job(enrichers).run();
+    await job([tautulli]).run();
 
     watched = false;
-    await job(enrichers).run();
+    await job([tautulli]).run();
 
     expect((await queries.allFacts()).filter((f) => f.mediaIdentityId === id)).toEqual([]);
   });
 
-  it('reads every enricher for every title on every run', async () => {
-    await title({ tmdbId: 100 });
-    await title({ tmdbId: 200 });
-    const tautulli = fakeEnricher(MetadataProviderType.TAUTULLI, () => undefined);
-    const enrichers = [{ providerId: tautulliId, name: 'Tautulli', enricher: tautulli }];
+  it('asks every reporter about every title it can match, by its title id column, on every run', async () => {
+    await title({ tmdbId: 100, plexRatingKey: null });
+    await title({ tmdbId: 200, plexRatingKey: null });
+    await title({ tmdbId: null, plexRatingKey: null, jellyfinItemId: 'jf-abc' });
+    const tmdb = fakeReporter(tautulliId, 'TMDB', 'tmdbId', ['tmdbStatus'], () => new Map());
+    const jellyfin = fakeReporter(
+      plexId,
+      'Jellyfin',
+      'jellyfinItemId',
+      ['studio'],
+      () => new Map()
+    );
 
-    await job(enrichers).run();
-    await job(enrichers).run();
+    await job([tmdb, jellyfin]).run();
+    await job([tmdb, jellyfin]).run();
 
-    expect(tautulli.enrich).toHaveBeenCalledTimes(2);
-    expect(tautulli.enrich.mock.calls[1][0]).toHaveLength(2);
+    expect(tmdb.provider.readReportedFacts).toHaveBeenCalledTimes(2);
+    expect(tmdb.provider.readReportedFacts.mock.calls[1][0]).toEqual([100, 200]);
+    expect(jellyfin.provider.readReportedFacts.mock.calls[0][0]).toEqual(['jf-abc']);
   });
 
-  it('hydrates _sourceIds.jellyfin from the title for a Jellyfin-known item', async () => {
-    await title({ plexRatingKey: null, jellyfinItemId: 'jf-abc' });
-    let seen: string | number | undefined;
-    const jellyfin = fakeEnricher(MetadataProviderType.JELLYFIN, (item) => {
-      seen = item._sourceIds.jellyfin;
-      return undefined;
-    });
+  it('stores only the facts a reporter declares, with defined values, matched by its title id column', async () => {
+    const id = await title({ plexRatingKey: 'k' });
+    await title({ plexRatingKey: 'other' });
+    const plex = fakeReporter(
+      plexId,
+      'Plex',
+      'plexRatingKey',
+      ['playCount', 'lastWatchedAt'],
+      () => new Map([['k', { playCount: 3, lastWatchedAt: undefined, studio: 'Undeclared' }]])
+    );
 
-    await job([{ providerId: plexId, name: 'Jellyfin', enricher: jellyfin }]).run();
+    await job([plex]).run();
 
-    expect(seen).toBe('jf-abc');
+    expect(await queries.allFacts()).toEqual([
+      { mediaIdentityId: id, providerId: plexId, field: 'playCount', value: 3 },
+    ]);
   });
 });

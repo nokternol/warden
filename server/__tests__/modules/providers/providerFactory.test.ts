@@ -75,37 +75,6 @@ describe('ProviderFactory.create', () => {
   });
 });
 
-describe('ProviderFactory.createMany', () => {
-  const factory = new ProviderFactory();
-
-  it('places each active provider into its typed slot, leaving absent types undefined', () => {
-    const set = factory.createMany(
-      [makeProvider(MetadataProviderType.PLEX), makeProvider(MetadataProviderType.TAUTULLI)],
-      log
-    );
-
-    expect(set.plex).toBeInstanceOf(PlexProvider);
-    expect(set.tautulli).toBeInstanceOf(TautulliProvider);
-    expect(set.seerr).toBeUndefined();
-  });
-
-  it('places an active Jellyfin provider into its typed slot', () => {
-    const set = factory.createMany([makeProvider(MetadataProviderType.JELLYFIN)], log);
-
-    expect(set.jellyfin).toBeInstanceOf(JellyfinProvider);
-  });
-
-  it('has no radarr/sonarr slots — MediaSource instances are never collapsed to one', () => {
-    const set = factory.createMany(
-      [makeProvider(MetadataProviderType.RADARR), makeProvider(MetadataProviderType.SONARR)],
-      log
-    );
-
-    expect((set as Record<string, unknown>).radarr).toBeUndefined();
-    expect((set as Record<string, unknown>).sonarr).toBeUndefined();
-  });
-});
-
 describe('ProviderFactory role queries', () => {
   const factory = new ProviderFactory();
   const row = (id: number, type: MetadataProviderType) => ({
