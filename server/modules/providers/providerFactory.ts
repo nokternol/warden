@@ -8,13 +8,17 @@ import { SeerrProvider } from './connections/seerrProvider';
 import { TautulliProvider } from './connections/tautulliProvider';
 import { TmdbProvider } from './connections/tmdbProvider';
 import { TvMazeProvider } from './connections/tvmazeProvider';
+import type { ReportedFactKey } from './facts';
+import { titleIdColumnOf } from './providerCatalogue';
 import { PROVIDER_CLASSES } from './providerClasses';
 import type {
+  FactReporter,
   JellyfinLinks,
   MovieSource,
   PlexLinks,
   ProviderCapabilities,
   SeriesSource,
+  TitleIdColumn,
   TitleLookup,
 } from './roles';
 
@@ -125,6 +129,37 @@ export class ProviderFactory implements IProviderFactory {
   /** The row whose type is the media server for `jellyfinItemId` links, with its connection. */
   jellyfinServerOf(rows: ProviderRow[], logger: Logger): RoleInstance<JellyfinLinks> | undefined {
     return connectionsDeclaring(rows, 'mediaServer', 'jellyfinItemId', logger)[0];
+  }
+
+  /**
+   * Every row whose type declares the facts it reports, with its connection, the title id column
+   * its answers are matched by and the facts it declares.
+   */
+  factReportersOf(
+    rows: ProviderRow[],
+    logger: Logger
+  ): Array<
+    RoleInstance<FactReporter> & {
+      titleIdColumn: TitleIdColumn;
+      reports: readonly ReportedFactKey[];
+    }
+  > {
+    return rows.flatMap((row) => {
+      const { facts } = PROVIDER_CLASSES[row.type].catalogueEntry
+        .capabilities as ProviderCapabilities;
+      const titleIdColumn = titleIdColumnOf(row.type);
+      if (!facts || !titleIdColumn) return [];
+      return [
+        {
+          providerId: row.id,
+          name: row.name,
+          // The class map refuses a class declaring `facts` that does not implement FactReporter.
+          provider: connect(row, logger) as AnyProvider & FactReporter,
+          titleIdColumn,
+          reports: facts.reports,
+        },
+      ];
+    });
   }
 
   /** Resolve a list of active provider settings into typed, named slots. */

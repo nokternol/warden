@@ -144,6 +144,52 @@ describe('ProviderFactory role queries', () => {
     ]);
     expect(factory.plexServerOf([row(5, MetadataProviderType.TAUTULLI)], log)).toBeUndefined();
   });
+
+  it('answers the fact reporters among the rows, each with its title id column and the facts it reports', () => {
+    const reporters = factory.factReportersOf(
+      [...rows, row(7, MetadataProviderType.SEERR), row(8, MetadataProviderType.TVMAZE)],
+      log
+    );
+
+    expect(
+      reporters.map(({ providerId, name, provider, titleIdColumn, reports }) => ({
+        providerId,
+        name,
+        kind: provider.constructor,
+        titleIdColumn,
+        reportsPlayCount: reports.includes('playCount'),
+      }))
+    ).toEqual([
+      {
+        providerId: 3,
+        name: 'PLEX 3',
+        kind: PlexProvider,
+        titleIdColumn: 'plexRatingKey',
+        reportsPlayCount: true,
+      },
+      {
+        providerId: 4,
+        name: 'JELLYFIN 4',
+        kind: JellyfinProvider,
+        titleIdColumn: 'jellyfinItemId',
+        reportsPlayCount: true,
+      },
+      {
+        providerId: 5,
+        name: 'TAUTULLI 5',
+        kind: TautulliProvider,
+        titleIdColumn: 'plexRatingKey',
+        reportsPlayCount: true,
+      },
+      {
+        providerId: 7,
+        name: 'SEERR 7',
+        kind: SeerrProvider,
+        titleIdColumn: 'tmdbId',
+        reportsPlayCount: false,
+      },
+    ]);
+  });
 });
 
 describe('ProviderFactory.tvMazeLookup', () => {
