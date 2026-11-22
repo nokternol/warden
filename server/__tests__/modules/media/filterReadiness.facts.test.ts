@@ -33,7 +33,7 @@ describe('FilterReadiness.readFacts', () => {
     await _resetDatabase();
   });
 
-  it('reads every provider instance, and every facts refresh record from the library cache', async () => {
+  it('reads every provider instance, and every facts and links refresh record from the library cache', async () => {
     const db = getDb();
     const [radarr, plex, tautulli] = await db
       .insert(metadataProviders)
@@ -71,5 +71,6 @@ describe('FilterReadiness.readFacts', () => {
       ])
     );
     expect(facts.factsRecords).toHaveLength(2);
+    expect(facts.linksRecords).toEqual([]);
   });
 });

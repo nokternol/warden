@@ -17,7 +17,7 @@ import { describe, expect, it } from 'vitest';
 
 const { RADARR, SONARR, PLEX, TAUTULLI } = MetadataProviderType;
 
-/** Facts with these instances, every one with a successful `facts` refresh unless given. */
+/** Facts with these instances, every one with successful `facts` and `links` refreshes unless given. */
 function facts(
   providers: ProviderFact[],
   overrides: Partial<Omit<ReadinessFacts, 'providers'>> = {}
@@ -25,6 +25,7 @@ function facts(
   return {
     providers,
     factsRecords: providers.map((p) => ({ providerId: p.id, refreshedAt: 1, failedAt: null })),
+    linksRecords: providers.map((p) => ({ providerId: p.id, refreshedAt: 1, failedAt: null })),
     ...overrides,
   };
 }
@@ -116,22 +117,41 @@ describe('findingsFor', () => {
   describe('an enrichment-only filter with an active producer', () => {
     const watched = movies([{ ruleKey: 'watched', value: true }]);
 
-    it("raises data-incomplete, naming the supplier, while a supplier's facts failed or never refreshed", () => {
+    it('raises data-incomplete, naming the reporters, while no reporter has a good facts refresh', () => {
       const providers = [active(1, RADARR), active(4, PLEX), active(2, TAUTULLI)];
       const failed = facts(providers, {
+        factsRecords: [
+          { providerId: 4, refreshedAt: 1, failedAt: 5 },
+          { providerId: 2, refreshedAt: 1, failedAt: 5 },
+        ],
+      });
+      const never = facts(providers, { factsRecords: [] });
+      for (const f of [failed, never]) {
+        expect(findingsFor(f, watched)).toMatchObject([
+          { kind: 'data-incomplete', ruleKey: 'watched', providerIds: [2, 4] },
+        ]);
+      }
+    });
+
+    it('raises nothing while another reporter of the fact still has a good refresh', () => {
+      const providers = [active(1, RADARR), active(4, PLEX), active(2, TAUTULLI)];
+      const f = facts(providers, {
         factsRecords: [
           { providerId: 4, refreshedAt: 1, failedAt: null },
           { providerId: 2, refreshedAt: 1, failedAt: 5 },
         ],
       });
-      const never = facts(providers, {
-        factsRecords: [{ providerId: 4, refreshedAt: 1, failedAt: null }],
+      expect(kinds(watched, f)).toEqual([]);
+    });
+
+    it('raises data-incomplete for a reporter whose facts are fresh but whose title links failed', () => {
+      const providers = [active(1, RADARR), active(4, PLEX)];
+      const f = facts(providers, {
+        linksRecords: [{ providerId: 4, refreshedAt: 1, failedAt: 5 }],
       });
-      for (const f of [failed, never]) {
-        expect(findingsFor(f, watched)).toMatchObject([
-          { kind: 'data-incomplete', ruleKey: 'watched', providerIds: [2] },
-        ]);
-      }
+      expect(findingsFor(f, watched)).toMatchObject([
+        { kind: 'data-incomplete', ruleKey: 'watched', providerIds: [4] },
+      ]);
     });
 
     it('believes successful facts records: a fact no title holds raises nothing', () => {
