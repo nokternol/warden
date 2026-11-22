@@ -8,7 +8,7 @@ import type {
 } from '../../providers';
 import type { ReportedFacts } from '../../providers';
 import type { MediaFieldProvider } from '../mediaFieldProvider';
-import { seerrFieldProvider, tautulliFieldProvider, tmdbFieldSource } from '../mediaFieldProvider';
+import { seerrFieldProvider, tmdbFieldSource } from '../mediaFieldProvider';
 import { decorate } from './decorate';
 import type { EnrichmentResult, MediaEnricher } from './enricher';
 
@@ -116,7 +116,7 @@ export function tautulliEnricher(
 ): MediaEnricher<'playCount' | 'lastWatchedAt'> {
   return {
     enrich: async (items): Promise<EnrichmentResult<'playCount' | 'lastWatchedAt'>> => {
-      const fieldsByKey = toFieldsByKey(tautulliFieldProvider, await tautulli.getHistory());
+      const fieldsByKey = await tautulli.readReportedFacts();
       return {
         provider: MetadataProviderType.TAUTULLI,
         items: decorate(items, (i) => i._sourceIds.plex, fieldsByKey),

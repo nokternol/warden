@@ -1,9 +1,12 @@
 import { getChildLogger } from '@server/kernel/logger';
 import type { ProviderConfig } from '@server/modules/providers/connections/baseProviderConnection';
-import { TautulliProvider } from '@server/modules/providers/connections/tautulliProvider';
+import {
+  type TautulliHistoryItem,
+  TautulliProvider,
+} from '@server/modules/providers/connections/tautulliProvider';
 import { server } from '@tests/mocks/server';
 import { http, HttpResponse } from 'msw';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const logger = getChildLogger('TestTautulliProvider');
 
@@ -169,5 +172,70 @@ describe('TautulliProvider — actuator tasks', () => {
     ).getHistory();
     expect(history).toHaveLength(1003);
     expect(starts).toEqual(['0', '1000']);
+  });
+});
+
+describe('TautulliProvider — reported facts', () => {
+  /** One completed, stored view of `rating_key`, stopped at `stopped`. */
+  function view(rating_key: string, stopped?: number): TautulliHistoryItem {
+    return {
+      row_id: 1,
+      rating_key,
+      title: 'T',
+      watched_status: 1,
+      duration: 3600,
+      play_duration: 3600,
+      user: 'u',
+      ...(stopped !== undefined ? { stopped } : {}),
+    } as TautulliHistoryItem;
+  }
+
+  /** The facts Tautulli reports when its history holds exactly `history`. */
+  async function reportedFor(history: TautulliHistoryItem[]) {
+    const provider = new TautulliProvider(mockConfig, logger);
+    vi.spyOn(provider, 'getHistory').mockResolvedValue(history);
+    return provider.readReportedFacts();
+  }
+
+  it('reports the play count and last play of each rating key', async () => {
+    const facts = await reportedFor([
+      view('abc123', 1700000000),
+      view('abc123', 1600000000),
+      view('other'),
+    ]);
+
+    expect(facts).toEqual(
+      new Map([
+        ['abc123', { playCount: 2, lastWatchedAt: new Date(1700000000 * 1000).toISOString() }],
+        ['other', { playCount: 1 }],
+      ])
+    );
+  });
+
+  it('counts only stored views Tautulli marks fully watched, as Plex would', async () => {
+    const facts = await reportedFor([
+      view('abc123', 1000),
+      { ...view('abc123', 2000), watched_status: 0.75 },
+      { ...view('abc123', 3000), row_id: null },
+      { ...view('partial', 4000), watched_status: 0.5 },
+    ]);
+
+    expect(facts).toEqual(
+      new Map([['abc123', { playCount: 1, lastWatchedAt: new Date(1000 * 1000).toISOString() }]])
+    );
+  });
+
+  it('counts a view of an episode as a view of its show, which a series is matched by', async () => {
+    const episode = (rating_key: string, stopped: number): TautulliHistoryItem => ({
+      ...view(rating_key, stopped),
+      grandparent_rating_key: 'show',
+      media_type: 'episode',
+    });
+
+    const facts = await reportedFor([episode('ep1', 5), episode('ep2', 9)]);
+
+    expect(facts).toEqual(
+      new Map([['show', { playCount: 2, lastWatchedAt: new Date(9 * 1000).toISOString() }]])
+    );
   });
 });

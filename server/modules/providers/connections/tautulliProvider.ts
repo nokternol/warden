@@ -1,6 +1,8 @@
 import { MetadataProviderType } from '@server/database/schema';
-import type { ActuatorTask, MediaActuator, ProviderTypeEntry } from '../roles';
+import type { ReportedFacts } from '../facts';
+import type { ActuatorTask, FactReporter, MediaActuator, ProviderTypeEntry } from '../roles';
 import { BaseProviderConnection } from './baseProviderConnection';
+import { playHistoryFacts } from './factMapping';
 
 export interface TautulliHistoryItem {
   /** `null` on a row with no stored history id yet, such as a stream still playing. */
@@ -44,7 +46,21 @@ interface TautulliResponse<T> {
 
 const HISTORY_PAGE_SIZE = 1000;
 
-export class TautulliProvider extends BaseProviderConnection implements MediaActuator {
+/** Tautulli's `watched_status` for a view that passed its watched threshold (like Plex's). */
+const FULLY_WATCHED = 1;
+
+/**
+ * A view that counts toward play count and last watched: fully watched, and stored in history.
+ * A row with no history id (`row_id: null`) is not a stored view, such as a stream still playing.
+ */
+function isCompletedView(item: TautulliHistoryItem): boolean {
+  return item.watched_status === FULLY_WATCHED && item.row_id !== null;
+}
+
+export class TautulliProvider
+  extends BaseProviderConnection
+  implements MediaActuator, FactReporter
+{
   /** How this provider type is presented, reached and what it can do. */
   static readonly catalogueEntry = {
     label: 'Tautulli',
@@ -85,6 +101,35 @@ export class TautulliProvider extends BaseProviderConnection implements MediaAct
       .get('api/v2', { searchParams: { ...this.baseParams, cmd, ...extra } })
       .json<TautulliResponse<T>>();
     return resp.response.data;
+  }
+
+  /**
+   * The play count and last play Tautulli reports for each title, by rating key, from its
+   * completed views. A view of an episode is a view of its show, which a series is matched by.
+   */
+  async readReportedFacts(): Promise<Map<string, Partial<ReportedFacts>>> {
+    const plays = new Map<string, { playCount: number; lastPlayedUnix?: number }>();
+    for (const item of await this.getHistory()) {
+      if (!isCompletedView(item)) continue;
+      const key =
+        item.media_type === 'episode' && item.grandparent_rating_key
+          ? item.grandparent_rating_key
+          : item.rating_key;
+      const seen = plays.get(key);
+      const later =
+        item.stopped !== undefined &&
+        (seen?.lastPlayedUnix === undefined || item.stopped > seen.lastPlayedUnix);
+      plays.set(key, {
+        playCount: (seen?.playCount ?? 0) + 1,
+        lastPlayedUnix: later ? item.stopped : seen?.lastPlayedUnix,
+      });
+    }
+    return new Map(
+      [...plays].map(([key, { playCount, lastPlayedUnix }]) => [
+        key,
+        playHistoryFacts(playCount, lastPlayedUnix),
+      ])
+    );
   }
 
   /** Every play on record. Tautulli answers with 25 rows unless asked for more. */
