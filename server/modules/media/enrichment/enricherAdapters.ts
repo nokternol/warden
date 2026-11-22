@@ -7,22 +7,9 @@ import type {
   TmdbProvider,
 } from '../../providers';
 import type { ReportedFacts } from '../../providers';
-import type { MediaFieldProvider } from '../mediaFieldProvider';
-import { seerrFieldProvider, tmdbFieldSource } from '../mediaFieldProvider';
+import { tmdbFieldSource } from '../mediaFieldProvider';
 import { decorate } from './decorate';
 import type { EnrichmentResult, MediaEnricher } from './enricher';
-
-/** Runs a `MediaFieldProvider`'s two-step visit→transform pipeline over one raw payload. */
-function toFieldsByKey<
-  TRaw,
-  TMediaField,
-  TFields extends Partial<ReportedFacts>,
-  TKey extends string | number,
->(provider: MediaFieldProvider<TRaw, TMediaField, TFields, TKey>, raw: TRaw): Map<TKey, TFields> {
-  return new Map(
-    [...provider.visit(raw)].map(([key, native]) => [key, provider.toEnrichmentFields(native)])
-  );
-}
 
 type PlexEnrichedField =
   | 'playCount'
@@ -82,8 +69,7 @@ export function seerrEnricher(
 ): MediaEnricher<'seerrRequestStatus' | 'seerrHasIssue'> {
   return {
     enrich: async (items): Promise<EnrichmentResult<'seerrRequestStatus' | 'seerrHasIssue'>> => {
-      const [requests, issues] = await Promise.all([seerr.getRequests(), seerr.getIssues()]);
-      const fieldsByKey = toFieldsByKey(seerrFieldProvider, [requests, issues]);
+      const fieldsByKey = await seerr.readReportedFacts();
       return {
         provider: MetadataProviderType.SEERR,
         items: decorate(items, (i) => i._sourceIds.tmdb, fieldsByKey),
