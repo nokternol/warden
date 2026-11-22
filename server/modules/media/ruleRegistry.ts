@@ -3,8 +3,8 @@ import { MediaRuleDescriptorSchema } from '@contract/media';
 import type { ContentType, FilterValue, InstanceScopedValue, RangeValue } from '@contract/schemas';
 import { isInstanceScopedValue } from '@contract/schemas';
 import { MetadataProviderType } from '../../database/schema';
+import type { ReportedFacts } from '../providers';
 import { fieldsByProviderType } from './activeFieldSet';
-import type { EnrichmentFields } from './mediaFieldProvider';
 import type { NormalizedMovie } from './movie';
 import type { NormalizedSeries } from './series';
 
@@ -49,13 +49,13 @@ export interface MediaRule<
    *  is active. Flows into `MediaRuleDescriptor` automatically; the client learns the class
    *  from the registry projection instead of keeping its own list. */
   instanceScoped?: boolean;
-  /** The `EnrichmentFields` key this rule's predicate reads, if any — most rules read a
+  /** The `ReportedFacts` key this rule's predicate reads, if any — most rules read a
    *  source-owned field instead (`title`, `year`, `hasFile`, …) and omit this. Declared,
    *  not inferred from the predicate body (TS can't introspect that): every
-   *  `EnrichmentFields` key must be the `sourceField` of at least one rule, checked below
+   *  `ReportedFacts` key must be the `sourceField` of at least one rule, checked below
    *  `MEDIA_RULES` — a field with no rule at all is enriched, stored, and merged onto the
    *  item, and silently never filterable. */
-  sourceField?: keyof EnrichmentFields;
+  sourceField?: keyof ReportedFacts;
   /** What a boolean rule's two values read as in the UI (*Monitored* / *Unmonitored*).
    *  Absent means the generic *Yes* / *No*. */
   valueLabels?: { true: string; false: string };
@@ -129,9 +129,9 @@ function inRange(actual: number, value: FilterValue): boolean {
  * A rule's `providers` for a field `MediaFieldProvider`/`MediaFieldSource`
  * tracks — every provider type whose `fieldsByProviderType` entry includes it,
  * the inverse lookup of that declaration. Rules backed by a source-owned field
- * outside `EnrichmentFields` (most of `NormalizedMovie`/`NormalizedSeries`) still
+ * outside `ReportedFacts` (most of `NormalizedMovie`/`NormalizedSeries`) still
  * hand-list `providers` until `movie.ts`/`series.ts` derive from
- * `EnrichmentFields` too (see spec's Risks section).
+ * `ReportedFacts` too (see spec's Risks section).
  *
  * Not content-type-scoped: a field produced by two providers who never both
  * apply to the same rule (`tags`: Radarr for movies, Sonarr for series) derives
@@ -139,7 +139,7 @@ function inRange(actual: number, value: FilterValue): boolean {
  * when the field's producer set doesn't vary by content type — see the
  * movie/series `tagIds` rules, which stay hand-listed for exactly this reason.
  */
-export function deriveProviders(field: keyof EnrichmentFields): MetadataProviderType[] {
+export function deriveProviders(field: keyof ReportedFacts): MetadataProviderType[] {
   return (Object.entries(fieldsByProviderType) as [MetadataProviderType, readonly string[]][])
     .filter(([, fields]) => fields.includes(field))
     .map(([type]) => type);
@@ -404,7 +404,6 @@ export const MEDIA_RULES = [
     // content-type scoping; only safe for a field with one producer regardless
     // of content type (see the series-side tagIds rule for the same reasoning).
     providers: [MetadataProviderType.RADARR],
-    sourceField: 'tags',
     instanceScoped: true,
     predicate: (item, value) => {
       const ids = instanceIds(value);
@@ -621,7 +620,6 @@ export const MEDIA_RULES = [
     // Hand-listed for the same reason as the movie-side tagIds rule above —
     // deriveProviders('tags') would wrongly include Radarr here.
     providers: [MetadataProviderType.SONARR],
-    sourceField: 'tags',
     instanceScoped: true,
     predicate: (item, value) => {
       const ids = instanceIds(value);
@@ -887,14 +885,14 @@ export function getRule(key: string, contentType: ContentType): MediaRule | unde
   );
 }
 
-// ─── Every EnrichmentFields key must be reachable through at least one rule ────
+// ─── Every ReportedFacts key must be reachable through at least one rule ────
 // `sourceField` is declared per rule, not inferred (a predicate body isn't
-// TS-introspectable) — this checks that declaration against `EnrichmentFields`
+// TS-introspectable) — this checks that declaration against `ReportedFacts`
 // itself, so a field with no rule at all (enriched, stored, and merged onto the
 // item, but never filterable) fails to compile, naming it.
 type _DeclaredSourceField = Extract<
   (typeof MEDIA_RULES)[number],
   { sourceField: string }
 >['sourceField'];
-type _FieldWithNoRule = Exclude<keyof EnrichmentFields, _DeclaredSourceField>;
+type _FieldWithNoRule = Exclude<keyof ReportedFacts, _DeclaredSourceField>;
 const _everyFieldHasARule: Record<_FieldWithNoRule, never> = {};

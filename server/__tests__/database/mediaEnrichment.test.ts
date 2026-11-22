@@ -90,22 +90,14 @@ describe('enrichment_field table', () => {
   });
 
   // Compares against fieldsByProviderType's deduped values, not a hand-typed list —
-  // that object is already compiler-exhaustive against EnrichmentFields
+  // that object is already compiler-exhaustive against ReportedFacts
   // (activeFieldSet.ts's _everyFieldHasAProducer), so this transitively proves the
   // migration's seed didn't drift from the field set without needing a second
   // hand-maintained list to keep in sync.
   it('is seeded with exactly the keys fieldsByProviderType declares producers for', async () => {
     const db = getDb();
     const rows = await db.select().from(enrichmentField);
-    // 'tags' is excluded: it's MediaFieldSource's construction-only field (built
-    // straight onto an item from a single provider's native payload, e.g.
-    // normalizeMedia.ts), never written to media_enrichment — same exclusion
-    // enricher.ts's EnrichableField makes for the same reason.
-    const expectedKeys = new Set(
-      Object.values(fieldsByProviderType)
-        .flat()
-        .filter((key) => key !== 'tags')
-    );
+    const expectedKeys = new Set(Object.values(fieldsByProviderType).flat());
 
     expect(new Set(rows.map((r) => r.key))).toEqual(expectedKeys);
   });

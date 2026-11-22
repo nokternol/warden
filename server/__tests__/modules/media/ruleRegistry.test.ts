@@ -186,7 +186,7 @@ describe('providers accuracy', () => {
 });
 
 // ─── deriveProviders ─────────────────────────────────────────────────
-// For a rule backed by an EnrichmentFields-tracked field, providers is
+// For a rule backed by an ReportedFacts-tracked field, providers is
 // derived from fieldsByProviderType (the same declaration MediaFieldProvider/
 // MediaFieldSource adapters are checked against) instead of hand-listed —
 // a provider rename/removal there can't silently leave a rule's gating stale.
@@ -201,13 +201,6 @@ describe('deriveProviders', () => {
       MetadataProviderType.TAUTULLI,
       MetadataProviderType.PLEX,
       MetadataProviderType.JELLYFIN,
-    ]);
-  });
-
-  it('derives tags to both Radarr and Sonarr — each owns tags on its own kind', () => {
-    expect(deriveProviders('tags')).toEqual([
-      MetadataProviderType.RADARR,
-      MetadataProviderType.SONARR,
     ]);
   });
 });

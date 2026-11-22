@@ -6,7 +6,8 @@ import type {
   TautulliProvider,
   TmdbProvider,
 } from '../../providers';
-import type { EnrichmentFields, MediaFieldProvider } from '../mediaFieldProvider';
+import type { ReportedFacts } from '../../providers';
+import type { MediaFieldProvider } from '../mediaFieldProvider';
 import {
   jellyfinFieldProvider,
   plexFieldProvider,
@@ -21,7 +22,7 @@ import type { EnrichmentResult, MediaEnricher } from './enricher';
 function toFieldsByKey<
   TRaw,
   TMediaField,
-  TFields extends Partial<EnrichmentFields>,
+  TFields extends Partial<ReportedFacts>,
   TKey extends string | number,
 >(provider: MediaFieldProvider<TRaw, TMediaField, TFields, TKey>, raw: TRaw): Map<TKey, TFields> {
   return new Map(
@@ -100,7 +101,7 @@ export function seerrEnricher(
 export function tmdbEnricher(tmdb: TmdbProvider): MediaEnricher<'tmdbStatus'> {
   return {
     enrich: async (items): Promise<EnrichmentResult<'tmdbStatus'>> => {
-      const fieldsByKey = new Map<number, Pick<EnrichmentFields, 'tmdbStatus'>>();
+      const fieldsByKey = new Map<number, Pick<ReportedFacts, 'tmdbStatus'>>();
       for (const item of items) {
         const tmdbId = item._sourceIds.tmdb;
         if (tmdbId === undefined || fieldsByKey.has(tmdbId)) continue;

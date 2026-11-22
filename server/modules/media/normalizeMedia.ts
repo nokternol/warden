@@ -1,6 +1,5 @@
 import { type TitleRating, ratingsOf } from '@contract/ratings';
 import type { RadarrMovie, SonarrSeries } from '../providers';
-import { radarrTagsFieldSource, sonarrTagsFieldSource } from './mediaFieldProvider';
 import type { NormalizedMovie } from './movie';
 import type { NormalizedSeries } from './series';
 
@@ -23,7 +22,7 @@ export function normalizeRadarrMovie(m: RadarrMovie, providerId: number): Normal
     hasFile: m.hasFile,
     monitored: m.monitored,
     qualityProfileId: m.qualityProfileId,
-    ...radarrTagsFieldSource.toEnrichmentFields(m.tags),
+    tags: m.tags,
     genres: m.genres,
     addedDate: m.added,
     sizeOnDiskBytes: m.statistics?.sizeOnDisk,
@@ -70,7 +69,7 @@ export function normalizeSonarrSeries(s: SonarrSeries, providerId: number): Norm
     hasFile: (s.statistics?.episodeFileCount ?? 0) > 0,
     monitored: s.monitored,
     qualityProfileId: s.qualityProfileId,
-    ...sonarrTagsFieldSource.toEnrichmentFields(s.tags),
+    tags: s.tags,
     genres: s.genres,
     addedDate: s.added,
     sizeOnDiskBytes: s.statistics?.sizeOnDisk,

@@ -20,6 +20,9 @@ export { createProvidersProcedures } from './providers.procedures';
 export { registerProvidersDependencies } from './providers.registrations';
 export type { ProvidersCradle } from './providers.registrations';
 
+// The facts non-source providers report about titles, by key.
+export type { ReportedFactKey, ReportedFacts } from './facts';
+
 // Provider roles — the capability vocabulary connections implement.
 export type { ActuatorTask, ActuatorTaskDescriptor, AddressColumn, MediaActuator } from './roles';
 export { isMediaActuator } from './roles';

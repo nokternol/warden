@@ -9,8 +9,8 @@ import {
 import { type DrizzleDb, getDb } from '@server/kernel/db';
 import { DomainEventBus } from '@server/kernel/eventBus';
 import { getChildLogger } from '@server/kernel/logger';
-import type { EnrichmentFields } from '@server/modules/media';
 import { LibraryCache } from '@server/modules/media/libraryCache';
+import type { ReportedFacts } from '@server/modules/providers';
 import {
   type IProviderFactory,
   type ProviderSettingsService,
@@ -48,7 +48,7 @@ export async function refreshCatalog(
 export async function seedFacts(
   db: DrizzleDb,
   mediaIdentityId: number,
-  facts: Partial<EnrichmentFields>,
+  facts: Partial<ReportedFacts>,
   providerId?: number
 ): Promise<void> {
   const fields = new Map((await db.select().from(enrichmentField)).map((f) => [f.key, f.id]));

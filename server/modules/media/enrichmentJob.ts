@@ -2,10 +2,10 @@ import { type MetadataProviderType, mediaIdentity } from '../../database/schema'
 import type { DrizzleDb } from '../../kernel/db';
 import { yieldToEventLoop } from '../../kernel/yieldToEventLoop';
 import { failureMessage, recordRefreshFailed, recordRefreshed } from '../providers';
+import type { ReportedFacts } from '../providers';
 import { fieldsByProviderType } from './activeFieldSet';
 import type { EnrichableField, MediaEnricher } from './enrichment/enricher';
 import type { EnrichmentQueries } from './enrichment/enrichment.queries';
-import type { EnrichmentFields } from './mediaFieldProvider';
 import type { MediaItem } from './mediaItem';
 
 /** One active enricher, with the provider instance whose facts it reads. */
@@ -66,12 +66,10 @@ export class EnrichmentJob {
         continue;
       }
       const declared = fieldsByProviderType as Partial<
-        Record<MetadataProviderType, readonly (keyof EnrichmentFields)[]>
+        Record<MetadataProviderType, readonly (keyof ReportedFacts)[]>
       >;
-      const fields = (declared[result.provider] ?? []).filter(
-        (field): field is EnrichableField => field !== 'tags'
-      );
-      const factsByTitle = new Map<number, Partial<EnrichmentFields>>();
+      const fields: readonly EnrichableField[] = declared[result.provider] ?? [];
+      const factsByTitle = new Map<number, Partial<ReportedFacts>>();
       for (const item of result.items) {
         await yieldToEventLoop();
         const titleId = item._sourceIds.identity;
@@ -80,7 +78,7 @@ export class EnrichmentJob {
           fields
             .map((field) => [field, item[field]] as const)
             .filter(([, value]) => value !== undefined && value !== null)
-        ) as Partial<EnrichmentFields>;
+        ) as Partial<ReportedFacts>;
         factsByTitle.set(titleId, facts);
       }
       await this.deps.enrichmentQueries.replaceProviderFacts(providerId, factsByTitle);

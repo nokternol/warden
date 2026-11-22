@@ -1,7 +1,7 @@
 import { MetadataProviderType } from '@server/database/schema';
 import { fieldsByProviderType } from '@server/modules/media/activeFieldSet';
 import { contestedFieldPrecedence } from '@server/modules/media/enrichment/precedence';
-import type { EnrichmentFields } from '@server/modules/media/mediaFieldProvider';
+import type { ReportedFacts } from '@server/modules/providers';
 import { describe, expect, it } from 'vitest';
 
 describe('contestedFieldPrecedence', () => {
@@ -19,10 +19,9 @@ describe('contestedFieldPrecedence', () => {
   });
 
   it('orders every fact more than one enricher type declares, covering each of them', () => {
-    const declarers = new Map<keyof EnrichmentFields, MetadataProviderType[]>();
+    const declarers = new Map<keyof ReportedFacts, MetadataProviderType[]>();
     for (const [type, fields] of Object.entries(fieldsByProviderType)) {
       for (const field of fields) {
-        if (field === 'tags') continue;
         declarers.set(field, [...(declarers.get(field) ?? []), type as MetadataProviderType]);
       }
     }

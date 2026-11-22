@@ -84,6 +84,3 @@ export type { EnrichmentJobFactoryDeps } from './enrichmentJobFactory';
 
 // Precedence — the per-field resolution order for a contested field.
 export type { ContestedFieldPrecedence } from './enrichment/precedence';
-
-// The facts a title can carry beyond its catalog record.
-export type { EnrichmentFields } from './mediaFieldProvider';

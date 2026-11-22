@@ -92,10 +92,10 @@ describe('EnrichmentQueries', () => {
     expect(await queries.allFacts()).toHaveLength(2);
   });
 
-  it('throws when a field key has no seeded enrichment_field row (migration/EnrichmentFields drift)', async () => {
+  it('throws when a field key has no seeded enrichment_field row (migration/ReportedFacts drift)', async () => {
     const id = await title();
     const queries = new EnrichmentQueries({ db: getDb() });
-    // Simulates seed drift: a key EnrichmentFields declares but the migration never seeded.
+    // Simulates seed drift: a key ReportedFacts declares but the migration never seeded.
     await getDb().delete(enrichmentField).where(eq(enrichmentField.key, 'tmdbStatus'));
 
     await expect(

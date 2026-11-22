@@ -1,8 +1,8 @@
 import type { MetadataProviderType } from '../../database/schema';
+import type { ReportedFacts } from '../providers';
 import type { EnrichableField } from './enrichment/enricher';
 import type { StoredFact } from './enrichment/enrichment.queries';
 import { contestedFieldPrecedence } from './enrichment/precedence';
-import type { EnrichmentFields } from './mediaFieldProvider';
 
 /**
  * Each title's facts, one value per fact, from the facts every provider reported. Where more than
@@ -13,14 +13,14 @@ import type { EnrichmentFields } from './mediaFieldProvider';
 export function resolveFacts(
   facts: readonly StoredFact[],
   typeOf: ReadonlyMap<number, MetadataProviderType>
-): Map<number, Partial<EnrichmentFields>> {
-  const rank = (field: keyof EnrichmentFields, providerId: number): number => {
+): Map<number, Partial<ReportedFacts>> {
+  const rank = (field: keyof ReportedFacts, providerId: number): number => {
     const order: readonly MetadataProviderType[] =
       contestedFieldPrecedence[field as EnrichableField] ?? [];
     const position = order.indexOf(typeOf.get(providerId)!);
     return position === -1 ? order.length : position;
   };
-  const chosen = new Map<number, Map<keyof EnrichmentFields, StoredFact>>();
+  const chosen = new Map<number, Map<keyof ReportedFacts, StoredFact>>();
   for (const fact of facts) {
     if (!typeOf.has(fact.providerId)) continue;
     const byField = chosen.get(fact.mediaIdentityId) ?? new Map();
@@ -35,7 +35,7 @@ export function resolveFacts(
       title,
       Object.fromEntries(
         [...byField.values()].map((f) => [f.field, f.value])
-      ) as Partial<EnrichmentFields>,
+      ) as Partial<ReportedFacts>,
     ])
   );
 }

@@ -10,12 +10,12 @@ import {
   SOURCE_OWNER,
   type SonarrSeries,
 } from '@server/modules/providers';
+import type { ReportedFacts } from '../providers';
 import { filterAnswer, findingsFor } from './filterReadiness';
 import type { CopyRecord, Library, LibraryCopy } from './libraryCache';
 import { paginateItems } from './media.pagination';
 import type { MediaCradle } from './media.registrations';
 import { sortMedia } from './media.sort';
-import type { EnrichmentFields } from './mediaFieldProvider';
 import type { SelectedTitle } from './mediaQueryEngine';
 import { resetMediaData } from './mediaReset';
 import { sourceOwnership } from './mediaSourceFactory';
@@ -102,9 +102,8 @@ function valuesOf(library: Library, pick: (item: LibraryCopy['item']) => unknown
 }
 
 /** A fact's distinct values across the copy, for a filter's choices. */
-function factValues(field: keyof EnrichmentFields) {
-  return (library: Library) =>
-    valuesOf(library, (item) => (item as Partial<EnrichmentFields>)[field]);
+function factValues(field: keyof ReportedFacts) {
+  return (library: Library) => valuesOf(library, (item) => (item as Partial<ReportedFacts>)[field]);
 }
 
 /** One stored list of each active instance of `type`, each entry tagged with its instance. */

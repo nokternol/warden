@@ -1,9 +1,9 @@
 import { MetadataProviderType } from '../../database/schema';
 import type { DomainEventBus } from '../../kernel/eventBus';
-import type { EnrichmentFields } from './mediaFieldProvider';
+import type { ReportedFacts } from '../providers';
 
 /**
- * The single declared source of truth for which `EnrichmentFields` keys each
+ * The single declared source of truth for which `ReportedFacts` keys each
  * provider type's `MediaFieldProvider`/`MediaFieldSource` adapter(s) produce.
  * Hand-authored per provider type, not declared on the connection classes as
  * their other capabilities are (`catalogueEntry`), because an adapter's
@@ -13,8 +13,6 @@ import type { EnrichmentFields } from './mediaFieldProvider';
  * reads instead of re-deriving.
  */
 export const fieldsByProviderType = {
-  [MetadataProviderType.RADARR]: ['tags'],
-  [MetadataProviderType.SONARR]: ['tags'],
   [MetadataProviderType.TAUTULLI]: ['playCount', 'lastWatchedAt'],
   [MetadataProviderType.PLEX]: [
     'playCount',
@@ -47,18 +45,18 @@ export const fieldsByProviderType = {
   ],
   [MetadataProviderType.SEERR]: ['seerrRequestStatus', 'seerrHasIssue'],
   [MetadataProviderType.TMDB]: ['tmdbStatus'],
-} as const satisfies Partial<Record<MetadataProviderType, readonly (keyof EnrichmentFields)[]>>;
+} as const satisfies Partial<Record<MetadataProviderType, readonly (keyof ReportedFacts)[]>>;
 
 /**
- * Every `EnrichmentFields` key must have at least one declared producer above — a field
+ * Every `ReportedFacts` key must have at least one declared producer above — a field
  * with no producer anywhere is unreachable (nothing would ever populate it), the same
  * silent-gap shape as the other coverage checks in this codebase (see
  * `docs/architecture/enrichment-field-completeness.md`). `_ActualCoveredField` is the
- * real union of every provider's declared fields; a new `EnrichmentFields` key with no
+ * real union of every provider's declared fields; a new `ReportedFacts` key with no
  * matching entry above fails to compile here, naming it.
  */
 type _ActualCoveredField = (typeof fieldsByProviderType)[keyof typeof fieldsByProviderType][number];
-type _UncoveredField = Exclude<keyof EnrichmentFields, _ActualCoveredField>;
+type _UncoveredField = Exclude<keyof ReportedFacts, _ActualCoveredField>;
 const _everyFieldHasAProducer: Record<_UncoveredField, never> = {};
 
 /**
@@ -66,15 +64,13 @@ const _everyFieldHasAProducer: Record<_UncoveredField, never> = {};
  * membership only ("who can produce this field at all"), not precedence
  * (which only orders an already-established membership set).
  */
-export function activeFieldSet(
-  activeTypes: Set<MetadataProviderType>
-): Set<keyof EnrichmentFields> {
+export function activeFieldSet(activeTypes: Set<MetadataProviderType>): Set<keyof ReportedFacts> {
   // Widened for indexing by the full `MetadataProviderType` enum (most of which have
   // no entry above) — the literal-narrowed export type only has the declared keys.
   const table = fieldsByProviderType as Partial<
-    Record<MetadataProviderType, readonly (keyof EnrichmentFields)[]>
+    Record<MetadataProviderType, readonly (keyof ReportedFacts)[]>
   >;
-  const fields = new Set<keyof EnrichmentFields>();
+  const fields = new Set<keyof ReportedFacts>();
   for (const type of activeTypes) {
     for (const field of table[type] ?? []) {
       fields.add(field);
@@ -99,7 +95,7 @@ export interface ActiveTypesSource {
  */
 export class ActiveFieldSetCache {
   private readonly source: ActiveTypesSource;
-  private cached: Set<keyof EnrichmentFields> | null = null;
+  private cached: Set<keyof ReportedFacts> | null = null;
   private cachedActiveTypes: Set<MetadataProviderType> | null = null;
   private generation = 0;
 
@@ -112,7 +108,7 @@ export class ActiveFieldSetCache {
     });
   }
 
-  async get(): Promise<Set<keyof EnrichmentFields>> {
+  async get(): Promise<Set<keyof ReportedFacts>> {
     if (this.cached !== null) return this.cached;
     const generation = this.generation;
     const fields = activeFieldSet(await this.getActiveTypes());

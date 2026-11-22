@@ -8,10 +8,6 @@ import {
 import { describe, expect, it, vi } from 'vitest';
 
 describe('fieldsByProviderType', () => {
-  it('declares tags as the field Radarr produces', () => {
-    expect(fieldsByProviderType[MetadataProviderType.RADARR]).toEqual(['tags']);
-  });
-
   it('declares playCount and lastWatchedAt for Tautulli', () => {
     expect(fieldsByProviderType[MetadataProviderType.TAUTULLI]).toEqual([
       'playCount',
@@ -64,10 +60,6 @@ describe('fieldsByProviderType', () => {
   it('declares tmdbStatus for TMDB', () => {
     expect(fieldsByProviderType[MetadataProviderType.TMDB]).toEqual(['tmdbStatus']);
   });
-
-  it('declares tags as the field Sonarr produces', () => {
-    expect(fieldsByProviderType[MetadataProviderType.SONARR]).toEqual(['tags']);
-  });
 });
 
 describe('activeFieldSet', () => {
@@ -76,7 +68,7 @@ describe('activeFieldSet', () => {
       new Set([MetadataProviderType.RADARR, MetadataProviderType.TAUTULLI])
     );
 
-    expect(result).toEqual(new Set(['tags', 'playCount', 'lastWatchedAt']));
+    expect(result).toEqual(new Set(['playCount', 'lastWatchedAt']));
   });
 });
 

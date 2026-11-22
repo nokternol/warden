@@ -1,6 +1,6 @@
 import { MetadataProviderType } from '../../../database/schema';
 import { ValidationError } from '../../../kernel/errors';
-import type { EnrichmentFields } from '../mediaFieldProvider';
+import type { ReportedFacts } from '../../providers';
 import type { EnrichableField } from './enricher';
 
 export type { EnrichableField };
@@ -13,7 +13,7 @@ export type { EnrichableField };
  * unrepresentable instead of merely forbidden by convention.
  */
 export type ContestedFieldPrecedence = Partial<{
-  [K in keyof EnrichmentFields]: readonly [MetadataProviderType, ...MetadataProviderType[]];
+  [K in keyof ReportedFacts]: readonly [MetadataProviderType, ...MetadataProviderType[]];
 }>;
 
 /** Plex ranks before Jellyfin wherever both media servers report a fact. */
@@ -46,19 +46,17 @@ export const contestedFieldPrecedence: ContestedFieldPrecedence = {
  * every enrichable fact more than one active provider type declares is contested, and every one
  * of those types must be in that fact's `contestedFieldPrecedence` order. A fact with no order, or
  * an active producer left out, would otherwise be decided by an accident of storage order instead
- * of the deliberate trust judgment precedence encodes. `tags` is construction-only (each source
- * builds its own instance's tags), so Radarr and Sonarr both declaring it contests nothing. Takes
+ * of the deliberate trust judgment precedence encodes. Takes
  * `precedence`/`fieldsByType` as parameters so it stays pure and testable against synthetic data.
  */
 export function assertContestedFieldsCovered(
   activeTypes: Set<MetadataProviderType>,
   precedence: ContestedFieldPrecedence,
-  fieldsByType: Partial<Record<MetadataProviderType, readonly (keyof EnrichmentFields)[]>>
+  fieldsByType: Partial<Record<MetadataProviderType, readonly (keyof ReportedFacts)[]>>
 ): void {
   const producers = new Map<EnrichableField, MetadataProviderType[]>();
   for (const type of activeTypes) {
     for (const field of fieldsByType[type] ?? []) {
-      if (field === 'tags') continue;
       producers.set(field, [...(producers.get(field) ?? []), type]);
     }
   }

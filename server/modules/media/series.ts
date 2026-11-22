@@ -1,10 +1,9 @@
-import type { EnrichmentFields } from './mediaFieldProvider';
+import type { ReportedFacts } from '../providers';
 
 /**
- * Every `EnrichmentFields` key, not a hand-picked subset — see the identical note on
- * `NormalizedMovie` (`movie.ts`) for why.
+ * A series as its source (Sonarr) supplies it in its catalog record: every catalog fact of a series.
  */
-export interface NormalizedSeries extends Partial<EnrichmentFields> {
+export interface SeriesCatalogRecord {
   _sourceIds: {
     sonarr?: number;
     plex?: string;
@@ -23,6 +22,7 @@ export interface NormalizedSeries extends Partial<EnrichmentFields> {
   hasFile?: boolean;
   monitored?: boolean;
   qualityProfileId?: number;
+  tags?: number[];
   genres?: string[];
   addedDate?: string;
   sizeOnDiskBytes?: number;
@@ -48,3 +48,6 @@ export interface NormalizedSeries extends Partial<EnrichmentFields> {
   /** Sonarr-only, instance-scoped id — backs the `languageProfileIds` filter rule. */
   languageProfileId?: number;
 }
+
+/** A series as rules read it: its catalog record and the facts other providers report about it. */
+export type NormalizedSeries = SeriesCatalogRecord & Partial<ReportedFacts>;

@@ -1,9 +1,7 @@
 import {
   jellyfinFieldProvider,
   plexFieldProvider,
-  radarrTagsFieldSource,
   seerrFieldProvider,
-  sonarrTagsFieldSource,
   tautulliFieldProvider,
   tmdbFieldSource,
 } from '@server/modules/media/mediaFieldProvider';
@@ -15,22 +13,6 @@ import type {
   TautulliHistoryItem,
 } from '@server/modules/providers';
 import { describe, expect, it } from 'vitest';
-
-describe('radarrTagsFieldSource', () => {
-  it('transforms Radarr tags into the canonical tags field', () => {
-    const result = radarrTagsFieldSource.toEnrichmentFields([10, 20]);
-
-    expect(result).toEqual({ tags: [10, 20] });
-  });
-});
-
-describe('sonarrTagsFieldSource', () => {
-  it('transforms Sonarr tags into the canonical tags field', () => {
-    const result = sonarrTagsFieldSource.toEnrichmentFields([30, 40]);
-
-    expect(result).toEqual({ tags: [30, 40] });
-  });
-});
 
 function history(rating_key: string, stopped?: number): TautulliHistoryItem {
   return {

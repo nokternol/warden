@@ -25,7 +25,7 @@ import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createMediaProcedures } from '@server/modules/media';
 import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.queries';
-import type { EnrichmentFields } from '@server/modules/media/mediaFieldProvider';
+import type { ReportedFacts } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
 import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import { refreshCatalog, seedFacts } from '@tests/helpers/library';
@@ -129,10 +129,7 @@ describe('Media browse — series registry predicates', () => {
     return createApiClient(app);
   }
 
-  async function seedEnrichment(
-    sourceId: number,
-    fields: Partial<EnrichmentFields>
-  ): Promise<void> {
+  async function seedEnrichment(sourceId: number, fields: Partial<ReportedFacts>): Promise<void> {
     const db = getDb();
     const [sonarr] = await db
       .select({ id: metadataProviders.id })

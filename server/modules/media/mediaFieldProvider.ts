@@ -7,44 +7,7 @@ import type {
   SeerrRequest,
   TautulliHistoryItem,
 } from '../providers';
-
-/**
- * The canonical fields any provider may contribute, whether by decorating an
- * existing item (`MediaFieldProvider`) or by constructing one from scratch
- * (`MediaFieldSource`). Hand-authored and type-only — never read or branched
- * on at runtime. Every adapter's `toEnrichmentFields` return is checked
- * against it, which is what catches a field-type disagreement between two
- * providers at compile time.
- */
-export interface EnrichmentFields {
-  tags: number[];
-  playCount: number;
-  lastWatchedAt: string;
-  seerrRequestStatus: number;
-  seerrHasIssue: boolean;
-  tmdbStatus: string;
-  plexAddedAt: string;
-  studio: string;
-  runtimeMinutes: number;
-  fileSizeBytes: number;
-  releaseDate: string;
-  fileContainer: string;
-  videoCodec: string;
-  audioCodec: string;
-  fileResolution: string;
-  labels: string[];
-  jellyfinAddedAt: string;
-  isFavorite: boolean;
-}
-
-/**
- * A provider that builds an entire canonical item from one raw item, always
- * 1:1, with no existing item to decorate. `toEnrichmentFields` is the single
- * checked transform from the provider's own representation to `TFields`.
- */
-export interface MediaFieldSource<TMediaField, TFields extends Partial<EnrichmentFields>> {
-  toEnrichmentFields(native: TMediaField): TFields;
-}
+import type { ReportedFacts } from '../providers';
 
 /**
  * A provider that decorates fields onto an already-existing item, joined by
@@ -56,29 +19,12 @@ export interface MediaFieldSource<TMediaField, TFields extends Partial<Enrichmen
 export interface MediaFieldProvider<
   TRaw,
   TMediaField,
-  TFields extends Partial<EnrichmentFields>,
+  TFields extends Partial<ReportedFacts>,
   TKey extends string | number = string,
 > {
   visit(raw: TRaw): Map<TKey, TMediaField>;
   toEnrichmentFields(native: TMediaField): TFields;
 }
-
-/**
- * Both Radarr and Sonarr report tags as a native `number[]` with no
- * transform needed — the same `MediaFieldSource` shape, kept as two named
- * exports (not one shared constant) because callers care which provider's
- * adapter they're wiring, even though today's transform happens to be
- * identical.
- */
-const tagsIdentitySource = (tags: number[]): Pick<EnrichmentFields, 'tags'> => ({ tags });
-
-export const radarrTagsFieldSource: MediaFieldSource<number[], Pick<EnrichmentFields, 'tags'>> = {
-  toEnrichmentFields: tagsIdentitySource,
-};
-
-export const sonarrTagsFieldSource: MediaFieldSource<number[], Pick<EnrichmentFields, 'tags'>> = {
-  toEnrichmentFields: tagsIdentitySource,
-};
 
 /**
  * The play-history shape Tautulli and Plex both natively report: play count
@@ -93,9 +39,9 @@ interface PlayHistoryFields {
 const toIso = (unix: number): string => new Date(unix * 1000).toISOString();
 
 /** The `toEnrichmentFields` transform every play-history provider shares. */
-function playHistoryToEnrichmentFields(
+function playHistoryToReportedFacts(
   native: PlayHistoryFields
-): Partial<Pick<EnrichmentFields, 'playCount' | 'lastWatchedAt'>> {
+): Partial<Pick<ReportedFacts, 'playCount' | 'lastWatchedAt'>> {
   return {
     playCount: native.playCount,
     ...(native.lastPlayedUnix !== undefined ? { lastWatchedAt: toIso(native.lastPlayedUnix) } : {}),
@@ -116,7 +62,7 @@ function isCompletedView(item: TautulliHistoryItem): boolean {
 export const tautulliFieldProvider: MediaFieldProvider<
   TautulliHistoryItem[],
   PlayHistoryFields,
-  Partial<Pick<EnrichmentFields, 'playCount' | 'lastWatchedAt'>>
+  Partial<Pick<ReportedFacts, 'playCount' | 'lastWatchedAt'>>
 > = {
   visit: (history) => {
     const byKey = new Map<string, PlayHistoryFields>();
@@ -138,11 +84,13 @@ export const tautulliFieldProvider: MediaFieldProvider<
     }
     return byKey;
   },
-  toEnrichmentFields: playHistoryToEnrichmentFields,
+  toEnrichmentFields: playHistoryToReportedFacts,
 };
 
-export const tmdbFieldSource: MediaFieldSource<string, Pick<EnrichmentFields, 'tmdbStatus'>> = {
-  toEnrichmentFields: (status) => ({ tmdbStatus: status }),
+export const tmdbFieldSource = {
+  toEnrichmentFields: (status: string): Pick<ReportedFacts, 'tmdbStatus'> => ({
+    tmdbStatus: status,
+  }),
 };
 
 /** Seerr's own representation: request status and whether an issue is open. */
@@ -154,7 +102,7 @@ interface SeerrNativeFields {
 export const seerrFieldProvider: MediaFieldProvider<
   [SeerrRequest[], SeerrIssue[]],
   SeerrNativeFields,
-  Partial<Pick<EnrichmentFields, 'seerrRequestStatus' | 'seerrHasIssue'>>,
+  Partial<Pick<ReportedFacts, 'seerrRequestStatus' | 'seerrHasIssue'>>,
   number
 > = {
   visit: ([requests, issues]) => {
@@ -204,7 +152,7 @@ export const plexFieldProvider: MediaFieldProvider<
   PlexNativeFields,
   Partial<
     Pick<
-      EnrichmentFields,
+      ReportedFacts,
       | 'playCount'
       | 'lastWatchedAt'
       | 'plexAddedAt'
@@ -242,7 +190,7 @@ export const plexFieldProvider: MediaFieldProvider<
     return byKey;
   },
   toEnrichmentFields: (native) => ({
-    ...playHistoryToEnrichmentFields(native),
+    ...playHistoryToReportedFacts(native),
     ...(native.addedAtUnix !== undefined ? { plexAddedAt: toIso(native.addedAtUnix) } : {}),
     ...(native.studio !== undefined ? { studio: native.studio } : {}),
     ...(native.durationMs !== undefined
@@ -315,7 +263,7 @@ export const jellyfinFieldProvider: MediaFieldProvider<
   JellyfinNativeFields,
   Partial<
     Pick<
-      EnrichmentFields,
+      ReportedFacts,
       | 'playCount'
       | 'lastWatchedAt'
       | 'jellyfinAddedAt'

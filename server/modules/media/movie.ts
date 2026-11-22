@@ -1,15 +1,9 @@
-import type { EnrichmentFields } from './mediaFieldProvider';
+import type { ReportedFacts } from '../providers';
 
 /**
- * Every `EnrichmentFields` key, not a hand-picked subset — no field is movie-only or
- * series-only within `EnrichmentFields` itself (that distinction lives in
- * `providers`/`contentTypes` instead), so `NormalizedSeries` extends the identical
- * `Partial<EnrichmentFields>`. A new `EnrichmentFields` key is carried here
- * automatically; there is no separate list to remember to update, unlike the previous
- * hand-typed `Pick<EnrichmentFields, 'tags' | 'playCount' | ...>` union, which
- * compiled fine even when a key was silently missing from it.
+ * A movie as its source (Radarr) supplies it in its catalog record: every catalog fact of a movie.
  */
-export interface NormalizedMovie extends Partial<EnrichmentFields> {
+export interface MovieCatalogRecord {
   _sourceIds: {
     radarr?: number;
     plex?: string;
@@ -26,6 +20,7 @@ export interface NormalizedMovie extends Partial<EnrichmentFields> {
   hasFile?: boolean;
   monitored?: boolean;
   qualityProfileId?: number;
+  tags?: number[];
   genres?: string[];
   addedDate?: string;
   sizeOnDiskBytes?: number;
@@ -62,3 +57,6 @@ export interface NormalizedMovie extends Partial<EnrichmentFields> {
   website?: string;
   youTubeTrailerId?: string;
 }
+
+/** A movie as rules read it: its catalog record and the facts other providers report about it. */
+export type NormalizedMovie = MovieCatalogRecord & Partial<ReportedFacts>;

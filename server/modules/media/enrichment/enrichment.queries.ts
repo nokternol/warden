@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { enrichmentField, mediaEnrichment } from '../../../database/schema';
 import type { DrizzleDb } from '../../../kernel/db';
-import type { EnrichmentFields } from '../mediaFieldProvider';
+import type { ReportedFacts } from '../../providers';
 
 interface Deps {
   db: DrizzleDb;
@@ -10,13 +10,13 @@ interface Deps {
 /**
  * The DAL seam behind the EAV media_enrichment shape — the one place that
  * pivots (mediaIdentityId, fieldId, value) rows into/out of the
- * EnrichmentFields object shape every consumer works with.
+ * ReportedFacts object shape every consumer works with.
  */
 /** One fact one provider reported about one title. */
 export interface StoredFact {
   mediaIdentityId: number;
   providerId: number;
-  field: keyof EnrichmentFields;
+  field: keyof ReportedFacts;
   value: unknown;
 }
 
@@ -37,7 +37,7 @@ export class EnrichmentQueries {
       .orderBy(mediaEnrichment.id);
     return rows.map((row) => ({
       ...row,
-      field: row.field as keyof EnrichmentFields,
+      field: row.field as keyof ReportedFacts,
       value: JSON.parse(row.value),
     }));
   }
@@ -49,7 +49,7 @@ export class EnrichmentQueries {
    */
   async replaceProviderFacts(
     providerId: number,
-    factsByTitle: Map<number, Partial<EnrichmentFields>>
+    factsByTitle: Map<number, Partial<ReportedFacts>>
   ): Promise<void> {
     const fieldRows = await this.deps.db.select().from(enrichmentField);
     const fieldIdByKey = new Map(fieldRows.map((f) => [f.key, f.id]));
@@ -58,12 +58,12 @@ export class EnrichmentQueries {
         .filter(([, value]) => value !== null && value !== undefined)
         .map(([key, value]) => {
           const fieldId = fieldIdByKey.get(key);
-          // A key EnrichmentFields declares but enrichment_field has no seeded row for is
-          // migration/EnrichmentFields drift (docs/architecture/media-enrichment-eav-model.md's
+          // A key ReportedFacts declares but enrichment_field has no seeded row for is
+          // migration/ReportedFacts drift (docs/architecture/media-enrichment-eav-model.md's
           // accepted, documented risk): fail loudly rather than as an opaque constraint error.
           if (fieldId === undefined) {
             throw new Error(
-              `enrichment_field has no seeded row for: ${key} — migration seed is out of sync with EnrichmentFields`
+              `enrichment_field has no seeded row for: ${key} — migration seed is out of sync with ReportedFacts`
             );
           }
           return { mediaIdentityId, fieldId, providerId, value: JSON.stringify(value) };
