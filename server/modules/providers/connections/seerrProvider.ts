@@ -53,7 +53,6 @@ export class SeerrProvider extends BaseProviderConnection implements FactReporte
     apiKeyRequired: true,
     hostPlaceholder: 'http://localhost:5055',
     apiPath: '',
-    filterData: ['Request queue'],
     capabilities: {
       providerKind: 'requestManager',
       facts: { reports: ['seerrRequestStatus', 'seerrHasIssue'], matchedBy: 'tmdbId' },

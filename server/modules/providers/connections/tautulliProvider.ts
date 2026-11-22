@@ -67,7 +67,6 @@ export class TautulliProvider
     apiKeyRequired: true,
     hostPlaceholder: 'http://localhost:8181',
     apiPath: '',
-    filterData: ['Watch history', 'Play statistics', 'User activity'],
     capabilities: {
       addressedBy: 'plexRatingKey',
       providerKind: 'watchHistory',

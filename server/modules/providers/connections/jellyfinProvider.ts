@@ -128,7 +128,6 @@ export class JellyfinProvider
     apiKeyRequired: true,
     hostPlaceholder: 'http://localhost:8096',
     apiPath: '',
-    filterData: ['Library contents', 'Item metadata'],
     capabilities: {
       mediaServer: 'jellyfinItemId',
       facts: {

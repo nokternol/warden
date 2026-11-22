@@ -12,7 +12,6 @@ const TYPES: ProviderTypeDescriptor[] = [
     type: 'PLEX',
     label: 'Plex',
     apiPath: '',
-    filterData: [],
     apiKeyRequired: true,
     hostPlaceholder: 'http://localhost:32400',
   },
@@ -20,11 +19,10 @@ const TYPES: ProviderTypeDescriptor[] = [
     type: 'RADARR',
     label: 'Radarr',
     apiPath: '/api/v3',
-    filterData: [],
     apiKeyRequired: true,
     hostPlaceholder: 'http://localhost:7878',
   },
-  { type: 'TVMAZE', label: 'TVmaze', apiPath: '', defaultUrl: 'https://t', filterData: [] },
+  { type: 'TVMAZE', label: 'TVmaze', apiPath: '', defaultUrl: 'https://t' },
 ];
 
 const fill = async (user: ReturnType<typeof userEvent.setup>, key = 'secret') => {

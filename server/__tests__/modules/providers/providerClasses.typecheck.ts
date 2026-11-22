@@ -14,7 +14,6 @@ class MovieSourceWithoutMovies extends BaseProviderConnection {
     apiKeyRequired: true,
     hostPlaceholder: 'http://localhost:1',
     apiPath: '',
-    filterData: [],
     capabilities: { source: 'movie' },
   } as const satisfies ProviderTypeEntry;
 
@@ -33,7 +32,6 @@ export const hostedWithoutAddress = {
   label: 'Nowhere',
   apiKeyRequired: false,
   apiPath: '',
-  filterData: [],
   capabilities: {},
   // @ts-expect-error an entry without a host placeholder must carry its `defaultUrl`
 } as const satisfies ProviderTypeEntry;
@@ -44,7 +42,6 @@ const reporterEntry = {
   apiKeyRequired: true,
   hostPlaceholder: 'http://localhost:1',
   apiPath: '',
-  filterData: [],
 } as const;
 
 /** Declares the facts it reports, but cannot read them: no `readReportedFacts`. */

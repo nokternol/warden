@@ -19,11 +19,7 @@ export const PROVIDER_CATALOGUE = Object.fromEntries(
 /** Each provider type as the setup screens see it, in display order; capabilities stay here. */
 export function describeProviderTypes(): ProviderTypeDescriptor[] {
   return (Object.entries(PROVIDER_CATALOGUE) as [MetadataProviderType, ProviderTypeEntry][]).map(
-    ([type, { capabilities: _capabilities, filterData, ...entry }]) => ({
-      type,
-      ...entry,
-      filterData: [...filterData],
-    })
+    ([type, { capabilities: _capabilities, ...entry }]) => ({ type, ...entry })
   );
 }
 

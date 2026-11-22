@@ -41,10 +41,9 @@ export interface ProviderCapabilities {
  * the class map's key supplies) and what it can do.
  */
 export type ProviderTypeEntry = Readonly<
-  Omit<ProviderTypeDescriptor, 'type' | 'filterData' | 'hostPlaceholder' | 'defaultUrl'>
+  Omit<ProviderTypeDescriptor, 'type' | 'hostPlaceholder' | 'defaultUrl'>
 > &
   ProviderAddress & {
-    readonly filterData: readonly string[];
     readonly capabilities: ProviderCapabilities;
   };
 

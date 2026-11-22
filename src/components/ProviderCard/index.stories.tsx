@@ -22,14 +22,12 @@ const radarrType: ProviderTypeDescriptor = {
   type: 'RADARR',
   label: 'Radarr',
   apiPath: '/api/v3',
-  filterData: ['Movie library', 'Quality profiles', 'Tags'],
 };
 
 const seerrType: ProviderTypeDescriptor = {
   type: 'SEERR',
   label: 'Seerr',
   apiPath: '',
-  filterData: ['Request queue'],
 };
 
 const tasks: ProviderTaskDescriptor[] = [

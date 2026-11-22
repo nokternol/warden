@@ -4,32 +4,28 @@ import AddProviderForm from './index';
 
 /** The offered types as /api/providers/types serves them. */
 const offeredTypes: ProviderTypeDescriptor[] = [
-  { type: 'PLEX', label: 'Plex', apiPath: '', filterData: ['Library contents', 'Item metadata'] },
+  { type: 'PLEX', label: 'Plex', apiPath: '' },
   {
     type: 'JELLYFIN',
     label: 'Jellyfin',
     apiPath: '',
-    filterData: ['Library contents', 'Item metadata'],
   },
   {
     type: 'RADARR',
     label: 'Radarr',
     apiPath: '/api/v3',
-    filterData: ['Movie library', 'Quality profiles', 'Tags'],
   },
   {
     type: 'SONARR',
     label: 'Sonarr',
     apiPath: '/api/v3',
-    filterData: ['Series library', 'Quality profiles', 'Tags'],
   },
   {
     type: 'TAUTULLI',
     label: 'Tautulli',
     apiPath: '',
-    filterData: ['Watch history', 'Play statistics', 'User activity'],
   },
-  { type: 'SEERR', label: 'Seerr', apiPath: '', filterData: ['Request queue'] },
+  { type: 'SEERR', label: 'Seerr', apiPath: '' },
 ];
 
 export const OfferedTypes: Story = () => (
@@ -48,7 +44,6 @@ export const HostedTypeWithFixedUrl: Story = () => (
           label: 'TMDB',
           apiPath: '',
           defaultUrl: 'https://api.themoviedb.org/3',
-          filterData: ['Metadata'],
         },
       ]}
       onSubmit={() => {}}

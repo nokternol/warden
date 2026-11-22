@@ -77,7 +77,6 @@ export class SonarrProvider extends BaseProviderConnection implements MediaActua
     apiKeyRequired: true,
     hostPlaceholder: 'http://localhost:8989',
     apiPath: '/api/v3',
-    filterData: ['Series library', 'Quality profiles', 'Tags'],
     capabilities: { source: 'series' },
   } as const satisfies ProviderTypeEntry;
 

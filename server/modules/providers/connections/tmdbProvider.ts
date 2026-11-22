@@ -172,7 +172,6 @@ export class TmdbProvider extends BaseProviderConnection implements FactReporter
     apiKeyRequired: true,
     apiPath: '',
     defaultUrl: 'https://api.themoviedb.org/3',
-    filterData: ['Metadata'],
     capabilities: {
       providerKind: 'metadata',
       facts: { reports: ['tmdbStatus'], matchedBy: 'tmdbId' },

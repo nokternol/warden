@@ -99,7 +99,6 @@ export class RadarrProvider extends BaseProviderConnection implements MediaActua
     apiKeyRequired: true,
     hostPlaceholder: 'http://localhost:7878',
     apiPath: '/api/v3',
-    filterData: ['Movie library', 'Quality profiles', 'Tags'],
     capabilities: { source: 'movie' },
   } as const satisfies ProviderTypeEntry;
 
