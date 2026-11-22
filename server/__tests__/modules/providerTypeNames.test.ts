@@ -8,21 +8,15 @@ const MODULES = path.join(__dirname, '../../modules');
 /**
  * Where a provider type may be named. Each provider type is declared once, on its connection class,
  * and the providers module reads those declarations; every other file asks for a capability. The
- * facts files (#246) and Search (#238) key on provider type, a departure the fracture ledger
- * records; they are listed here so this test holds everywhere else.
+ * stored primary media server (#264) and Search (#238) key on provider type, departures the
+ * fracture ledger records; they are listed here so this test holds everywhere else.
  */
 const MAY_NAME_PROVIDER_TYPES = [
   'providers/connections/',
   'providers/providerClasses.ts',
   'providers/providerFactory.ts',
   'providers/providerCatalogue.ts',
-  'media/activeFieldSet.ts',
-  'media/enrichmentJobFactory.ts',
-  'media/enrichment/',
-  'media/ruleRegistry.ts',
-  'media/mediaFieldProvider.ts',
   'appSettings/appSettingsService.ts',
-  'media/factsRefreshKinds.ts',
   'media/media.search.procedures.ts',
 ];
 
