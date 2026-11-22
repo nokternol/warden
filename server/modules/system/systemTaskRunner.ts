@@ -10,7 +10,7 @@ export interface CatalogRefreshJobLike {
 
 export interface EnrichmentJobLike {
   run(): Promise<number>;
-  /** The enrichers the run could not read, by name. */
+  /** The fact reporters the run could not read, or whose facts it could not store, by name. */
   failedProviders(): string[];
 }
 

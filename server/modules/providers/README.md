@@ -53,14 +53,15 @@ cheap call that needs the key, through its own client and authentication; the co
 ### How a provider declares itself
 
 Each connection class carries `static readonly catalogueEntry = { … } as const satisfies
-ProviderTypeEntry`: its label, API path, host placeholder or default URL, key requirement, filter data
-and `capabilities` (`source`, `mediaServer`, `addressedBy`). It implements the role interfaces its
-capabilities require (`MovieSource`/`SeriesSource` for `source`, `PlexLinks`/`JellyfinLinks` for
-`mediaServer`) — the class map built through `defineProviderClasses` refuses to compile otherwise — and
-`MediaActuator` when it runs tasks. Callers ask for a capability (`SOURCE_OWNER`, the addressing
+ProviderTypeEntry`: its label, API path, host placeholder or default URL, key requirement and
+`capabilities` (`source`, `mediaServer`, `addressedBy`, `providerKind`, `facts`). It implements the
+role interfaces its capabilities require (`MovieSource`/`SeriesSource` for `source`,
+`PlexLinks`/`JellyfinLinks` for `mediaServer`, `FactReporter` for `facts`) — the class map built
+through `defineProviderClasses` refuses to compile otherwise, and refuses a fact reporter that resolves
+to no kind or no title id column — and `MediaActuator` when it runs tasks. Callers ask for a capability (`SOURCE_OWNER`, the addressing
 columns, the factory's role queries), never for a provider type, and never cast.
 
-Adding a provider that is a source, an actuator addressed by an existing column, or a fact supplier is
+Adding a provider that is a source, an actuator addressed by an existing column, or a fact reporter is
 its type identity (the `MetadataProviderType` member and the contract's provider-type value), its
 connection class (with `catalogueEntry` and the role interfaces it implements) and its entry in the
 class map (`providerClasses.ts`). Each content type has exactly one source type today (north-star
@@ -68,8 +69,10 @@ belief 9), checked by a unit test over the class map. A new media server still n
 role query, a link interface, a link slot in the catalog refresh and a database column, a departure
 recorded in the fracture ledger.
 
-`MediaEnricher` is a media-owned port: `enrichment/enricherAdapters.ts` binds a connection's data to
-it, so a connection implements nothing from media directly. See
+A fact reporter declares the reported facts it reports (`facts.reports`, keys of `ReportedFacts` in
+`facts.ts`) and translates its own payload into them in `readReportedFacts`; Enrichment, in media,
+matches the answers to titles and stores only the declared facts. The precedence between reporters
+(`REPORTED_FACT_PRECEDENCE`) ranks kinds of provider, never provider types. See
 `docs/architecture/provider-roles-and-identity.md` for the role model.
 
 ### Auth patterns
