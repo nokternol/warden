@@ -210,4 +210,37 @@ describe('EnrichmentJob', () => {
       ])
     );
   });
+
+  it('records a reporter whose facts cannot be stored as a failed refresh, and still runs the next', async () => {
+    const id = await title();
+    const tautulli = fakeReporter(
+      tautulliId,
+      'Tautulli',
+      'plexRatingKey',
+      ['playCount'],
+      () => new Map([['k', { playCount: 5 }]])
+    );
+    const plex = fakeReporter(
+      plexId,
+      'Plex',
+      'plexRatingKey',
+      ['studio'],
+      () => new Map([['k', { studio: 'Legendary' }]])
+    );
+    const store = queries.replaceProviderFacts.bind(queries);
+    vi.spyOn(queries, 'replaceProviderFacts').mockImplementation(async (providerId, facts) => {
+      if (providerId === tautulliId) throw new Error('disk full');
+      return store(providerId, facts);
+    });
+
+    const run = job([tautulli, plex]);
+    await run.run();
+
+    expect(run.failedProviders()).toEqual(['Tautulli']);
+    expect(await queries.allFacts()).toEqual([
+      { mediaIdentityId: id, providerId: plexId, field: 'studio', value: 'Legendary' },
+    ]);
+    const records = await readRefreshRecords(getDb());
+    expect(records.find((r) => r.providerId === tautulliId)?.error).toBe('disk full');
+  });
 });
