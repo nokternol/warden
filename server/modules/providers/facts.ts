@@ -28,3 +28,14 @@ export type ReportedFactKey = keyof ReportedFacts;
 
 /** The kind of a fact reporter, which the reported-fact precedence ranks. Sources are not a kind. */
 export type ProviderKind = 'mediaServer' | 'watchHistory' | 'requestManager' | 'metadata';
+
+/**
+ * For each reported fact more than one kind of provider reports, those kinds in the order whose
+ * value Warden takes (north-star belief 3: the precedence ranks kinds of service, never named
+ * services). A watch-history tracker counts completed plays, not opens, so it ranks before a media
+ * server. Between two providers of one kind, the first connected wins until the owner chooses.
+ */
+export const REPORTED_FACT_PRECEDENCE: Partial<Record<ReportedFactKey, readonly ProviderKind[]>> = {
+  playCount: ['watchHistory', 'mediaServer'],
+  lastWatchedAt: ['watchHistory', 'mediaServer'],
+};

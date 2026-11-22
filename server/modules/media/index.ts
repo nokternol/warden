@@ -73,6 +73,3 @@ export type { MediaQueryEngine } from './mediaQueryEngine';
 // Enrichment — the job that stores each provider's facts.
 export { EnrichmentJobFactory } from './enrichmentJobFactory';
 export type { EnrichmentJobFactoryDeps } from './enrichmentJobFactory';
-
-// Precedence — the per-field resolution order for a contested field.
-export type { ContestedFieldPrecedence } from './enrichment/precedence';

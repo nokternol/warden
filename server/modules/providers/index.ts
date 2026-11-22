@@ -21,6 +21,7 @@ export { registerProvidersDependencies } from './providers.registrations';
 export type { ProvidersCradle } from './providers.registrations';
 
 // The facts non-source providers report about titles, by key.
+export { REPORTED_FACT_PRECEDENCE } from './facts';
 export type { ProviderKind, ReportedFactKey, ReportedFacts } from './facts';
 
 // Provider roles — the capability vocabulary connections implement.
@@ -40,11 +41,7 @@ export type { IProviderFactory, ProviderFactory } from './providerFactory';
 
 // Provider settings — persistence and projection of configured providers.
 export { ProviderSettingsService } from './providerSettingsService';
-export type {
-  PrecedenceCoverageValidator,
-  ProviderSettingsDraft,
-  ProviderSummary,
-} from './providerSettingsService';
+export type { ProviderSettingsDraft, ProviderSummary } from './providerSettingsService';
 
 // What each provider type declares, read from its connection class: how it is named in anything
 // shown to the user, which type owns each content type's catalog, and how titles are addressed.
