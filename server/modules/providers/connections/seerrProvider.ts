@@ -54,7 +54,10 @@ export class SeerrProvider extends BaseProviderConnection implements FactReporte
     hostPlaceholder: 'http://localhost:5055',
     apiPath: '',
     filterData: ['Request queue'],
-    capabilities: {},
+    capabilities: {
+      providerKind: 'requestManager',
+      facts: { reports: ['seerrRequestStatus', 'seerrHasIssue'], matchedBy: 'tmdbId' },
+    },
   } as const satisfies ProviderTypeEntry;
 
   /** One call that needs the key, so a wrong key fails the test. */

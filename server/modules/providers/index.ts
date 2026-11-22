@@ -21,10 +21,17 @@ export { registerProvidersDependencies } from './providers.registrations';
 export type { ProvidersCradle } from './providers.registrations';
 
 // The facts non-source providers report about titles, by key.
-export type { ReportedFactKey, ReportedFacts } from './facts';
+export type { ProviderKind, ReportedFactKey, ReportedFacts } from './facts';
 
 // Provider roles — the capability vocabulary connections implement.
-export type { ActuatorTask, ActuatorTaskDescriptor, AddressColumn, MediaActuator } from './roles';
+export type {
+  ActuatorTask,
+  ActuatorTaskDescriptor,
+  AddressColumn,
+  FactReporter,
+  MediaActuator,
+  TitleIdColumn,
+} from './roles';
 export { isMediaActuator } from './roles';
 
 // Factories: connections from stored settings, sources from connections. The container
@@ -48,7 +55,11 @@ export {
   contentTypeOfSourceType,
   isMediaServerType,
   isMediaSourceType,
+  providerKindOf,
   providerTypeLabel,
+  reportersOf,
+  reportsFacts,
+  titleIdColumnOf,
 } from './providerCatalogue';
 
 // Per-provider task enablement read by automations.

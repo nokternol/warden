@@ -21,11 +21,11 @@ import {
   isMediaSourceType,
   readProviderLists,
   readRefreshRecords,
+  reportsFacts,
 } from '@server/modules/providers';
 import { and, eq } from 'drizzle-orm';
 import { EnrichmentQueries } from './enrichment/enrichment.queries';
 import { resolveFacts } from './enrichmentMerge';
-import { FACTS_REFRESHING_TYPES } from './factsRefreshKinds';
 import type { MediaItem } from './mediaItem';
 import { normalizeRadarrMovie, normalizeSonarrSeries } from './normalizeMedia';
 
@@ -70,13 +70,13 @@ export interface Library {
 
 /**
  * The kinds of data a provider type refreshes into the copy, as it declares: a source refreshes
- * its catalog and setup lists, a media server the links into it, and a facts supplier its facts.
+ * its catalog and setup lists, a media server the links into it, and a fact reporter its facts.
  */
 function refreshedKinds(type: MetadataProviderType): RefreshKind[] {
   return [
     ...(isMediaSourceType(type) ? (['catalog', 'lists'] as const) : []),
     ...(isMediaServerType(type) ? (['links'] as const) : []),
-    ...(FACTS_REFRESHING_TYPES.has(type) ? (['facts'] as const) : []),
+    ...(reportsFacts(type) ? (['facts'] as const) : []),
   ];
 }
 

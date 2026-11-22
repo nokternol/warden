@@ -19,8 +19,10 @@ import {
   type RefreshKind,
   type SonarrProvider,
   type SonarrSeries,
+  isMediaServerType,
   readRefreshRecords,
   recordRefreshed,
+  reportsFacts,
 } from '@server/modules/providers';
 import { CatalogRefreshJob } from '@server/modules/providers/catalogRefreshJob';
 import { ProviderFactory } from '@server/modules/providers/providerFactory';
@@ -158,15 +160,13 @@ async function markOthersRefreshed(db: DrizzleDb): Promise<void> {
     .select()
     .from(metadataProviders)
     .where(eq(metadataProviders.isActive, true));
-  const kinds: Partial<Record<string, RefreshKind[]>> = {
-    PLEX: ['links', 'facts'],
-    JELLYFIN: ['links', 'facts'],
-    TAUTULLI: ['facts'],
-    SEERR: ['facts'],
-    TMDB: ['facts'],
-  };
   for (const provider of providers) {
-    for (const kind of kinds[provider.type] ?? []) {
+    const type = provider.type as MetadataProviderType;
+    const kinds: RefreshKind[] = [
+      ...(isMediaServerType(type) ? (['links'] as const) : []),
+      ...(reportsFacts(type) ? (['facts'] as const) : []),
+    ];
+    for (const kind of kinds) {
       if (!records.some((r) => r.providerId === provider.id && r.kind === kind)) {
         await recordRefreshed(db, provider.id, kind);
       }

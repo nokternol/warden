@@ -3,23 +3,36 @@ import type { ContentType } from '@contract/schemas';
 import type { MetadataProviderType } from '@server/database/schema';
 import type { RadarrMovie } from './connections/radarrProvider';
 import type { SonarrSeries } from './connections/sonarrProvider';
-import type { ReportedFacts } from './facts';
+import type { ProviderKind, ReportedFactKey, ReportedFacts } from './facts';
 
 /** A title's media-server id columns, as the catalog refresh links them. */
 export type AddressColumn = 'plexRatingKey' | 'jellyfinItemId';
 
+/** The title id column a reporter's answers are matched by. */
+export type TitleIdColumn = 'tmdbId' | AddressColumn;
+
 /**
  * What a provider type can do beyond running tasks, declared once on its connection class:
- *  - `source`: owns that content type's catalog;
+ *  - `source`: owns that content type's catalog, and so supplies its catalog facts;
  *  - `mediaServer`: is the media server that titles' `<column>` links point into, and addresses
  *    titles by that column;
- *  - `addressedBy`: addresses titles by a column it is not the media server for.
- * Running tasks is declared by implementing `MediaActuator`.
+ *  - `addressedBy`: addresses titles by a column it is not the media server for;
+ *  - `providerKind`: the kind of fact reporter it is, for a type whose kind `mediaServer` does not
+ *    already say (a media server is always `'mediaServer'`);
+ *  - `facts`: the reported facts it reports (`reports`), and, for a type with no address column,
+ *    the title id its answers are matched by (`matchedBy`).
+ * Running tasks is declared by implementing `MediaActuator`; declaring `facts` requires
+ * implementing `FactReporter`.
  */
 export interface ProviderCapabilities {
   readonly source?: ContentType;
   readonly mediaServer?: AddressColumn;
   readonly addressedBy?: AddressColumn;
+  readonly providerKind?: ProviderKind;
+  readonly facts?: {
+    readonly reports: readonly ReportedFactKey[];
+    readonly matchedBy?: 'tmdbId';
+  };
 }
 
 /**

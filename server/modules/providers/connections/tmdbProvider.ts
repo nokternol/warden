@@ -173,7 +173,10 @@ export class TmdbProvider extends BaseProviderConnection implements FactReporter
     apiPath: '',
     defaultUrl: 'https://api.themoviedb.org/3',
     filterData: ['Metadata'],
-    capabilities: {},
+    capabilities: {
+      providerKind: 'metadata',
+      facts: { reports: ['tmdbStatus'], matchedBy: 'tmdbId' },
+    },
   } as const satisfies ProviderTypeEntry;
 
   /** One call that needs the key, so a wrong key fails the test. */

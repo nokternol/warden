@@ -76,7 +76,25 @@ export class PlexProvider extends BaseProviderConnection implements MediaActuato
     hostPlaceholder: 'http://localhost:32400',
     apiPath: '',
     filterData: ['Library contents', 'Item metadata'],
-    capabilities: { mediaServer: 'plexRatingKey' },
+    capabilities: {
+      mediaServer: 'plexRatingKey',
+      facts: {
+        reports: [
+          'playCount',
+          'lastWatchedAt',
+          'plexAddedAt',
+          'studio',
+          'runtimeMinutes',
+          'fileSizeBytes',
+          'releaseDate',
+          'fileContainer',
+          'videoCodec',
+          'audioCodec',
+          'fileResolution',
+          'labels',
+        ],
+      },
+    },
   } as const satisfies ProviderTypeEntry;
 
   /** One call that needs the key, so a wrong key fails the test. */

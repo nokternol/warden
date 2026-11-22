@@ -68,7 +68,11 @@ export class TautulliProvider
     hostPlaceholder: 'http://localhost:8181',
     apiPath: '',
     filterData: ['Watch history', 'Play statistics', 'User activity'],
-    capabilities: { addressedBy: 'plexRatingKey' },
+    capabilities: {
+      addressedBy: 'plexRatingKey',
+      providerKind: 'watchHistory',
+      facts: { reports: ['playCount', 'lastWatchedAt'] },
+    },
   } as const satisfies ProviderTypeEntry;
 
   /** One call that needs the key, so a wrong key fails the test. */

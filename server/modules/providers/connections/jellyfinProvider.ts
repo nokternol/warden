@@ -129,7 +129,26 @@ export class JellyfinProvider
     hostPlaceholder: 'http://localhost:8096',
     apiPath: '',
     filterData: ['Library contents', 'Item metadata'],
-    capabilities: { mediaServer: 'jellyfinItemId' },
+    capabilities: {
+      mediaServer: 'jellyfinItemId',
+      facts: {
+        reports: [
+          'playCount',
+          'lastWatchedAt',
+          'jellyfinAddedAt',
+          'studio',
+          'runtimeMinutes',
+          'fileSizeBytes',
+          'releaseDate',
+          'fileContainer',
+          'videoCodec',
+          'audioCodec',
+          'fileResolution',
+          'labels',
+          'isFavorite',
+        ],
+      },
+    },
   } as const satisfies ProviderTypeEntry;
 
   /** One call that needs the key, so a wrong key fails the test. */

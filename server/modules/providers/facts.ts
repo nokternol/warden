@@ -25,3 +25,6 @@ export interface ReportedFacts {
 
 /** The key of a reported fact. */
 export type ReportedFactKey = keyof ReportedFacts;
+
+/** The kind of a fact reporter, which the reported-fact precedence ranks. Sources are not a kind. */
+export type ProviderKind = 'mediaServer' | 'watchHistory' | 'requestManager' | 'metadata';
