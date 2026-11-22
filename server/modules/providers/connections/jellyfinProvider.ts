@@ -1,11 +1,14 @@
 import { MetadataProviderType } from '@server/database/schema';
+import type { ReportedFacts } from '../facts';
 import {
   type ActuatorTask,
+  type FactReporter,
   type MediaActuator,
   type ProviderTypeEntry,
   requireParameter,
 } from '../roles';
 import { BaseProviderConnection } from './baseProviderConnection';
+import { defined, playHistoryFacts } from './factMapping';
 
 export interface JellyfinLibrary {
   Name: string;
@@ -67,7 +70,58 @@ interface JellyfinItemsResponse {
   TotalRecordCount: number;
 }
 
-export class JellyfinProvider extends BaseProviderConnection implements MediaActuator {
+/**
+ * Discrete resolution tier from a video stream's pixel height, matching Plex's `videoResolution`
+ * convention ("1080"), since Jellyfin reports raw Width/Height rather than a tier label.
+ */
+function resolutionTier(height: number | undefined): string | undefined {
+  if (height === undefined) return undefined;
+  if (height >= 2160) return '2160';
+  if (height >= 1080) return '1080';
+  if (height >= 720) return '720';
+  return 'sd';
+}
+
+const TICKS_PER_MINUTE = 10_000 * 60_000;
+
+/**
+ * What Jellyfin reports about one item, from its own fields, its user data and its primary file
+ * (first MediaSources entry). Without a play count, `Played` counts as one play.
+ */
+function reportedFactsOf(item: JellyfinItem): Partial<ReportedFacts> {
+  const userData = item.UserData;
+  const source = item.MediaSources?.[0];
+  const streams = source?.MediaStreams ?? [];
+  const video = streams.find((s) => s.Type === 'Video');
+  const lastPlayed = userData?.LastPlayedDate;
+  return {
+    ...playHistoryFacts(
+      userData?.PlayCount ?? (userData?.Played ? 1 : 0),
+      lastPlayed ? Date.parse(lastPlayed) / 1000 : undefined
+    ),
+    ...defined({
+      jellyfinAddedAt: item.DateCreated,
+      studio: item.Studios?.[0]?.Name,
+      runtimeMinutes:
+        item.RunTimeTicks !== undefined
+          ? Math.round(item.RunTimeTicks / TICKS_PER_MINUTE)
+          : undefined,
+      fileSizeBytes: source?.Size,
+      releaseDate: item.PremiereDate,
+      fileContainer: source?.Container,
+      videoCodec: video?.Codec,
+      audioCodec: streams.find((s) => s.Type === 'Audio')?.Codec,
+      fileResolution: resolutionTier(video?.Height),
+      labels: item.Tags && item.Tags.length > 0 ? item.Tags : undefined,
+      isFavorite: userData?.IsFavorite,
+    }),
+  };
+}
+
+export class JellyfinProvider
+  extends BaseProviderConnection
+  implements MediaActuator, FactReporter
+{
   /** How this provider type is presented, reached and what it can do. */
   static readonly catalogueEntry = {
     label: 'Jellyfin',
@@ -171,6 +225,12 @@ export class JellyfinProvider extends BaseProviderConnection implements MediaAct
    *  and enrichment-relevant fields. User-scoped (`Users/{userId}/Items`, not the
    *  generic `/Items` route) so the response carries per-user `UserData`
    *  (`IsFavorite`/`PlayCount`/`LastPlayedDate`/`Played`) for the configured user. */
+  /** The facts Jellyfin reports about every item in its libraries, by item id. */
+  async readReportedFacts(): Promise<Map<string, Partial<ReportedFacts>>> {
+    const items = await this.getAllItems();
+    return new Map(items.map((item) => [item.Id, reportedFactsOf(item)]));
+  }
+
   public async getAllItems(): Promise<JellyfinItem[]> {
     const resp = await this.client
       .get(`Users/${this.userId}/Items`, {

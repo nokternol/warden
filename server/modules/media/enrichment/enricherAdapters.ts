@@ -8,12 +8,7 @@ import type {
 } from '../../providers';
 import type { ReportedFacts } from '../../providers';
 import type { MediaFieldProvider } from '../mediaFieldProvider';
-import {
-  jellyfinFieldProvider,
-  seerrFieldProvider,
-  tautulliFieldProvider,
-  tmdbFieldSource,
-} from '../mediaFieldProvider';
+import { seerrFieldProvider, tautulliFieldProvider, tmdbFieldSource } from '../mediaFieldProvider';
 import { decorate } from './decorate';
 import type { EnrichmentResult, MediaEnricher } from './enricher';
 
@@ -73,7 +68,7 @@ type JellyfinEnrichedField =
 export function jellyfinEnricher(jellyfin: JellyfinProvider): MediaEnricher<JellyfinEnrichedField> {
   return {
     enrich: async (items): Promise<EnrichmentResult<JellyfinEnrichedField>> => {
-      const fieldsByKey = toFieldsByKey(jellyfinFieldProvider, await jellyfin.getAllItems());
+      const fieldsByKey = await jellyfin.readReportedFacts();
       return {
         provider: MetadataProviderType.JELLYFIN,
         items: decorate(items, (i) => i._sourceIds.jellyfin, fieldsByKey),

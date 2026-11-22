@@ -1,9 +1,12 @@
 import { getChildLogger } from '@server/kernel/logger';
 import type { ProviderConfig } from '@server/modules/providers/connections/baseProviderConnection';
-import { JellyfinProvider } from '@server/modules/providers/connections/jellyfinProvider';
+import {
+  type JellyfinItem,
+  JellyfinProvider,
+} from '@server/modules/providers/connections/jellyfinProvider';
 import { server } from '@tests/mocks/server';
 import { http, HttpResponse } from 'msw';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const logger = getChildLogger('TestJellyfinProvider');
 
@@ -214,5 +217,98 @@ describe('JellyfinProvider — deleting an item already gone', () => {
     );
 
     await expect(provider.deleteItems(['jf-1'])).resolves.toBeUndefined();
+  });
+});
+
+describe('JellyfinProvider — reported facts', () => {
+  /** The facts Jellyfin reports when its libraries hold exactly `items`. */
+  async function reportedFor(items: JellyfinItem[]) {
+    const provider = new JellyfinProvider(mockConfig, logger);
+    vi.spyOn(provider, 'getAllItems').mockResolvedValue(items);
+    return provider.readReportedFacts();
+  }
+
+  it("reports each item's facts by its item id", async () => {
+    const facts = await reportedFor([
+      {
+        Id: 'jf-101',
+        Name: 'M',
+        Type: 'Movie',
+        DateCreated: '2020-01-01T00:00:00.000Z',
+        PremiereDate: '1999-03-31T00:00:00.000Z',
+        RunTimeTicks: 73_200_000_000,
+        Studios: [{ Name: 'Legendary Pictures' }],
+        Tags: ['4K'],
+        UserData: { PlayCount: 5, LastPlayedDate: '2024-01-01T00:00:00.000Z', IsFavorite: true },
+        MediaSources: [
+          {
+            Container: 'mkv',
+            Size: 123,
+            MediaStreams: [
+              { Type: 'Video', Codec: 'hevc', Height: 2160 },
+              { Type: 'Audio', Codec: 'eac3' },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    expect(facts).toEqual(
+      new Map([
+        [
+          'jf-101',
+          {
+            playCount: 5,
+            lastWatchedAt: '2024-01-01T00:00:00.000Z',
+            jellyfinAddedAt: '2020-01-01T00:00:00.000Z',
+            studio: 'Legendary Pictures',
+            runtimeMinutes: 122,
+            fileSizeBytes: 123,
+            releaseDate: '1999-03-31T00:00:00.000Z',
+            fileContainer: 'mkv',
+            videoCodec: 'hevc',
+            audioCodec: 'eac3',
+            fileResolution: '2160',
+            labels: ['4K'],
+            isFavorite: true,
+          },
+        ],
+      ])
+    );
+  });
+
+  it('counts an item marked played with no play count as one play', async () => {
+    const facts = await reportedFor([
+      { Id: 'jf-101', Name: 'M', Type: 'Movie', UserData: { Played: true } },
+    ]);
+
+    expect(facts.get('jf-101')).toEqual({ playCount: 1 });
+  });
+
+  it('reports no play as a play count of 0, and leaves out every fact the item does not carry', async () => {
+    const facts = await reportedFor([
+      { Id: 'jf-101', Name: 'M', Type: 'Movie', Tags: [], MediaSources: [{}] },
+    ]);
+
+    expect(facts.get('jf-101')).toEqual({ playCount: 0 });
+  });
+
+  it('reports each resolution tier from the video height', async () => {
+    const heights = [2160, 1080, 720, 480];
+    const facts = await reportedFor(
+      heights.map((Height) => ({
+        Id: `jf-${Height}`,
+        Name: 'M',
+        Type: 'Movie',
+        MediaSources: [{ MediaStreams: [{ Type: 'Video', Height }] }],
+      }))
+    );
+
+    expect(heights.map((h) => facts.get(`jf-${h}`)?.fileResolution)).toEqual([
+      '2160',
+      '1080',
+      '720',
+      'sd',
+    ]);
   });
 });
