@@ -17,9 +17,15 @@ import {
   findingsFor,
   getRule,
   isAddressedActuator,
-  suppliersOf,
+  reporterReliability,
 } from '../media';
-import type { FilterReadiness, Library, LibraryCache, LibraryCopy } from '../media';
+import type {
+  FilterReadiness,
+  Library,
+  LibraryCache,
+  LibraryCopy,
+  ReporterReliability,
+} from '../media';
 import type { MediaQueryRecord, MediaQueryService } from '../mediaQueries';
 import {
   ADDRESS_COLUMN_BY_TYPE,
@@ -32,7 +38,6 @@ import {
   isMediaSourceType,
   providerTypeLabel,
   readEnabledTaskIds,
-  titleIdColumnOf,
 } from '../providers';
 import type { AutomationBlockService } from './automationBlockService';
 import type { AutomationRunService, RunTargets } from './automationRunService';
@@ -119,13 +124,12 @@ interface Dependency {
 }
 
 /**
- * A reported fact a destructive run's queries filter on, and the active providers that report it.
- * A reporter matched by a media server's links (its title id column is that server's address
- * column) lists that server's instances in `via`; one matched by TMDB id lists none.
+ * A reported fact a destructive run's queries filter on, and whether each of its active reporters
+ * can be relied on (`reporterReliability`).
  */
 interface FactDependency {
   label: string;
-  suppliers: Array<{ providerId: number; via: number[] }>;
+  reporters: ReporterReliability[];
 }
 
 /** What a destructive run depends on: providers it needs every one of, and facts it needs once. */
@@ -172,14 +176,11 @@ function unrefreshedDependencies(
     const reason = unrefreshed(library, dependency);
     return reason ? [`Not run: ${reason}`] : [];
   });
-  const unsupplied = facts.flatMap(({ label, suppliers }) => {
-    if (suppliers.length === 0) return [];
-    const reasons = suppliers.map(({ providerId, via }) => {
-      const facts = unrefreshed(library, { providerId, kind: 'facts' });
-      if (facts) return facts;
-      const links = via.map((id) => unrefreshed(library, { providerId: id, kind: 'links' }));
-      return via.length > 0 && links.every((r) => r !== undefined) ? links[0] : undefined;
-    });
+  const unsupplied = facts.flatMap(({ label, reporters }) => {
+    if (reporters.length === 0) return [];
+    const reasons = reporters.map(({ unrefreshed: dependency }) =>
+      dependency ? unrefreshed(library, dependency) : undefined
+    );
     if (reasons.some((r) => r === undefined)) return [];
     return [`Not run: no provider supplying ${label} has refreshed (${reasons.join('; ')})`];
   });
@@ -671,18 +672,11 @@ export class AutomationExecutor {
         })
       )
     );
-    // The media servers whose links a reporter's answers are matched through; none for TMDB ids.
-    const via = (type: MetadataProviderType): number[] => {
-      const column = titleIdColumnOf(type);
-      return column && column !== 'tmdbId' ? active(MEDIA_SERVER_BY_COLUMN[column]) : [];
-    };
     const facts = [...rules.values()]
       .filter((rule) => rule.reads !== 'catalog')
       .map((rule) => ({
         label: rule.label,
-        suppliers: suppliersOf(rule, contentType).flatMap((type) =>
-          active(type).map((providerId) => ({ providerId, via: via(type) }))
-        ),
+        reporters: reporterReliability(library, rule, contentType),
       }));
     return { required: [...catalogs, ...addressed], facts };
   }

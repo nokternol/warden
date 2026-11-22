@@ -13,20 +13,44 @@ import {
   filterAnswer,
   findingsFor,
 } from '@server/modules/media/filterReadiness';
+import {
+  type RefreshKind,
+  type StoredRefreshRecord,
+  providerTypeLabel,
+} from '@server/modules/providers';
 import { describe, expect, it } from 'vitest';
 
 const { RADARR, SONARR, PLEX, TAUTULLI } = MetadataProviderType;
 
-/** Facts with these instances, every one with successful `facts` and `links` refreshes unless given. */
+/** One provider's refresh of one kind: when it last succeeded, and when it last failed. */
+interface Refresh {
+  providerId: number;
+  refreshedAt: number | null;
+  failedAt: number | null;
+}
+
+/**
+ * Facts with these instances, every one with successful `facts` and `links` refreshes unless
+ * given; the active ones are the loaded copy's providers.
+ */
 function facts(
   providers: ProviderFact[],
-  overrides: Partial<Omit<ReadinessFacts, 'providers'>> = {}
+  given: { factsRecords?: Refresh[]; linksRecords?: Refresh[] } = {}
 ): ReadinessFacts {
+  const good = providers.map((p) => ({ providerId: p.id, refreshedAt: 1, failedAt: null }));
+  const records = (kind: RefreshKind, refreshes: Refresh[]): StoredRefreshRecord[] =>
+    refreshes.map((r) => ({ ...r, kind, error: r.failedAt === null ? null : 'down' }));
   return {
     providers,
-    factsRecords: providers.map((p) => ({ providerId: p.id, refreshedAt: 1, failedAt: null })),
-    linksRecords: providers.map((p) => ({ providerId: p.id, refreshedAt: 1, failedAt: null })),
-    ...overrides,
+    library: {
+      providers: providers
+        .filter((p) => p.isActive)
+        .map(({ id, type }) => ({ id, type, name: providerTypeLabel(type) })),
+      records: [
+        ...records('facts', given.factsRecords ?? good),
+        ...records('links', given.linksRecords ?? good),
+      ],
+    },
   };
 }
 

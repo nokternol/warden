@@ -7,13 +7,8 @@ import {
 import { type ContentType, isInstanceScopedValue } from '@contract/schemas';
 import { isOfferedProviderType, scope } from '@contract/scope';
 import type { MetadataProviderType } from '../../database/schema';
-import {
-  MEDIA_SERVER_BY_COLUMN,
-  SOURCE_OWNER,
-  providerTypeLabel,
-  titleIdColumnOf,
-} from '../providers';
-import type { LibraryCache } from './libraryCache';
+import { SOURCE_OWNER, providerTypeLabel } from '../providers';
+import { type Library, type LibraryCache, reporterReliability } from './libraryCache';
 import {
   type Filter,
   type FilterValue,
@@ -29,13 +24,6 @@ export interface ProviderFact {
   isActive: boolean;
 }
 
-/** One provider's refresh record of one kind, as readiness judges what it supplies with it. */
-export interface RefreshState {
-  providerId: number;
-  refreshedAt: number | null;
-  failedAt: number | null;
-}
-
 /**
  * Everything filter readiness judges with. The same for every filter list in a request, so it is
  * read once and each list is judged against it in memory.
@@ -43,10 +31,8 @@ export interface RefreshState {
 export interface ReadinessFacts {
   /** Every configured provider instance, active or not. */
   providers: readonly ProviderFact[];
-  /** Every stored `facts` refresh record. */
-  factsRecords: readonly RefreshState[];
-  /** Every stored `links` refresh record. */
-  linksRecords: readonly RefreshState[];
+  /** The loaded copy's active providers and refresh records, which say whose facts can be relied on. */
+  library: Pick<Library, 'providers' | 'records'>;
 }
 
 /** The narrow slice of `ProviderSettingsService` readiness reads. */
@@ -58,7 +44,7 @@ export interface ProviderInstancesSource {
 export class FilterReadiness {
   private readonly deps: {
     providerSettingsService: ProviderInstancesSource;
-    /** The library copy, whose refresh records say whose facts are complete. */
+    /** The library copy, whose refresh records say whose facts can be relied on. */
     libraryCache: Pick<LibraryCache, 'read'>;
   };
 
@@ -67,18 +53,13 @@ export class FilterReadiness {
   }
 
   async readFacts(): Promise<ReadinessFacts> {
-    const [providers, { records }] = await Promise.all([
+    const [providers, library] = await Promise.all([
       this.deps.providerSettingsService.list(),
       this.deps.libraryCache.read(),
     ]);
-    const ofKind = (kind: 'facts' | 'links') =>
-      records
-        .filter((r) => r.kind === kind)
-        .map(({ providerId, refreshedAt, failedAt }) => ({ providerId, refreshedAt, failedAt }));
     return {
       providers: providers.map(({ id, type, isActive }) => ({ id, type, isActive })),
-      factsRecords: ofKind('facts'),
-      linksRecords: ofKind('links'),
+      library: { providers: library.providers, records: library.records },
     };
   }
 }
@@ -158,40 +139,22 @@ function filterFindings(judging: Judging, { ruleKey, value }: Filter): Readiness
   ];
 }
 
-/** Whether a provider's latest refresh of one kind succeeded. */
-function refreshed(records: readonly RefreshState[], providerId: number): boolean {
-  const record = records.find((r) => r.providerId === providerId);
-  return record?.refreshedAt != null && record.failedAt == null;
-}
-
 /**
- * Whether a reported-fact rule's data is complete, by the same test a destructive run's gate uses:
- * the data is incomplete while none of the fact's active reporters can be relied on. A reporter can
- * be relied on when its latest `facts` refresh succeeded and, for one matched by a media server's
- * links, an active instance of that media server's `links` refresh succeeded too. Warden believes a
- * successful refresh, so a fact no title holds raises nothing (north-star belief 6). The finding is
- * informational: it names the reporters and never stops a run itself.
+ * Whether a reported-fact rule's data is complete: incomplete while none of the fact's active
+ * reporters can be relied on (`reporterReliability`, the answer a destructive run's gate reads too).
+ * Warden believes a successful refresh, so a fact no title holds raises nothing (north-star belief
+ * 6). The finding is informational: it names the reporters and never stops a run itself.
  */
 function enrichmentFindings(judging: Judging, rule: MediaRule): ReadinessFinding[] {
   if (rule.reads === 'catalog') return [];
   const { facts, list } = judging;
-  const suppliers = suppliersOf(rule, list.contentType);
-  const reporters = facts.providers.filter((p) => p.isActive && suppliers.includes(p.type));
-  const linked = (type: MetadataProviderType): boolean => {
-    const column = titleIdColumnOf(type);
-    if (!column || column === 'tmdbId') return true;
-    const servers = facts.providers.filter(
-      (p) => p.isActive && p.type === MEDIA_SERVER_BY_COLUMN[column]
-    );
-    return servers.length === 0 || servers.some((p) => refreshed(facts.linksRecords, p.id));
-  };
-  const usable = reporters.filter((p) => refreshed(facts.factsRecords, p.id) && linked(p.type));
-  if (reporters.length === 0 || usable.length > 0) return [];
+  const reporters = reporterReliability(facts.library, rule, list.contentType);
+  if (reporters.length === 0 || reporters.some((r) => r.unrefreshed === null)) return [];
   return [
     finding(
       list,
       { kind: 'data-incomplete', ruleLabel: rule.label },
-      { ruleKey: rule.key, providerIds: reporters.map((p) => p.id).sort((a, b) => a - b) }
+      { ruleKey: rule.key, providerIds: reporters.map((r) => r.providerId).sort((a, b) => a - b) }
     ),
   ];
 }

@@ -2,7 +2,9 @@ import { MetadataProviderType, mediaItems, metadataProviders } from '@server/dat
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { DomainEventBus } from '@server/kernel/eventBus';
-import { LibraryCache } from '@server/modules/media/libraryCache';
+import { LibraryCache, reporterReliability } from '@server/modules/media/libraryCache';
+import { getRule } from '@server/modules/media/ruleRegistry';
+import type { RefreshKind, StoredRefreshRecord } from '@server/modules/providers';
 import { CatalogRefreshJob } from '@server/modules/providers/catalogRefreshJob';
 import { createRadarrMovie } from '@tests/factories';
 import { emptyCatalogRun } from '@tests/helpers/collaborators';
@@ -142,5 +144,53 @@ describe('LibraryCache', () => {
       studio: 'Legendary',
       videoCodec: 'hevc',
     });
+  });
+});
+
+describe('reporterReliability', () => {
+  const { PLEX, JELLYFIN, TAUTULLI, SEERR } = MetadataProviderType;
+  const providers = [
+    { id: 1, name: 'Plex', type: PLEX },
+    { id: 2, name: 'Jellyfin', type: JELLYFIN },
+    { id: 3, name: 'Tautulli', type: TAUTULLI },
+    { id: 4, name: 'Seerr', type: SEERR },
+  ];
+  const record = (providerId: number, kind: RefreshKind, failed = false): StoredRefreshRecord => ({
+    providerId,
+    kind,
+    refreshedAt: 1,
+    failedAt: failed ? 2 : null,
+    error: failed ? 'down' : null,
+  });
+
+  it('answers, per active reporter of a fact, the refresh it cannot be relied on for, or none', () => {
+    const library = {
+      providers,
+      records: [
+        record(1, 'facts'),
+        record(1, 'links', true),
+        record(2, 'facts', true),
+        record(2, 'links'),
+        record(3, 'facts'),
+        record(4, 'facts'),
+      ],
+    };
+
+    expect(reporterReliability(library, getRule('watched', 'movie')!, 'movie')).toEqual([
+      { providerId: 1, unrefreshed: { providerId: 1, kind: 'links' } },
+      { providerId: 2, unrefreshed: { providerId: 2, kind: 'facts' } },
+      { providerId: 3, unrefreshed: { providerId: 1, kind: 'links' } },
+    ]);
+    expect(reporterReliability(library, getRule('requestStatus', 'movie')!, 'movie')).toEqual([
+      { providerId: 4, unrefreshed: null },
+    ]);
+  });
+
+  it('relies on a reporter whose media server is not active, and on one that never needs links', () => {
+    const library = { providers: [providers[2]], records: [record(3, 'facts')] };
+
+    expect(reporterReliability(library, getRule('watched', 'movie')!, 'movie')).toEqual([
+      { providerId: 3, unrefreshed: null },
+    ]);
   });
 });

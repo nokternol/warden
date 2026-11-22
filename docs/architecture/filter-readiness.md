@@ -25,9 +25,10 @@ here:
 request:
 
 - every provider instance and whether it is active, through a narrow slice of `ProviderSettingsService`;
-- every `facts` and `links` refresh record: when each reporter's facts and each media server's links
-  were last read, and whether the latest attempt failed, read from the library copy
-  ([`LibraryCache`](ref:path:server/modules/media/libraryCache.ts)), as every feature reads it.
+- the library copy's active providers and refresh records
+  ([`LibraryCache`](ref:path:server/modules/media/libraryCache.ts)), as every feature reads them.
+  Readiness does not judge refresh records itself: whether a fact's reporters can be relied on is
+  `reporterReliability`'s answer over the copy, the one a destructive run's gate reads too.
 
 `findingsFor(facts, filterList)` is pure. The query list judges every saved query against one read of
 the facts. The Media page judges its URL filters, which have no query id. The executor judges each
@@ -50,7 +51,7 @@ labels, and an instance by its own type, so a deleted instance reads "Provider i
 | `no-provider` | No active, offered supplier of what the rule reads (`suppliersOf`): the content type's source for a catalog fact, the fact's reporters for a reported fact. A catalog-fact rule depends on the source alone, so it never raises this: `no-library` says the source is missing. A rule only a deferred provider type reports always raises it, and saving such a query is refused. |
 | `unknown-rule` | A stored filter names a rule that is no longer registered. The engine's own throw stays as a backstop. |
 | `inactive-instance` | A filter value names an instance that is not an active source of the content type: inactive, deleted, or active but of the wrong type (a Sonarr tag on a movie query). This applies to every actuator. |
-| `data-incomplete` | A reported-fact filter none of whose active reporters can be relied on: each one's latest `facts` refresh failed or never ran, or, for a reporter matched through a media server's links, that server's `links` refresh did. The same test a destructive run's gate applies, so the two never disagree; one failed reporter beside a good one raises nothing. Names the reporters. Informational (below). |
+| `data-incomplete` | A reported-fact filter none of whose active reporters can be relied on: each one's latest `facts` refresh failed or never ran, or, for a reporter matched through a media server's links, that server's `links` refresh did. Read from `reporterReliability`, the one answer a destructive run's gate also reads, so the two cannot disagree; one failed reporter beside a good one raises nothing. Names the reporters. Informational (below). |
 | `no-data` | No longer raised. Warden believes a supplier's successful refresh, so a fact no title holds is the truth (north-star belief 6). The kind and the sign-off path it fed remain in the code, unreachable. |
 
 Findings are deduplicated by id, so two filters naming the same missing instance say it once.

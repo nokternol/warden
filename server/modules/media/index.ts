@@ -29,8 +29,8 @@ export type { NormalizedSeries } from './series';
 export { normalizeRadarrMovie, normalizeSonarrSeries } from './normalizeMedia';
 
 // The in-memory copy of the library every feature reads, and the records saying how current it is.
-export { recordsFor } from './libraryCache';
-export type { Library, LibraryCache, LibraryCopy } from './libraryCache';
+export { recordsFor, reporterReliability } from './libraryCache';
+export type { Library, LibraryCache, LibraryCopy, ReporterReliability } from './libraryCache';
 
 // Owner-type policy: which provider type owns each content type, and its
 // active instances.

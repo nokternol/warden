@@ -33,7 +33,7 @@ describe('FilterReadiness.readFacts', () => {
     await _resetDatabase();
   });
 
-  it('reads every provider instance, and every facts and links refresh record from the library cache', async () => {
+  it('reads every provider instance, and the loaded copy’s active providers and refresh records', async () => {
     const db = getDb();
     const [radarr, plex, tautulli] = await db
       .insert(metadataProviders)
@@ -64,13 +64,12 @@ describe('FilterReadiness.readFacts', () => {
       { id: plex.id, type: MetadataProviderType.PLEX, isActive: false },
       { id: tautulli.id, type: MetadataProviderType.TAUTULLI, isActive: true },
     ]);
-    expect(facts.factsRecords).toEqual(
+    expect(facts.library.providers.map((p) => p.id)).toEqual([radarr.id, tautulli.id]);
+    expect(facts.library.records).toEqual(
       expect.arrayContaining([
-        { providerId: plex.id, refreshedAt: expect.any(Number), failedAt: null },
-        { providerId: tautulli.id, refreshedAt: null, failedAt: expect.any(Number) },
+        expect.objectContaining({ providerId: plex.id, kind: 'facts', failedAt: null }),
+        expect.objectContaining({ providerId: tautulli.id, kind: 'facts', refreshedAt: null }),
       ])
     );
-    expect(facts.factsRecords).toHaveLength(2);
-    expect(facts.linksRecords).toEqual([]);
   });
 });

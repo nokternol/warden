@@ -312,7 +312,9 @@ service still supplies does not depend on the one that failed). The rule lives i
   by TMDB id has no links dependency. Play count from Plex and Jellyfin survives Plex failing while
   Jellyfin refreshed. Only a rule none of whose reporters is good skips the run, naming the fact and why
   each reporter failed. A catalog-fact rule adds no facts dependency, so a filter on Year or Has file
-  never waits on a media server. Filter readiness raises `data-incomplete` by the same test.
+  never waits on a media server. Whether each reporter can be relied on is one function over the loaded
+  copy, [`reporterReliability`](ref:path:server/modules/media/libraryCache.ts); the gate and filter
+  readiness's `data-incomplete` both read it, so they give one answer.
 
 Non-destructive runs proceed, and nothing here judges a run by how much it would affect.
 

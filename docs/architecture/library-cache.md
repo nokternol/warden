@@ -80,6 +80,12 @@ content type answers from: the `catalog` and `lists` records of each active inst
 the `links` and `facts` records of every active media server and fact reporter (`reportsFacts`). A kind that never refreshed
 appears with neither time, as not refreshed yet. Browse, query counts, automation previews and
 readiness carry these records.
+
+[`reporterReliability`](ref:path:server/modules/media/libraryCache.ts) is the one answer to whether a
+reported fact's reporters can be relied on: for a rule and content type it gives, per active reporter
+(`suppliersOf`), the refresh it cannot be relied on for — its own `facts`, or the `links` of every
+active media server its answers are matched through — or none. A destructive run's gate and filter
+readiness's `data-incomplete` both read it.
 [`freshnessOf`](ref:path:contract/schemas.ts) turns them into one "As of" time, the stalest
 successful refresh, so a view never claims fresher data than it has, plus the providers that failed or
 never refreshed. The client shows that as one line,

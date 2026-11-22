@@ -994,8 +994,7 @@ describe('AutomationExecutor', () => {
         filterReadiness: {
           readFacts: async () => ({
             providers: [{ id: 1, type: MetadataProviderType.RADARR, isActive: true }],
-            factsRecords: [],
-            linksRecords: [],
+            library: { providers: [], records: [] },
           }),
         },
         providerSettingsService: mockProviderSettingsService as unknown as ProviderSettingsService,
