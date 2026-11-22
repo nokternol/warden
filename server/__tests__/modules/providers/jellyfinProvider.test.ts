@@ -260,7 +260,7 @@ describe('JellyfinProvider — reported facts', () => {
           {
             playCount: 5,
             lastWatchedAt: '2024-01-01T00:00:00.000Z',
-            jellyfinAddedAt: '2020-01-01T00:00:00.000Z',
+            addedToMediaServerAt: '2020-01-01T00:00:00.000Z',
             studio: 'Legendary Pictures',
             runtimeMinutes: 122,
             fileSizeBytes: 123,

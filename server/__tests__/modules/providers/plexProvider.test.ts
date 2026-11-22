@@ -200,7 +200,7 @@ describe('PlexProvider — reported facts', () => {
           {
             playCount: 2,
             lastWatchedAt: new Date(1700000000 * 1000).toISOString(),
-            plexAddedAt: new Date(1600000000 * 1000).toISOString(),
+            addedToMediaServerAt: new Date(1600000000 * 1000).toISOString(),
             studio: 'Legendary Pictures',
             runtimeMinutes: 122,
             fileSizeBytes: 123,

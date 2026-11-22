@@ -88,7 +88,7 @@ describe('LibraryCache', () => {
         playCount: 2,
         studio: 'Plex Studio',
         videoCodec: 'h264',
-        plexAddedAt: '2023-01-01T00:00:00.000Z',
+        addedToMediaServerAt: '2023-01-01T00:00:00.000Z',
       },
       plexId
     );
@@ -109,7 +109,7 @@ describe('LibraryCache', () => {
       lastWatchedAt: '2024-01-01T00:00:00.000Z',
       studio: 'Plex Studio',
       videoCodec: 'h264',
-      plexAddedAt: '2023-01-01T00:00:00.000Z',
+      addedToMediaServerAt: '2023-01-01T00:00:00.000Z',
       isFavorite: true,
     });
   });

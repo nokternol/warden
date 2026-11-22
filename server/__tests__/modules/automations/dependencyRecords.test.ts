@@ -286,7 +286,7 @@ describe('runs and the refresh records they depend on', () => {
       connection,
       act: deleteMovies,
       taskId: 'deleteMovieWithFiles',
-      exclude: [{ ruleKey: 'seerrRequestStatus', value: 2 }],
+      exclude: [{ ruleKey: 'requestStatus', value: 2 }],
     });
 
     expect(acted).toBe(false);

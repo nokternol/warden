@@ -82,7 +82,7 @@ describe('findingsFor', () => {
 
   it('raises no-provider for a rule only a deferred provider type produces', () => {
     const f = facts([active(1, RADARR)]);
-    expect(kinds(movies([{ ruleKey: 'tmdbStatus', value: 'Released' }]), f)).toEqual([
+    expect(kinds(movies([{ ruleKey: 'productionStatus', value: 'Released' }]), f)).toEqual([
       'no-provider',
     ]);
   });
@@ -194,14 +194,14 @@ describe('findingsFor', () => {
         { ruleKey: 'tagIds', value: { providerId: 3, ids: [1] } },
         { ruleKey: 'tagIds', value: { providerId: 2, ids: [1] } },
         { ruleKey: 'watched', value: true },
-        { ruleKey: 'tmdbStatus', value: 'Released' },
+        { ruleKey: 'productionStatus', value: 'Released' },
       ])
     ).map((x) => x.message);
     expect(messages).toEqual([
       'Tags filter names Radarr instance 3, which is not an active provider',
       'Tags filter names Sonarr instance 2, which is not a Radarr provider',
       'Watched filter needs a Plex, Jellyfin or Tautulli provider, and none is active',
-      'TMDB status filter needs a TMDB provider, which Warden does not offer',
+      'Production status filter needs a TMDB provider, which Warden does not offer',
     ]);
   });
 });

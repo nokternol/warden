@@ -22,11 +22,17 @@ describe('resolveFacts', () => {
         { mediaIdentityId: 10, providerId: JELLYFIN, field: 'studio', value: 'Jellyfin Studio' },
         { mediaIdentityId: 10, providerId: JELLYFIN, field: 'playCount', value: 9 },
         { mediaIdentityId: 10, providerId: TAUTULLI, field: 'playCount', value: 5 },
+        { mediaIdentityId: 10, providerId: PLEX, field: 'addedToMediaServerAt', value: '2023' },
+        { mediaIdentityId: 10, providerId: JELLYFIN, field: 'addedToMediaServerAt', value: '2022' },
       ],
       typeOf
     );
 
-    expect(resolved.get(10)).toEqual({ studio: 'Jellyfin Studio', playCount: 5 });
+    expect(resolved.get(10)).toEqual({
+      studio: 'Jellyfin Studio',
+      playCount: 5,
+      addedToMediaServerAt: '2022',
+    });
     expect(resolved.get(20)).toEqual({ studio: 'Only on Plex' });
   });
 });

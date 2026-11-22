@@ -55,7 +55,7 @@ export class SeerrProvider extends BaseProviderConnection implements FactReporte
     apiPath: '',
     capabilities: {
       providerKind: 'requestManager',
-      facts: { reports: ['seerrRequestStatus', 'seerrHasIssue'], matchedBy: 'tmdbId' },
+      facts: { reports: ['requestStatus', 'hasIssue'], matchedBy: 'tmdbId' },
     },
   } as const satisfies ProviderTypeEntry;
 
@@ -73,8 +73,8 @@ export class SeerrProvider extends BaseProviderConnection implements FactReporte
     const [requests, issues] = await Promise.all([this.getRequests(), this.getIssues()]);
     const facts = new Map<number, Partial<ReportedFacts>>();
     const of = (tmdbId: number) => facts.get(tmdbId) ?? facts.set(tmdbId, {}).get(tmdbId)!;
-    for (const request of requests) of(request.media.tmdbId).seerrRequestStatus = request.status;
-    for (const issue of issues) of(issue.media.tmdbId).seerrHasIssue = true;
+    for (const request of requests) of(request.media.tmdbId).requestStatus = request.status;
+    for (const issue of issues) of(issue.media.tmdbId).hasIssue = true;
     return facts;
   }
 

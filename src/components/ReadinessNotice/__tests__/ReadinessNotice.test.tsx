@@ -40,7 +40,7 @@ describe('ReadinessNotice', () => {
   it('says what clears each finding, which for missing data includes signing it off', () => {
     const worded = describeFinding({
       kind: 'no-data',
-      ruleLabel: 'Seerr request status',
+      ruleLabel: 'Request status',
       contentType: 'movie',
     });
     render(

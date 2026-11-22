@@ -24,8 +24,13 @@ describe('describeFinding', () => {
       /Activate a Plex, Jellyfin or Tautulli provider/,
     ],
     [
-      { kind: 'no-provider', ruleLabel: 'TMDB status', producerLabels: ['TMDB'], offered: false },
-      'TMDB status filter needs a TMDB provider, which Warden does not offer',
+      {
+        kind: 'no-provider',
+        ruleLabel: 'Production status',
+        producerLabels: ['TMDB'],
+        offered: false,
+      },
+      'Production status filter needs a TMDB provider, which Warden does not offer',
       /without this filter/,
     ],
     [
@@ -63,8 +68,8 @@ describe('describeFinding', () => {
       /next refreshes successfully/,
     ],
     [
-      { kind: 'no-data', ruleLabel: 'Seerr request status', contentType: 'movie' },
-      'Seerr request status filter has no data: no movie holds a value for it',
+      { kind: 'no-data', ruleLabel: 'Request status', contentType: 'movie' },
+      'Request status filter has no data: no movie holds a value for it',
       /signed off on the Automations page/,
     ],
   ];

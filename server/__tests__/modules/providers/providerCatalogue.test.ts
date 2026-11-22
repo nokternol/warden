@@ -54,7 +54,7 @@ describe('what each type reports', () => {
     const { PLEX, JELLYFIN, RADARR, TAUTULLI, SEERR, TMDB, TVMAZE } = MetadataProviderType;
 
     expect(reportersOf('playCount')).toEqual([PLEX, JELLYFIN, TAUTULLI]);
-    expect(reportersOf('seerrRequestStatus')).toEqual([SEERR]);
+    expect(reportersOf('requestStatus')).toEqual([SEERR]);
     expect([PLEX, JELLYFIN, TAUTULLI, SEERR, TMDB, RADARR].map(providerKindOf)).toEqual([
       'mediaServer',
       'mediaServer',

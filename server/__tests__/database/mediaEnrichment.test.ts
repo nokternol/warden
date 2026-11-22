@@ -7,7 +7,27 @@ import {
 } from '@server/database/schema';
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
-import { PROVIDER_CATALOGUE } from '@server/modules/providers/providerCatalogue';
+import type { ReportedFactKey } from '@server/modules/providers';
+
+/** Every reported fact key; the type makes the list complete and exact. */
+const EVERY_REPORTED_FACT: Record<ReportedFactKey, true> = {
+  playCount: true,
+  lastWatchedAt: true,
+  requestStatus: true,
+  hasIssue: true,
+  productionStatus: true,
+  addedToMediaServerAt: true,
+  studio: true,
+  runtimeMinutes: true,
+  fileSizeBytes: true,
+  releaseDate: true,
+  fileContainer: true,
+  videoCodec: true,
+  audioCodec: true,
+  fileResolution: true,
+  labels: true,
+  isFavorite: true,
+};
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -89,15 +109,9 @@ describe('enrichment_field table', () => {
     await _resetDatabase();
   });
 
-  it('is seeded with exactly the facts the connections declare they report', async () => {
-    const db = getDb();
-    const rows = await db.select().from(enrichmentField);
-    const expectedKeys = new Set(
-      Object.values(PROVIDER_CATALOGUE).flatMap(
-        ({ capabilities }) => capabilities.facts?.reports ?? []
-      )
-    );
+  it('holds exactly one field row per reported fact after every migration', async () => {
+    const rows = await getDb().select().from(enrichmentField);
 
-    expect(new Set(rows.map((r) => r.key))).toEqual(expectedKeys);
+    expect(rows.map((r) => r.key).sort()).toEqual(Object.keys(EVERY_REPORTED_FACT).sort());
   });
 });

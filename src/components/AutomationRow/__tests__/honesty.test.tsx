@@ -195,10 +195,10 @@ describe('Run Now on a destructive task', () => {
 
 describe('a filter with no data', () => {
   const awaiting = {
-    id: 'no-data:1:seerrRequestStatus:4',
+    id: 'no-data:1:requestStatus:4',
     kind: 'no-data' as const,
     providerIds: [4],
-    message: 'Seerr request status filter has no data: no movie holds a value for it',
+    message: 'Request status filter has no data: no movie holds a value for it',
     clears: 'Clears when a title gets a value.',
   };
   beforeEach(() => {

@@ -70,7 +70,7 @@ export const CheckData: Story = () => (
         ...query,
         health: {
           findings: [
-            finding({ kind: 'no-data', ruleLabel: 'Seerr request status', contentType: 'movie' }),
+            finding({ kind: 'no-data', ruleLabel: 'Request status', contentType: 'movie' }),
           ],
           queryList: 'checkData',
         },

@@ -29,7 +29,7 @@ export type RuleGroup =
   | 'Media server'
   | 'Play History'
   | 'Requests'
-  | 'TMDB';
+  | 'Metadata';
 
 export type Predicate<
   T extends NormalizedMovie | NormalizedSeries = NormalizedMovie | NormalizedSeries,
@@ -166,27 +166,15 @@ export const MEDIA_RULES = [
     },
   },
   {
-    key: 'plexAddedDaysAgo',
-    label: 'Plex added (days ago)',
+    key: 'addedToMediaServerDaysAgo',
+    label: 'Added to media server (days ago)',
     group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'range',
-    reads: 'plexAddedAt',
+    reads: 'addedToMediaServerAt',
     predicate: (item, value) => {
-      if (!item.plexAddedAt) return false;
-      return inRange(daysElapsed(item.plexAddedAt), value);
-    },
-  },
-  {
-    key: 'jellyfinAddedDaysAgo',
-    label: 'Jellyfin added (days ago)',
-    group: 'Media server',
-    contentTypes: ['movie', 'series'],
-    dataType: 'range',
-    reads: 'jellyfinAddedAt',
-    predicate: (item, value) => {
-      if (!item.jellyfinAddedAt) return false;
-      return inRange(daysElapsed(item.jellyfinAddedAt), value);
+      if (!item.addedToMediaServerAt) return false;
+      return inRange(daysElapsed(item.addedToMediaServerAt), value);
     },
   },
   {
@@ -324,14 +312,15 @@ export const MEDIA_RULES = [
     predicate: (item, value) => item.monitored === asBool(value),
   },
   {
-    key: 'jellyfinIsFavorite',
-    label: 'Jellyfin favorite',
+    key: 'isFavorite',
+    label: 'Favorite',
     group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
     reads: 'isFavorite',
     valueLabels: { true: 'Favorited', false: 'Not Favorited' },
-    // No favourite flag from Jellyfin is unknown, not "not a favourite": it matches neither value.
+    // A title no media server reported a favourite flag for is unknown, not "not a favourite":
+    // it matches neither value.
     predicate: (item, value) => item.isFavorite !== undefined && item.isFavorite === asBool(value),
   },
 
@@ -743,12 +732,12 @@ export const MEDIA_RULES = [
     },
   },
   {
-    key: 'tmdbStatus',
-    label: 'TMDB status',
-    group: 'TMDB',
+    key: 'productionStatus',
+    label: 'Production status',
+    group: 'Metadata',
     contentTypes: ['movie', 'series'],
     dataType: 'string',
-    reads: 'tmdbStatus',
+    reads: 'productionStatus',
     options: [
       { value: 'Released', label: 'Released' },
       { value: 'In Production', label: 'In Production' },
@@ -758,17 +747,17 @@ export const MEDIA_RULES = [
     ],
     shortLabel: 'Status',
     predicate: (item, value) => {
-      if (!item.tmdbStatus) return false;
-      return item.tmdbStatus === String(value);
+      if (!item.productionStatus) return false;
+      return item.productionStatus === String(value);
     },
   },
   {
-    key: 'seerrRequestStatus',
-    label: 'Seerr request status',
+    key: 'requestStatus',
+    label: 'Request status',
     group: 'Requests',
     contentTypes: ['movie', 'series'],
     dataType: 'number',
-    reads: 'seerrRequestStatus',
+    reads: 'requestStatus',
     options: [
       { value: '1', label: 'Pending' },
       { value: '2', label: 'Approved' },
@@ -777,20 +766,20 @@ export const MEDIA_RULES = [
     ],
     shortLabel: 'Status',
     predicate: (item, value) => {
-      if (item.seerrRequestStatus === undefined) return false;
-      return item.seerrRequestStatus === Number(value);
+      if (item.requestStatus === undefined) return false;
+      return item.requestStatus === Number(value);
     },
   },
   {
-    key: 'seerrHasIssue',
-    label: 'Seerr has issue',
+    key: 'hasIssue',
+    label: 'Has issue',
     group: 'Requests',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
-    reads: 'seerrHasIssue',
+    reads: 'hasIssue',
     valueLabels: { true: 'Has Issue', false: 'No Issue' },
     // Truthy/falsy: "has issue" treats unknown (null/undefined) and false alike as "no issue".
-    predicate: (item, value) => Boolean(item.seerrHasIssue) === asBool(value),
+    predicate: (item, value) => Boolean(item.hasIssue) === asBool(value),
   },
   {
     key: 'lastWatchedDaysAgo',

@@ -50,7 +50,7 @@ function reportedFactsOf(item: PlexMediaItem): Partial<ReportedFacts> {
   return {
     ...playHistoryFacts(item.viewCount ?? 0, item.lastViewedAt),
     ...defined({
-      plexAddedAt: item.addedAt !== undefined ? isoFromUnix(item.addedAt) : undefined,
+      addedToMediaServerAt: item.addedAt !== undefined ? isoFromUnix(item.addedAt) : undefined,
       studio: item.studio,
       runtimeMinutes: item.duration !== undefined ? Math.round(item.duration / 60_000) : undefined,
       fileSizeBytes: media?.Part?.[0]?.size,
@@ -81,7 +81,7 @@ export class PlexProvider extends BaseProviderConnection implements MediaActuato
         reports: [
           'playCount',
           'lastWatchedAt',
-          'plexAddedAt',
+          'addedToMediaServerAt',
           'studio',
           'runtimeMinutes',
           'fileSizeBytes',

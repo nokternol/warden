@@ -174,7 +174,7 @@ export class TmdbProvider extends BaseProviderConnection implements FactReporter
     defaultUrl: 'https://api.themoviedb.org/3',
     capabilities: {
       providerKind: 'metadata',
-      facts: { reports: ['tmdbStatus'], matchedBy: 'tmdbId' },
+      facts: { reports: ['productionStatus'], matchedBy: 'tmdbId' },
     },
   } as const satisfies ProviderTypeEntry;
 
@@ -197,7 +197,7 @@ export class TmdbProvider extends BaseProviderConnection implements FactReporter
     const facts = new Map<number, Partial<ReportedFacts>>();
     for (const tmdbId of new Set(titleIds.map(Number))) {
       const status = await this.getStatus(tmdbId);
-      if (status !== undefined) facts.set(tmdbId, { tmdbStatus: status });
+      if (status !== undefined) facts.set(tmdbId, { productionStatus: status });
     }
     return facts;
   }

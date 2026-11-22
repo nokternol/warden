@@ -50,7 +50,7 @@ class ReporterWithoutReading extends BaseProviderConnection {
     ...reporterEntry,
     capabilities: {
       providerKind: 'metadata',
-      facts: { reports: ['tmdbStatus'], matchedBy: 'tmdbId' },
+      facts: { reports: ['productionStatus'], matchedBy: 'tmdbId' },
     },
   } as const satisfies ProviderTypeEntry;
 
@@ -64,7 +64,7 @@ defineProviderClasses({ [MetadataProviderType.TMDB]: ReporterWithoutReading });
 class ReporterOfNoKind extends BaseProviderConnection {
   static readonly catalogueEntry = {
     ...reporterEntry,
-    capabilities: { facts: { reports: ['tmdbStatus'], matchedBy: 'tmdbId' } },
+    capabilities: { facts: { reports: ['productionStatus'], matchedBy: 'tmdbId' } },
   } as const satisfies ProviderTypeEntry;
 
   async testConnection(): Promise<void> {}
@@ -78,7 +78,7 @@ defineProviderClasses({ [MetadataProviderType.TMDB]: ReporterOfNoKind });
 class ReporterMatchedByNothing extends BaseProviderConnection {
   static readonly catalogueEntry = {
     ...reporterEntry,
-    capabilities: { providerKind: 'metadata', facts: { reports: ['tmdbStatus'] } },
+    capabilities: { providerKind: 'metadata', facts: { reports: ['productionStatus'] } },
   } as const satisfies ProviderTypeEntry;
 
   async testConnection(): Promise<void> {}

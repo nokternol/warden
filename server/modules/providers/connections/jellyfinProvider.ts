@@ -100,7 +100,7 @@ function reportedFactsOf(item: JellyfinItem): Partial<ReportedFacts> {
       lastPlayed ? Date.parse(lastPlayed) / 1000 : undefined
     ),
     ...defined({
-      jellyfinAddedAt: item.DateCreated,
+      addedToMediaServerAt: item.DateCreated,
       studio: item.Studios?.[0]?.Name,
       runtimeMinutes:
         item.RunTimeTicks !== undefined
@@ -134,7 +134,7 @@ export class JellyfinProvider
         reports: [
           'playCount',
           'lastWatchedAt',
-          'jellyfinAddedAt',
+          'addedToMediaServerAt',
           'studio',
           'runtimeMinutes',
           'fileSizeBytes',

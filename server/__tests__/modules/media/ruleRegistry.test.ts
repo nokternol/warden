@@ -23,7 +23,7 @@ const baseMovie: NormalizedMovie = {
   tags: [10, 20],
   genres: ['Sci-Fi', 'Thriller'],
   addedDate: new Date(Date.now() - 10 * 86_400_000).toISOString(),
-  plexAddedAt: new Date(Date.now() - 10 * 86_400_000).toISOString(),
+  addedToMediaServerAt: new Date(Date.now() - 10 * 86_400_000).toISOString(),
   sizeOnDiskBytes: 5 * 1_073_741_824,
   certification: 'PG-13',
   imdbRating: 8.8,
@@ -253,14 +253,16 @@ describe('movie predicates', () => {
     expect(rule.predicate({ ...baseMovie, addedDate: undefined }, { min: 5 })).toBe(false);
   });
 
-  it('plexAddedDaysAgo — passes within min/max bounds', () => {
-    const rule = getRule('plexAddedDaysAgo', 'movie')!;
+  it('addedToMediaServerDaysAgo — passes within min/max bounds', () => {
+    const rule = getRule('addedToMediaServerDaysAgo', 'movie')!;
     expect(rule.predicate(baseMovie, { min: 5 })).toBe(true); // added 10 days ago, gte 5
   });
 
-  it('plexAddedDaysAgo — fails when item has no plexAddedAt', () => {
-    const rule = getRule('plexAddedDaysAgo', 'movie')!;
-    expect(rule.predicate({ ...baseMovie, plexAddedAt: undefined }, { min: 5 })).toBe(false);
+  it('addedToMediaServerDaysAgo — fails when item has no addedToMediaServerAt', () => {
+    const rule = getRule('addedToMediaServerDaysAgo', 'movie')!;
+    expect(rule.predicate({ ...baseMovie, addedToMediaServerAt: undefined }, { min: 5 })).toBe(
+      false
+    );
   });
 
   it('sizeOnDiskGb — passes within min/max bounds (GB)', () => {
@@ -559,44 +561,43 @@ describe('series predicates', () => {
     expect(rule.predicate({ ...baseSeries, playCount: 2 }, true)).toBe(true);
   });
 
-  it('tmdbStatus — movie: true when tmdbStatus matches value', () => {
-    const rule = getRule('tmdbStatus', 'movie')!;
-    expect(rule.predicate({ ...baseMovie, tmdbStatus: 'Ended' }, 'Ended')).toBe(true);
-    expect(rule.predicate({ ...baseMovie, tmdbStatus: 'In Production' }, 'Ended')).toBe(false);
-    expect(rule.predicate({ ...baseMovie, tmdbStatus: undefined }, 'Ended')).toBe(false);
+  it('productionStatus — movie: true when productionStatus matches value', () => {
+    const rule = getRule('productionStatus', 'movie')!;
+    expect(rule.predicate({ ...baseMovie, productionStatus: 'Ended' }, 'Ended')).toBe(true);
+    expect(rule.predicate({ ...baseMovie, productionStatus: 'In Production' }, 'Ended')).toBe(
+      false
+    );
+    expect(rule.predicate({ ...baseMovie, productionStatus: undefined }, 'Ended')).toBe(false);
   });
 
-  it('seerrRequestStatus — movie: true when seerrRequestStatus equals value', () => {
-    const rule = getRule('seerrRequestStatus', 'movie')!;
-    expect(rule.predicate({ ...baseMovie, seerrRequestStatus: 2 }, 2)).toBe(true);
-    expect(rule.predicate({ ...baseMovie, seerrRequestStatus: 1 }, 2)).toBe(false);
-    expect(rule.predicate({ ...baseMovie, seerrRequestStatus: undefined }, 2)).toBe(false);
+  it('requestStatus — movie: true when requestStatus equals value', () => {
+    const rule = getRule('requestStatus', 'movie')!;
+    expect(rule.predicate({ ...baseMovie, requestStatus: 2 }, 2)).toBe(true);
+    expect(rule.predicate({ ...baseMovie, requestStatus: 1 }, 2)).toBe(false);
+    expect(rule.predicate({ ...baseMovie, requestStatus: undefined }, 2)).toBe(false);
   });
 
-  it('seerrHasIssue — movie: true when seerrHasIssue matches value', () => {
-    const rule = getRule('seerrHasIssue', 'movie')!;
-    expect(rule.predicate({ ...baseMovie, seerrHasIssue: true }, true)).toBe(true);
-    expect(rule.predicate({ ...baseMovie, seerrHasIssue: false }, true)).toBe(false);
-    expect(rule.predicate({ ...baseMovie, seerrHasIssue: undefined }, true)).toBe(false);
+  it('hasIssue — movie: true when hasIssue matches value', () => {
+    const rule = getRule('hasIssue', 'movie')!;
+    expect(rule.predicate({ ...baseMovie, hasIssue: true }, true)).toBe(true);
+    expect(rule.predicate({ ...baseMovie, hasIssue: false }, true)).toBe(false);
+    expect(rule.predicate({ ...baseMovie, hasIssue: undefined }, true)).toBe(false);
   });
 
   it('the request-manager rules are labelled and produced by Seerr alone', () => {
-    const requestStatus = getRule('seerrRequestStatus', 'movie')!;
-    const hasIssue = getRule('seerrHasIssue', 'movie')!;
-    expect([requestStatus.label, hasIssue.label]).toEqual([
-      'Seerr request status',
-      'Seerr has issue',
-    ]);
+    const requestStatus = getRule('requestStatus', 'movie')!;
+    const hasIssue = getRule('hasIssue', 'movie')!;
+    expect([requestStatus.label, hasIssue.label]).toEqual(['Request status', 'Has issue']);
     expect(suppliersOf(requestStatus)).toEqual([MetadataProviderType.SEERR]);
     expect(suppliersOf(hasIssue)).toEqual([MetadataProviderType.SEERR]);
     expect(MEDIA_RULES.filter((r) => r.key.startsWith('overseerr'))).toEqual([]);
   });
 
-  it('seerrHasIssue — movie: unknown (null/undefined) reads as "no issue" (truthy/falsy)', () => {
-    const rule = getRule('seerrHasIssue', 'movie')!;
+  it('hasIssue — movie: unknown (null/undefined) reads as "no issue" (truthy/falsy)', () => {
+    const rule = getRule('hasIssue', 'movie')!;
     // Data stores truth (null = Seerr said nothing); the filter treats unknown as falsy,
     // so "has issue = false" includes items with no reported issue.
-    expect(rule.predicate({ ...baseMovie, seerrHasIssue: undefined }, false)).toBe(true);
+    expect(rule.predicate({ ...baseMovie, hasIssue: undefined }, false)).toBe(true);
   });
 
   it('lastWatchedDaysAgo — movie: passes within min/max bounds', () => {
@@ -682,32 +683,24 @@ describe('file-tech and release-date predicates', () => {
   });
 });
 
-// ─── Jellyfin-only predicates ─────────────────────────────────────────────────
+// ─── Favourite predicates ─────────────────────────────────────────────────────
 
-describe('Jellyfin-only predicates', () => {
-  it('jellyfinAddedDaysAgo — movie: passes within min/max bounds', () => {
-    const rule = getRule('jellyfinAddedDaysAgo', 'movie')!;
-    const tenDaysAgo = new Date(Date.now() - 10 * 86_400_000).toISOString();
-    expect(rule.predicate({ ...baseMovie, jellyfinAddedAt: tenDaysAgo }, { min: 5 })).toBe(true);
-    expect(rule.predicate({ ...baseMovie, jellyfinAddedAt: tenDaysAgo }, { min: 15 })).toBe(false);
-    expect(rule.predicate({ ...baseMovie, jellyfinAddedAt: undefined }, { min: 5 })).toBe(false);
-  });
-
-  it('jellyfinIsFavorite — movie: matches boolean exactly', () => {
-    const rule = getRule('jellyfinIsFavorite', 'movie')!;
+describe('favourite predicates', () => {
+  it('isFavorite — movie: matches boolean exactly', () => {
+    const rule = getRule('isFavorite', 'movie')!;
     expect(rule.predicate({ ...baseMovie, isFavorite: true }, true)).toBe(true);
     expect(rule.predicate({ ...baseMovie, isFavorite: true }, false)).toBe(false);
     expect(rule.predicate({ ...baseMovie, isFavorite: false }, false)).toBe(true);
   });
 
-  it('jellyfinIsFavorite — a title with no favourite flag matches neither value', () => {
-    const rule = getRule('jellyfinIsFavorite', 'movie')!;
+  it('isFavorite — a title with no favourite flag matches neither value', () => {
+    const rule = getRule('isFavorite', 'movie')!;
     expect(rule.predicate({ ...baseMovie, isFavorite: undefined }, false)).toBe(false);
     expect(rule.predicate({ ...baseMovie, isFavorite: undefined }, true)).toBe(false);
   });
 
-  it('jellyfinIsFavorite — series: matches boolean exactly', () => {
-    const rule = getRule('jellyfinIsFavorite', 'series')!;
+  it('isFavorite — series: matches boolean exactly', () => {
+    const rule = getRule('isFavorite', 'series')!;
     expect(rule.predicate({ ...baseSeries, isFavorite: true }, true)).toBe(true);
     expect(rule.predicate({ ...baseSeries, isFavorite: false }, true)).toBe(false);
   });

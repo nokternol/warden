@@ -52,8 +52,8 @@ export const scope: Scope = {
     rules: [
       // A multi-value rule with no lookup to choose values from, so it has no control.
       'certification',
-      // Produced only by TMDB.
-      'tmdbStatus',
+      // Reported only by the metadata provider, TMDB, whose type is deferred.
+      'productionStatus',
     ],
     tasks: [],
     procedures: [

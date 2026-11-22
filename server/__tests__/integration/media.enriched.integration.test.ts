@@ -9,7 +9,7 @@ import {
 /**
  * Phase 2 — enriched predicates on the browse path.
  *
- * The parallel engine never declared the seerr or tmdbStatus predicates, so
+ * The parallel engine never declared the seerr or productionStatus predicates, so
  * these controls did nothing. After the swap the handler merges media_enrichment
  * the normalized items and filters through the registry. Critically: when there
  * is NO enrichment data, an enriched filter returns 0 items (not "keep all").
@@ -150,13 +150,13 @@ describe('Media browse — enriched predicates', () => {
     await refreshCatalog(libraryCradle);
   });
 
-  describe('seerrRequestStatus', () => {
+  describe('requestStatus', () => {
     it('returns only movies whose merged enrichment status equals the requested value', async () => {
-      await seedEnrichment(1, { seerrRequestStatus: 2 });
-      await seedEnrichment(2, { seerrRequestStatus: 1 });
+      await seedEnrichment(1, { requestStatus: 2 });
+      await seedEnrichment(2, { requestStatus: 1 });
 
       const res = await client.get(
-        browsePath('movie', [{ ruleKey: 'seerrRequestStatus', value: 2 }], { pageSize: 100 })
+        browsePath('movie', [{ ruleKey: 'requestStatus', value: 2 }], { pageSize: 100 })
       );
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Requested']);
@@ -164,33 +164,33 @@ describe('Media browse — enriched predicates', () => {
 
     it('returns 0 items when there is no enrichment data (corrected from "keep all")', async () => {
       const res = await client.get(
-        browsePath('movie', [{ ruleKey: 'seerrRequestStatus', value: 2 }], { pageSize: 100 })
+        browsePath('movie', [{ ruleKey: 'requestStatus', value: 2 }], { pageSize: 100 })
       );
       const data = expectSuccessResponse(res);
       expect(data.totalCount).toBe(0);
     });
   });
 
-  describe('seerrHasIssue', () => {
-    it('returns only movies flagged with an issue when seerrHasIssue=true', async () => {
-      await seedEnrichment(1, { seerrHasIssue: true });
-      await seedEnrichment(2, { seerrHasIssue: false });
+  describe('hasIssue', () => {
+    it('returns only movies flagged with an issue when hasIssue=true', async () => {
+      await seedEnrichment(1, { hasIssue: true });
+      await seedEnrichment(2, { hasIssue: false });
 
       const res = await client.get(
-        browsePath('movie', [{ ruleKey: 'seerrHasIssue', value: true }], { pageSize: 100 })
+        browsePath('movie', [{ ruleKey: 'hasIssue', value: true }], { pageSize: 100 })
       );
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Requested']);
     });
   });
 
-  describe('tmdbStatus', () => {
-    it('returns only movies whose merged tmdbStatus matches', async () => {
-      await seedEnrichment(1, { tmdbStatus: 'Released' });
-      await seedEnrichment(2, { tmdbStatus: 'In Production' });
+  describe('productionStatus', () => {
+    it('returns only movies whose merged productionStatus matches', async () => {
+      await seedEnrichment(1, { productionStatus: 'Released' });
+      await seedEnrichment(2, { productionStatus: 'In Production' });
 
       const res = await client.get(
-        browsePath('movie', [{ ruleKey: 'tmdbStatus', value: 'Released' }], { pageSize: 100 })
+        browsePath('movie', [{ ruleKey: 'productionStatus', value: 'Released' }], { pageSize: 100 })
       );
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Requested']);
@@ -229,14 +229,16 @@ describe('Media browse — enriched predicates', () => {
     });
   });
 
-  describe('plexAddedDaysAgo min', () => {
+  describe('addedToMediaServerDaysAgo min', () => {
     it('returns only movies added to Plex at least N days ago', async () => {
       const daysAgoIso = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString();
-      await seedEnrichment(1, { plexAddedAt: daysAgoIso(10) });
-      await seedEnrichment(2, { plexAddedAt: daysAgoIso(2) });
+      await seedEnrichment(1, { addedToMediaServerAt: daysAgoIso(10) });
+      await seedEnrichment(2, { addedToMediaServerAt: daysAgoIso(2) });
 
       const res = await client.get(
-        browsePath('movie', [{ ruleKey: 'plexAddedDaysAgo', value: { min: 7 } }], { pageSize: 100 })
+        browsePath('movie', [{ ruleKey: 'addedToMediaServerDaysAgo', value: { min: 7 } }], {
+          pageSize: 100,
+        })
       );
       const data = expectSuccessResponse(res);
       expect(data.items.map((m: { title: string }) => m.title)).toEqual(['Requested']);

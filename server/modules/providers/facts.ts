@@ -6,10 +6,10 @@
 export interface ReportedFacts {
   playCount: number;
   lastWatchedAt: string;
-  seerrRequestStatus: number;
-  seerrHasIssue: boolean;
-  tmdbStatus: string;
-  plexAddedAt: string;
+  requestStatus: number;
+  hasIssue: boolean;
+  productionStatus: string;
+  addedToMediaServerAt: string;
   studio: string;
   runtimeMinutes: number;
   fileSizeBytes: number;
@@ -19,7 +19,6 @@ export interface ReportedFacts {
   audioCodec: string;
   fileResolution: string;
   labels: string[];
-  jellyfinAddedAt: string;
   isFavorite: boolean;
 }
 

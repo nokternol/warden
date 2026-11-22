@@ -514,6 +514,6 @@ describe('TmdbProvider — reported facts', () => {
     const facts = await tmdb.readReportedFacts([100, 100, 200]);
 
     expect(getStatus).toHaveBeenCalledTimes(2);
-    expect(facts).toEqual(new Map([[100, { tmdbStatus: 'Released' }]]));
+    expect(facts).toEqual(new Map([[100, { productionStatus: 'Released' }]]));
   });
 });

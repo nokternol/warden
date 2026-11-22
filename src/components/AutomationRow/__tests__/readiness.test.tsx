@@ -43,7 +43,7 @@ describe('ReadinessBlocks', () => {
         readiness={readiness({
           blocks: {
             needsFix: [],
-            awaitingSignOff: [finding('no-data', 'f1', 'Seerr request status filter has no data')],
+            awaitingSignOff: [finding('no-data', 'f1', 'Request status filter has no data')],
             signedOff: [],
           },
         })}
@@ -51,7 +51,7 @@ describe('ReadinessBlocks', () => {
       />
     );
 
-    const item = screen.getByText(/Seerr request status filter has no data/).closest('li');
+    const item = screen.getByText(/Request status filter has no data/).closest('li');
     await userEvent
       .setup()
       .click(within(item as HTMLElement).getByRole('button', { name: 'Accept' }));
@@ -68,7 +68,7 @@ describe('ReadinessBlocks', () => {
               finding('data-incomplete', 'f2', "Watched filter's data has not finished loading"),
             ],
             awaitingSignOff: [],
-            signedOff: [finding('no-data', 'f3', 'Seerr has issue filter has no data')],
+            signedOff: [finding('no-data', 'f3', 'Has issue filter has no data')],
           },
         })}
       />
@@ -78,7 +78,7 @@ describe('ReadinessBlocks', () => {
     expect(needsFix).toHaveTextContent("this automation's provider, is not an active provider");
     expect(needsFix).toHaveTextContent("Clears: Watched filter's data has not finished loading");
     expect(screen.getByRole('region', { name: 'Signed off' })).toHaveTextContent(
-      'Seerr has issue filter has no data'
+      'Has issue filter has no data'
     );
   });
 });
@@ -102,7 +102,7 @@ describe('RunCheck', () => {
           runNow: 'asks',
           blocks: {
             needsFix: [],
-            awaitingSignOff: [finding('no-data', 'f1', 'Seerr request status filter has no data')],
+            awaitingSignOff: [finding('no-data', 'f1', 'Request status filter has no data')],
             signedOff: [],
           },
         })}
@@ -110,7 +110,7 @@ describe('RunCheck', () => {
     );
 
     expect(screen.getByText(/There appears to be no data/)).toBeInTheDocument();
-    expect(screen.getByText(/Seerr request status filter has no data/)).toBeInTheDocument();
+    expect(screen.getByText(/Request status filter has no data/)).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole('button', { name: 'Proceed' }));
     expect(onConfirm).toHaveBeenCalledWith(['f1']);
   });

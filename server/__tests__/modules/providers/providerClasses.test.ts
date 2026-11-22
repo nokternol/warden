@@ -30,11 +30,11 @@ describe('the provider class map', () => {
       },
       [MetadataProviderType.SEERR]: {
         providerKind: 'requestManager',
-        facts: { reports: ['seerrRequestStatus', 'seerrHasIssue'], matchedBy: 'tmdbId' },
+        facts: { reports: ['requestStatus', 'hasIssue'], matchedBy: 'tmdbId' },
       },
       [MetadataProviderType.TMDB]: {
         providerKind: 'metadata',
-        facts: { reports: ['tmdbStatus'], matchedBy: 'tmdbId' },
+        facts: { reports: ['productionStatus'], matchedBy: 'tmdbId' },
       },
       [MetadataProviderType.OMDB]: {},
       [MetadataProviderType.TVMAZE]: {},

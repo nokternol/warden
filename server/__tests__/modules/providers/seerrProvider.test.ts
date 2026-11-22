@@ -81,9 +81,9 @@ describe('SeerrProvider — reported facts', () => {
 
     expect(await provider.readReportedFacts()).toEqual(
       new Map([
-        [100, { seerrRequestStatus: 2, seerrHasIssue: true }],
-        [999, { seerrRequestStatus: 3 }],
-        [555, { seerrHasIssue: true }],
+        [100, { requestStatus: 2, hasIssue: true }],
+        [999, { requestStatus: 3 }],
+        [555, { hasIssue: true }],
       ])
     );
   });
