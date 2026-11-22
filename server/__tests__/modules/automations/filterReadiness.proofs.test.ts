@@ -490,7 +490,7 @@ describe('when a module singleton starts listening on the event bus', () => {
     };
     const before = bus.emitter.listenerCount('provider:changed');
 
-    void container.cradle.activeFieldSetCache;
+    void container.cradle.libraryCache;
 
     expect(bus.emitter.listenerCount('provider:changed')).toBe(before + 1);
   });

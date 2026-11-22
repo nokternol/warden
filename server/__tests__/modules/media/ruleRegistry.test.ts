@@ -4,7 +4,6 @@ import {
   type MediaRule,
   type NormalizedMovie,
   type NormalizedSeries,
-  deriveProviders,
   getRule,
   suppliersOf,
   toDescriptor,
@@ -172,9 +171,9 @@ describe('providers accuracy', () => {
 
   it('watched is derived from playCount — Tautulli, Plex, and Jellyfin all produce it', () => {
     expect(getRule('watched', 'movie')!.providers).toEqual([
-      MetadataProviderType.TAUTULLI,
       MetadataProviderType.PLEX,
       MetadataProviderType.JELLYFIN,
+      MetadataProviderType.TAUTULLI,
     ]);
   });
 
@@ -201,26 +200,6 @@ describe('providers accuracy', () => {
     expect(getRule('addedDaysAgo', 'series')!.providers).toEqual([
       MetadataProviderType.RADARR,
       MetadataProviderType.SONARR,
-    ]);
-  });
-});
-
-// ─── deriveProviders ─────────────────────────────────────────────────
-// For a rule backed by an ReportedFacts-tracked field, providers is
-// derived from fieldsByProviderType (the same declaration MediaFieldProvider/
-// MediaFieldSource adapters are checked against) instead of hand-listed —
-// a provider rename/removal there can't silently leave a rule's gating stale.
-
-describe('deriveProviders', () => {
-  it('derives tmdbStatus to [TMDB]', () => {
-    expect(deriveProviders('tmdbStatus')).toEqual([MetadataProviderType.TMDB]);
-  });
-
-  it('derives playCount to Tautulli, Plex, and Jellyfin — a contested field', () => {
-    expect(deriveProviders('playCount')).toEqual([
-      MetadataProviderType.TAUTULLI,
-      MetadataProviderType.PLEX,
-      MetadataProviderType.JELLYFIN,
     ]);
   });
 });

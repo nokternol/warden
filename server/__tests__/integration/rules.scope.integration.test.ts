@@ -23,7 +23,7 @@ function rulesClient(cradle: Cradle, declared: Scope) {
     next();
   });
   const procedures = createRulesProcedures({
-    activeFieldSetCache: cradle.activeFieldSetCache,
+    libraryCache: cradle.libraryCache,
     scope: declared,
   });
   app.use(serveApi({ media: procedures }));

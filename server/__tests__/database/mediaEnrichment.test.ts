@@ -7,7 +7,7 @@ import {
 } from '@server/database/schema';
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
-import { fieldsByProviderType } from '@server/modules/media/activeFieldSet';
+import { PROVIDER_CATALOGUE } from '@server/modules/providers/providerCatalogue';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -89,15 +89,14 @@ describe('enrichment_field table', () => {
     await _resetDatabase();
   });
 
-  // Compares against fieldsByProviderType's deduped values, not a hand-typed list —
-  // that object is already compiler-exhaustive against ReportedFacts
-  // (activeFieldSet.ts's _everyFieldHasAProducer), so this transitively proves the
-  // migration's seed didn't drift from the field set without needing a second
-  // hand-maintained list to keep in sync.
-  it('is seeded with exactly the keys fieldsByProviderType declares producers for', async () => {
+  it('is seeded with exactly the facts the connections declare they report', async () => {
     const db = getDb();
     const rows = await db.select().from(enrichmentField);
-    const expectedKeys = new Set(Object.values(fieldsByProviderType).flat());
+    const expectedKeys = new Set(
+      Object.values(PROVIDER_CATALOGUE).flatMap(
+        ({ capabilities }) => capabilities.facts?.reports ?? []
+      )
+    );
 
     expect(new Set(rows.map((r) => r.key))).toEqual(expectedKeys);
   });

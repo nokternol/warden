@@ -90,12 +90,6 @@ export class ProviderSettingsService {
     return rows.map((r) => summarize(r));
   }
 
-  /** The set of provider types with an active configured instance. */
-  async activeTypes(): Promise<Set<MetadataProviderType>> {
-    const providers = await this.list();
-    return new Set(providers.filter((p) => p.isActive).map((p) => p.type));
-  }
-
   /**
    * Enforces the single-active-provider-per-type invariant (D8), role-scoped: types
    * playing the `MediaSource` role (Radarr, Sonarr — see `isMediaSourceType`) may have

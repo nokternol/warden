@@ -1,5 +1,4 @@
 import { type AwilixContainer, type NameAndRegistrationPair, asClass } from 'awilix';
-import { ActiveFieldSetCache } from './activeFieldSet';
 import { EnrichmentQueries } from './enrichment/enrichment.queries';
 import { EnrichmentJobFactory } from './enrichmentJobFactory';
 import { FilterReadiness } from './filterReadiness';
@@ -15,7 +14,6 @@ export interface MediaCradle {
   mediaQueryEngine: MediaQueryEngine;
   enrichmentJobFactory: EnrichmentJobFactory;
   enrichmentQueries: EnrichmentQueries;
-  activeFieldSetCache: ActiveFieldSetCache;
   filterReadiness: FilterReadiness;
   libraryCache: LibraryCache;
 }
@@ -32,7 +30,6 @@ export function registerMediaDependencies<TCradle extends MediaCradle>(
     mediaQueryEngine: asClass(MediaQueryEngine).singleton(),
     enrichmentJobFactory: asClass(EnrichmentJobFactory).singleton(),
     enrichmentQueries: asClass(EnrichmentQueries).singleton(),
-    activeFieldSetCache: asClass(ActiveFieldSetCache).singleton(),
     filterReadiness: asClass(FilterReadiness).singleton(),
     libraryCache: asClass(LibraryCache).singleton(),
   };

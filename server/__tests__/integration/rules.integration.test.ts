@@ -95,6 +95,30 @@ describe('GET /api/rules', () => {
     expect(res.body.data.map((r: { key: string }) => r.key)).toEqual([]);
   });
 
+  it('offers a rule only while a supplier of what it reads is active and offered', async () => {
+    const keysWith = async (type: MetadataProviderType) => {
+      const created = await providerSettingsService.create({
+        type,
+        name: `Test ${type}`,
+        url: 'http://localhost:1234/api',
+        apiKey: 'test-api-key',
+      });
+      const res = await supertest(app).get('/api/rules');
+      await providerSettingsService.delete(created.id);
+      return res.body.data.map((r: { key: string }) => r.key) as string[];
+    };
+
+    const withPlex = await keysWith(MetadataProviderType.PLEX);
+    expect(withPlex).toContain('studio');
+    expect(withPlex).not.toContain('title');
+    expect(withPlex).not.toContain('year');
+    expect(withPlex).not.toContain('hasFile');
+
+    const withSonarr = await keysWith(MetadataProviderType.SONARR);
+    expect(withSonarr).toContain('year');
+    expect(withSonarr).not.toContain('studio');
+  });
+
   it('returns only movie-compatible fields when contentType=movie', async () => {
     await providerSettingsService.create({
       type: MetadataProviderType.RADARR,

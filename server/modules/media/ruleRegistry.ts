@@ -4,7 +4,6 @@ import type { ContentType, FilterValue, InstanceScopedValue, RangeValue } from '
 import { isInstanceScopedValue } from '@contract/schemas';
 import { MetadataProviderType } from '../../database/schema';
 import { type ReportedFactKey, type ReportedFacts, SOURCE_OWNER, reportersOf } from '../providers';
-import { fieldsByProviderType } from './activeFieldSet';
 import type { NormalizedMovie } from './movie';
 import type { NormalizedSeries } from './series';
 
@@ -121,26 +120,6 @@ function inRange(actual: number, value: FilterValue): boolean {
   return true;
 }
 
-/**
- * A rule's `providers` for a field `MediaFieldProvider`/`MediaFieldSource`
- * tracks — every provider type whose `fieldsByProviderType` entry includes it,
- * the inverse lookup of that declaration. Rules backed by a source-owned field
- * outside `ReportedFacts` (most of `NormalizedMovie`/`NormalizedSeries`) still
- * hand-list `providers` until `movie.ts`/`series.ts` derive from
- * `ReportedFacts` too (see spec's Risks section).
- *
- * Not content-type-scoped: a field produced by two providers who never both
- * apply to the same rule (`tags`: Radarr for movies, Sonarr for series) derives
- * to *both*, which is wrong for a content-type-scoped rule. Safe to call only
- * when the field's producer set doesn't vary by content type — see the
- * movie/series `tagIds` rules, which stay hand-listed for exactly this reason.
- */
-export function deriveProviders(field: keyof ReportedFacts): MetadataProviderType[] {
-  return (Object.entries(fieldsByProviderType) as [MetadataProviderType, readonly string[]][])
-    .filter(([, fields]) => fields.includes(field))
-    .map(([type]) => type);
-}
-
 // ─── Registry ─────────────────────────────────────────────────────────────────
 
 export const MEDIA_RULES = [
@@ -180,7 +159,7 @@ export const MEDIA_RULES = [
     dataType: 'boolean',
     reads: 'playCount',
     valueLabels: { true: 'Watched', false: 'Unwatched' },
-    providers: deriveProviders('playCount'),
+    providers: reportersOf('playCount'),
     // A title with no play data is unknown, not unwatched: it matches neither value, so an
     // "unwatched" query never selects titles no provider has reported on.
     predicate: (item, value) => {
@@ -208,7 +187,7 @@ export const MEDIA_RULES = [
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     reads: 'plexAddedAt',
-    providers: deriveProviders('plexAddedAt'),
+    providers: reportersOf('plexAddedAt'),
     predicate: (item, value) => {
       if (!item.plexAddedAt) return false;
       return inRange(daysElapsed(item.plexAddedAt), value);
@@ -221,7 +200,7 @@ export const MEDIA_RULES = [
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     reads: 'jellyfinAddedAt',
-    providers: deriveProviders('jellyfinAddedAt'),
+    providers: reportersOf('jellyfinAddedAt'),
     predicate: (item, value) => {
       if (!item.jellyfinAddedAt) return false;
       return inRange(daysElapsed(item.jellyfinAddedAt), value);
@@ -280,7 +259,7 @@ export const MEDIA_RULES = [
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     reads: 'fileSizeBytes',
-    providers: deriveProviders('fileSizeBytes'),
+    providers: reportersOf('fileSizeBytes'),
     predicate: (item, value) => {
       if (item.fileSizeBytes === undefined) return false;
       return inRange(item.fileSizeBytes / 1_073_741_824, value);
@@ -293,7 +272,7 @@ export const MEDIA_RULES = [
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     reads: 'releaseDate',
-    providers: deriveProviders('releaseDate'),
+    providers: reportersOf('releaseDate'),
     predicate: (item, value) => {
       if (!item.releaseDate) return false;
       return inRange(daysElapsed(item.releaseDate), value);
@@ -307,7 +286,7 @@ export const MEDIA_RULES = [
     dataType: 'csv-strings',
     reads: 'fileContainer',
     lookup: 'fileContainers',
-    providers: deriveProviders('fileContainer'),
+    providers: reportersOf('fileContainer'),
     predicate: (item, value) => {
       if (!item.fileContainer) return false;
       return parseCsvStrings(value).includes(item.fileContainer);
@@ -321,7 +300,7 @@ export const MEDIA_RULES = [
     dataType: 'csv-strings',
     reads: 'videoCodec',
     lookup: 'videoCodecs',
-    providers: deriveProviders('videoCodec'),
+    providers: reportersOf('videoCodec'),
     predicate: (item, value) => {
       if (!item.videoCodec) return false;
       return parseCsvStrings(value).includes(item.videoCodec);
@@ -335,7 +314,7 @@ export const MEDIA_RULES = [
     dataType: 'csv-strings',
     reads: 'audioCodec',
     lookup: 'audioCodecs',
-    providers: deriveProviders('audioCodec'),
+    providers: reportersOf('audioCodec'),
     predicate: (item, value) => {
       if (!item.audioCodec) return false;
       return parseCsvStrings(value).includes(item.audioCodec);
@@ -349,7 +328,7 @@ export const MEDIA_RULES = [
     dataType: 'csv-strings',
     reads: 'fileResolution',
     lookup: 'fileResolutions',
-    providers: deriveProviders('fileResolution'),
+    providers: reportersOf('fileResolution'),
     predicate: (item, value) => {
       if (!item.fileResolution) return false;
       return parseCsvStrings(value).includes(item.fileResolution);
@@ -363,7 +342,7 @@ export const MEDIA_RULES = [
     dataType: 'csv-strings',
     reads: 'labels',
     lookup: 'labels',
-    providers: deriveProviders('labels'),
+    providers: reportersOf('labels'),
     predicate: (item, value) => {
       const labels = parseCsvStrings(value);
       return (item.labels ?? []).some((l) => labels.includes(l));
@@ -388,7 +367,7 @@ export const MEDIA_RULES = [
     dataType: 'boolean',
     reads: 'isFavorite',
     valueLabels: { true: 'Favorited', false: 'Not Favorited' },
-    providers: deriveProviders('isFavorite'),
+    providers: reportersOf('isFavorite'),
     // No favourite flag from Jellyfin is unknown, not "not a favourite": it matches neither value.
     predicate: (item, value) => item.isFavorite !== undefined && item.isFavorite === asBool(value),
   },
@@ -451,7 +430,7 @@ export const MEDIA_RULES = [
     dataType: 'csv-strings',
     reads: 'studio',
     lookup: 'studio',
-    providers: deriveProviders('studio'),
+    providers: reportersOf('studio'),
     predicate: (item, value) => {
       if (!item.studio) return false;
       return parseCsvStrings(value).includes(item.studio);
@@ -464,7 +443,7 @@ export const MEDIA_RULES = [
     contentTypes: ['movie'],
     dataType: 'range',
     reads: 'runtimeMinutes',
-    providers: deriveProviders('runtimeMinutes'),
+    providers: reportersOf('runtimeMinutes'),
     predicate: (item, value) => {
       const movie = item as NormalizedMovie;
       if (movie.runtimeMinutes === undefined) return false;
@@ -699,7 +678,7 @@ export const MEDIA_RULES = [
     dataType: 'csv-strings',
     reads: 'studio',
     lookup: 'studio',
-    providers: deriveProviders('studio'),
+    providers: reportersOf('studio'),
     predicate: (item, value) => {
       const series = item as NormalizedSeries;
       if (!series.studio) return false;
@@ -851,7 +830,7 @@ export const MEDIA_RULES = [
       { value: 'Canceled', label: 'Canceled' },
     ],
     shortLabel: 'Status',
-    providers: deriveProviders('tmdbStatus'),
+    providers: reportersOf('tmdbStatus'),
     predicate: (item, value) => {
       if (!item.tmdbStatus) return false;
       return item.tmdbStatus === String(value);
@@ -871,7 +850,7 @@ export const MEDIA_RULES = [
       { value: '4', label: 'Available' },
     ],
     shortLabel: 'Status',
-    providers: deriveProviders('seerrRequestStatus'),
+    providers: reportersOf('seerrRequestStatus'),
     predicate: (item, value) => {
       if (item.seerrRequestStatus === undefined) return false;
       return item.seerrRequestStatus === Number(value);
@@ -885,7 +864,7 @@ export const MEDIA_RULES = [
     dataType: 'boolean',
     reads: 'seerrHasIssue',
     valueLabels: { true: 'Has Issue', false: 'No Issue' },
-    providers: deriveProviders('seerrHasIssue'),
+    providers: reportersOf('seerrHasIssue'),
     // Truthy/falsy: "has issue" treats unknown (null/undefined) and false alike as "no issue".
     predicate: (item, value) => Boolean(item.seerrHasIssue) === asBool(value),
   },
@@ -896,7 +875,7 @@ export const MEDIA_RULES = [
     contentTypes: ['movie', 'series'],
     dataType: 'range',
     reads: 'lastWatchedAt',
-    providers: deriveProviders('lastWatchedAt'),
+    providers: reportersOf('lastWatchedAt'),
     predicate: (item, value) => {
       if (!item.lastWatchedAt) return false;
       return inRange(daysElapsed(item.lastWatchedAt), value);

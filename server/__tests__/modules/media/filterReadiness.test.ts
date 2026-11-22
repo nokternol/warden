@@ -180,7 +180,7 @@ describe('findingsFor', () => {
     expect(messages).toEqual([
       'Tags filter names Radarr instance 3, which is not an active provider',
       'Tags filter names Sonarr instance 2, which is not a Radarr provider',
-      'Watched filter needs a Tautulli, Plex or Jellyfin provider, and none is active',
+      'Watched filter needs a Plex, Jellyfin or Tautulli provider, and none is active',
       'TMDB status filter needs a TMDB provider, which Warden does not offer',
     ]);
   });
