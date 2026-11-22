@@ -2,8 +2,8 @@
 
 Server-side spec: why the actuator half of the system-roles model is shaped the
 way the code is. Detailed spec of the **MediaActuator** role, one of three roles a configured system can
-play; its sibling for the MediaEnricher role is `docs/architecture/media-enricher-role.md`. The
-surrounding source/identity model (MediaSource) is `docs/architecture/provider-roles-and-identity.md`.
+play. The surrounding source/identity model (MediaSource) and the fact-reporter role are
+`docs/architecture/provider-roles-and-identity.md`.
 
 ## The role owns its tasks
 

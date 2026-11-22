@@ -1,14 +1,13 @@
 # Provider Roles & the Media Identity Model
 
-As of 2026-11-16, this documents the model the code *actually* implements today, including its
+As of 2026-11-22, this documents the model the code *actually* implements today, including its
 remaining limits — recorded as architecture rather than intent because the hierarchy and the
 multi-instance identity model described below are real and load-bearing, not an unstarted plan.
 
 **Scope:** this covers the **MediaSource** role, the group/instance identity model underneath it, and
-the enricher role's relationship to that model. (The enricher role is the `MediaEnricher` contract —
-`enrich(items): EnrichmentResult` — re-grounded in Phase 2.5; its full spec is
-`docs/architecture/media-enricher-role.md`.) The third role a system can play — **MediaActuator**
-(tasks/actions) — is the role-owned task model in `docs/architecture/actuator-task-ownership.md`.
+**facts**: what each provider tells Warden about a title, declared once by that provider. The
+**MediaActuator** role (tasks/actions) is the role-owned task model in
+`docs/architecture/actuator-task-ownership.md`.
 
 ## Why this is recorded as architecture, not intent
 
@@ -27,7 +26,7 @@ every other surface derives from it — never re-declares it.
 | Tier | Providers (today) | Role in code |
 |---|---|---|
 | **Catalog owner** (`MediaSource`) | Radarr (movies), Sonarr (series) | Define what *exists* and its canonical id; the catalog is the union of every active instance's library |
-| **Enricher** | Tautulli, Plex, Jellyfin, Seerr, TMDB / OMDB / TVMaze | Decorate owner rows by shared key; contribute nothing standalone |
+| **Fact reporter** | Plex, Jellyfin, Tautulli, Seerr, TMDB | Report facts about titles they can address, matched by a title id; contribute nothing standalone |
 | **Inert toward catalog** | Plex-as-*owner*, Jellyfin-as-*owner* | Cannot produce a catalog row at all |
 
 With no Radarr and no Sonarr configured, the app is effectively empty: browse lists, identity
@@ -36,7 +35,7 @@ resolution, and enrichment all short-circuit to nothing (see the pipeline below)
 ## How a provider type declares what it can do
 
 Each connection class carries a static `catalogueEntry`: how its provider type is presented and
-reached (label, API path, host placeholder or default URL, key requirement, filter data) and its
+reached (label, API path, host placeholder or default URL, key requirement) and its
 `capabilities` ([`ProviderCapabilities`](ref:path:server/modules/providers/roles.ts)):
 
 | Capability | Meaning | Declared by (today) |
@@ -44,6 +43,8 @@ reached (label, API path, host placeholder or default URL, key requirement, filt
 | `source: ContentType` | Owns that content type's catalog | Radarr `movie`, Sonarr `series` |
 | `mediaServer: AddressColumn` | Is the media server titles' `<column>` links point into, and addresses titles by it | Plex `plexRatingKey`, Jellyfin `jellyfinItemId` |
 | `addressedBy: AddressColumn` | Addresses titles by a column it is not the media server for | Tautulli `plexRatingKey` |
+| `providerKind: ProviderKind` | The kind of fact reporter it is, where `mediaServer` does not already say | Tautulli `watchHistory`, Seerr `requestManager`, TMDB `metadata` |
+| `facts: { reports, matchedBy? }` | The reported facts it reports, and the title id its answers are matched by when it has no address column | Plex, Jellyfin, Tautulli; Seerr and TMDB with `matchedBy: 'tmdbId'` |
 
 Running tasks is declared by implementing `MediaActuator` (see the actuator doc). The entry is
 `as const`, so the declared values stay visible to the type checker.
@@ -53,8 +54,10 @@ provider type to connection class, in display order, built through `defineProvid
 reads each class's declared capabilities and requires the matching role interface
 ([`roles.ts`](ref:path:server/modules/providers/roles.ts)): `source: 'movie'` a `MovieSource`,
 `source: 'series'` a `SeriesSource`, `mediaServer: 'plexRatingKey'` a `PlexLinks`,
-`mediaServer: 'jellyfinItemId'` a `JellyfinLinks`. A class declaring a capability it cannot serve does
-not compile; a `@ts-expect-error` fixture
+`mediaServer: 'jellyfinItemId'` a `JellyfinLinks`, `facts` a `FactReporter`. It also refuses a class
+declaring `facts` that resolves to no kind (neither a media server nor a declared `providerKind`) or to
+no title id column (no address column and no `matchedBy`). A class declaring a capability it cannot
+serve does not compile; a `@ts-expect-error` fixture
 ([`providerClasses.typecheck.ts`](ref:path:server/__tests__/modules/providers/providerClasses.typecheck.ts))
 keeps that check honest under `yarn typecheck:server`.
 
@@ -63,14 +66,18 @@ Everything else is read from those declarations, never re-declared:
 - [`providerCatalogue.ts`](ref:path:server/modules/providers/providerCatalogue.ts) derives
   `PROVIDER_CATALOGUE`, the setup type list and the type labels; `SOURCE_OWNER`, `isMediaSourceType`
   and `contentTypeOfSourceType` from `source`; `ADDRESS_COLUMN_BY_TYPE` from `mediaServer` or
-  `addressedBy`; and `isMediaServerType` and `MEDIA_SERVER_BY_COLUMN` from `mediaServer`. An entry
+  `addressedBy`; `isMediaServerType` and `MEDIA_SERVER_BY_COLUMN` from `mediaServer`; and, from
+  `facts` and `providerKind`, `reportersOf(fact)`, `reportsFacts(type)`, `titleIdColumnOf(type)` (the
+  address column first, then `matchedBy`) and `providerKindOf(type)` (`mediaServer` wins over a
+  declared kind, so a redundant declaration is unused, never a second truth). An entry
   carries either a `hostPlaceholder` (a self-hosted type) or a `defaultUrl` (a hosted type), never
   neither.
 - The factory ([`providerFactory.ts`](ref:path:server/modules/providers/providerFactory.ts)) constructs
   from the map, and answers one query per role (`movieSourcesOf`, `seriesSourcesOf`, `plexServerOf`,
-  `jellyfinServerOf`): each keeps the provider rows whose type declares that role and returns
-  `{ providerId, name, provider }` typed by the role, narrowed by a type predicate over the map's
-  declarations, so neither the queries nor their callers cast.
+  `jellyfinServerOf`, `factReportersOf`): each keeps the provider rows whose type declares that role
+  and returns `{ providerId, name, provider }` typed by the role, narrowed by a type predicate over the
+  map's declarations, so neither the queries nor their callers cast. `factReportersOf` adds each
+  reporter's title id column and the facts it declares.
 - Callers ask for the capability: media's `sourceOwnership()` and the rule registry's content-type
   scoping read `SOURCE_OWNER`; the catalog refresh reads the role queries; the refresh kinds a provider
   writes, the content types an automation's action can address and the filter-choice lists all read the
@@ -84,26 +91,25 @@ requirement."). A unit test over the real class map
 ([`providerClasses.test.ts`](ref:path:server/__tests__/modules/providers/providerClasses.test.ts))
 holds it.
 
-**Adding a provider** that is a source, an actuator addressed by an existing column, or a fact supplier
+**Adding a provider** that is a source, an actuator addressed by an existing column, or a fact reporter
 is its type identity (the `MetadataProviderType` member and the contract's provider-type value), its
 connection class (with `catalogueEntry` and the role interfaces it implements) and its entry in the
-class map. Two departures from belief 9 remain, recorded in the fracture ledger: a new *media server*
-still needs its own role query, link interface, link slot in the catalog refresh and database column;
-and facts are still declared by provider type in media's own tables, not on the connection classes.
+class map. One departure from belief 9 remains, recorded in the fracture ledger: a new *media server*
+still needs its own role query, link interface, link slot in the catalog refresh and database column.
+A reported fact no existing service reports still needs its key in `ReportedFacts`, a rule that reads
+it and a seeded `enrichment_field` row.
 
 ## Multi-instance is real: Radarr/Sonarr may have any number of active instances
 
 `ProviderSettingsService.assertNoActiveConflict` ([`server/modules/providers/providerSettingsService.ts`](ref:path:server/modules/providers/providerSettingsService.ts))
 early-returns for `isMediaSourceType(type)` — Radarr and Sonarr carry **no** single-active invariant.
-Every other provider type (TMDB, Seerr, Tautulli, Plex-as-enricher, Jellyfin) still enforces it: at
+Every other provider type (TMDB, Seerr, Tautulli, Plex, Jellyfin) still enforces it: at
 most one active instance, or `assertNoActiveConflict` throws `ValidationError`. This is role-scoped, not
 type-hardcoded, so it reads directly off the one authority above.
 
-The factory's role queries are the structural half of this: `movieSourcesOf`/`seriesSourcesOf`
-return one entry per configured row, never collapsing same-type entries into a single slot.
-`ProviderSet` (the `createMany` result, which the enrichment job still reads) has no
-`radarr`/`sonarr` slots at all — the type system cannot express "the Radarr instance" any more, so no
-future consumer can silently reintroduce last-one-wins.
+The factory's role queries are the structural half of this: each returns one entry per configured
+row, never collapsing same-type entries into a single slot, so no consumer can silently reintroduce
+last-one-wins.
 
 ## The identity model: group vs. instance copy
 
@@ -170,7 +176,7 @@ provider. A run in which any provider failed ends in error naming them, each onc
 [`providerRefresh.ts`](ref:path:server/modules/providers/providerRefresh.ts) owns `provider_refresh`:
 one row per provider and kind, holding `refreshedAt` (last success) and `failedAt`/`error` (latest
 failure, cleared on success). Each kind has one writer: `catalog`, `links` and `lists` the catalog
-refresh, `facts` the enrichment job. The records are how every view says how current it is, and what a
+refresh, `facts` Enrichment. The records are how every view says how current it is, and what a
 destructive run checks before acting (see below).
 
 ## Removed copies and run history
@@ -192,14 +198,62 @@ also records how current the copy it acted on was (`freshnessAsOf`, `freshnessSt
 and its links in one `db.batch`, a single SQLite transaction. A user run's `itemCount` is the number of
 copies it targeted.
 
-## Enrichment: facts per provider
+## Facts: declared once by the service that supplies them
 
-The enrichment job (`EnrichmentJob.run`, [`server/modules/media/enrichmentJob.ts`](ref:path:server/modules/media/enrichmentJob.ts))
-reads every active enricher for every title on every run, hydrating each `media_identity` row into a
-canonical item (`_sourceIds.identity` is the group's surrogate id), and stores each provider's facts as it
-reported them. Precedence between providers is applied when the library cache loads. See
-[the EAV model](ref:path:docs/architecture/media-enrichment-eav-model.md) and
-`docs/architecture/media-enricher-role.md`.
+A **fact** is something one service tells Warden about a title. There are two kinds, and every fact is
+one or the other:
+
+- A **catalog fact** is a value the content type's source supplies in its catalog record: title, year,
+  has file, tags, genres, network, certification and the rest of
+  [`MovieCatalogRecord`](ref:path:server/modules/media/movie.ts) and
+  [`SeriesCatalogRecord`](ref:path:server/modules/media/series.ts). The source's `source` declaration
+  says it supplies them; they are not listed per key.
+- A **reported fact** is a value a non-source provider reports about titles it can address, declared by
+  key on that provider's connection (`capabilities.facts.reports`) and named for what it means, never for
+  the product that reports it (`addedToMediaServerAt`, `requestStatus`, `productionStatus`). The value
+  type of each is [`ReportedFacts`](ref:path:server/modules/providers/facts.ts).
+
+A compile check beside the records ([`mediaItem.ts`](ref:path:server/modules/media/mediaItem.ts),
+`NoReportedFacts`) fails when a catalog record key is also a reported fact key, with a fixture proving
+it fires: a provider reporting a catalog fact would need an owner decision on source-versus-reporter
+precedence first. `NormalizedMovie`/`NormalizedSeries` are a catalog record plus `Partial<ReportedFacts>`.
+
+**The rule:** a fact is a catalog fact (the content type's source supplies it) or a reported fact
+(declared by key on the reporting connection, named for what it means). Anything that needs "who
+supplies this" derives it from the declarations, never from a list of its own; and precedence ranks
+kinds of provider, never named providers.
+
+Each reporting connection implements `FactReporter.readReportedFacts(titleIds)`, translating its own
+payload into the common fact shape keyed by the title id its declaration names (Plex and Tautulli by
+rating key, Jellyfin by item id, Seerr and TMDB by TMDB id; TMDB looks up the ids it is asked about, the
+others read everything). Everything that needs to know who supplies a fact derives it:
+
+- **Enrichment** ([`enrichmentJob.ts`](ref:path:server/modules/media/enrichmentJob.ts)), the scheduled
+  refresh of reported facts, runs over `factReportersOf` every active provider row. For each reporter it
+  collects the titles' ids in its title id column, calls `readReportedFacts`, gives every title an id
+  names the answer for that id (a movie and a series can share a TMDB id), and stores only the facts the
+  reporter declares, with defined values, through `EnrichmentQueries.replaceProviderFacts`. A failed
+  answer or a failed write records that reporter's `facts` refresh as failed, keeps what Warden held from
+  it, and the run goes on to the next reporter.
+- **The library cache's refresh kinds** give a `facts` record to every type that `reportsFacts`.
+- **Rules** say what they read (`MediaRule.reads`: `'catalog'` or one reported fact), and
+  [`suppliersOf(rule, contentType?)`](ref:path:server/modules/media/ruleRegistry.ts) answers the content
+  type's source for a catalog rule and `reportersOf(fact)` otherwise, unioned over the rule's content
+  types when none is asked. Rule offering, filter readiness and a destructive run's dependencies all read
+  it. A compile check fails when a reported fact has no rule that reads it.
+- **Precedence** ([`REPORTED_FACT_PRECEDENCE`](ref:path:server/modules/providers/facts.ts)) lists, for each
+  fact more than one kind of provider reports, those kinds in order: play count and last watched take a
+  watch-history tracker's value before a media server's.
+  [`resolveFacts`](ref:path:server/modules/media/enrichmentMerge.ts) applies it per title when the cache
+  loads; between two providers of the same kind it takes the first connected (lowest provider id), and a
+  title only one of them holds keeps that one's value. The owner's choice between two of a kind
+  (north-star belief 3: "between two of the same kind, the owner's choice wins, or the first connected
+  until they choose") is not built yet (#264): the stored `primaryMediaServer` setting is not applied. A
+  test over every declaration fails when a fact is reported by two or more kinds and one is missing from
+  its order.
+
+Facts are stored per provider, one row per title, fact and provider, so no provider's value is lost at
+write time; see [the EAV model](ref:path:docs/architecture/media-enrichment-eav-model.md).
 
 ## The MediaSource role and the copies it supplies
 
@@ -247,17 +301,18 @@ service still supplies does not depend on the one that failed). The rule lives i
 
 - **Providers it needs, each one.** The `catalog` record of the instances it reads: a catalog-owning
   actuator's own instance (any other actuator: every active source instance of the content type); for
-  each filter whose value names an instance, that instance; for each other filter on a field a source
-  supplies, every active source instance, since any instance's copy may meet it. And the `links` record
+  each filter whose value names an instance, that instance; for each other filter on a catalog fact,
+  every active source instance, since any instance's copy may meet it. And the `links` record
   of the media server whose ids it addresses. Any of these failed or never read skips the run, naming the provider and the kind.
-- **Facts it filters on, once each.** For each rule in its included or excluded queries, the run needs
-  one active supplier whose `facts` record succeeded and, for a supplier reached through a media
-  server's links, whose server's `links` record succeeded too (from `ADDRESS_COLUMN_BY_TYPE` and
-  `MEDIA_SERVER_BY_COLUMN`, derived from the providers' declarations in
-  [`providerCatalogue.ts`](ref:path:server/modules/providers/providerCatalogue.ts);
-  Seerr has no links dependency). Play count from Plex and Jellyfin survives Plex failing while
-  Jellyfin refreshed. Only a rule none of whose suppliers is good skips the run, naming the fact and why
-  each supplier failed.
+- **Reported facts it filters on, once each.** For each reported-fact rule in its included or excluded
+  queries, the run needs one active reporter from `suppliersOf` whose `facts` record succeeded and, for
+  a reporter matched through a media server's links (its `titleIdColumnOf` is that server's column,
+  `MEDIA_SERVER_BY_COLUMN`), whose server's `links` record succeeded too
+  ([`providerCatalogue.ts`](ref:path:server/modules/providers/providerCatalogue.ts)); a reporter matched
+  by TMDB id has no links dependency. Play count from Plex and Jellyfin survives Plex failing while
+  Jellyfin refreshed. Only a rule none of whose reporters is good skips the run, naming the fact and why
+  each reporter failed. A catalog-fact rule adds no facts dependency, so a filter on Year or Has file
+  never waits on a media server. Filter readiness raises `data-incomplete` by the same test.
 
 Non-destructive runs proceed, and nothing here judges a run by how much it would affect.
 
@@ -301,5 +356,5 @@ single-instance deployment carries no `providerId`.
    sources can expose several editions from *one* instance (a single Plex item with multiple
    quality-optimized versions) — distinct from the multi-*instance* case the identity model above
    already handles.
-2. **Media servers cannot own.** Plex and Jellyfin both only enrich — neither can produce a catalog row,
+2. **Media servers cannot own.** Plex and Jellyfin both only report facts — neither can produce a catalog row,
    the same limitation `docs/architecture/media-providers.md`'s Jellyfin entry documents in full.

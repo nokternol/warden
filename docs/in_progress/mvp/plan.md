@@ -54,7 +54,7 @@ code. Every path to them is blocked by the scope declaration.
 | Media-page ratings panel | No MVP job reads per-title ratings; the browse-library view and a normalized rating are post-MVP. It reads the one ratings mechanism, `contract/ratings.ts` (C6). |
 | Search page, `/api/search/metadata` | A second way to find a title beside the title filter (F11). C7 decides its role and settles title lookup to one mechanism before the MVP closes; the surface stays blocked unless C7's decision un-defers it. |
 | `/api/providers/metadata` | No MVP consumer. |
-| `/api/app-settings` (the `appSettings` module, `settingsAwarePrecedence.ts`) | No UI and no consumer yet. It is the input to the post-MVP precedence work. |
+| `/api/app-settings` (the `appSettings` module) | No UI and no consumer yet. It is the input to the post-MVP precedence work. |
 | Provider type TVMAZE | Not buildable through `ProviderFactory` yet (its API key is lost), so offering it is a reachable broken path (L1). |
 | Provider type OMDB | No consumer until per-source ratings have an identity-keyed store (`docs/intent/media-ratings-provider.md`). |
 | Provider type TMDB | Not in the verification stack (decision 9). Login-page backdrops keep using the `TMDB_API_KEY` environment setting, which is separate from the provider type. |

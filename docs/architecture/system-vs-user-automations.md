@@ -35,7 +35,7 @@ Current system automations (added in Phase 2):
 - **Catalog refresh** (task id `system:identity-resolution`) — the only reader of the providers'
   library data: stores each Radarr/Sonarr copy, groups copies into titles, links titles to Plex and
   Jellyfin items, and stores each instance's setup lists
-- **Enrichment** — stores each enricher's facts per provider
+- **Enrichment** — stores each fact reporter's declared facts per provider
 
 Together they write the library copy every feature reads. Each records, per provider and kind, when
 it last refreshed and whether it failed, and both send `media:changed` when they finish, success or

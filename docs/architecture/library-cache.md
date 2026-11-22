@@ -2,7 +2,7 @@
 
 Warden answers every question about the owner's library from one copy: what the services said about
 each title, stored in Warden's database by the scheduled refreshes. Features never read Radarr,
-Sonarr, Plex, Jellyfin or the enrichers live. They read
+Sonarr, Plex, Jellyfin or the other fact reporters live. They read
 [`LibraryCache`](ref:path:server/modules/media/libraryCache.ts), a singleton in the media module
 (registered in [`media.registrations.ts`](ref:path:server/modules/media/media.registrations.ts)): the
 in-memory copy of the library as last refreshed, loaded from the database. It holds nothing the
@@ -44,8 +44,8 @@ A load reads, for active providers only:
   its facts, so evaluation reads nothing else.
 - **Facts, one value each.** Facts are stored per provider. The load resolves them with
   [`resolveFacts`](ref:path:server/modules/media/enrichmentMerge.ts): where more than one active
-  provider reported a fact, `contestedFieldPrecedence` picks one; a fact one provider reported is kept
-  as reported.
+  provider reported a fact about a title, the kind ranked first in `REPORTED_FACT_PRECEDENCE` wins and,
+  between two of one kind, the first connected; a fact one provider reported is kept as reported.
 - **Providers, refresh records and stored lists**, for the "As of" line, dependency checks and choice
   lists.
 
@@ -77,7 +77,7 @@ view of them.
 
 [`recordsFor`](ref:path:server/modules/media/libraryCache.ts) picks the refresh records a view of a
 content type answers from: the `catalog` and `lists` records of each active instance owning it, and
-the `links` and `facts` records of every active media server and enricher. A kind that never refreshed
+the `links` and `facts` records of every active media server and fact reporter (`reportsFacts`). A kind that never refreshed
 appears with neither time, as not refreshed yet. Browse, query counts, automation previews and
 readiness carry these records.
 [`freshnessOf`](ref:path:contract/schemas.ts) turns them into one "As of" time, the stalest

@@ -42,7 +42,7 @@ per-lookup caches in the media procedures.
   on the title as a whole, and the acting service acts on every copy of the title it holds. A
   Radarr or Sonarr run acts on its own copy of a title selected through any instance's copy.
 
-## 3. Facts (beliefs 2, 8, 9)
+## 3. Facts (beliefs 2, 8, 9) — built (#246)
 
 - **Each service declares once which facts it supplies.** The fact list, the refresh's write, the
   rules that read a fact and the services a rule depends on all follow from that one declaration.

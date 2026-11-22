@@ -14,7 +14,7 @@ kinds of deferred things:
   The request manager is offered as `SEERR`, the one request-manager type, which serves an Overseerr
   server as well as a Seerr server.
 - **`rules`** — rule keys that are never served: `certification` (a multi-value rule with no lookup,
-  so it has no control) and `tmdbStatus` (produced only by TMDB).
+  so it has no control) and `productionStatus` (reported only by TMDB, whose type is deferred).
 - **`tasks`** — provider tasks not offered for enablement or automation, each named by provider type
   and task id, because task ids are unique only within a type. None are deferred today.
 - **`procedures`** — contract route paths that answer 404: `/api/search/metadata` and
@@ -41,8 +41,9 @@ the default of an injectable `scope` parameter. The client has no cradle, so it 
   connection is attempted. A row of a deferred type stored earlier still lists, but nothing in the API
   creates one.
 - **Rules.** [`media.rules.procedures.ts`](ref:path:server/modules/media/media.rules.procedures.ts)
-  serves a rule only if the declaration does not defer it *and* it has a *live producer*: one of its
-  `providers` is configured, active, and of an offered type. A deferred type is never a producer.
+  serves a rule only if the declaration does not defer it *and* it has a *live supplier*: one of its
+  suppliers (`suppliersOf`, derived from what the rule reads) is active, as the library cache holds
+  them, and of an offered type. A deferred type is never a supplier.
 - **Tasks.** `GET /api/providers/tasks` leaves out deferred tasks. That projection is the only source
   the provider card's task toggles and the automation builder read. A deferred task is also refused on
   write: a provider update whose `settings.enabledTasks` names one answers 400, and
@@ -64,9 +65,10 @@ the default of an injectable `scope` parameter. The client has no cradle, so it 
   [`MediaCard`](ref:path:src/components/MediaCard/index.tsx) renders them non-interactive.
 
 The `rules` list decides: a listed rule is not served, and removing its entry serves it once it has a
-live producer. [`ruleScope.test.ts`](ref:path:server/__tests__/modules/media/ruleScope.test.ts) keeps
-the list complete, equal to exactly the set of rules with no control or no offered producer, so it is
-a checked inventory too: un-deferring TMDB fails that test until `tmdbStatus` is removed from the list.
+live supplier. [`ruleScope.test.ts`](ref:path:server/__tests__/modules/media/ruleScope.test.ts) keeps
+the list complete, equal to exactly the set of rules with no control or no offered supplier
+(`suppliersOf`), so it is a checked inventory too: un-deferring TMDB fails that test until
+`productionStatus` is removed from the list.
 
 Procedures, pages and sections are plain strings too.
 [`scope.test.ts`](ref:path:src/__tests__/contract/scope.test.ts) fails when an entry names no route path
@@ -85,7 +87,7 @@ the deferred code stays covered while no route reaches it.
 
 Each connection class declares its type's catalogue entry once, as `catalogueEntry`: its `label`, the
 `apiPath` appended to the host the user enters, the `defaultUrl` of a hosted service, and its
-`filterData`: short phrases saying what it makes filterable, plus its capabilities. The entry is
+capabilities. The entry is
 `as const satisfies ProviderTypeEntry`, so each keeps its own shape: `ProviderFactory.tvMazeLookup`
 reads TVmaze's `defaultUrl` as a guaranteed string.
 [`providerCatalogue.ts`](ref:path:server/modules/providers/providerCatalogue.ts) reads the entries from
@@ -108,8 +110,9 @@ no copy. [`useProviderTypes`](ref:path:src/hooks/useProviderTypes.ts) fetches th
   locks a `defaultUrl`. It asks for an API key where the type's `apiKeyRequired` says so, and shows the
   type's `hostPlaceholder`. While the types load, or when none are served, it says so and disables Save.
 - [`ProviderCard`](ref:path:src/components/ProviderCard/index.tsx) shows its type's label and
-  filter data, and round-trips the host through `apiPath` when editing. A row of a deferred type gets
-  no descriptor: it shows its raw type and no filter data.
+  round-trips the host through `apiPath` when editing. It claims nothing about what a type makes
+  filterable: the rules served say that. A row of a deferred type gets no descriptor: it shows its raw
+  type.
 - The Providers page ([`src/pages/settings/index.page.tsx`](ref:path:src/pages/settings/index.page.tsx))
   groups configured providers in the served order. The media page
   ([`src/pages/media/index.page.tsx`](ref:path:src/pages/media/index.page.tsx)) names a source's owner

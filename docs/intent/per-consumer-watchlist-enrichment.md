@@ -1,11 +1,12 @@
-# Per-consumer watchlist enrichment
+# Per-consumer watchlist fact
 
 **Status:** INTENT (future state, not built). Recorded from a design conversation scoping one target
 `MediaQuery`: movies added to the media player (downloaded) over 90 days ago, tagged with one of a set of
 Radarr tags, that are not on the watchlist of any of a chosen set of Plex-server consumers. Two of the
 three predicates already exist (Radarr `tagIds`, and an automation's excluded query for the "not on
 any" shape, `docs/architecture/media-query-engine.md`); this doc covers the remaining one — the third predicate,
-"downloaded X days ago" via Plex's own `addedAt`, is built as the `plexAddedDaysAgo` rule.
+"downloaded X days ago" via the media server's own added date, is built as the
+`addedToMediaServerDaysAgo` rule.
 
 ## Per-consumer watchlist, not a flattened boolean
 
@@ -69,23 +70,23 @@ for this predicate either way.
 
 1. `SeerrProvider.getUsers()` → `GET /api/v1/user`, paginated.
 2. `SeerrProvider.getWatchlist(userId)` → `GET /api/v1/user/:id/watchlist`, paginated.
-3. `seerrWatchlistEnricher` (new, or an extension of `seerrEnricher` in `enricherAdapters.ts`) —
-   per user, aggregate `tmdbId → userId[]` into `watchlistUserIds`.
-4. `EnrichmentFields.watchlistUserIds: number[]` — Overseerr user ids (the natural identity for the
-   exclude-source multi-select in the UI — these are the ids a consumer picker would show).
-5. `mediaEnrichment` schema: new `watchlistUserIds` column (JSON-encoded array — no existing array-column
-   precedent in `schema.ts`, first one), migration.
-6. `enrichmentMerge.ts`: copy-through with JSON parse.
-7. `ruleRegistry.ts`: new `watchlistUserIds` rule, `instance-ids`, same predicate shape as `tagIds`.
+3. A new reported fact, `ReportedFacts.watchlistUserIds: number[]` — Seerr user ids (the natural
+   identity for the exclude-source multi-select in the UI — these are the ids a consumer picker would
+   show), named for what it means, declared in Seerr's `facts.reports` and filled by its
+   `readReportedFacts`: per user, aggregate `tmdbId → userId[]`.
+4. A seed migration for its `enrichment_field` row (facts are stored as JSON values, so an array needs
+   no schema change).
+5. `ruleRegistry.ts`: a new `watchlistUserIds` rule that `reads` it, `instance-ids`, same predicate
+   shape as `tagIds`.
 
 ### Open questions for whoever picks this up
 
-- Whether `watchlistUserIds` needs its own `EnrichmentJobFactoryDeps`-level plumbing or can ride entirely on
-  the existing `seerrEnricher`'s provider instance.
+- Whether one Seerr instance is enough, or a watchlist per consumer needs more than the one
+  request manager's answer.
 - Whether the consumer picker in the UI needs Overseerr `displayName`s surfaced somewhere (a small read
   endpoint), or whether that's a separate follow-up once the predicate itself lands.
 - Pagination/rate-limit behavior for servers with many Overseerr users — `getWatchlist` is one call per user
   per enrichment pass; no caching layer exists on our side the way Overseerr's own etag cache does internally.
 
-These are unresolved enough to warrant a wayfinder pass (grilling + prototype on the array-column/enricher
+These are unresolved enough to warrant a wayfinder pass (grilling + prototype on the array-valued fact
 shape) before this gets a phase plan — the Plex added-date work this doc was split from has shipped.
