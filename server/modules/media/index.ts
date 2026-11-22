@@ -53,7 +53,7 @@ export type {
   MediaRuleDescriptor,
   RangeValue,
 } from './ruleRegistry';
-export { MEDIA_RULES, getRule, toDescriptor } from './ruleRegistry';
+export { MEDIA_RULES, getRule, suppliersOf, toDescriptor } from './ruleRegistry';
 
 // Filter readiness — the one place a filter list's findings are raised, worded and given a
 // consequence. Facts are read once per request; the judging and answers are pure.

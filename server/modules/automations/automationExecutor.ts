@@ -17,6 +17,7 @@ import {
   findingsFor,
   getRule,
   isAddressedActuator,
+  suppliersOf,
 } from '../media';
 import type { FilterReadiness, Library, LibraryCache, LibraryCopy } from '../media';
 import type { MediaQueryRecord, MediaQueryService } from '../mediaQueries';
@@ -31,6 +32,7 @@ import {
   isMediaSourceType,
   providerTypeLabel,
   readEnabledTaskIds,
+  titleIdColumnOf,
 } from '../providers';
 import type { AutomationBlockService } from './automationBlockService';
 import type { AutomationRunService, RunTargets } from './automationRunService';
@@ -117,9 +119,9 @@ interface Dependency {
 }
 
 /**
- * A fact a destructive run's queries filter on, and the active providers that supply it. A
- * supplier reached through a media server's links (Tautulli and Plex through Plex, Jellyfin through
- * Jellyfin) lists that server's instances in `via`.
+ * A reported fact a destructive run's queries filter on, and the active providers that report it.
+ * A reporter matched by a media server's links (its title id column is that server's address
+ * column) lists that server's instances in `via`; one matched by TMDB id lists none.
  */
 interface FactDependency {
   label: string;
@@ -607,8 +609,9 @@ export class AutomationExecutor {
    * The source catalogs a run on `providerSettings` reads. A catalog-owning actuator acts on its
    * own catalog's copies, any other actuator on every active source instance's copies. A filter
    * whose value names an instance can be met only through that instance's copy, so it reads that
-   * instance's catalog; any other filter on a field a source supplies may be met through any
-   * instance's copy, so it reads every active source instance's catalog.
+   * instance's catalog; any other filter on a catalog fact may be met through any instance's
+   * copy, so it reads every active source instance's catalog. A reported-fact filter adds no
+   * catalog dependency.
    */
   private catalogDependencies(
     library: Library,
@@ -624,7 +627,7 @@ export class AutomationExecutor {
         if (isInstanceScopedValue(value) && value.providerId !== undefined) {
           return [value.providerId];
         }
-        return getRule(ruleKey, contentType)?.providers.includes(sourceType) ? everySource : [];
+        return getRule(ruleKey, contentType)?.reads === 'catalog' ? everySource : [];
       })
     );
     return [...acting, ...filtered].map((providerId) => ({
@@ -668,14 +671,19 @@ export class AutomationExecutor {
         })
       )
     );
-    const facts = [...rules.values()].map((rule) => ({
-      label: rule.label,
-      suppliers: rule.providers
-        .filter((type) => !isMediaSourceType(type))
-        .flatMap((type) =>
-          active(type).map((providerId) => ({ providerId, via: linkProviders(type) }))
+    // The media servers whose links a reporter's answers are matched through; none for TMDB ids.
+    const via = (type: MetadataProviderType): number[] => {
+      const column = titleIdColumnOf(type);
+      return column && column !== 'tmdbId' ? active(MEDIA_SERVER_BY_COLUMN[column]) : [];
+    };
+    const facts = [...rules.values()]
+      .filter((rule) => rule.reads !== 'catalog')
+      .map((rule) => ({
+        label: rule.label,
+        suppliers: suppliersOf(rule, contentType).flatMap((type) =>
+          active(type).map((providerId) => ({ providerId, via: via(type) }))
         ),
-    }));
+      }));
     return { required: [...catalogs, ...addressed], facts };
   }
 
