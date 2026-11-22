@@ -149,7 +149,7 @@ function filterFindings(judging: Judging, { ruleKey, value }: Filter): Readiness
  * incomplete: an informational finding, which names the suppliers and never stops a run.
  */
 function enrichmentFindings(judging: Judging, rule: MediaRule): ReadinessFinding[] {
-  if (!rule.sourceField || rule.providers.some(isMediaSourceType)) return [];
+  if (rule.reads === 'catalog' || rule.providers.some(isMediaSourceType)) return [];
   const { facts, list } = judging;
   const incomplete = facts.providers
     .filter((p) => p.isActive && rule.providers.includes(p.type))

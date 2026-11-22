@@ -6,6 +6,7 @@ import {
   type NormalizedSeries,
   deriveProviders,
   getRule,
+  suppliersOf,
   toDescriptor,
 } from '@server/modules/media/ruleRegistry';
 import { MOCK_RULES } from '@tests/mocks/handlers/media';
@@ -86,6 +87,25 @@ describe('MEDIA_RULES', () => {
 // The dataType is the contract the client reads to choose an input widget: `instance-ids`
 // means numeric ids, `csv-strings` means free-text tokens. It must match what the
 // predicate parses, otherwise the UI offers the wrong control.
+
+describe('suppliersOf', () => {
+  const { RADARR, SONARR, PLEX, JELLYFIN, TAUTULLI } = MetadataProviderType;
+
+  it("answers the content type's source for a rule reading the catalog", () => {
+    expect(suppliersOf(getRule('year', 'movie')!, 'movie')).toEqual([RADARR]);
+    expect(suppliersOf(getRule('hasFile', 'series')!, 'series')).toEqual([SONARR]);
+  });
+
+  it('answers every provider declaring a reported fact for a rule reading it', () => {
+    expect(suppliersOf(getRule('watched', 'movie')!, 'movie')).toEqual([PLEX, JELLYFIN, TAUTULLI]);
+    expect(suppliersOf(getRule('studio', 'movie')!, 'movie')).toEqual([PLEX, JELLYFIN]);
+  });
+
+  it("answers the union over the rule's content types when none is asked", () => {
+    expect(suppliersOf(getRule('year', 'movie')!)).toEqual([RADARR, SONARR]);
+    expect(suppliersOf(getRule('tagIds', 'movie')!)).toEqual([RADARR]);
+  });
+});
 
 describe('dataType classification', () => {
   it('genres compares strings — csv-strings, both content types', () => {
