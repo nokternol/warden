@@ -188,4 +188,26 @@ describe('EnrichmentJob', () => {
       { mediaIdentityId: id, providerId: plexId, field: 'playCount', value: 3 },
     ]);
   });
+
+  it('gives every title an id names the answer for that id, as a movie and a series sharing a TMDB id', async () => {
+    const movie = await title({ contentType: 'movie', tmdbId: 100, plexRatingKey: null });
+    const series = await title({ contentType: 'series', tmdbId: 100, plexRatingKey: null });
+    const tmdb = fakeReporter(
+      tautulliId,
+      'TMDB',
+      'tmdbId',
+      ['tmdbStatus'],
+      () => new Map([[100, { tmdbStatus: 'Ended' }]])
+    );
+
+    await job([tmdb]).run();
+
+    expect(tmdb.provider.readReportedFacts.mock.calls[0][0]).toEqual([100]);
+    expect(await queries.allFacts()).toEqual(
+      expect.arrayContaining([
+        { mediaIdentityId: movie, providerId: tautulliId, field: 'tmdbStatus', value: 'Ended' },
+        { mediaIdentityId: series, providerId: tautulliId, field: 'tmdbStatus', value: 'Ended' },
+      ])
+    );
+  });
 });
