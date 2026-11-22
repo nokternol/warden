@@ -3,6 +3,7 @@ import type { ContentType } from '@contract/schemas';
 import type { MetadataProviderType } from '@server/database/schema';
 import type { RadarrMovie } from './connections/radarrProvider';
 import type { SonarrSeries } from './connections/sonarrProvider';
+import type { ReportedFacts } from './facts';
 
 /** A title's media-server id columns, as the catalog refresh links them. */
 export type AddressColumn = 'plexRatingKey' | 'jellyfinItemId';
@@ -74,6 +75,13 @@ export interface JellyfinLinks {
   getAllItems(): Promise<
     Array<{ Id: string; Type?: string; ProviderIds?: Record<string, string> }>
   >;
+}
+
+/** A connection that reports facts about titles, by the title id its declaration names. */
+export interface FactReporter {
+  readReportedFacts(
+    titleIds: readonly (string | number)[]
+  ): Promise<Map<string | number, Partial<ReportedFacts>>>;
 }
 
 /** Resolves a series' TVmaze id from its TheTVDB id, for the catalog refresh. */

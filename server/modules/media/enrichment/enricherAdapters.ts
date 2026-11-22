@@ -10,7 +10,6 @@ import type { ReportedFacts } from '../../providers';
 import type { MediaFieldProvider } from '../mediaFieldProvider';
 import {
   jellyfinFieldProvider,
-  plexFieldProvider,
   seerrFieldProvider,
   tautulliFieldProvider,
   tmdbFieldSource,
@@ -47,7 +46,7 @@ type PlexEnrichedField =
 export function plexEnricher(plex: PlexProvider): MediaEnricher<PlexEnrichedField> {
   return {
     enrich: async (items): Promise<EnrichmentResult<PlexEnrichedField>> => {
-      const fieldsByKey = toFieldsByKey(plexFieldProvider, await plex.getAllItems());
+      const fieldsByKey = await plex.readReportedFacts();
       return {
         provider: MetadataProviderType.PLEX,
         items: decorate(items, (i) => i._sourceIds.plex, fieldsByKey),

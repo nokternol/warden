@@ -1,9 +1,12 @@
 import { getChildLogger } from '@server/kernel/logger';
 import type { ProviderConfig } from '@server/modules/providers/connections/baseProviderConnection';
-import { PlexProvider } from '@server/modules/providers/connections/plexProvider';
+import {
+  type PlexMediaItem,
+  PlexProvider,
+} from '@server/modules/providers/connections/plexProvider';
 import { server } from '@tests/mocks/server';
 import { http, HttpResponse } from 'msw';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const logger = getChildLogger('TestPlexProvider');
 
@@ -154,5 +157,70 @@ describe('PlexProvider — deleting an item already gone', () => {
     );
 
     await expect(provider.deleteFromLibrary(['101'])).resolves.toBeUndefined();
+  });
+});
+
+describe('PlexProvider — reported facts', () => {
+  /** The facts Plex reports when its libraries hold exactly `items`. */
+  async function reportedFor(items: PlexMediaItem[]) {
+    const provider = new PlexProvider(mockConfig, logger);
+    vi.spyOn(provider, 'getAllItems').mockResolvedValue(items);
+    return provider.readReportedFacts();
+  }
+
+  it("reports each item's facts by its rating key", async () => {
+    const facts = await reportedFor([
+      {
+        ratingKey: 'plex-101',
+        title: 'M',
+        type: 'movie',
+        viewCount: 2,
+        lastViewedAt: 1700000000,
+        addedAt: 1600000000,
+        studio: 'Legendary Pictures',
+        duration: 7_320_000,
+        originallyAvailableAt: '1999-03-31',
+        Label: [{ tag: '4K' }],
+        Media: [
+          {
+            container: 'mkv',
+            videoCodec: 'h264',
+            audioCodec: 'aac',
+            videoResolution: '1080',
+            Part: [{ size: 123 }],
+          },
+        ],
+      },
+    ]);
+
+    expect(facts).toEqual(
+      new Map([
+        [
+          'plex-101',
+          {
+            playCount: 2,
+            lastWatchedAt: new Date(1700000000 * 1000).toISOString(),
+            plexAddedAt: new Date(1600000000 * 1000).toISOString(),
+            studio: 'Legendary Pictures',
+            runtimeMinutes: 122,
+            fileSizeBytes: 123,
+            releaseDate: '1999-03-31',
+            fileContainer: 'mkv',
+            videoCodec: 'h264',
+            audioCodec: 'aac',
+            fileResolution: '1080',
+            labels: ['4K'],
+          },
+        ],
+      ])
+    );
+  });
+
+  it('reports no play as a play count of 0, and leaves out every fact the item does not carry', async () => {
+    const facts = await reportedFor([
+      { ratingKey: 'plex-101', title: 'M', type: 'movie', Label: [], Media: [{}] },
+    ]);
+
+    expect(facts.get('plex-101')).toEqual({ playCount: 0 });
   });
 });

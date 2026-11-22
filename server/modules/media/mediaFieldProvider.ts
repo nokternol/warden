@@ -1,8 +1,6 @@
 import type {
   JellyfinItem,
   JellyfinMediaSource,
-  PlexMedia,
-  PlexMediaItem,
   SeerrIssue,
   SeerrRequest,
   TautulliHistoryItem,
@@ -122,87 +120,6 @@ export const seerrFieldProvider: MediaFieldProvider<
   toEnrichmentFields: (native) => ({
     ...(native.requestStatus !== undefined ? { seerrRequestStatus: native.requestStatus } : {}),
     ...(native.hasIssue !== undefined ? { seerrHasIssue: native.hasIssue } : {}),
-  }),
-};
-
-/** The first `Media` entry's first `Part` — the file Plex actually plays, per item. */
-function primaryPart(item: PlexMediaItem): { media?: PlexMedia; size?: number } {
-  const media = item.Media?.[0];
-  return { media, size: media?.Part?.[0]?.size };
-}
-
-/** Plex's own representation: play history plus its library-added timestamp and
- *  the rest of the item's directly-owned metadata (studio, runtime, file-tech,
- *  release date, labels). */
-interface PlexNativeFields extends PlayHistoryFields {
-  addedAtUnix?: number;
-  studio?: string;
-  durationMs?: number;
-  fileSizeBytes?: number;
-  releaseDate?: string;
-  fileContainer?: string;
-  videoCodec?: string;
-  audioCodec?: string;
-  fileResolution?: string;
-  labels?: string[];
-}
-
-export const plexFieldProvider: MediaFieldProvider<
-  PlexMediaItem[],
-  PlexNativeFields,
-  Partial<
-    Pick<
-      ReportedFacts,
-      | 'playCount'
-      | 'lastWatchedAt'
-      | 'plexAddedAt'
-      | 'studio'
-      | 'runtimeMinutes'
-      | 'fileSizeBytes'
-      | 'releaseDate'
-      | 'fileContainer'
-      | 'videoCodec'
-      | 'audioCodec'
-      | 'fileResolution'
-      | 'labels'
-    >
-  >
-> = {
-  visit: (items) => {
-    const byKey = new Map<string, PlexNativeFields>();
-    for (const item of items) {
-      const { media, size } = primaryPart(item);
-      byKey.set(item.ratingKey, {
-        playCount: item.viewCount ?? 0,
-        lastPlayedUnix: item.lastViewedAt,
-        addedAtUnix: item.addedAt,
-        studio: item.studio,
-        durationMs: item.duration,
-        fileSizeBytes: size,
-        releaseDate: item.originallyAvailableAt,
-        fileContainer: media?.container,
-        videoCodec: media?.videoCodec,
-        audioCodec: media?.audioCodec,
-        fileResolution: media?.videoResolution,
-        labels: item.Label?.map((l) => l.tag),
-      });
-    }
-    return byKey;
-  },
-  toEnrichmentFields: (native) => ({
-    ...playHistoryToReportedFacts(native),
-    ...(native.addedAtUnix !== undefined ? { plexAddedAt: toIso(native.addedAtUnix) } : {}),
-    ...(native.studio !== undefined ? { studio: native.studio } : {}),
-    ...(native.durationMs !== undefined
-      ? { runtimeMinutes: Math.round(native.durationMs / 60_000) }
-      : {}),
-    ...(native.fileSizeBytes !== undefined ? { fileSizeBytes: native.fileSizeBytes } : {}),
-    ...(native.releaseDate !== undefined ? { releaseDate: native.releaseDate } : {}),
-    ...(native.fileContainer !== undefined ? { fileContainer: native.fileContainer } : {}),
-    ...(native.videoCodec !== undefined ? { videoCodec: native.videoCodec } : {}),
-    ...(native.audioCodec !== undefined ? { audioCodec: native.audioCodec } : {}),
-    ...(native.fileResolution !== undefined ? { fileResolution: native.fileResolution } : {}),
-    ...(native.labels !== undefined && native.labels.length > 0 ? { labels: native.labels } : {}),
   }),
 };
 
