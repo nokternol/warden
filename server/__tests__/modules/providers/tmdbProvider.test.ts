@@ -503,3 +503,17 @@ describe('TmdbProvider watch/providers edge cases', () => {
     expect(result).toEqual(allFalse);
   });
 });
+
+describe('TmdbProvider — reported facts', () => {
+  it('reports the production status of each TMDB id asked, looking each one up once', async () => {
+    const tmdb = new TmdbProvider(mockProvider, log);
+    const getStatus = vi
+      .spyOn(tmdb, 'getStatus')
+      .mockImplementation(async (id) => (id === 100 ? 'Released' : undefined));
+
+    const facts = await tmdb.readReportedFacts([100, 100, 200]);
+
+    expect(getStatus).toHaveBeenCalledTimes(2);
+    expect(facts).toEqual(new Map([[100, { tmdbStatus: 'Released' }]]));
+  });
+});

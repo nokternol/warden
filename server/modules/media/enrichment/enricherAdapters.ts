@@ -7,7 +7,6 @@ import type {
   TmdbProvider,
 } from '../../providers';
 import type { ReportedFacts } from '../../providers';
-import { tmdbFieldSource } from '../mediaFieldProvider';
 import { decorate } from './decorate';
 import type { EnrichmentResult, MediaEnricher } from './enricher';
 
@@ -81,14 +80,10 @@ export function seerrEnricher(
 export function tmdbEnricher(tmdb: TmdbProvider): MediaEnricher<'tmdbStatus'> {
   return {
     enrich: async (items): Promise<EnrichmentResult<'tmdbStatus'>> => {
-      const fieldsByKey = new Map<number, Pick<ReportedFacts, 'tmdbStatus'>>();
-      for (const item of items) {
-        const tmdbId = item._sourceIds.tmdb;
-        if (tmdbId === undefined || fieldsByKey.has(tmdbId)) continue;
-        const status = await tmdb.getStatus(tmdbId);
-        if (status !== undefined)
-          fieldsByKey.set(tmdbId, tmdbFieldSource.toEnrichmentFields(status));
-      }
+      const tmdbIds = items.flatMap((item) =>
+        item._sourceIds.tmdb !== undefined ? [item._sourceIds.tmdb] : []
+      );
+      const fieldsByKey = await tmdb.readReportedFacts(tmdbIds);
       return {
         provider: MetadataProviderType.TMDB,
         items: decorate(items, (i) => i._sourceIds.tmdb, fieldsByKey),
