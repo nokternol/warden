@@ -7,6 +7,7 @@ import {
   contentTypeOfSourceType,
   isMediaServerType,
   isMediaSourceType,
+  mediaServerOfColumn,
   providerKindOf,
   reportersOf,
   reportsFacts,
@@ -46,6 +47,15 @@ describe('the provider catalogue', () => {
       plexRatingKey: MetadataProviderType.PLEX,
       jellyfinItemId: MetadataProviderType.JELLYFIN,
     });
+  });
+});
+
+describe('mediaServerOfColumn', () => {
+  it('names the media server whose links a column needs, and none for TMDB ids', () => {
+    expect(mediaServerOfColumn('plexRatingKey')).toBe(MetadataProviderType.PLEX);
+    expect(mediaServerOfColumn('jellyfinItemId')).toBe(MetadataProviderType.JELLYFIN);
+    expect(mediaServerOfColumn('tmdbId')).toBeUndefined();
+    expect(mediaServerOfColumn(undefined)).toBeUndefined();
   });
 });
 

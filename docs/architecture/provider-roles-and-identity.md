@@ -66,7 +66,9 @@ Everything else is read from those declarations, never re-declared:
 - [`providerCatalogue.ts`](ref:path:server/modules/providers/providerCatalogue.ts) derives
   `PROVIDER_CATALOGUE`, the setup type list and the type labels; `SOURCE_OWNER`, `isMediaSourceType`
   and `contentTypeOfSourceType` from `source`; `ADDRESS_COLUMN_BY_TYPE` from `mediaServer` or
-  `addressedBy`; `isMediaServerType` and `MEDIA_SERVER_BY_COLUMN` from `mediaServer`; and, from
+  `addressedBy`; `isMediaServerType`, `MEDIA_SERVER_BY_COLUMN` and `mediaServerOfColumn` (the media
+  server whose links a title id column needs, the one lookup the run gate and `reporterReliability`
+  share) from `mediaServer`; and, from
   `facts` and `providerKind`, `reportersOf(fact)`, `reportsFacts(type)`, `titleIdColumnOf(type)` (the
   address column first, then `matchedBy`) and `providerKindOf(type)` (`mediaServer` wins over a
   declared kind, so a redundant declaration is unused, never a second truth). An entry
@@ -306,8 +308,8 @@ service still supplies does not depend on the one that failed). The rule lives i
   of the media server whose ids it addresses. Any of these failed or never read skips the run, naming the provider and the kind.
 - **Reported facts it filters on, once each.** For each reported-fact rule in its included or excluded
   queries, the run needs one active reporter from `suppliersOf` whose `facts` record succeeded and, for
-  a reporter matched through a media server's links (its `titleIdColumnOf` is that server's column,
-  `MEDIA_SERVER_BY_COLUMN`), whose server's `links` record succeeded too
+  a reporter matched through a media server's links (`mediaServerOfColumn` of its `titleIdColumnOf`),
+  whose server's `links` record succeeded too
   ([`providerCatalogue.ts`](ref:path:server/modules/providers/providerCatalogue.ts)); a reporter matched
   by TMDB id has no links dependency. Play count from Plex and Jellyfin survives Plex failing while
   Jellyfin refreshed. Only a rule none of whose reporters is good skips the run, naming the fact and why

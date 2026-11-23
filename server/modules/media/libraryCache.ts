@@ -10,7 +10,6 @@ import type { MetadataProviderType } from '@server/database/schema';
 import type { DrizzleDb } from '@server/kernel/db';
 import type { DomainEventBus } from '@server/kernel/eventBus';
 import {
-  MEDIA_SERVER_BY_COLUMN,
   type ProviderListsData,
   type ProviderListsReader,
   type RadarrMovie,
@@ -20,6 +19,7 @@ import {
   type StoredRefreshRecord,
   isMediaServerType,
   isMediaSourceType,
+  mediaServerOfColumn,
   readProviderLists,
   readRefreshRecords,
   reportsFacts,
@@ -125,11 +125,8 @@ export function reporterReliability(
         if (!refreshedOk(records, id, 'facts')) {
           return { providerId: id, unrefreshed: { providerId: id, kind: 'facts' as const } };
         }
-        const column = titleIdColumnOf(type);
-        const servers =
-          column && column !== 'tmdbId'
-            ? providers.filter((p) => p.type === MEDIA_SERVER_BY_COLUMN[column])
-            : [];
+        const serverType = mediaServerOfColumn(titleIdColumnOf(type));
+        const servers = serverType ? providers.filter((p) => p.type === serverType) : [];
         const linked =
           servers.length === 0 || servers.some((p) => refreshedOk(records, p.id, 'links'));
         return {

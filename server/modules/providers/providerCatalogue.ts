@@ -59,6 +59,16 @@ export const MEDIA_SERVER_BY_COLUMN = Object.fromEntries(
   DECLARED.flatMap(({ type, mediaServer }) => (mediaServer ? [[mediaServer, type]] : []))
 ) as Record<AddressColumn, MetadataProviderType>;
 
+/**
+ * The media server type whose `links` refresh a title id column needs: the one whose links write
+ * that column. None for TMDB ids, which no media server links, or for no column.
+ */
+export function mediaServerOfColumn(
+  column: TitleIdColumn | undefined
+): MetadataProviderType | undefined {
+  return column && column !== 'tmdbId' ? MEDIA_SERVER_BY_COLUMN[column] : undefined;
+}
+
 /** Whether a provider type is a media server titles link into (declares `mediaServer`). */
 export function isMediaServerType(type: MetadataProviderType): boolean {
   return PROVIDER_CATALOGUE[type].capabilities.mediaServer !== undefined;

@@ -31,11 +31,11 @@ import {
   ADDRESS_COLUMN_BY_TYPE,
   type ActuatorTask,
   type IProviderFactory,
-  MEDIA_SERVER_BY_COLUMN,
   type ProviderSettingsService,
   SOURCE_OWNER,
   isMediaActuator,
   isMediaSourceType,
+  mediaServerOfColumn,
   providerTypeLabel,
   readEnabledTaskIds,
 } from '../providers';
@@ -653,8 +653,8 @@ export class AutomationExecutor {
     const active = (type: MetadataProviderType) =>
       library.providers.filter((p) => p.type === type).map((p) => p.id);
     const linkProviders = (type: MetadataProviderType): number[] => {
-      const column = ADDRESS_COLUMN_BY_TYPE[type];
-      return column ? active(MEDIA_SERVER_BY_COLUMN[column]) : [];
+      const server = mediaServerOfColumn(ADDRESS_COLUMN_BY_TYPE[type]);
+      return server ? active(server) : [];
     };
     const isSource = isMediaSourceType(providerSettings.type);
     const catalogs = this.catalogDependencies(library, providerSettings, contentType, queries);

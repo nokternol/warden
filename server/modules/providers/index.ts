@@ -47,11 +47,11 @@ export type { ProviderSettingsDraft, ProviderSummary } from './providerSettingsS
 // shown to the user, which type owns each content type's catalog, and how titles are addressed.
 export {
   ADDRESS_COLUMN_BY_TYPE,
-  MEDIA_SERVER_BY_COLUMN,
   SOURCE_OWNER,
   contentTypeOfSourceType,
   isMediaServerType,
   isMediaSourceType,
+  mediaServerOfColumn,
   providerKindOf,
   providerTypeLabel,
   reportersOf,
