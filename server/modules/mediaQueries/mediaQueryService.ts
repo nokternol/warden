@@ -10,7 +10,7 @@ import {
   type FilterAnswer,
   type FilterReadiness,
   type FilterValue,
-  type ReadinessFacts,
+  type ReadinessInputs,
   filterAnswer,
   findingsFor,
   getRule,
@@ -59,10 +59,10 @@ function serializeValue(value: FilterValue): string {
 }
 
 function computeHealth(
-  facts: ReadinessFacts,
+  inputs: ReadinessInputs,
   list: { queryId?: number; filters: Filter[]; contentType: ContentType }
 ): QueryHealth {
-  const findings = findingsFor(facts, list);
+  const findings = findingsFor(inputs, list);
   return { findings, queryList: filterAnswer(findings).queryList };
 }
 
@@ -89,7 +89,7 @@ export class MediaQueryService {
     const rows = await this.db.select().from(mediaQueries).orderBy(mediaQueries.createdAt);
     const fvRows = await this.db.select().from(mediaQueryFilterValues);
 
-    const facts = await this.filterReadiness.readFacts();
+    const inputs = await this.filterReadiness.readInputs();
 
     const contentTypeByQueryId = new Map<number, ContentType>(
       rows.map((row) => [row.id, row.contentType as ContentType])
@@ -109,7 +109,7 @@ export class MediaQueryService {
 
     return rows.map((row) => {
       const filters = filtersByQueryId.get(row.id) ?? [];
-      const health = computeHealth(facts, {
+      const health = computeHealth(inputs, {
         queryId: row.id,
         filters,
         contentType: row.contentType as ContentType,
@@ -176,7 +176,7 @@ export class MediaQueryService {
       );
     }
 
-    const health = computeHealth(await this.filterReadiness.readFacts(), {
+    const health = computeHealth(await this.filterReadiness.readInputs(), {
       queryId: row.id,
       filters: draft.filters,
       contentType: draft.contentType,
@@ -207,7 +207,7 @@ export class MediaQueryService {
       return { ruleKey: fv.ruleKey, value: coerceValue(fv.value, dataType) };
     });
 
-    const health = computeHealth(await this.filterReadiness.readFacts(), {
+    const health = computeHealth(await this.filterReadiness.readInputs(), {
       queryId: row.id,
       filters,
       contentType: row.contentType as ContentType,

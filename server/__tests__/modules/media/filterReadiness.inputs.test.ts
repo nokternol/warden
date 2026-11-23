@@ -1,5 +1,5 @@
 /**
- * The facts filter readiness judges with, read from the database in one pass.
+ * The inputs filter readiness judges with, read from the database in one pass.
  *
  * Run: vitest run --project server
  */
@@ -24,7 +24,7 @@ const testConfig = {
   LOG_LEVEL: 'error',
 } as AppConfig;
 
-describe('FilterReadiness.readFacts', () => {
+describe('FilterReadiness.readInputs', () => {
   beforeEach(async () => {
     await initializeDatabase(testConfig);
   });
@@ -49,23 +49,23 @@ describe('FilterReadiness.readFacts', () => {
     const libraryCache = new LibraryCache({ db, eventBus: new DomainEventBus() });
     const read = vi.spyOn(libraryCache, 'read');
 
-    const facts = await new FilterReadiness({
+    const inputs = await new FilterReadiness({
       providerSettingsService: new ProviderSettingsService({
         ...providerSettingsCollaborators(),
         db,
       }),
       libraryCache,
-    }).readFacts();
+    }).readInputs();
 
     expect(read).toHaveBeenCalledOnce();
 
-    expect(facts.providers).toEqual([
+    expect(inputs.providers).toEqual([
       { id: radarr.id, type: MetadataProviderType.RADARR },
       { id: plex.id, type: MetadataProviderType.PLEX },
       { id: tautulli.id, type: MetadataProviderType.TAUTULLI },
     ]);
-    expect(facts.library.providers.map((p) => p.id)).toEqual([radarr.id, tautulli.id]);
-    expect(facts.library.records).toEqual(
+    expect(inputs.library.providers.map((p) => p.id)).toEqual([radarr.id, tautulli.id]);
+    expect(inputs.library.records).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ providerId: plex.id, kind: 'facts', failedAt: null }),
         expect.objectContaining({ providerId: tautulli.id, kind: 'facts', refreshedAt: null }),

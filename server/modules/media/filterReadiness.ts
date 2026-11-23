@@ -21,7 +21,7 @@ import {
  * A configured provider instance, active or not, as readiness names one a filter value refers to.
  * Whether it is active is the loaded copy's answer (`library.providers`), never this row's.
  */
-export interface ProviderFact {
+export interface ConfiguredInstance {
   id: number;
   type: MetadataProviderType;
 }
@@ -30,22 +30,22 @@ export interface ProviderFact {
  * Everything filter readiness judges with. The same for every filter list in a request, so it is
  * read once and each list is judged against it in memory.
  */
-export interface ReadinessFacts {
+export interface ReadinessInputs {
   /**
    * Every configured provider instance, active or not: only to name the type of an instance a
    * filter value refers to, which an inactive instance has but the loaded copy does not carry.
    */
-  providers: readonly ProviderFact[];
+  providers: readonly ConfiguredInstance[];
   /** The loaded copy's active providers and refresh records, which say whose facts can be relied on. */
   library: Pick<Library, 'providers' | 'records'>;
 }
 
 /** The narrow slice of `ProviderSettingsService` readiness reads. */
 export interface ProviderInstancesSource {
-  list(): Promise<readonly ProviderFact[]>;
+  list(): Promise<readonly ConfiguredInstance[]>;
 }
 
-/** Reads the facts filter readiness judges with, once per request. */
+/** Reads the inputs filter readiness judges with, once per request. */
 export class FilterReadiness {
   private readonly deps: {
     providerSettingsService: ProviderInstancesSource;
@@ -57,7 +57,7 @@ export class FilterReadiness {
     this.deps = deps;
   }
 
-  async readFacts(): Promise<ReadinessFacts> {
+  async readInputs(): Promise<ReadinessInputs> {
     const [providers, library] = await Promise.all([
       this.deps.providerSettingsService.list(),
       this.deps.libraryCache.read(),
@@ -77,7 +77,7 @@ export interface FilterList {
 }
 
 /**
- * A finding about `list`. Its id is built from the facts that make it (kind, query, rule and the
+ * A finding about `list`. Its id is built from what makes it (kind, query, rule and the
  * provider instances involved), so a re-check that finds the same problem gives the same id.
  */
 function finding(
@@ -100,7 +100,7 @@ function finding(
 
 /** What every filter of one list is judged against. */
 interface Judging {
-  facts: ReadinessFacts;
+  inputs: ReadinessInputs;
   list: FilterList;
   /** The provider type that owns the list's content type's catalog. */
   sourceType: MetadataProviderType;
@@ -108,13 +108,13 @@ interface Judging {
   hasActive(type: MetadataProviderType): boolean;
 }
 
-/** Every reason `list` cannot be trusted to select the titles it describes, against `facts`. */
-export function findingsFor(facts: ReadinessFacts, list: FilterList): ReadinessFinding[] {
+/** Every reason `list` cannot be trusted to select the titles it describes, against `inputs`. */
+export function findingsFor(inputs: ReadinessInputs, list: FilterList): ReadinessFinding[] {
   const sourceType = SOURCE_OWNER[list.contentType];
   const hasActive = (type: MetadataProviderType) =>
-    facts.library.providers.some((p) => p.type === type);
+    inputs.library.providers.some((p) => p.type === type);
   const judging: Judging = {
-    facts,
+    inputs,
     list,
     sourceType,
     libraryMissing: !hasActive(sourceType),
@@ -152,8 +152,8 @@ function filterFindings(judging: Judging, { ruleKey, value }: Filter): Readiness
  */
 function reportedFactFindings(judging: Judging, rule: MediaRule): ReadinessFinding[] {
   if (rule.reads === 'catalog') return [];
-  const { facts, list } = judging;
-  const reporters = reporterReliability(facts.library, rule, list.contentType);
+  const { inputs, list } = judging;
+  const reporters = reporterReliability(inputs.library, rule, list.contentType);
   if (reporters.length === 0 || reporters.some((r) => r.unrefreshed === null)) return [];
   return [
     finding(
@@ -193,8 +193,8 @@ function instanceFindings(
 ): ReadinessFinding[] {
   if (!isInstanceScopedValue(value) || value.providerId === undefined) return [];
   const { providerId } = value;
-  const named = judging.facts.providers.find((p) => p.id === providerId);
-  const isActive = judging.facts.library.providers.some((p) => p.id === providerId);
+  const named = judging.inputs.providers.find((p) => p.id === providerId);
+  const isActive = judging.inputs.library.providers.some((p) => p.id === providerId);
   const instance = { id: providerId, typeLabel: named && providerTypeLabel(named.type) };
   if (isActive && named?.type === judging.sourceType) return [];
   const expectedLabel = isActive ? providerTypeLabel(judging.sourceType) : undefined;

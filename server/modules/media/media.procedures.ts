@@ -137,7 +137,7 @@ export function createMediaProcedures(
 
   /** Why the page's filters may not select what they describe, and what the page does about it. */
   async function readiness(filters: Filter[], contentType: ContentType) {
-    const findings = findingsFor(await cradle.filterReadiness.readFacts(), {
+    const findings = findingsFor(await cradle.filterReadiness.readInputs(), {
       contentType,
       filters,
     });

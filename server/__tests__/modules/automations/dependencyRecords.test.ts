@@ -431,7 +431,7 @@ describe('runs and the refresh records they depend on', () => {
 
     expect(acted).toBe(false);
     expect(run.error).toMatch(/Plex's links refresh failed/);
-    const readiness = findingsFor(await filterReadinessOver(getDb()).readFacts(), {
+    const readiness = findingsFor(await filterReadinessOver(getDb()).readInputs(), {
       contentType: 'movie',
       filters: exclude,
     });

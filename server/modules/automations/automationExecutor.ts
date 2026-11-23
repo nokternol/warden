@@ -54,7 +54,7 @@ interface ExecutorDeps {
   automationRunService: AutomationRunService;
   providerSettingsService: ProviderSettingsService;
   mediaQueryService: MediaQueryService;
-  filterReadiness: Pick<FilterReadiness, 'readFacts'>;
+  filterReadiness: Pick<FilterReadiness, 'readInputs'>;
   automationBlockService: Pick<AutomationBlockService, 'reconcile'>;
   providerFactory: IProviderFactory;
   mediaQueryEngine: MediaQueryEngine;
@@ -201,7 +201,7 @@ export class AutomationExecutor {
   private readonly mediaQueryService: MediaQueryService;
   private readonly providerFactory: IProviderFactory;
   private readonly mediaQueryEngine: MediaQueryEngine;
-  private readonly filterReadiness: Pick<FilterReadiness, 'readFacts'>;
+  private readonly filterReadiness: Pick<FilterReadiness, 'readInputs'>;
   private readonly automationBlockService: Pick<AutomationBlockService, 'reconcile'>;
   private readonly libraryCache: Pick<LibraryCache, 'contentOf'>;
   private readonly systemTaskRunner: SystemTaskRunnerLike;
@@ -436,9 +436,9 @@ export class AutomationExecutor {
         `${instanceName({ id: automationProvider.id, typeLabel: providerTypeLabel(automationProvider.type) })}, this automation's provider, is not an active provider`
       );
     }
-    const facts = await this.filterReadiness.readFacts();
+    const inputs = await this.filterReadiness.readInputs();
     const findings = automationQueries.flatMap(({ queryId, record }) =>
-      findingsFor(facts, { queryId, contentType: record.contentType, filters: record.filters })
+      findingsFor(inputs, { queryId, contentType: record.contentType, filters: record.filters })
     );
     // Before any sign-off is known, every finding a user could accept awaits sign-off.
     const signOffable = automationAnswer(findings, new Set()).blocks.awaitingSignOff;

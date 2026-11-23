@@ -64,7 +64,7 @@ export type {
   FilterAnswer,
   FilterList,
   FilterReadiness,
-  ReadinessFacts,
+  ReadinessInputs,
 } from './filterReadiness';
 
 // The one evaluation of the catalog: which titles a set of conditions selects among copies.

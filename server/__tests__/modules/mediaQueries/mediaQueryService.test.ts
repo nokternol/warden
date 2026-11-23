@@ -195,18 +195,18 @@ describe('MediaQueryService', () => {
     expect(listed.health.queryList).toBe('clear');
   });
 
-  it('reads the readiness facts once however many queries it lists', async () => {
+  it('reads the readiness inputs once however many queries it lists', async () => {
     const readiness = filterReadinessOver(getDb());
-    const readFacts = vi.spyOn(readiness, 'readFacts');
+    const readInputs = vi.spyOn(readiness, 'readInputs');
     const listing = new MediaQueryService({ db: getDb(), filterReadiness: readiness });
     for (const name of ['A', 'B', 'C']) {
       await listing.create({ name, contentType: 'movie', filters: [] });
     }
-    readFacts.mockClear();
+    readInputs.mockClear();
 
     await listing.list();
 
-    expect(readFacts).toHaveBeenCalledTimes(1);
+    expect(readInputs).toHaveBeenCalledTimes(1);
   });
 
   // ── create ────────────────────────────────────────────────────────────────

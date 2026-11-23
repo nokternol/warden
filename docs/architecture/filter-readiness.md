@@ -19,9 +19,9 @@ here:
   `automation_queries.queryId` foreign key restricts it
   ([`server/database/schema.ts`](ref:path:server/database/schema.ts)), and the query row shows why.
 
-## Facts read once, judged in memory
+## Inputs read once, judged in memory
 
-[`FilterReadiness.readFacts()`](ref:path:server/modules/media/filterReadiness.ts) reads, once per
+[`FilterReadiness.readInputs()`](ref:path:server/modules/media/filterReadiness.ts) reads, once per
 request:
 
 - every provider instance, active or not, through a narrow slice of `ProviderSettingsService`, only
@@ -33,10 +33,10 @@ request:
   Readiness does not judge refresh records itself: whether a fact's reporters can be relied on is
   `reporterReliability`'s answer over the copy, the one a destructive run's gate reads too.
 
-`findingsFor(facts, filterList)` is pure. The query list judges every saved query against one read of
-the facts. The Media page judges its URL filters, which have no query id. The executor judges each
+`findingsFor(inputs, filterList)` is pure. The query list judges every saved query against one read of
+the inputs. The Media page judges its URL filters, which have no query id. The executor judges each
 query an automation targets, inside the provider turn, so a long wait cannot leave it judging stale
-facts. A filter list is judged the same whichever automation uses it: under north-star belief 3 a
+inputs. A filter list is judged the same whichever automation uses it: under north-star belief 3 a
 value naming any active source instance is a valid condition for every actuator, since it selects
 titles that each actuator then acts on in its own service.
 

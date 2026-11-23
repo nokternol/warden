@@ -992,7 +992,7 @@ describe('AutomationExecutor', () => {
         // The provider settings are mocked, so readiness judges against the same instance.
         automationBlockService: new AutomationBlockService({ db: getDb() }),
         filterReadiness: {
-          readFacts: async () => ({
+          readInputs: async () => ({
             providers: [{ id: 1, type: MetadataProviderType.RADARR }],
             library: {
               providers: [{ id: 1, name: 'Radarr', type: MetadataProviderType.RADARR }],
