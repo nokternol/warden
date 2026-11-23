@@ -87,7 +87,7 @@ The executor adds one problem of its own: the automation's provider is not activ
 `automation_blocks` row per automation and `no-data` finding id. Each check reconciles the rows: it
 inserts new findings and deletes those it no longer finds, row by row, so a sign-off landing during a
 check is never overwritten. A finding that clears and comes back is a new row and needs a new sign-off.
-The producers' instance ids are part of the finding's id, so a sign-off given while one Seerr instance
+The suppliers' instance ids are part of the finding's id, so a sign-off given while one Seerr instance
 supplied the field does not carry over to its replacement. Accepting a row that the latest check
 deleted, or one already signed off, answers 409.
 

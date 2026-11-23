@@ -81,7 +81,7 @@ describe('GET /api/rules', () => {
     expect(keys).not.toContain('monitored');
   });
 
-  it('serves no rule whose only configured producers are types that are not offered', async () => {
+  it('serves no rule whose only configured suppliers are types that are not offered', async () => {
     // A TMDB row can exist from before TMDB was deferred; it produces nothing offered.
     await providerSettingsService.create({
       type: MetadataProviderType.TMDB,
@@ -263,7 +263,7 @@ describe('GET /api/rules', () => {
       expect(groupOf('year')).toBeUndefined();
     });
 
-    it('exposes presentation only — no predicate, producers, field mapping or required flag', async () => {
+    it('exposes presentation only — no predicate, suppliers, field mapping or required flag', async () => {
       const rules = await rulesServedWith(
         MetadataProviderType.RADARR,
         MetadataProviderType.SONARR,

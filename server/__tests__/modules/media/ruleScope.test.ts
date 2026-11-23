@@ -14,7 +14,7 @@ function cannotBeOffered(rule: MediaRule): boolean {
 }
 
 describe('the scope declaration of deferred rules', () => {
-  it('lists exactly the rules that have no control or no producer among offered types', () => {
+  it('lists exactly the rules that have no control or no supplier among offered types', () => {
     const unofferable = [...new Set(RULES.filter(cannotBeOffered).map((r) => r.key))].sort();
 
     expect([...scope.deferred.rules].sort()).toEqual(unofferable);

@@ -52,7 +52,7 @@ export interface NamedInstance {
 /** What a finding's sentence is written from. Labels are resolved by the server. */
 export type FindingDescription =
   | { kind: 'no-library'; contentType: ContentType; sourceLabel: string }
-  | { kind: 'no-provider'; ruleLabel: string; producerLabels: string[]; offered: boolean }
+  | { kind: 'no-provider'; ruleLabel: string; supplierLabels: string[]; offered: boolean }
   | { kind: 'unknown-rule'; ruleKey: string }
   | {
       kind: 'inactive-instance';
@@ -97,14 +97,14 @@ export function describeFinding(description: FindingDescription): {
         clears: `Activate a ${description.sourceLabel} provider.`,
       };
     case 'no-provider': {
-      const producers = either(description.producerLabels);
+      const suppliers = either(description.supplierLabels);
       return description.offered
         ? {
-            message: `${description.ruleLabel} filter needs a ${producers} provider, and none is active`,
-            clears: `Activate a ${producers} provider.`,
+            message: `${description.ruleLabel} filter needs a ${suppliers} provider, and none is active`,
+            clears: `Activate a ${suppliers} provider.`,
           }
         : {
-            message: `${description.ruleLabel} filter needs a ${producers} provider, which Warden does not offer`,
+            message: `${description.ruleLabel} filter needs a ${suppliers} provider, which Warden does not offer`,
             clears: RECREATE,
           };
     }

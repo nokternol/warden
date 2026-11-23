@@ -627,7 +627,7 @@ describe('MediaFilterBar — provider gating', () => {
     expect(screen.queryByRole('button', { name: /watched/i })).not.toBeInTheDocument();
   });
 
-  it('renders a shared rule whose sole active producer is JELLYFIN, reachable via Add filter', async () => {
+  it('renders a shared rule whose sole active supplier is JELLYFIN, reachable via Add filter', async () => {
     const user = setupUser();
     render(
       <MediaFilterBar {...makeProps({ ...propsFor(['JELLYFIN']), lookups: EMPTY_LOOKUPS })} />

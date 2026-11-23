@@ -50,7 +50,7 @@ export const Broken: Story = () => (
             finding({
               kind: 'no-provider',
               ruleLabel: 'Watched',
-              producerLabels: ['Tautulli', 'Plex', 'Jellyfin'],
+              supplierLabels: ['Tautulli', 'Plex', 'Jellyfin'],
               offered: true,
             }),
           ],

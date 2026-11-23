@@ -17,7 +17,7 @@ describe('describeFinding', () => {
       {
         kind: 'no-provider',
         ruleLabel: 'Watched',
-        producerLabels: ['Plex', 'Jellyfin', 'Tautulli'],
+        supplierLabels: ['Plex', 'Jellyfin', 'Tautulli'],
         offered: true,
       },
       'Watched filter needs a Plex, Jellyfin or Tautulli provider, and none is active',
@@ -27,7 +27,7 @@ describe('describeFinding', () => {
       {
         kind: 'no-provider',
         ruleLabel: 'Production status',
-        producerLabels: ['TMDB'],
+        supplierLabels: ['TMDB'],
         offered: false,
       },
       'Production status filter needs a TMDB provider, which Warden does not offer',

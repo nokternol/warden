@@ -23,7 +23,7 @@ const noData = finding({
 const unsupplied = finding({
   kind: 'no-provider',
   ruleLabel: 'Watched',
-  producerLabels: ['Tautulli', 'Plex', 'Jellyfin'],
+  supplierLabels: ['Tautulli', 'Plex', 'Jellyfin'],
   offered: true,
 });
 const signedOff = finding({ kind: 'no-data', ruleLabel: 'Has issue', contentType: 'movie' });

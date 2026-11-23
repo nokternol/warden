@@ -85,7 +85,7 @@ describe('findingsFor', () => {
     expect(finding).toMatchObject({ kind: 'unknown-rule', queryId: 7, ruleKey: 'retiredRule' });
   });
 
-  it('raises no-provider for a reported-fact filter none of whose producers is active', () => {
+  it('raises no-provider for a reported-fact filter none of whose suppliers is active', () => {
     const [finding] = findingsFor(
       facts([active(1, RADARR)]),
       movies([{ ruleKey: 'watched', value: true }])
@@ -93,7 +93,7 @@ describe('findingsFor', () => {
     expect(finding).toMatchObject({ kind: 'no-provider', ruleKey: 'watched' });
   });
 
-  it('raises nothing for a reported-fact filter when any one of its producers is active', () => {
+  it('raises nothing for a reported-fact filter when any one of its suppliers is active', () => {
     const f = facts([active(1, RADARR), active(2, TAUTULLI)]);
     expect(kinds(movies([{ ruleKey: 'watched', value: true }]), f)).toEqual([]);
   });
@@ -138,7 +138,7 @@ describe('findingsFor', () => {
     });
   });
 
-  describe('a reported-fact filter with an active producer', () => {
+  describe('a reported-fact filter with an active supplier', () => {
     const watched = movies([{ ruleKey: 'watched', value: true }]);
 
     it('raises data-incomplete, naming the reporters, while no reporter has a good facts refresh', () => {

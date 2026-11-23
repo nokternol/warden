@@ -172,7 +172,7 @@ function supplyFindings(judging: Judging, rule: MediaRule): ReadinessFinding[] {
       {
         kind: 'no-provider',
         ruleLabel: rule.label,
-        producerLabels: (offered.length > 0 ? offered : suppliers).map(providerTypeLabel),
+        supplierLabels: (offered.length > 0 ? offered : suppliers).map(providerTypeLabel),
         offered: offered.length > 0,
       },
       { ruleKey: rule.key }

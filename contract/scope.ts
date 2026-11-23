@@ -18,9 +18,9 @@ export interface Scope {
     providerTypes: readonly ProviderType[];
     /**
      * Rule keys that are not served. A test keeps this list equal to the rules with no
-     * control or no producer of an offered type, so it is the complete inventory of
+     * control or no supplier of an offered type, so it is the complete inventory of
      * deferred rules: un-deferring a provider type shows which of these it brings back,
-     * and removing an entry serves that rule once it has a live producer.
+     * and removing an entry serves that rule once it has a live supplier.
      */
     rules: readonly string[];
     /** Provider tasks that are not offered for enablement or automation. */

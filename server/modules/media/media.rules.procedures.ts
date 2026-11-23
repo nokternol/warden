@@ -21,7 +21,7 @@ export function createRulesProcedures(
   async function gatedDescriptors(contentType?: ContentType): Promise<MediaRuleDescriptor[]> {
     const activeTypes = new Set((await libraryCache.read()).providers.map((p) => p.type));
     // A live supplier of what the rule reads is active, and of a type that is offered.
-    const hasLiveProducer = (rule: MediaRule) =>
+    const hasLiveSupplier = (rule: MediaRule) =>
       suppliersOf(rule, contentType).some(
         (type) => activeTypes.has(type) && isOfferedProviderType(scope, type)
       );
@@ -30,7 +30,7 @@ export function createRulesProcedures(
       (rule) => contentType === undefined || rule.contentTypes.includes(contentType)
     )
       .filter((rule) => isOfferedRule(scope, rule.key))
-      .filter(hasLiveProducer)
+      .filter(hasLiveSupplier)
       .flatMap((rule) => toDescriptor(rule) ?? []);
   }
 
