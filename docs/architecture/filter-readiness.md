@@ -24,9 +24,12 @@ here:
 [`FilterReadiness.readFacts()`](ref:path:server/modules/media/filterReadiness.ts) reads, once per
 request:
 
-- every provider instance and whether it is active, through a narrow slice of `ProviderSettingsService`;
+- every provider instance, active or not, through a narrow slice of `ProviderSettingsService`, only
+  to name the type of an instance a filter value refers to, which an inactive one has and the loaded
+  copy does not carry;
 - the library copy's active providers and refresh records
   ([`LibraryCache`](ref:path:server/modules/media/libraryCache.ts)), as every feature reads them.
+  Whether a provider is active is always the copy's answer.
   Readiness does not judge refresh records itself: whether a fact's reporters can be relied on is
   `reporterReliability`'s answer over the copy, the one a destructive run's gate reads too.
 

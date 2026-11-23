@@ -17,11 +17,13 @@ import {
   suppliersOf,
 } from './ruleRegistry';
 
-/** A configured provider instance, as readiness judges filters against it. */
+/**
+ * A configured provider instance, active or not, as readiness names one a filter value refers to.
+ * Whether it is active is the loaded copy's answer (`library.providers`), never this row's.
+ */
 export interface ProviderFact {
   id: number;
   type: MetadataProviderType;
-  isActive: boolean;
 }
 
 /**
@@ -29,7 +31,10 @@ export interface ProviderFact {
  * read once and each list is judged against it in memory.
  */
 export interface ReadinessFacts {
-  /** Every configured provider instance, active or not. */
+  /**
+   * Every configured provider instance, active or not: only to name the type of an instance a
+   * filter value refers to, which an inactive instance has but the loaded copy does not carry.
+   */
   providers: readonly ProviderFact[];
   /** The loaded copy's active providers and refresh records, which say whose facts can be relied on. */
   library: Pick<Library, 'providers' | 'records'>;
@@ -58,7 +63,7 @@ export class FilterReadiness {
       this.deps.libraryCache.read(),
     ]);
     return {
-      providers: providers.map(({ id, type, isActive }) => ({ id, type, isActive })),
+      providers: providers.map(({ id, type }) => ({ id, type })),
       library: { providers: library.providers, records: library.records },
     };
   }
@@ -107,7 +112,7 @@ interface Judging {
 export function findingsFor(facts: ReadinessFacts, list: FilterList): ReadinessFinding[] {
   const sourceType = SOURCE_OWNER[list.contentType];
   const hasActive = (type: MetadataProviderType) =>
-    facts.providers.some((p) => p.isActive && p.type === type);
+    facts.library.providers.some((p) => p.type === type);
   const judging: Judging = {
     facts,
     list,
@@ -189,9 +194,10 @@ function instanceFindings(
   if (!isInstanceScopedValue(value) || value.providerId === undefined) return [];
   const { providerId } = value;
   const named = judging.facts.providers.find((p) => p.id === providerId);
+  const isActive = judging.facts.library.providers.some((p) => p.id === providerId);
   const instance = { id: providerId, typeLabel: named && providerTypeLabel(named.type) };
-  if (named?.isActive && named.type === judging.sourceType) return [];
-  const expectedLabel = named?.isActive ? providerTypeLabel(judging.sourceType) : undefined;
+  if (isActive && named?.type === judging.sourceType) return [];
+  const expectedLabel = isActive ? providerTypeLabel(judging.sourceType) : undefined;
   return [
     finding(
       judging.list,

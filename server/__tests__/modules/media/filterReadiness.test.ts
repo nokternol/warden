@@ -7,7 +7,6 @@ import type { ReadinessFinding, ReadinessKind } from '@contract/readiness';
 import { MetadataProviderType } from '@server/database/schema';
 import {
   type FilterList,
-  type ProviderFact,
   type ReadinessFacts,
   automationAnswer,
   filterAnswer,
@@ -22,6 +21,13 @@ import { describe, expect, it } from 'vitest';
 
 const { RADARR, SONARR, PLEX, TAUTULLI } = MetadataProviderType;
 
+/** A configured instance, and whether the loaded copy holds it as active. */
+interface Instance {
+  id: number;
+  type: MetadataProviderType;
+  isActive: boolean;
+}
+
 /** One provider's refresh of one kind: when it last succeeded, and when it last failed. */
 interface Refresh {
   providerId: number;
@@ -34,14 +40,14 @@ interface Refresh {
  * given; the active ones are the loaded copy's providers.
  */
 function facts(
-  providers: ProviderFact[],
+  providers: Instance[],
   given: { factsRecords?: Refresh[]; linksRecords?: Refresh[] } = {}
 ): ReadinessFacts {
   const good = providers.map((p) => ({ providerId: p.id, refreshedAt: 1, failedAt: null }));
   const records = (kind: RefreshKind, refreshes: Refresh[]): StoredRefreshRecord[] =>
     refreshes.map((r) => ({ ...r, kind, error: r.failedAt === null ? null : 'down' }));
   return {
-    providers,
+    providers: providers.map(({ id, type }) => ({ id, type })),
     library: {
       providers: providers
         .filter((p) => p.isActive)
@@ -54,7 +60,7 @@ function facts(
   };
 }
 
-const active = (id: number, type: MetadataProviderType): ProviderFact => ({
+const active = (id: number, type: MetadataProviderType): Instance => ({
   id,
   type,
   isActive: true,

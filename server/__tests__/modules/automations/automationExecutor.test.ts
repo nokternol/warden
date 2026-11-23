@@ -993,8 +993,11 @@ describe('AutomationExecutor', () => {
         automationBlockService: new AutomationBlockService({ db: getDb() }),
         filterReadiness: {
           readFacts: async () => ({
-            providers: [{ id: 1, type: MetadataProviderType.RADARR, isActive: true }],
-            library: { providers: [], records: [] },
+            providers: [{ id: 1, type: MetadataProviderType.RADARR }],
+            library: {
+              providers: [{ id: 1, name: 'Radarr', type: MetadataProviderType.RADARR }],
+              records: [],
+            },
           }),
         },
         providerSettingsService: mockProviderSettingsService as unknown as ProviderSettingsService,

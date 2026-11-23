@@ -60,9 +60,9 @@ describe('FilterReadiness.readFacts', () => {
     expect(read).toHaveBeenCalledOnce();
 
     expect(facts.providers).toEqual([
-      { id: radarr.id, type: MetadataProviderType.RADARR, isActive: true },
-      { id: plex.id, type: MetadataProviderType.PLEX, isActive: false },
-      { id: tautulli.id, type: MetadataProviderType.TAUTULLI, isActive: true },
+      { id: radarr.id, type: MetadataProviderType.RADARR },
+      { id: plex.id, type: MetadataProviderType.PLEX },
+      { id: tautulli.id, type: MetadataProviderType.TAUTULLI },
     ]);
     expect(facts.library.providers.map((p) => p.id)).toEqual([radarr.id, tautulli.id]);
     expect(facts.library.records).toEqual(
