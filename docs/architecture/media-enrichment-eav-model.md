@@ -111,24 +111,20 @@ The library cache and `EnrichmentJob` both depend on `EnrichmentQueries` instead
 this replaces the two modules' direct table access with a shared dependency neither imports from the
 other.
 
-## What replaced the wide table's per-field touch points
+## What a new reported fact touches
 
-Before this change, `mediaEnrichment`'s six columns meant seven hand-maintained touch points existed for
-each new field, among them `schema.ts`, a migration per field and the read's per-field copy-through.
-The rest are now derived from the reporting connections' declarations or compile-checked
-(`docs/architecture/enrichment-field-completeness.md`). The EAV shape removes the two that couldn't get
-a guard under a wide-table shape:
-
-- **`schema.ts` + a migration per field** — eliminated as a recurring action. Adding field #7 through
-  #90 is a seed row in `enrichment_field`, never a schema change.
-- **The read's per-field copy-through** — eliminated by making the read generic. Storage only ever
-  holds a row for a field actually present, so the library cache assigns each title's resolved facts in
-  one step instead of a hand-written line per field; there's no per-field line left to omit.
+A new reported fact needs no schema change and no per-fact read code. Its storage is a seed row in
+`enrichment_field`, never a new column, and the read is generic: storage holds a row only for a fact
+actually present, so the library cache assigns each title's resolved facts in one step, with no line per
+fact to omit. Everything else that knows about a fact derives it from the reporting connections'
+declarations or is compile-checked (`docs/architecture/enrichment-field-completeness.md`). A wide table
+could guard neither of the first two: each new fact would be a column, a migration and a hand-written
+copy-through line.
 
 **Accepted, documented residual risk: migration seed drift.** The migrations' seeded `enrichment_field`
 keys are asserted against the `ReportedFactKey` set in a test
 (`server/__tests__/database/mediaEnrichment.test.ts`), through a `Record<ReportedFactKey, true>` that is
 compile-time exhaustive. A future fact added to `ReportedFacts` without a seed migration is a test-time
 catch, not a compile-time one. Deliberately accepted rather than engineered
-around — the mitigation is documenting the "add a provider field" procedure clearly, not a stronger
+around — the mitigation is documenting the "add a reported fact" procedure clearly, not a stronger
 gate.
