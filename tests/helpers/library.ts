@@ -43,8 +43,8 @@ export async function refreshCatalog(
 }
 
 /**
- * Stores facts about one title as `providerId` reported them, as the enrichment job would, for
- * tests that need facts without running an enricher. Without `providerId` the facts are credited
+ * Stores reported facts about one title as `providerId` reported them, as Enrichment would, for
+ * tests that need facts without running Enrichment. Without `providerId` the facts are credited
  * to the first configured provider. Other titles' facts are left alone.
  */
 export async function seedFacts(
@@ -151,7 +151,7 @@ export function libraryCacheHolding(libraries: InstanceLibrary[]): LibraryCache 
 }
 
 /**
- * Records every active media server's links and every active enricher's facts as refreshed now,
+ * Records every active media server's links and every active fact reporter's facts as refreshed now,
  * where no record says otherwise, so a test's copy reads as fully refreshed.
  */
 async function markOthersRefreshed(db: DrizzleDb): Promise<void> {
