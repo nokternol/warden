@@ -177,7 +177,7 @@ describe('MediaQueryService', () => {
     expect(dto.health.findings).toEqual([]);
   });
 
-  it('lists a query on an enrichment-only rule with a data-incomplete finding before any enrichment run', async () => {
+  it('lists a query on a reported-fact rule with a data-incomplete finding before any Enrichment run', async () => {
     const db = getDb();
     await db.insert(metadataProviders).values([
       { type: MetadataProviderType.RADARR, name: 'Radarr', url: 'http://radarr' },

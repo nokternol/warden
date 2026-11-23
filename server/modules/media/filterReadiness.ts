@@ -134,7 +134,7 @@ function filterFindings(judging: Judging, { ruleKey, value }: Filter): Readiness
   const supply = supplyFindings(judging, rule);
   return [
     ...supply,
-    ...(supply.length === 0 ? enrichmentFindings(judging, rule) : []),
+    ...(supply.length === 0 ? reportedFactFindings(judging, rule) : []),
     ...instanceFindings(judging, rule, value),
   ];
 }
@@ -145,7 +145,7 @@ function filterFindings(judging: Judging, { ruleKey, value }: Filter): Readiness
  * Warden believes a successful refresh, so a fact no title holds raises nothing (north-star belief
  * 6). The finding is informational: it names the reporters and never stops a run itself.
  */
-function enrichmentFindings(judging: Judging, rule: MediaRule): ReadinessFinding[] {
+function reportedFactFindings(judging: Judging, rule: MediaRule): ReadinessFinding[] {
   if (rule.reads === 'catalog') return [];
   const { facts, list } = judging;
   const reporters = reporterReliability(facts.library, rule, list.contentType);
