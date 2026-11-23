@@ -37,7 +37,7 @@ export { isMediaActuator } from './roles';
 
 // Factories: connections from stored settings, sources from connections. The container
 // constructs the factory; consumers receive it and type it from here.
-export type { IProviderFactory, ProviderFactory } from './providerFactory';
+export type { FactReporterInstance, IProviderFactory, ProviderFactory } from './providerFactory';
 
 // Provider settings — persistence and projection of configured providers.
 export { ProviderSettingsService } from './providerSettingsService';

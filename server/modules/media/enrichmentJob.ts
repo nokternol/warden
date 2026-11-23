@@ -2,17 +2,14 @@ import { mediaIdentity } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
 import { yieldToEventLoop } from '../../kernel/yieldToEventLoop';
 import { failureMessage, recordRefreshFailed, recordRefreshed } from '../providers';
-import type { ProviderFactory, ReportedFactKey, ReportedFacts } from '../providers';
+import type { FactReporterInstance, ReportedFactKey, ReportedFacts } from '../providers';
 import type { EnrichmentQueries } from './enrichment/enrichment.queries';
-
-/** One active fact reporter, with its title id column and the facts it declares. */
-type Reporter = ReturnType<ProviderFactory['factReportersOf']>[number];
 
 interface Deps {
   db: DrizzleDb;
   enrichmentQueries: EnrichmentQueries;
   /** Every active fact reporter; an empty list when none is active. */
-  reporters: Reporter[];
+  reporters: FactReporterInstance[];
 }
 
 /** The facts among `facts` that the reporter declares, with defined, non-null values. */
@@ -28,7 +25,7 @@ function declaredFacts(
 /** Each id in `column`, with every title that id names (one id may name several). */
 function titlesByIdIn(
   identities: readonly (typeof mediaIdentity.$inferSelect)[],
-  column: Reporter['titleIdColumn']
+  column: FactReporterInstance['titleIdColumn']
 ): Map<string | number, number[]> {
   const titlesById = new Map<string | number, number[]>();
   for (const identity of identities) {

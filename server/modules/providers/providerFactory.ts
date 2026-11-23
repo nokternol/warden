@@ -26,6 +26,15 @@ interface RoleInstance<Role> {
   provider: Role;
 }
 
+/**
+ * An active fact reporter: its connection, the title id column its answers are matched by and the
+ * facts it declares.
+ */
+export type FactReporterInstance = RoleInstance<FactReporter> & {
+  titleIdColumn: TitleIdColumn;
+  reports: readonly ReportedFactKey[];
+};
+
 type ProviderClasses = typeof PROVIDER_CLASSES;
 
 /** The provider types whose declared capabilities set `capability` to `value`. */
@@ -115,15 +124,7 @@ export class ProviderFactory implements IProviderFactory {
    * Every row whose type declares the facts it reports, with its connection, the title id column
    * its answers are matched by and the facts it declares.
    */
-  factReportersOf(
-    rows: ProviderRow[],
-    logger: Logger
-  ): Array<
-    RoleInstance<FactReporter> & {
-      titleIdColumn: TitleIdColumn;
-      reports: readonly ReportedFactKey[];
-    }
-  > {
+  factReportersOf(rows: ProviderRow[], logger: Logger): FactReporterInstance[] {
     return rows.flatMap((row) => {
       const { facts } = PROVIDER_CLASSES[row.type].catalogueEntry
         .capabilities as ProviderCapabilities;
