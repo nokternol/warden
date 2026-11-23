@@ -19,15 +19,18 @@ import {
   type StoredRefreshRecord,
   isMediaServerType,
   isMediaSourceType,
+  mediaServerOfColumn,
   readProviderLists,
   readRefreshRecords,
+  reportsFacts,
+  titleIdColumnOf,
 } from '@server/modules/providers';
 import { and, eq } from 'drizzle-orm';
 import { EnrichmentQueries } from './enrichment/enrichment.queries';
 import { resolveFacts } from './enrichmentMerge';
-import { FACTS_REFRESHING_TYPES } from './factsRefreshKinds';
 import type { MediaItem } from './mediaItem';
 import { normalizeRadarrMovie, normalizeSonarrSeries } from './normalizeMedia';
+import { type MediaRule, suppliersOf } from './ruleRegistry';
 
 /** The provider's own record of a copy, by the content type its provider owns. */
 export interface CopyRecord {
@@ -70,19 +73,73 @@ export interface Library {
 
 /**
  * The kinds of data a provider type refreshes into the copy, as it declares: a source refreshes
- * its catalog and setup lists, a media server the links into it, and a facts supplier its facts.
+ * its catalog and setup lists, a media server the links into it, and a fact reporter its facts.
  */
 function refreshedKinds(type: MetadataProviderType): RefreshKind[] {
   return [
     ...(isMediaSourceType(type) ? (['catalog', 'lists'] as const) : []),
     ...(isMediaServerType(type) ? (['links'] as const) : []),
-    ...(FACTS_REFRESHING_TYPES.has(type) ? (['facts'] as const) : []),
+    ...(reportsFacts(type) ? (['facts'] as const) : []),
   ];
 }
 
 /**
+ * Whether one active reporter of a fact can be relied on: `unrefreshed` names the refresh it cannot
+ * be relied on for (its own `facts`, or the `links` of the media server its answers are matched
+ * through), or is null when it can.
+ */
+export interface ReporterReliability {
+  providerId: number;
+  unrefreshed: { providerId: number; kind: 'facts' | 'links' } | null;
+}
+
+/** Whether a provider's latest refresh of `kind` succeeded. */
+function refreshedOk(
+  records: readonly StoredRefreshRecord[],
+  providerId: number,
+  kind: RefreshKind
+): boolean {
+  const record = records.find((r) => r.providerId === providerId && r.kind === kind);
+  return record?.refreshedAt != null && record.failedAt == null;
+}
+
+/**
+ * The one answer to "can this reporter of a fact be relied on", for each active reporter of what a
+ * reported-fact `rule` reads (`suppliersOf`), from the loaded copy. A reporter cannot be relied on
+ * while its latest `facts` refresh failed or never ran, or, for one matched through a media server's
+ * links (its `titleIdColumnOf` column), while every active instance of that media server has
+ * unrefreshed `links`; a reporter whose media server is not active, or that is matched by TMDB id,
+ * needs no links. A destructive run's gate and filter readiness both judge facts by it, so they give
+ * one answer (north-star beliefs 7 and 8).
+ */
+export function reporterReliability(
+  library: Pick<Library, 'providers' | 'records'>,
+  rule: MediaRule,
+  contentType: ContentType
+): ReporterReliability[] {
+  const { providers, records } = library;
+  return suppliersOf(rule, contentType).flatMap((type) =>
+    providers
+      .filter((p) => p.type === type)
+      .map(({ id }) => {
+        if (!refreshedOk(records, id, 'facts')) {
+          return { providerId: id, unrefreshed: { providerId: id, kind: 'facts' as const } };
+        }
+        const serverType = mediaServerOfColumn(titleIdColumnOf(type));
+        const servers = serverType ? providers.filter((p) => p.type === serverType) : [];
+        const linked =
+          servers.length === 0 || servers.some((p) => refreshedOk(records, p.id, 'links'));
+        return {
+          providerId: id,
+          unrefreshed: linked ? null : { providerId: servers[0].id, kind: 'links' as const },
+        };
+      })
+  );
+}
+
+/**
  * The refresh records a view of `contentType` answers from: the catalog and lists of each active
- * instance owning it, and the links and facts of every active media server and enricher. A kind
+ * instance owning it, and the links and facts of every active media server and fact reporter. A kind
  * never refreshed has a record with neither time, so it reads as not refreshed yet.
  */
 export function recordsFor(library: Library, contentType: ContentType): RefreshRecord[] {

@@ -20,32 +20,43 @@ export { createProvidersProcedures } from './providers.procedures';
 export { registerProvidersDependencies } from './providers.registrations';
 export type { ProvidersCradle } from './providers.registrations';
 
+// The facts non-source providers report about titles, by key.
+export { REPORTED_FACT_PRECEDENCE } from './facts';
+export type { ProviderKind, ReportedFactKey, ReportedFacts } from './facts';
+
 // Provider roles — the capability vocabulary connections implement.
-export type { ActuatorTask, ActuatorTaskDescriptor, AddressColumn, MediaActuator } from './roles';
+export type {
+  ActuatorTask,
+  ActuatorTaskDescriptor,
+  AddressColumn,
+  FactReporter,
+  MediaActuator,
+  TitleIdColumn,
+} from './roles';
 export { isMediaActuator } from './roles';
 
 // Factories: connections from stored settings, sources from connections. The container
 // constructs the factory; consumers receive it and type it from here.
-export type { IProviderFactory, ProviderFactory } from './providerFactory';
+export type { FactReporterInstance, IProviderFactory, ProviderFactory } from './providerFactory';
 
 // Provider settings — persistence and projection of configured providers.
 export { ProviderSettingsService } from './providerSettingsService';
-export type {
-  PrecedenceCoverageValidator,
-  ProviderSettingsDraft,
-  ProviderSummary,
-} from './providerSettingsService';
+export type { ProviderSettingsDraft, ProviderSummary } from './providerSettingsService';
 
 // What each provider type declares, read from its connection class: how it is named in anything
 // shown to the user, which type owns each content type's catalog, and how titles are addressed.
 export {
   ADDRESS_COLUMN_BY_TYPE,
-  MEDIA_SERVER_BY_COLUMN,
   SOURCE_OWNER,
   contentTypeOfSourceType,
   isMediaServerType,
   isMediaSourceType,
+  mediaServerOfColumn,
+  providerKindOf,
   providerTypeLabel,
+  reportersOf,
+  reportsFacts,
+  titleIdColumnOf,
 } from './providerCatalogue';
 
 // Per-provider task enablement read by automations.
@@ -70,9 +81,8 @@ export { readProviderLists } from './providerLists';
 export type { ProviderListsData } from './providerLists';
 export type { ProviderListsReader } from './providerListsReader';
 
-// Connection classes and the payload types callers read. Search (#238) and the
-// enricher adapters (#246) import the classes directly; every other caller
-// asks for a capability through the role interfaces and the factory's role
+// Connection classes and the payload types callers read. Search (#238) imports
+// the classes directly; every other caller asks for a capability through the role interfaces and the factory's role
 // queries. Payload types that only the connections use (profiles, tags) are
 // module-private.
 export { JellyfinProvider } from './connections/jellyfinProvider';

@@ -19,20 +19,24 @@ here:
   `automation_queries.queryId` foreign key restricts it
   ([`server/database/schema.ts`](ref:path:server/database/schema.ts)), and the query row shows why.
 
-## Facts read once, judged in memory
+## Inputs read once, judged in memory
 
-[`FilterReadiness.readFacts()`](ref:path:server/modules/media/filterReadiness.ts) reads, once per
+[`FilterReadiness.readInputs()`](ref:path:server/modules/media/filterReadiness.ts) reads, once per
 request:
 
-- every provider instance and whether it is active, through a narrow slice of `ProviderSettingsService`;
-- every enricher's `facts` refresh record: when its facts were last read, and whether the latest
-  attempt failed, read from the library copy
-  ([`LibraryCache`](ref:path:server/modules/media/libraryCache.ts)), as every feature reads it.
+- every provider instance, active or not, through a narrow slice of `ProviderSettingsService`, only
+  to name the type of an instance a filter value refers to, which an inactive one has and the loaded
+  copy does not carry;
+- the library copy's active providers and refresh records
+  ([`LibraryCache`](ref:path:server/modules/media/libraryCache.ts)), as every feature reads them.
+  Whether a provider is active is always the copy's answer.
+  Readiness does not judge refresh records itself: whether a fact's reporters can be relied on is
+  `reporterReliability`'s answer over the copy, the one a destructive run's gate reads too.
 
-`findingsFor(facts, filterList)` is pure. The query list judges every saved query against one read of
-the facts. The Media page judges its URL filters, which have no query id. The executor judges each
+`findingsFor(inputs, filterList)` is pure. The query list judges every saved query against one read of
+the inputs. The Media page judges its URL filters, which have no query id. The executor judges each
 query an automation targets, inside the provider turn, so a long wait cannot leave it judging stale
-facts. A filter list is judged the same whichever automation uses it: under north-star belief 3 a
+inputs. A filter list is judged the same whichever automation uses it: under north-star belief 3 a
 value naming any active source instance is a valid condition for every actuator, since it selects
 titles that each actuator then acts on in its own service.
 
@@ -47,10 +51,10 @@ labels, and an instance by its own type, so a deleted instance reads "Provider i
 | Kind | Raised when |
 |---|---|
 | `no-library` | No active source owns the content type, with or without filters. It replaces `no-provider` for a rule that source would supply, so the cause is said once. |
-| `no-provider` | No active, offered provider can supply the rule. A source supplies only the content type it owns (`SOURCE_OWNER`); enrichers serve every content type. A rule only a deferred provider type produces always raises it, and saving such a query is refused. |
+| `no-provider` | No active, offered supplier of what the rule reads (`suppliersOf`): the content type's source for a catalog fact, the fact's reporters for a reported fact. A catalog-fact rule depends on the source alone, so it never raises this: `no-library` says the source is missing. A rule only a deferred provider type reports always raises it, and saving such a query is refused. |
 | `unknown-rule` | A stored filter names a rule that is no longer registered. The engine's own throw stays as a backstop. |
 | `inactive-instance` | A filter value names an instance that is not an active source of the content type: inactive, deleted, or active but of the wrong type (a Sonarr tag on a movie query). This applies to every actuator. |
-| `data-incomplete` | An enrichment-only filter, and an active supplier's latest `facts` refresh failed or never ran. Names those suppliers. Informational (below). |
+| `data-incomplete` | A reported-fact filter none of whose active reporters can be relied on: each one's latest `facts` refresh failed or never ran, or, for a reporter matched through a media server's links, that server's `links` refresh did. Read from `reporterReliability`, the one answer a destructive run's gate also reads, so the two cannot disagree; one failed reporter beside a good one raises nothing. Names the reporters. Informational (below). |
 | `no-data` | No longer raised. Warden believes a supplier's successful refresh, so a fact no title holds is the truth (north-star belief 6). The kind and the sign-off path it fed remain in the code, unreachable. |
 
 Findings are deduplicated by id, so two filters naming the same missing instance say it once.
@@ -86,7 +90,7 @@ The executor adds one problem of its own: the automation's provider is not activ
 `automation_blocks` row per automation and `no-data` finding id. Each check reconciles the rows: it
 inserts new findings and deletes those it no longer finds, row by row, so a sign-off landing during a
 check is never overwritten. A finding that clears and comes back is a new row and needs a new sign-off.
-The producers' instance ids are part of the finding's id, so a sign-off given while one Seerr instance
+The suppliers' instance ids are part of the finding's id, so a sign-off given while one Seerr instance
 supplied the field does not carry over to its replacement. Accepting a row that the latest check
 deleted, or one already signed off, answers 409.
 

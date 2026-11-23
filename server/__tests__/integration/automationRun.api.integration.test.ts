@@ -84,12 +84,12 @@ describe('POST /api/automations/:id/run — Phase 3', () => {
 
     const res = await client
       .post(`/api/automations/${systemAutomationId}/run`)
-      .send({ consentedFindings: ['no-data:1:seerrRequestStatus:4'] });
+      .send({ consentedFindings: ['no-data:1:requestStatus:4'] });
 
     expect(res.status).toBe(202);
     expect(execute).toHaveBeenCalledWith(systemAutomationId, {
       trigger: 'runNow',
-      consentedFindings: ['no-data:1:seerrRequestStatus:4'],
+      consentedFindings: ['no-data:1:requestStatus:4'],
     });
     execute.mockRestore();
   });
@@ -97,7 +97,7 @@ describe('POST /api/automations/:id/run — Phase 3', () => {
   it('answers 409 to a sign-off for a finding that is not awaiting one', async () => {
     const res = await client
       .post(`/api/automations/${systemAutomationId}/sign-offs`)
-      .send({ findingId: 'no-data:1:seerrRequestStatus:4' });
+      .send({ findingId: 'no-data:1:requestStatus:4' });
 
     expect(res.status).toBe(409);
   });

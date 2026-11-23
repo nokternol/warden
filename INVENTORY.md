@@ -6,8 +6,9 @@ Method: parallel subagents per provider group, consolidated into this document.
 > fetched as of the date above. File paths, type names and "currently fetched/filterable" columns may
 > no longer match the code; `docs/architecture/` describes what is built, and
 > `docs/architecture/VOCABULARY.md` lists retired names. The request manager is one provider type,
-> Seerr (`SEERR`, `SeerrProvider`), with `seerr`-prefixed field keys; this document's "Overseerr"
-> names the server product.
+> Seerr (`SEERR`, `SeerrProvider`), and reported facts are named for what they mean (`requestStatus`,
+> `hasIssue`, `productionStatus`), not for the product; this document's "Overseerr" names the server
+> product.
 
 ---
 

@@ -20,7 +20,7 @@ export { createSearchProcedures } from './media.search.procedures';
 export { registerMediaDependencies } from './media.registrations';
 export type { MediaCradle } from './media.registrations';
 
-// The canonical item shape a library copy carries and enrichers describe.
+// The canonical item shape a library copy carries: its catalog record and reported facts.
 export type { MediaItem } from './mediaItem';
 export type { NormalizedMovie } from './movie';
 export type { NormalizedSeries } from './series';
@@ -29,8 +29,8 @@ export type { NormalizedSeries } from './series';
 export { normalizeRadarrMovie, normalizeSonarrSeries } from './normalizeMedia';
 
 // The in-memory copy of the library every feature reads, and the records saying how current it is.
-export { recordsFor } from './libraryCache';
-export type { Library, LibraryCache, LibraryCopy } from './libraryCache';
+export { recordsFor, reporterReliability } from './libraryCache';
+export type { Library, LibraryCache, LibraryCopy, ReporterReliability } from './libraryCache';
 
 // Owner-type policy: which provider type owns each content type, and its
 // active instances.
@@ -41,16 +41,8 @@ export type { MediaSourceDescriptor } from './mediaSourceFactory';
 // the catalog refresh linked.
 export { actuatorIdOf, isAddressedActuator } from './actuatorIdResolver';
 
-// Enrichment roles and the adapters that bind providers' native connections
-// to them.
+// Enrichment's data access: each reporter's stored facts.
 export { EnrichmentQueries } from './enrichment/enrichment.queries';
-export type { EnrichableField, EnrichmentResult, MediaEnricher } from './enrichment/enricher';
-export {
-  seerrEnricher,
-  plexEnricher,
-  tautulliEnricher,
-  tmdbEnricher,
-} from './enrichment/enricherAdapters';
 
 // The rule vocabulary and its client-facing projection.
 export type {
@@ -61,7 +53,7 @@ export type {
   MediaRuleDescriptor,
   RangeValue,
 } from './ruleRegistry';
-export { MEDIA_RULES, getRule, toDescriptor } from './ruleRegistry';
+export { MEDIA_RULES, getRule, suppliersOf, toDescriptor } from './ruleRegistry';
 
 // Filter readiness — the one place a filter list's findings are raised, worded and given a
 // consequence. Facts are read once per request; the judging and answers are pure.
@@ -72,7 +64,7 @@ export type {
   FilterAnswer,
   FilterList,
   FilterReadiness,
-  ReadinessFacts,
+  ReadinessInputs,
 } from './filterReadiness';
 
 // The one evaluation of the catalog: which titles a set of conditions selects among copies.
@@ -81,9 +73,3 @@ export type { MediaQueryEngine } from './mediaQueryEngine';
 // Enrichment — the job that stores each provider's facts.
 export { EnrichmentJobFactory } from './enrichmentJobFactory';
 export type { EnrichmentJobFactoryDeps } from './enrichmentJobFactory';
-
-// Precedence — the per-field resolution order for a contested field.
-export type { ContestedFieldPrecedence } from './enrichment/precedence';
-
-// The facts a title can carry beyond its catalog record.
-export type { EnrichmentFields } from './mediaFieldProvider';

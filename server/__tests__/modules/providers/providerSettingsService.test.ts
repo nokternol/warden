@@ -11,7 +11,6 @@ import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
 import { ValidationError } from '@server/kernel/errors';
 import { DomainEventBus } from '@server/kernel/eventBus';
-import { ActiveFieldSetCache } from '@server/modules/media/activeFieldSet';
 import { ProviderSettingsService } from '@server/modules/providers/providerSettingsService';
 import { providerSettingsCollaborators } from '@tests/helpers/collaborators';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -421,52 +420,5 @@ describe('ProviderSettingsService', () => {
     await withBus.update(created.id, { name: 'Renamed' });
 
     expect(listener).toHaveBeenCalledTimes(1);
-  });
-
-  it('deleting the only active Plex removes its fields from the active field set', async () => {
-    const events = new DomainEventBus();
-    const withBus = new ProviderSettingsService({
-      ...providerSettingsCollaborators(),
-      db: getDb(),
-      eventBus: events,
-    });
-    const fieldSet = new ActiveFieldSetCache({
-      providerSettingsService: withBus,
-      eventBus: events,
-    });
-    const plex = await withBus.create({
-      type: MetadataProviderType.PLEX,
-      name: 'Plex',
-      url: 'http://localhost:32400',
-    });
-    expect((await fieldSet.get()).has('plexAddedAt')).toBe(true);
-
-    await withBus.delete(plex.id);
-
-    expect((await fieldSet.get()).has('plexAddedAt')).toBe(false);
-  });
-
-  // -------------------------------------------------------------------------
-  // precedenceCoverageValidator — injected fail-fast hook, called with the
-  // prospective active-type set at the same point assertNoActiveConflict runs.
-  // -------------------------------------------------------------------------
-
-  it('rejects create when the injected precedenceCoverageValidator throws', async () => {
-    const precedenceCoverageValidator = vi.fn(() => {
-      throw new ValidationError('TAUTULLI covers playCount but PLEX does not');
-    });
-    const withValidator = new ProviderSettingsService({
-      ...providerSettingsCollaborators(),
-      db: getDb(),
-      precedenceCoverageValidator,
-    });
-
-    await expect(
-      withValidator.create({
-        type: MetadataProviderType.PLEX,
-        name: 'Plex',
-        url: 'http://localhost:32400',
-      })
-    ).rejects.toThrow(ValidationError);
   });
 });

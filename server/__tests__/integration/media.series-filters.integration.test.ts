@@ -25,7 +25,7 @@ import { errorHandlerMiddleware } from '@server/kernel/middleware/errorHandler';
 import { requestIdMiddleware } from '@server/kernel/middleware/requestId';
 import { createMediaProcedures } from '@server/modules/media';
 import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.queries';
-import type { EnrichmentFields } from '@server/modules/media/mediaFieldProvider';
+import type { ReportedFacts } from '@server/modules/providers';
 import { createMockConfig } from '@tests/factories';
 import { browsePath, createApiClient, expectSuccessResponse } from '@tests/helpers/api';
 import { refreshCatalog, seedFacts } from '@tests/helpers/library';
@@ -129,10 +129,7 @@ describe('Media browse — series registry predicates', () => {
     return createApiClient(app);
   }
 
-  async function seedEnrichment(
-    sourceId: number,
-    fields: Partial<EnrichmentFields>
-  ): Promise<void> {
+  async function seedEnrichment(sourceId: number, fields: Partial<ReportedFacts>): Promise<void> {
     const db = getDb();
     const [sonarr] = await db
       .select({ id: metadataProviders.id })
@@ -321,28 +318,28 @@ describe('Media browse — series registry predicates', () => {
     });
   });
 
-  describe('enriched predicates (seerr / tmdbStatus / lastWatched) on series', () => {
-    it('seerrRequestStatus narrows by merged SONARR enrichment', async () => {
+  describe('enriched predicates (seerr / productionStatus / lastWatched) on series', () => {
+    it('requestStatus narrows by merged SONARR enrichment', async () => {
       const client = await clientWithSeries([series(1, 'Requested', {}), series(2, 'Other', {})]);
-      await seedEnrichment(1, { seerrRequestStatus: 2 });
-      await seedEnrichment(2, { seerrRequestStatus: 1 });
+      await seedEnrichment(1, { requestStatus: 2 });
+      await seedEnrichment(2, { requestStatus: 1 });
       const res = await client.get(
-        browsePath('series', [{ ruleKey: 'seerrRequestStatus', value: 2 }], { pageSize: 100 })
+        browsePath('series', [{ ruleKey: 'requestStatus', value: 2 }], { pageSize: 100 })
       );
       expect(expectSuccessResponse(res).items.map((s: { title: string }) => s.title)).toEqual([
         'Requested',
       ]);
     });
 
-    it('tmdbStatus narrows by merged SONARR enrichment', async () => {
+    it('productionStatus narrows by merged SONARR enrichment', async () => {
       const client = await clientWithSeries([
         series(1, 'Ended TV', {}),
         series(2, 'Returning TV', {}),
       ]);
-      await seedEnrichment(1, { tmdbStatus: 'Ended' });
-      await seedEnrichment(2, { tmdbStatus: 'Returning Series' });
+      await seedEnrichment(1, { productionStatus: 'Ended' });
+      await seedEnrichment(2, { productionStatus: 'Returning Series' });
       const res = await client.get(
-        browsePath('series', [{ ruleKey: 'tmdbStatus', value: 'Ended' }], { pageSize: 100 })
+        browsePath('series', [{ ruleKey: 'productionStatus', value: 'Ended' }], { pageSize: 100 })
       );
       expect(expectSuccessResponse(res).items.map((s: { title: string }) => s.title)).toEqual([
         'Ended TV',
@@ -352,7 +349,7 @@ describe('Media browse — series registry predicates', () => {
     it('returns 0 series when an enriched filter has no enrichment data', async () => {
       const client = await clientWithSeries([series(1, 'A', {}), series(2, 'B', {})]);
       const res = await client.get(
-        browsePath('series', [{ ruleKey: 'seerrRequestStatus', value: 2 }], { pageSize: 100 })
+        browsePath('series', [{ ruleKey: 'requestStatus', value: 2 }], { pageSize: 100 })
       );
       expect(expectSuccessResponse(res).totalCount).toBe(0);
     });

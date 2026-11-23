@@ -24,7 +24,7 @@ export const NeedsFix: Story = () => (
         finding({
           kind: 'no-provider',
           ruleLabel: 'Watched',
-          producerLabels: ['Tautulli', 'Plex', 'Jellyfin'],
+          supplierLabels: ['Tautulli', 'Plex', 'Jellyfin'],
           offered: true,
         }),
       ]}
@@ -35,9 +35,7 @@ export const NeedsFix: Story = () => (
 export const NoData: Story = () => (
   <Frame>
     <ReadinessNotice
-      findings={[
-        finding({ kind: 'no-data', ruleLabel: 'Seerr request status', contentType: 'movie' }),
-      ]}
+      findings={[finding({ kind: 'no-data', ruleLabel: 'Request status', contentType: 'movie' })]}
     />
   </Frame>
 );
@@ -53,7 +51,7 @@ export const Mixed: Story = () => (
           ruleLabel: 'Tags',
           instance: { id: 3, typeLabel: 'Radarr' },
         }),
-        finding({ kind: 'no-data', ruleLabel: 'Seerr request status', contentType: 'movie' }),
+        finding({ kind: 'no-data', ruleLabel: 'Request status', contentType: 'movie' }),
       ]}
     />
   </Frame>

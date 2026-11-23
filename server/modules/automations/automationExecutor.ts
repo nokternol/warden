@@ -17,18 +17,25 @@ import {
   findingsFor,
   getRule,
   isAddressedActuator,
+  reporterReliability,
 } from '../media';
-import type { FilterReadiness, Library, LibraryCache, LibraryCopy } from '../media';
+import type {
+  FilterReadiness,
+  Library,
+  LibraryCache,
+  LibraryCopy,
+  ReporterReliability,
+} from '../media';
 import type { MediaQueryRecord, MediaQueryService } from '../mediaQueries';
 import {
   ADDRESS_COLUMN_BY_TYPE,
   type ActuatorTask,
   type IProviderFactory,
-  MEDIA_SERVER_BY_COLUMN,
   type ProviderSettingsService,
   SOURCE_OWNER,
   isMediaActuator,
   isMediaSourceType,
+  mediaServerOfColumn,
   providerTypeLabel,
   readEnabledTaskIds,
 } from '../providers';
@@ -47,7 +54,7 @@ interface ExecutorDeps {
   automationRunService: AutomationRunService;
   providerSettingsService: ProviderSettingsService;
   mediaQueryService: MediaQueryService;
-  filterReadiness: Pick<FilterReadiness, 'readFacts'>;
+  filterReadiness: Pick<FilterReadiness, 'readInputs'>;
   automationBlockService: Pick<AutomationBlockService, 'reconcile'>;
   providerFactory: IProviderFactory;
   mediaQueryEngine: MediaQueryEngine;
@@ -117,13 +124,12 @@ interface Dependency {
 }
 
 /**
- * A fact a destructive run's queries filter on, and the active providers that supply it. A
- * supplier reached through a media server's links (Tautulli and Plex through Plex, Jellyfin through
- * Jellyfin) lists that server's instances in `via`.
+ * A reported fact a destructive run's queries filter on, and whether each of its active reporters
+ * can be relied on (`reporterReliability`).
  */
 interface FactDependency {
   label: string;
-  suppliers: Array<{ providerId: number; via: number[] }>;
+  reporters: ReporterReliability[];
 }
 
 /** What a destructive run depends on: providers it needs every one of, and facts it needs once. */
@@ -170,14 +176,11 @@ function unrefreshedDependencies(
     const reason = unrefreshed(library, dependency);
     return reason ? [`Not run: ${reason}`] : [];
   });
-  const unsupplied = facts.flatMap(({ label, suppliers }) => {
-    if (suppliers.length === 0) return [];
-    const reasons = suppliers.map(({ providerId, via }) => {
-      const facts = unrefreshed(library, { providerId, kind: 'facts' });
-      if (facts) return facts;
-      const links = via.map((id) => unrefreshed(library, { providerId: id, kind: 'links' }));
-      return via.length > 0 && links.every((r) => r !== undefined) ? links[0] : undefined;
-    });
+  const unsupplied = facts.flatMap(({ label, reporters }) => {
+    if (reporters.length === 0) return [];
+    const reasons = reporters.map(({ unrefreshed: dependency }) =>
+      dependency ? unrefreshed(library, dependency) : undefined
+    );
     if (reasons.some((r) => r === undefined)) return [];
     return [`Not run: no provider supplying ${label} has refreshed (${reasons.join('; ')})`];
   });
@@ -198,7 +201,7 @@ export class AutomationExecutor {
   private readonly mediaQueryService: MediaQueryService;
   private readonly providerFactory: IProviderFactory;
   private readonly mediaQueryEngine: MediaQueryEngine;
-  private readonly filterReadiness: Pick<FilterReadiness, 'readFacts'>;
+  private readonly filterReadiness: Pick<FilterReadiness, 'readInputs'>;
   private readonly automationBlockService: Pick<AutomationBlockService, 'reconcile'>;
   private readonly libraryCache: Pick<LibraryCache, 'contentOf'>;
   private readonly systemTaskRunner: SystemTaskRunnerLike;
@@ -433,9 +436,9 @@ export class AutomationExecutor {
         `${instanceName({ id: automationProvider.id, typeLabel: providerTypeLabel(automationProvider.type) })}, this automation's provider, is not an active provider`
       );
     }
-    const facts = await this.filterReadiness.readFacts();
+    const inputs = await this.filterReadiness.readInputs();
     const findings = automationQueries.flatMap(({ queryId, record }) =>
-      findingsFor(facts, { queryId, contentType: record.contentType, filters: record.filters })
+      findingsFor(inputs, { queryId, contentType: record.contentType, filters: record.filters })
     );
     // Before any sign-off is known, every finding a user could accept awaits sign-off.
     const signOffable = automationAnswer(findings, new Set()).blocks.awaitingSignOff;
@@ -607,8 +610,9 @@ export class AutomationExecutor {
    * The source catalogs a run on `providerSettings` reads. A catalog-owning actuator acts on its
    * own catalog's copies, any other actuator on every active source instance's copies. A filter
    * whose value names an instance can be met only through that instance's copy, so it reads that
-   * instance's catalog; any other filter on a field a source supplies may be met through any
-   * instance's copy, so it reads every active source instance's catalog.
+   * instance's catalog; any other filter on a catalog fact may be met through any instance's
+   * copy, so it reads every active source instance's catalog. A reported-fact filter adds no
+   * catalog dependency.
    */
   private catalogDependencies(
     library: Library,
@@ -624,7 +628,7 @@ export class AutomationExecutor {
         if (isInstanceScopedValue(value) && value.providerId !== undefined) {
           return [value.providerId];
         }
-        return getRule(ruleKey, contentType)?.providers.includes(sourceType) ? everySource : [];
+        return getRule(ruleKey, contentType)?.reads === 'catalog' ? everySource : [];
       })
     );
     return [...acting, ...filtered].map((providerId) => ({
@@ -649,8 +653,8 @@ export class AutomationExecutor {
     const active = (type: MetadataProviderType) =>
       library.providers.filter((p) => p.type === type).map((p) => p.id);
     const linkProviders = (type: MetadataProviderType): number[] => {
-      const column = ADDRESS_COLUMN_BY_TYPE[type];
-      return column ? active(MEDIA_SERVER_BY_COLUMN[column]) : [];
+      const server = mediaServerOfColumn(ADDRESS_COLUMN_BY_TYPE[type]);
+      return server ? active(server) : [];
     };
     const isSource = isMediaSourceType(providerSettings.type);
     const catalogs = this.catalogDependencies(library, providerSettings, contentType, queries);
@@ -668,14 +672,12 @@ export class AutomationExecutor {
         })
       )
     );
-    const facts = [...rules.values()].map((rule) => ({
-      label: rule.label,
-      suppliers: rule.providers
-        .filter((type) => !isMediaSourceType(type))
-        .flatMap((type) =>
-          active(type).map((providerId) => ({ providerId, via: linkProviders(type) }))
-        ),
-    }));
+    const facts = [...rules.values()]
+      .filter((rule) => rule.reads !== 'catalog')
+      .map((rule) => ({
+        label: rule.label,
+        reporters: reporterReliability(library, rule, contentType),
+      }));
     return { required: [...catalogs, ...addressed], facts };
   }
 

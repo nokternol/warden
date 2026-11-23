@@ -17,16 +17,16 @@ const finding = (description: FindingDescription): ReadinessFinding => ({
 
 const noData = finding({
   kind: 'no-data',
-  ruleLabel: 'Seerr request status',
+  ruleLabel: 'Request status',
   contentType: 'movie',
 });
 const unsupplied = finding({
   kind: 'no-provider',
   ruleLabel: 'Watched',
-  producerLabels: ['Tautulli', 'Plex', 'Jellyfin'],
+  supplierLabels: ['Tautulli', 'Plex', 'Jellyfin'],
   offered: true,
 });
-const signedOff = finding({ kind: 'no-data', ruleLabel: 'Seerr has issue', contentType: 'movie' });
+const signedOff = finding({ kind: 'no-data', ruleLabel: 'Has issue', contentType: 'movie' });
 
 const readiness = (over: Partial<AutomationReadiness>): AutomationReadiness => ({
   schedule: 'runs',

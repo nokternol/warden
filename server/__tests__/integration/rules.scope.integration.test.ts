@@ -23,7 +23,7 @@ function rulesClient(cradle: Cradle, declared: Scope) {
     next();
   });
   const procedures = createRulesProcedures({
-    activeFieldSetCache: cradle.activeFieldSetCache,
+    libraryCache: cradle.libraryCache,
     scope: declared,
   });
   app.use(serveApi({ media: procedures }));
@@ -67,7 +67,7 @@ describe('GET /api/rules under the scope declaration', () => {
     return (expectSuccessResponse(res) as { key: string }[]).map((r) => r.key);
   };
 
-  it('does not serve a deferred rule that has a live producer, and serves it once un-deferred', async () => {
+  it('does not serve a deferred rule that has a live supplier, and serves it once un-deferred', async () => {
     const deferringMonitored: Scope = {
       deferred: { ...scope.deferred, rules: [...scope.deferred.rules, 'monitored'] },
     };

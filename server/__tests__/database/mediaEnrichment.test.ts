@@ -7,7 +7,27 @@ import {
 } from '@server/database/schema';
 import type { AppConfig } from '@server/kernel/config';
 import { _resetDatabase, getDb, initializeDatabase } from '@server/kernel/db';
-import { fieldsByProviderType } from '@server/modules/media/activeFieldSet';
+import type { ReportedFactKey } from '@server/modules/providers';
+
+/** Every reported fact key; the type makes the list complete and exact. */
+const EVERY_REPORTED_FACT: Record<ReportedFactKey, true> = {
+  playCount: true,
+  lastWatchedAt: true,
+  requestStatus: true,
+  hasIssue: true,
+  productionStatus: true,
+  addedToMediaServerAt: true,
+  studio: true,
+  runtimeMinutes: true,
+  fileSizeBytes: true,
+  releaseDate: true,
+  fileContainer: true,
+  videoCodec: true,
+  audioCodec: true,
+  fileResolution: true,
+  labels: true,
+  isFavorite: true,
+};
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -89,24 +109,9 @@ describe('enrichment_field table', () => {
     await _resetDatabase();
   });
 
-  // Compares against fieldsByProviderType's deduped values, not a hand-typed list —
-  // that object is already compiler-exhaustive against EnrichmentFields
-  // (activeFieldSet.ts's _everyFieldHasAProducer), so this transitively proves the
-  // migration's seed didn't drift from the field set without needing a second
-  // hand-maintained list to keep in sync.
-  it('is seeded with exactly the keys fieldsByProviderType declares producers for', async () => {
-    const db = getDb();
-    const rows = await db.select().from(enrichmentField);
-    // 'tags' is excluded: it's MediaFieldSource's construction-only field (built
-    // straight onto an item from a single provider's native payload, e.g.
-    // normalizeMedia.ts), never written to media_enrichment — same exclusion
-    // enricher.ts's EnrichableField makes for the same reason.
-    const expectedKeys = new Set(
-      Object.values(fieldsByProviderType)
-        .flat()
-        .filter((key) => key !== 'tags')
-    );
+  it('holds exactly one field row per reported fact after every migration', async () => {
+    const rows = await getDb().select().from(enrichmentField);
 
-    expect(new Set(rows.map((r) => r.key))).toEqual(expectedKeys);
+    expect(rows.map((r) => r.key).sort()).toEqual(Object.keys(EVERY_REPORTED_FACT).sort());
   });
 });

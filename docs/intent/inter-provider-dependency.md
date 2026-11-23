@@ -3,7 +3,8 @@
 **Status:** INTENT (future state, not built). Discovered while examining actuator translation (see
 `docs/architecture/actuator-task-ownership.md`) and originally recorded alongside the media identity model's
 open items — reclassified here on its own: this is an **identity/provider-configuration** issue, not the
-`MediaItem` field-shape one (`docs/architecture/media-field-provider-role.md`, shipped, unrelated theme).
+question of which facts a service reports (declared on its connection; see
+`docs/architecture/provider-roles-and-identity.md`, shipped, unrelated theme).
 
 ## The problem
 

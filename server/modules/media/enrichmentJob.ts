@@ -1,90 +1,78 @@
-import { type MetadataProviderType, mediaIdentity } from '../../database/schema';
+import { mediaIdentity } from '../../database/schema';
 import type { DrizzleDb } from '../../kernel/db';
 import { yieldToEventLoop } from '../../kernel/yieldToEventLoop';
 import { failureMessage, recordRefreshFailed, recordRefreshed } from '../providers';
-import { fieldsByProviderType } from './activeFieldSet';
-import type { EnrichableField, MediaEnricher } from './enrichment/enricher';
+import type { FactReporterInstance, ReportedFactKey, ReportedFacts } from '../providers';
 import type { EnrichmentQueries } from './enrichment/enrichment.queries';
-import type { EnrichmentFields } from './mediaFieldProvider';
-import type { MediaItem } from './mediaItem';
-
-/** One active enricher, with the provider instance whose facts it reads. */
-export interface EnricherSource {
-  providerId: number;
-  name: string;
-  enricher: MediaEnricher;
-}
 
 interface Deps {
   db: DrizzleDb;
   enrichmentQueries: EnrichmentQueries;
-  /** Every active enricher; an empty list when none is active. */
-  enrichers: EnricherSource[];
+  /** Every active fact reporter; an empty list when none is active. */
+  reporters: FactReporterInstance[];
+}
+
+/** The facts among `facts` that the reporter declares, with defined, non-null values. */
+function declaredFacts(
+  facts: Partial<ReportedFacts>,
+  reports: readonly ReportedFactKey[]
+): Partial<ReportedFacts> {
+  return Object.fromEntries(
+    reports.flatMap((key) => (facts[key] != null ? [[key, facts[key]]] : []))
+  ) as Partial<ReportedFacts>;
+}
+
+/** Each id in `column`, with every title that id names (one id may name several). */
+function titlesByIdIn(
+  identities: readonly (typeof mediaIdentity.$inferSelect)[],
+  column: FactReporterInstance['titleIdColumn']
+): Map<string | number, number[]> {
+  const titlesById = new Map<string | number, number[]>();
+  for (const identity of identities) {
+    const id = identity[column];
+    if (id != null) titlesById.set(id, [...(titlesById.get(id) ?? []), identity.id]);
+  }
+  return titlesById;
 }
 
 /**
- * Project a title row into the canonical item the enrichers match and decorate. No
- * `radarr`/`sonarr` key: the title carries no per-instance coordinate, and no enricher matches
- * on those keys (`enricherAdapters.ts`).
- */
-function hydrate(identity: typeof mediaIdentity.$inferSelect): MediaItem {
-  const ids: Record<string, number | string> = { identity: identity.id };
-  if (identity.tmdbId != null) ids.tmdb = identity.tmdbId;
-  if (identity.plexRatingKey != null) ids.plex = identity.plexRatingKey;
-  if (identity.imdbId != null) ids.imdb = identity.imdbId;
-  if (identity.jellyfinItemId != null) ids.jellyfin = identity.jellyfinItemId;
-  return { _sourceIds: ids, title: '' } as MediaItem;
-}
-
-/**
- * Reads every active enricher for every title on every run and stores each provider's facts as
- * it reported them. A provider's successful answer replaces everything Warden held from it; a
- * failed one keeps it and records the failure. Precedence between providers is applied when the
- * library cache loads, not here.
+ * Enrichment: the scheduled refresh of reported facts. On every run it asks every active reporter
+ * about every title it can match, by the title id column its declaration names, and stores each
+ * reporter's declared facts as it reported them. One id may name several titles (a movie and a
+ * series can share a TMDB id); each gets the answer. A reporter's successful answer replaces
+ * everything Warden held from it; a failed answer, or a failure to store it, keeps what Warden
+ * held, records the failure and moves on to the next reporter. Precedence
+ * between reporters is applied when the library cache loads, not here.
  */
 export class EnrichmentJob {
   private readonly failed: string[] = [];
 
   constructor(private deps: Deps) {}
 
-  /** The enrichers this run could not read, by name. */
+  /** The reporters this run could not read, by name. */
   failedProviders(): string[] {
     return [...this.failed];
   }
 
   async run(): Promise<number> {
     const identities = await this.deps.db.select().from(mediaIdentity);
-    const items = identities.map(hydrate);
 
-    for (const { providerId, name, enricher } of this.deps.enrichers) {
-      let result: Awaited<ReturnType<MediaEnricher['enrich']>>;
+    for (const { providerId, name, provider, titleIdColumn, reports } of this.deps.reporters) {
+      const titlesById = titlesByIdIn(identities, titleIdColumn);
       try {
-        result = await enricher.enrich(items);
+        const answers = await provider.readReportedFacts([...titlesById.keys()]);
+        const factsByTitle = new Map<number, Partial<ReportedFacts>>();
+        for (const [id, facts] of answers) {
+          await yieldToEventLoop();
+          const declared = declaredFacts(facts, reports);
+          for (const titleId of titlesById.get(id) ?? []) factsByTitle.set(titleId, declared);
+        }
+        await this.deps.enrichmentQueries.replaceProviderFacts(providerId, factsByTitle);
+        await recordRefreshed(this.deps.db, providerId, 'facts');
       } catch (err) {
         this.failed.push(name);
         await recordRefreshFailed(this.deps.db, providerId, 'facts', failureMessage(err));
-        continue;
       }
-      const declared = fieldsByProviderType as Partial<
-        Record<MetadataProviderType, readonly (keyof EnrichmentFields)[]>
-      >;
-      const fields = (declared[result.provider] ?? []).filter(
-        (field): field is EnrichableField => field !== 'tags'
-      );
-      const factsByTitle = new Map<number, Partial<EnrichmentFields>>();
-      for (const item of result.items) {
-        await yieldToEventLoop();
-        const titleId = item._sourceIds.identity;
-        if (titleId === undefined) continue;
-        const facts = Object.fromEntries(
-          fields
-            .map((field) => [field, item[field]] as const)
-            .filter(([, value]) => value !== undefined && value !== null)
-        ) as Partial<EnrichmentFields>;
-        factsByTitle.set(titleId, facts);
-      }
-      await this.deps.enrichmentQueries.replaceProviderFacts(providerId, factsByTitle);
-      await recordRefreshed(this.deps.db, providerId, 'facts');
     }
 
     return identities.length;

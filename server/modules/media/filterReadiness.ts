@@ -7,45 +7,49 @@ import {
 import { type ContentType, isInstanceScopedValue } from '@contract/schemas';
 import { isOfferedProviderType, scope } from '@contract/scope';
 import type { MetadataProviderType } from '../../database/schema';
-import { SOURCE_OWNER, isMediaSourceType, providerTypeLabel } from '../providers';
-import type { LibraryCache } from './libraryCache';
-import { type Filter, type FilterValue, type MediaRule, getRule } from './ruleRegistry';
+import { SOURCE_OWNER, providerTypeLabel } from '../providers';
+import { type Library, type LibraryCache, reporterReliability } from './libraryCache';
+import {
+  type Filter,
+  type FilterValue,
+  type MediaRule,
+  getRule,
+  suppliersOf,
+} from './ruleRegistry';
 
-/** A configured provider instance, as readiness judges filters against it. */
-export interface ProviderFact {
+/**
+ * A configured provider instance, active or not, as readiness names one a filter value refers to.
+ * Whether it is active is the loaded copy's answer (`library.providers`), never this row's.
+ */
+export interface ConfiguredInstance {
   id: number;
   type: MetadataProviderType;
-  isActive: boolean;
-}
-
-/** One enricher's `facts` refresh record, as readiness judges its facts with it. */
-export interface FactsRecord {
-  providerId: number;
-  refreshedAt: number | null;
-  failedAt: number | null;
 }
 
 /**
  * Everything filter readiness judges with. The same for every filter list in a request, so it is
  * read once and each list is judged against it in memory.
  */
-export interface ReadinessFacts {
-  /** Every configured provider instance, active or not. */
-  providers: readonly ProviderFact[];
-  /** Every stored `facts` refresh record. */
-  factsRecords: readonly FactsRecord[];
+export interface ReadinessInputs {
+  /**
+   * Every configured provider instance, active or not: only to name the type of an instance a
+   * filter value refers to, which an inactive instance has but the loaded copy does not carry.
+   */
+  providers: readonly ConfiguredInstance[];
+  /** The loaded copy's active providers and refresh records, which say whose facts can be relied on. */
+  library: Pick<Library, 'providers' | 'records'>;
 }
 
 /** The narrow slice of `ProviderSettingsService` readiness reads. */
 export interface ProviderInstancesSource {
-  list(): Promise<readonly ProviderFact[]>;
+  list(): Promise<readonly ConfiguredInstance[]>;
 }
 
-/** Reads the facts filter readiness judges with, once per request. */
+/** Reads the inputs filter readiness judges with, once per request. */
 export class FilterReadiness {
   private readonly deps: {
     providerSettingsService: ProviderInstancesSource;
-    /** The library copy, whose refresh records say whose facts are complete. */
+    /** The library copy, whose refresh records say whose facts can be relied on. */
     libraryCache: Pick<LibraryCache, 'read'>;
   };
 
@@ -53,16 +57,14 @@ export class FilterReadiness {
     this.deps = deps;
   }
 
-  async readFacts(): Promise<ReadinessFacts> {
-    const [providers, { records }] = await Promise.all([
+  async readInputs(): Promise<ReadinessInputs> {
+    const [providers, library] = await Promise.all([
       this.deps.providerSettingsService.list(),
       this.deps.libraryCache.read(),
     ]);
     return {
-      providers: providers.map(({ id, type, isActive }) => ({ id, type, isActive })),
-      factsRecords: records
-        .filter((r) => r.kind === 'facts')
-        .map(({ providerId, refreshedAt, failedAt }) => ({ providerId, refreshedAt, failedAt })),
+      providers: providers.map(({ id, type }) => ({ id, type })),
+      library: { providers: library.providers, records: library.records },
     };
   }
 }
@@ -75,7 +77,7 @@ export interface FilterList {
 }
 
 /**
- * A finding about `list`. Its id is built from the facts that make it (kind, query, rule and the
+ * A finding about `list`. Its id is built from what makes it (kind, query, rule and the
  * provider instances involved), so a re-check that finds the same problem gives the same id.
  */
 function finding(
@@ -98,7 +100,7 @@ function finding(
 
 /** What every filter of one list is judged against. */
 interface Judging {
-  facts: ReadinessFacts;
+  inputs: ReadinessInputs;
   list: FilterList;
   /** The provider type that owns the list's content type's catalog. */
   sourceType: MetadataProviderType;
@@ -106,13 +108,13 @@ interface Judging {
   hasActive(type: MetadataProviderType): boolean;
 }
 
-/** Every reason `list` cannot be trusted to select the titles it describes, against `facts`. */
-export function findingsFor(facts: ReadinessFacts, list: FilterList): ReadinessFinding[] {
+/** Every reason `list` cannot be trusted to select the titles it describes, against `inputs`. */
+export function findingsFor(inputs: ReadinessInputs, list: FilterList): ReadinessFinding[] {
   const sourceType = SOURCE_OWNER[list.contentType];
   const hasActive = (type: MetadataProviderType) =>
-    facts.providers.some((p) => p.isActive && p.type === type);
+    inputs.library.providers.some((p) => p.type === type);
   const judging: Judging = {
-    facts,
+    inputs,
     list,
     sourceType,
     libraryMissing: !hasActive(sourceType),
@@ -137,59 +139,46 @@ function filterFindings(judging: Judging, { ruleKey, value }: Filter): Readiness
   const supply = supplyFindings(judging, rule);
   return [
     ...supply,
-    ...(supply.length === 0 ? enrichmentFindings(judging, rule) : []),
+    ...(supply.length === 0 ? reportedFactFindings(judging, rule) : []),
     ...instanceFindings(judging, rule, value),
   ];
 }
 
 /**
- * Whether an enrichment-only rule's data is complete: Warden believes a supplier's successful
- * `facts` refresh, so a fact no title holds is the truth and raises nothing (north-star belief 6).
- * A supplier whose latest refresh failed, or that never refreshed, makes the rule's data
- * incomplete: an informational finding, which names the suppliers and never stops a run.
+ * Whether a reported-fact rule's data is complete: incomplete while none of the fact's active
+ * reporters can be relied on (`reporterReliability`, the answer a destructive run's gate reads too).
+ * Warden believes a successful refresh, so a fact no title holds raises nothing (north-star belief
+ * 6). The finding is informational: it names the reporters and never stops a run itself.
  */
-function enrichmentFindings(judging: Judging, rule: MediaRule): ReadinessFinding[] {
-  if (!rule.sourceField || rule.providers.some(isMediaSourceType)) return [];
-  const { facts, list } = judging;
-  const incomplete = facts.providers
-    .filter((p) => p.isActive && rule.providers.includes(p.type))
-    .filter((p) => {
-      const record = facts.factsRecords.find((r) => r.providerId === p.id);
-      return record?.refreshedAt == null || record.failedAt != null;
-    })
-    .map((p) => p.id)
-    .sort((a, b) => a - b);
-  if (incomplete.length === 0) return [];
+function reportedFactFindings(judging: Judging, rule: MediaRule): ReadinessFinding[] {
+  if (rule.reads === 'catalog') return [];
+  const { inputs, list } = judging;
+  const reporters = reporterReliability(inputs.library, rule, list.contentType);
+  if (reporters.length === 0 || reporters.some((r) => r.unrefreshed === null)) return [];
   return [
     finding(
       list,
       { kind: 'data-incomplete', ruleLabel: rule.label },
-      { ruleKey: rule.key, providerIds: incomplete }
+      { ruleKey: rule.key, providerIds: reporters.map((r) => r.providerId).sort((a, b) => a - b) }
     ),
   ];
 }
 
-/** Whether an active, offered provider serving the list's content type can supply `rule`. */
+/** Whether an active, offered supplier of what `rule` reads serves the list's content type. */
 function supplyFindings(judging: Judging, rule: MediaRule): ReadinessFinding[] {
-  const { sourceType, libraryMissing, hasActive } = judging;
-  // Enrichers serve every content type; a source serves only the content type it owns.
-  const producers = rule.providers.filter(
-    (type) =>
-      isOfferedProviderType(scope, type) && (!isMediaSourceType(type) || type === sourceType)
-  );
-  // The missing library is the cause for a rule its source would supply; it is said once.
-  if (producers.some(hasActive) || (libraryMissing && rule.providers.includes(sourceType))) {
-    return [];
-  }
-  const offered = producers.length > 0;
+  const { list, hasActive } = judging;
+  const suppliers = suppliersOf(rule, list.contentType);
+  const offered = suppliers.filter((type) => isOfferedProviderType(scope, type));
+  // A catalog rule depends on the source alone, whose absence the no-library finding says once.
+  if (rule.reads === 'catalog' || offered.some(hasActive)) return [];
   return [
     finding(
-      judging.list,
+      list,
       {
         kind: 'no-provider',
         ruleLabel: rule.label,
-        producerLabels: (offered ? producers : rule.providers).map(providerTypeLabel),
-        offered,
+        supplierLabels: (offered.length > 0 ? offered : suppliers).map(providerTypeLabel),
+        offered: offered.length > 0,
       },
       { ruleKey: rule.key }
     ),
@@ -204,10 +193,11 @@ function instanceFindings(
 ): ReadinessFinding[] {
   if (!isInstanceScopedValue(value) || value.providerId === undefined) return [];
   const { providerId } = value;
-  const named = judging.facts.providers.find((p) => p.id === providerId);
+  const named = judging.inputs.providers.find((p) => p.id === providerId);
+  const isActive = judging.inputs.library.providers.some((p) => p.id === providerId);
   const instance = { id: providerId, typeLabel: named && providerTypeLabel(named.type) };
-  if (named?.isActive && named.type === judging.sourceType) return [];
-  const expectedLabel = named?.isActive ? providerTypeLabel(judging.sourceType) : undefined;
+  if (isActive && named?.type === judging.sourceType) return [];
+  const expectedLabel = isActive ? providerTypeLabel(judging.sourceType) : undefined;
   return [
     finding(
       judging.list,

@@ -64,8 +64,8 @@ pins the exact set of tasks that leave it off, so a new task fails it until some
   `media:changed`; `ProviderSettingsService` sends `provider:changed`.
 - **Consumers:**
   - [`LibraryCache`](ref:path:server/modules/media/libraryCache.ts) drops its loaded copy on both events,
-    and loads again on the next read.
-  - [`ActiveFieldSetCache`](ref:path:server/modules/media/activeFieldSet.ts) drops its cached field set on `provider:changed`.
+    and loads again on the next read. Rule offering reads the active providers from it, so the rules
+    offered follow a provider change through the same clear.
 
 `EventEmitter.emit` is synchronous and re-throws a listener's exception into the sender. The bus
 doesn't isolate listeners from each other or from the sender; each in-process listener catches its
@@ -74,17 +74,16 @@ attach.
 
 ## Cache invalidation conventions
 
-The event bus is the only route by which a cache over Warden's own data clears. Neither cache has a
+The event bus is the only route by which a cache over Warden's own data clears. The cache has no
 time-based expiry: the library copy changes only when a refresh writes it.
 
 | Route | Fires when | Covers |
 |---|---|---|
 | `media:changed` | A refresh job finished, or a media reset deleted the copy | The library copy in the database changed |
-| `provider:changed` | `ProviderSettingsService` create, update or delete | Which providers' copies are active, and which fields can be supplied |
+| `provider:changed` | `ProviderSettingsService` create, update or delete | Which providers' copies are active, and so which rules can be offered |
 
-Both caches guard against an in-flight load: `LibraryCache` stores the promise of the load it starts and a
-clear drops it, so a load that started before an invalidation is never kept; `ActiveFieldSetCache`
-keeps a generation counter.
+The cache guards against an in-flight load: `LibraryCache` stores the promise of the load it starts and a
+clear drops it, so a load that started before an invalidation is never kept.
 
 ### When something sends `provider:changed`
 

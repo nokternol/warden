@@ -114,8 +114,8 @@ describe('SettingsPage', () => {
       []
     );
     const served: ProviderTypeDescriptor[] = [
-      { type: 'RADARR', label: 'Radarr', apiPath: '/api/v3', filterData: [] },
-      { type: 'PLEX', label: 'Plex', apiPath: '', filterData: [] },
+      { type: 'RADARR', label: 'Radarr', apiPath: '/api/v3' },
+      { type: 'PLEX', label: 'Plex', apiPath: '' },
     ];
     server.use(mockProcedure(contract.providers.types, () => served));
 

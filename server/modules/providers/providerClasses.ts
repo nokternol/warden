@@ -11,6 +11,8 @@ import { TautulliProvider } from './connections/tautulliProvider';
 import { TmdbProvider } from './connections/tmdbProvider';
 import { TvMazeProvider } from './connections/tvmazeProvider';
 import type {
+  AddressColumn,
+  FactReporter,
   JellyfinLinks,
   MovieSource,
   PlexLinks,
@@ -25,7 +27,24 @@ type RolesDeclaredBy<C extends ProviderCapabilities> = (C extends { source: 'mov
   : unknown) &
   (C extends { source: 'series' } ? SeriesSource : unknown) &
   (C extends { mediaServer: 'plexRatingKey' } ? PlexLinks : unknown) &
-  (C extends { mediaServer: 'jellyfinItemId' } ? JellyfinLinks : unknown);
+  (C extends { mediaServer: 'jellyfinItemId' } ? JellyfinLinks : unknown) &
+  (C extends { facts: object } ? FactReporter : unknown);
+
+/**
+ * Whether a type declaring `facts` can be ranked and matched: it resolves to a kind (is a media
+ * server, or declares `providerKind`) and to a title id column (has an address column, or declares
+ * `matchedBy`). A type declaring no facts needs neither.
+ */
+type ReporterResolves<C> = C extends { facts: object }
+  ? C extends { mediaServer: AddressColumn } | { providerKind: string }
+    ? C extends
+        | { mediaServer: AddressColumn }
+        | { addressedBy: AddressColumn }
+        | { facts: { matchedBy: 'tmdbId' } }
+      ? true
+      : false
+    : false
+  : true;
 
 /** A connection class carrying its catalogue entry, whose instances play `Roles`. */
 type ProviderClass<Roles = unknown> = {
@@ -35,13 +54,16 @@ type ProviderClass<Roles = unknown> = {
 
 /**
  * A map from provider type to connection class in which each class constructs the role
- * interfaces its `catalogueEntry.capabilities` declare.
+ * interfaces its `catalogueEntry.capabilities` declare, and each fact reporter resolves to a kind
+ * and a title id column.
  */
 export type CheckedClassMap<M> = {
   [K in keyof M]: K extends MetadataProviderType
     ? M[K] extends { readonly catalogueEntry: { readonly capabilities: infer C } }
       ? C extends ProviderCapabilities
-        ? ProviderClass<RolesDeclaredBy<C>>
+        ? ReporterResolves<C> extends true
+          ? ProviderClass<RolesDeclaredBy<C>>
+          : never
         : never
       : ProviderClass
     : never;

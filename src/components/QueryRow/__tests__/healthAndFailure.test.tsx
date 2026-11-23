@@ -55,7 +55,7 @@ describe('QueryRow', () => {
           {
             ...finding(
               'no-data',
-              'Seerr request status filter has no data: no movie holds a value for it'
+              'Request status filter has no data: no movie holds a value for it'
             ),
             clears:
               'An automation relying on this filter needs it signed off on the Automations page.',

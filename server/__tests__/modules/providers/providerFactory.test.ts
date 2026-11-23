@@ -75,37 +75,6 @@ describe('ProviderFactory.create', () => {
   });
 });
 
-describe('ProviderFactory.createMany', () => {
-  const factory = new ProviderFactory();
-
-  it('places each active provider into its typed slot, leaving absent types undefined', () => {
-    const set = factory.createMany(
-      [makeProvider(MetadataProviderType.PLEX), makeProvider(MetadataProviderType.TAUTULLI)],
-      log
-    );
-
-    expect(set.plex).toBeInstanceOf(PlexProvider);
-    expect(set.tautulli).toBeInstanceOf(TautulliProvider);
-    expect(set.seerr).toBeUndefined();
-  });
-
-  it('places an active Jellyfin provider into its typed slot', () => {
-    const set = factory.createMany([makeProvider(MetadataProviderType.JELLYFIN)], log);
-
-    expect(set.jellyfin).toBeInstanceOf(JellyfinProvider);
-  });
-
-  it('has no radarr/sonarr slots — MediaSource instances are never collapsed to one', () => {
-    const set = factory.createMany(
-      [makeProvider(MetadataProviderType.RADARR), makeProvider(MetadataProviderType.SONARR)],
-      log
-    );
-
-    expect((set as Record<string, unknown>).radarr).toBeUndefined();
-    expect((set as Record<string, unknown>).sonarr).toBeUndefined();
-  });
-});
-
 describe('ProviderFactory role queries', () => {
   const factory = new ProviderFactory();
   const row = (id: number, type: MetadataProviderType) => ({
@@ -143,6 +112,52 @@ describe('ProviderFactory role queries', () => {
       { providerId: 4, name: 'JELLYFIN 4', kind: JellyfinProvider },
     ]);
     expect(factory.plexServerOf([row(5, MetadataProviderType.TAUTULLI)], log)).toBeUndefined();
+  });
+
+  it('answers the fact reporters among the rows, each with its title id column and the facts it reports', () => {
+    const reporters = factory.factReportersOf(
+      [...rows, row(7, MetadataProviderType.SEERR), row(8, MetadataProviderType.TVMAZE)],
+      log
+    );
+
+    expect(
+      reporters.map(({ providerId, name, provider, titleIdColumn, reports }) => ({
+        providerId,
+        name,
+        kind: provider.constructor,
+        titleIdColumn,
+        reportsPlayCount: reports.includes('playCount'),
+      }))
+    ).toEqual([
+      {
+        providerId: 3,
+        name: 'PLEX 3',
+        kind: PlexProvider,
+        titleIdColumn: 'plexRatingKey',
+        reportsPlayCount: true,
+      },
+      {
+        providerId: 4,
+        name: 'JELLYFIN 4',
+        kind: JellyfinProvider,
+        titleIdColumn: 'jellyfinItemId',
+        reportsPlayCount: true,
+      },
+      {
+        providerId: 5,
+        name: 'TAUTULLI 5',
+        kind: TautulliProvider,
+        titleIdColumn: 'plexRatingKey',
+        reportsPlayCount: true,
+      },
+      {
+        providerId: 7,
+        name: 'SEERR 7',
+        kind: SeerrProvider,
+        titleIdColumn: 'tmdbId',
+        reportsPlayCount: false,
+      },
+    ]);
   });
 });
 

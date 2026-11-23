@@ -74,30 +74,25 @@ type-only edges as exempt from the direction rule for exactly this pattern, and 
 edge elsewhere is still worth a second look even though the tool won't flag it.
 
 **`media → providers` is the plain, exception-free default direction.** No provider code names
-media's types: `MediaEnricher` is a **media-owned** role contract
-([`media/enrichment/enricher.ts`](ref:path:server/modules/media/enrichment/enricher.ts)), and
-`MediaSource` is a **provider-owned** role interface in
+media's types. `MediaSource` is a **provider-owned** role interface in
 [`providers/roles.ts`](ref:path:server/modules/providers/roles.ts): what the catalog refresh, inside
 providers, reads from a connection declaring `source`; media never reads a source connection, only the
-stored copies the query engine judges. Each connection class declares what it can do on itself
-(`catalogueEntry`, the role interfaces it implements); the providers module derives everything else from
-those declarations. The refresh kinds the library cache reports, the content types an automation's
-action can address, the filter-choice lists and the catalog refresh's inputs ask those declarations,
-never a provider type. Facts are still keyed by provider type (`activeFieldSet.ts`,
-`factsRefreshKinds.ts`, the enricher adapters, the rule registry's `providers`), and the automation
-executor reads the derived addressing tables by type: a departure from north-star belief 9 recorded
-in the [fracture ledger](ref:path:docs/architecture/fracture-ledger.md)'s Open section ("Capabilities
-still keyed by provider type").
-For media's own roles, provider connection classes (`PlexProvider`, `TautulliProvider`,
-`SeerrProvider`, `TmdbProvider`, `JellyfinProvider`) implement nothing directly — they are *bound* by
-media-owned code (the library cache's normalisation of stored copies,
-[`libraryCache.ts`](ref:path:server/modules/media/libraryCache.ts), and the enricher adapters,
-[`enrichment/enricherAdapters.ts`](ref:path:server/modules/media/enrichment/enricherAdapters.ts)) that
-import the provider connection classes from providers' public interface — ordinary `media → providers`,
-ordinary direction, no exception. The enrichment mechanics that only need providers' own DTO vocabulary
-(the per-provider mappers and the match-and-decorate join) moved with the adapters into
-[`media/enrichment/`](ref:path:server/modules/media/enrichment/decorate.ts), typed as `Pick<MediaItem, ...>`
-subsets of media's canonical shape.
+stored copies the query engine judges. `FactReporter` is provider-owned too: a reporting connection
+translates its own payload into `ReportedFacts`
+([`providers/facts.ts`](ref:path:server/modules/providers/facts.ts)), the providers-owned vocabulary of
+reported facts and their kind precedence, and media's Enrichment job stores what the reporters declare.
+Each connection class declares what it can do on itself (`catalogueEntry`, the role interfaces it
+implements); the providers module derives everything else from those declarations. The refresh kinds
+the library cache reports, the content types an automation's action can address, the filter-choice
+lists, the catalog refresh's inputs, Enrichment's reporters, a rule's suppliers and the fact precedence
+ask those declarations, never a provider type. The automation executor still reads the derived
+addressing tables by type, and the stored primary media server is keyed `'PLEX' | 'JELLYFIN'`:
+departures from north-star belief 9 recorded in the
+[fracture ledger](ref:path:docs/architecture/fracture-ledger.md)'s Open section ("Capabilities still
+keyed by provider type").
+Media-owned code binds providers' data the ordinary way: the library cache normalises stored copies
+([`libraryCache.ts`](ref:path:server/modules/media/libraryCache.ts)) and merges the stored reported
+facts onto them — ordinary `media → providers`, no exception.
 
 `MediaActuator` is unaffected by this and stays **provider-owned**, in
 [`providers/roles.ts`](ref:path:server/modules/providers/roles.ts) — it is the role providers expose for
@@ -109,11 +104,12 @@ actions on media they own, not a role media consumes, so it never had a reason t
 server/
   kernel/          # eventBus, logger, config, db, errors, cache, middleware, api (contract implementer)
   modules/
-    providers/     # connections (BaseProviderConnection + per-system), roles (MediaActuator),
+    providers/     # connections (BaseProviderConnection + per-system), roles (MediaSource,
+                   # FactReporter, MediaActuator), reported-fact vocabulary + kind precedence,
                    # provider settings service + instance CRUD and connection probe at
                    # /api/providers, task enablement, identity-resolution job
     media/         # normalize + NormalizedMovie/NormalizedSeries shapes, ruleRegistry,
-                   # MediaEnricher role contract + its provider adapters, library cache,
+                   # catalog records, library cache,
                    # mediaQueryEngine (select), enrichment job + merge, backdrops, search
     mediaQueries/  # MediaQueryRecord CRUD + query health
     automations/   # automation service, executor, run service, scheduler

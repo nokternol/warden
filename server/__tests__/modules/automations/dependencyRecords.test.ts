@@ -8,6 +8,7 @@ import { AutomationExecutor } from '@server/modules/automations/automationExecut
 import { AutomationRunService } from '@server/modules/automations/automationRunService';
 import { AutomationService } from '@server/modules/automations/automationService';
 import type { Filter } from '@server/modules/media';
+import { findingsFor } from '@server/modules/media/filterReadiness';
 import { LibraryCache } from '@server/modules/media/libraryCache';
 import { MediaQueryService } from '@server/modules/mediaQueries/mediaQueryService';
 import {
@@ -285,7 +286,7 @@ describe('runs and the refresh records they depend on', () => {
       connection,
       act: deleteMovies,
       taskId: 'deleteMovieWithFiles',
-      exclude: [{ ruleKey: 'seerrRequestStatus', value: 2 }],
+      exclude: [{ ruleKey: 'requestStatus', value: 2 }],
     });
 
     expect(acted).toBe(false);
@@ -390,6 +391,51 @@ describe('runs and the refresh records they depend on', () => {
     expect(run.error).toMatch(/Watched/);
     expect(run.error).toMatch(/Plex/);
     expect(run.error).toMatch(/Jellyfin/);
+  });
+
+  it("acts on a catalog fact once the source refreshed, though a media server's facts refresh failed", async () => {
+    const { plex } = await mediaServers();
+    await recordRefreshFailed(getDb(), plex, 'facts', 'Plex timed out');
+    const { connection, deleteMovies } = radarrConnection();
+
+    const { run, acted } = await runOnce({
+      providerId: radarrA,
+      connection,
+      act: deleteMovies,
+      taskId: 'deleteMovieWithFiles',
+      include: [
+        { ruleKey: 'year', value: { min: 1900 } },
+        { ruleKey: 'hasFile', value: true },
+      ],
+    });
+
+    expect(run.error).toBeNull();
+    expect(acted).toBe(true);
+  });
+
+  it("skips, as readiness calls the data incomplete, when a reporter's facts are fresh but its links failed", async () => {
+    const { plex, jellyfin } = await mediaServers();
+    await recordRefreshed(getDb(), plex, 'facts');
+    await recordRefreshFailed(getDb(), plex, 'links', 'Plex timed out');
+    await recordRefreshFailed(getDb(), jellyfin, 'facts', 'Jellyfin timed out');
+    const { connection, deleteMovies } = radarrConnection();
+    const exclude = [{ ruleKey: 'watched', value: true }];
+
+    const { run, acted } = await runOnce({
+      providerId: radarrA,
+      connection,
+      act: deleteMovies,
+      taskId: 'deleteMovieWithFiles',
+      exclude,
+    });
+
+    expect(acted).toBe(false);
+    expect(run.error).toMatch(/Plex's links refresh failed/);
+    const readiness = findingsFor(await filterReadinessOver(getDb()).readInputs(), {
+      contentType: 'movie',
+      filters: exclude,
+    });
+    expect(readiness.map((f) => [f.kind, f.ruleKey])).toEqual([['data-incomplete', 'watched']]);
   });
 
   it('skips a destructive run that depends on a provider never refreshed', async () => {

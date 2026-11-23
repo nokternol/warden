@@ -18,15 +18,11 @@ export function executorCollaborators() {
 }
 
 /**
- * The collaborators a `ProviderSettingsService` needs beside its database: a fresh event bus and a
- * precedence coverage check that accepts every active-type set. A test that observes either passes
- * its own after the spread.
+ * The collaborators a `ProviderSettingsService` needs beside its database: a fresh event bus. A
+ * test that observes it passes its own after the spread.
  */
 export function providerSettingsCollaborators() {
-  return {
-    eventBus: new DomainEventBus(),
-    precedenceCoverageValidator: (_activeTypes: Set<MetadataProviderType>) => {},
-  };
+  return { eventBus: new DomainEventBus() };
 }
 
 /**

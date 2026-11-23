@@ -22,11 +22,11 @@ const radarrType: ProviderTypeDescriptor = {
   type: 'RADARR',
   label: 'Radarr',
   apiPath: '/api/v3',
-  filterData: ['Films', 'Profiles'],
 };
 
 describe('ProviderCard', () => {
-  it("shows its type's served label and the filter data the type provides", () => {
+  it("shows its type's served label and no filter line, collapsed or expanded", async () => {
+    const user = userEvent.setup();
     render(
       <ProviderCard
         provider={mockProvider}
@@ -37,7 +37,11 @@ describe('ProviderCard', () => {
       />
     );
     expect(screen.queryByText('Radarr')).toBeInTheDocument();
-    expect(screen.queryByText('Filter: Films · Profiles')).toBeInTheDocument();
+    expect(screen.queryByText(/^Filter/)).not.toBeInTheDocument();
+
+    await user.click(screen.getByText('Radarr Main'));
+
+    expect(screen.queryByText(/^Filter/)).not.toBeInTheDocument();
   });
 
   it('renders the provider name', () => {

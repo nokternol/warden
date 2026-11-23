@@ -8,7 +8,6 @@ export class TvMazeProvider extends BaseProviderConnection {
     apiKeyRequired: false,
     apiPath: '',
     defaultUrl: 'https://api.tvmaze.com',
-    filterData: ['Network'],
     capabilities: {},
   } as const satisfies ProviderTypeEntry;
 

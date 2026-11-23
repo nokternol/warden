@@ -73,8 +73,6 @@ export const ProviderTypeDescriptorSchema = z.object({
   apiKeyRequired: z.boolean().optional(),
   /** An example host on the type's default port, for a type whose host the user enters. */
   hostPlaceholder: z.string().optional(),
-  /** What the provider contributes to filtering, as short phrases. */
-  filterData: z.array(z.string()),
 });
 
 export const providers = {

@@ -1,4 +1,5 @@
-import type { ProviderTypeEntry } from '../roles';
+import type { ReportedFacts } from '../facts';
+import type { FactReporter, ProviderTypeEntry } from '../roles';
 import { BaseProviderConnection } from './baseProviderConnection';
 
 export interface TmdbMovieDetails {
@@ -164,15 +165,17 @@ function extractTvCertification(
   return first?.rating;
 }
 
-export class TmdbProvider extends BaseProviderConnection {
+export class TmdbProvider extends BaseProviderConnection implements FactReporter {
   /** How this provider type is presented, reached and what it can do. */
   static readonly catalogueEntry = {
     label: 'TMDB',
     apiKeyRequired: true,
     apiPath: '',
     defaultUrl: 'https://api.themoviedb.org/3',
-    filterData: ['Metadata'],
-    capabilities: {},
+    capabilities: {
+      providerKind: 'metadata',
+      facts: { reports: ['productionStatus'], matchedBy: 'tmdbId' },
+    },
   } as const satisfies ProviderTypeEntry;
 
   /** One call that needs the key, so a wrong key fails the test. */
@@ -182,6 +185,21 @@ export class TmdbProvider extends BaseProviderConnection {
 
   private get apiParams() {
     return { api_key: this.provider.apiKey || '' };
+  }
+
+  /**
+   * The production status TMDB reports for each TMDB id asked, looked up one at a time; an id
+   * TMDB holds no status for is left out.
+   */
+  async readReportedFacts(
+    titleIds: readonly (string | number)[]
+  ): Promise<Map<number, Partial<ReportedFacts>>> {
+    const facts = new Map<number, Partial<ReportedFacts>>();
+    for (const tmdbId of new Set(titleIds.map(Number))) {
+      const status = await this.getStatus(tmdbId);
+      if (status !== undefined) facts.set(tmdbId, { productionStatus: status });
+    }
+    return facts;
   }
 
   /** The release/airing status TMDB reports for an id, trying movie then tv. */

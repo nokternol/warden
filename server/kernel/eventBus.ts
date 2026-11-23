@@ -33,7 +33,7 @@ export interface DomainEvents {
   // Provider configuration changed: which providers exist, are active, or what they serve.
   // Sent by: every `ProviderSettingsService` mutation (create, update, delete) except
   // `recordTest`, which changes only a provider's test status.
-  // Heard by: `ActiveFieldSetCache` and the media procedures' caches.
+  // Heard by: the library cache, which the media procedures answer from.
   // It lives on the kernel bus so `providers` never imports from `media`.
   'provider:changed': Record<string, never>;
 }

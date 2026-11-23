@@ -1,5 +1,5 @@
 /**
- * The facts filter readiness judges with, read from the database in one pass.
+ * The inputs filter readiness judges with, read from the database in one pass.
  *
  * Run: vitest run --project server
  */
@@ -24,7 +24,7 @@ const testConfig = {
   LOG_LEVEL: 'error',
 } as AppConfig;
 
-describe('FilterReadiness.readFacts', () => {
+describe('FilterReadiness.readInputs', () => {
   beforeEach(async () => {
     await initializeDatabase(testConfig);
   });
@@ -33,7 +33,7 @@ describe('FilterReadiness.readFacts', () => {
     await _resetDatabase();
   });
 
-  it('reads every provider instance, and every facts refresh record from the library cache', async () => {
+  it('reads every provider instance, and the loaded copy’s active providers and refresh records', async () => {
     const db = getDb();
     const [radarr, plex, tautulli] = await db
       .insert(metadataProviders)
@@ -49,27 +49,27 @@ describe('FilterReadiness.readFacts', () => {
     const libraryCache = new LibraryCache({ db, eventBus: new DomainEventBus() });
     const read = vi.spyOn(libraryCache, 'read');
 
-    const facts = await new FilterReadiness({
+    const inputs = await new FilterReadiness({
       providerSettingsService: new ProviderSettingsService({
         ...providerSettingsCollaborators(),
         db,
       }),
       libraryCache,
-    }).readFacts();
+    }).readInputs();
 
     expect(read).toHaveBeenCalledOnce();
 
-    expect(facts.providers).toEqual([
-      { id: radarr.id, type: MetadataProviderType.RADARR, isActive: true },
-      { id: plex.id, type: MetadataProviderType.PLEX, isActive: false },
-      { id: tautulli.id, type: MetadataProviderType.TAUTULLI, isActive: true },
+    expect(inputs.providers).toEqual([
+      { id: radarr.id, type: MetadataProviderType.RADARR },
+      { id: plex.id, type: MetadataProviderType.PLEX },
+      { id: tautulli.id, type: MetadataProviderType.TAUTULLI },
     ]);
-    expect(facts.factsRecords).toEqual(
+    expect(inputs.library.providers.map((p) => p.id)).toEqual([radarr.id, tautulli.id]);
+    expect(inputs.library.records).toEqual(
       expect.arrayContaining([
-        { providerId: plex.id, refreshedAt: expect.any(Number), failedAt: null },
-        { providerId: tautulli.id, refreshedAt: null, failedAt: expect.any(Number) },
+        expect.objectContaining({ providerId: plex.id, kind: 'facts', failedAt: null }),
+        expect.objectContaining({ providerId: tautulli.id, kind: 'facts', refreshedAt: null }),
       ])
     );
-    expect(facts.factsRecords).toHaveLength(2);
   });
 });

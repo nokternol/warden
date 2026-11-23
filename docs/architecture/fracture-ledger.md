@@ -762,6 +762,46 @@ Earlier entries in this ledger use the names that were current when they healed 
   constructor default on a collaborator; the scope declaration is being reframed as feature flags, which
   decide how it is received. Recorded as Open below ("The scope declaration — reached three ways").
 
+### Facts — each service's facts described in about nine places (recorded and healed 2026-11-22, MVP slice C11)
+
+- **Fracture:** north-star beliefs 7, 8 and 9 (a fact another connected service still supplies does
+  not depend on the one that failed; one way of answering one question; adding a service changes
+  nothing else). Warden had no single idea of a fact. What the film and series managers report was not
+  treated as facts at all, and what the other services report was described beside them, in the media
+  module, as compile-time types runtime code could not read. So every part that needed "which service
+  supplies this" kept its own hand-written answer: a producer table by provider type, each adapter's
+  field union (written twice), the facts-refreshing type set, the enrichment job factory's two type
+  lists and its name-destructured slot set, the refresh's write, a named-provider precedence order and
+  its activation-time guard, every rule's `providers`, and the provider catalogue's display list of
+  "filter data". Two compile guards and two runtime checks each patched part of their disagreement.
+  Belief 3's precedence also named products (Tautulli, then Plex, then Jellyfin), and some facts were
+  named for the product that reports them: "Plex added" and "Jellyfin added" were two facts and two
+  filters for one idea, and request status, issue and production status carried Seerr's and TMDB's
+  names.
+- **How it misled:** a destructive automation filtering on Year or Has file was stopped when Plex's
+  facts refresh failed, because the rules listed Plex (and TMDB) as suppliers of values only Radarr and
+  Sonarr write; TMDB alone counted as making Year and Certification available; the provider card said
+  TVmaze adds a "Network" filter and Tautulli "Play statistics" and "User activity", which no filter
+  reads; an owner with two media servers needed two filters for one question; and a new fact-supplying
+  service meant editing about nine places outside its connection.
+- **Healed by:** one idea, the fact, in two kinds, both declared by the provider. A catalog fact is
+  what the content type's source supplies in its catalog record (`MovieCatalogRecord`,
+  `SeriesCatalogRecord`, tags among them), declared by `source`; a reported fact is declared by key on
+  the reporting connection (`capabilities.facts`), named for what it means, and translated by that
+  connection's `FactReporter.readReportedFacts`. A compile check keeps the two kinds disjoint.
+  Enrichment runs over the factory's `factReportersOf` and writes only what each reporter declares;
+  rules say what they read (`reads`) and `suppliersOf` derives who supplies them for offering,
+  readiness and the run gate, which readiness now matches; the refresh kinds ask `reportsFacts`.
+  Precedence ranks kinds of provider (`REPORTED_FACT_PRECEDENCE`), and between two of a kind the first
+  connected wins, as belief 3 allows until the owner chooses (#264). `addedToMediaServerAt`,
+  `requestStatus`, `hasIssue`, `productionStatus` and the `isFavorite` rule replaced the product-named
+  keys (migration 0041 keeps the stored values). `filterData` is gone with no replacement. The
+  provider-type-name guard's allowlist lost every facts file. Recorded in `VOCABULARY.md` (fact,
+  catalog fact, reported fact, Enrichment, `FactReporter`, `ProviderKind`; the enricher names retired).
+- **Left on purpose:** the owner's choice of a primary provider of a kind is its own slice (#264); until
+  it lands the stored `primaryMediaServer` setting is not applied. Recorded as Open below ("Capabilities
+  still keyed by provider type").
+
 ## Open
 
 ### The scope declaration — reached three ways (recorded 2026-11-21, MVP slice C8)
@@ -837,10 +877,10 @@ Earlier entries in this ledger use the names that were current when they healed 
 - **Departure:** north-star belief 9 (no special cases elsewhere) and belief 2 (where a fact can be used
   and an action taken never depends on which services they are). These remain keyed by provider type
   rather than read from a declaration:
-  - facts: which provider types supply which fields and refresh facts (`activeFieldSet.ts`,
-    `factsRefreshKinds.ts`, the enricher adapters, `enrichmentJobFactory.ts` with `ProviderSet`/
-    `createMany`, `ruleRegistry` `providers`), and the primary media server's `'PLEX' | 'JELLYFIN'`
-    precedence setting ([`server/modules/media/factsRefreshKinds.ts`](ref:path:server/modules/media/factsRefreshKinds.ts));
+  - the stored primary media server, a `'PLEX' | 'JELLYFIN'` setting where belief 3 asks for the
+    owner's choice between two providers of one kind; nothing applies it, so the first connected wins
+    until the owner can choose (#264)
+    ([`server/modules/appSettings/appSettingsService.ts`](ref:path:server/modules/appSettings/appSettingsService.ts));
   - the filter-choice contract keyed `radarr`/`sonarr`
     ([`server/modules/media/media.procedures.ts`](ref:path:server/modules/media/media.procedures.ts));
   - the source role interfaces typed by Radarr's and Sonarr's own payloads (`RadarrMovie`,
@@ -856,5 +896,28 @@ Earlier entries in this ledger use the names that were current when they healed 
 - **Departure (belief 8, one way of reaching a provider):** a stored key is sent to a test of any path on
   the origin it was saved for, because `storedKeyFor` compares origins only
   ([`server/modules/providers/connectionProbe.ts`](ref:path:server/modules/providers/connectionProbe.ts)).
-- **Heals by:** facts declared on the connection classes like the other capabilities (the facts slice,
-  #246, inherits the guard test's allowlist entries), and each remaining caller asking a declaration.
+- **Heals by:** each remaining caller asking a declaration; the primary provider becomes a per-kind
+  instance choice (#264). Facts healed in C11 (above).
+
+### TMDB ids matched without content type (recorded 2026-11-22, MVP slice C11)
+
+- **Departure:** north-star belief 3: "Everything that needs to know 'is this the same title' gets the
+  same answer." A title is identified per content type (a TMDB movie id and a TMDB tv id with the same
+  number are different titles), but a reporter matched by TMDB id answers by the bare number: Enrichment
+  gives a TMDB-matched reporter's answer for an id to every title that id names, movie and series alike
+  ([`server/modules/media/enrichmentJob.ts`](ref:path:server/modules/media/enrichmentJob.ts)), Seerr's
+  answers carry no content type, and TMDB's status lookup tries the movie endpoint before the tv one
+  ([`server/modules/providers/connections/tmdbProvider.ts`](ref:path:server/modules/providers/connections/tmdbProvider.ts)).
+  A request for a film can therefore read as a request for an unrelated series sharing its number.
+- **Heals by:** a TMDB-matched reporter answering per content type, and Enrichment matching by content
+  type and TMDB id, as the catalog refresh's grouping does.
+
+### Catalog facts named for a product (recorded 2026-11-22, MVP slice C11)
+
+- **Departure:** north-star beliefs 2 and 8: where a fact can be used never depends on which service
+  supplies it, and each idea has one name. Reported facts are named for what they mean, but some catalog
+  facts and their rules still carry the product's name: `radarrStatus`, served as "Radarr status"
+  ([`server/modules/media/ruleRegistry.ts`](ref:path:server/modules/media/ruleRegistry.ts),
+  [`server/modules/media/movie.ts`](ref:path:server/modules/media/movie.ts)).
+- **Heals by:** naming each catalog fact and its rule for what it means (a movie's release status), with
+  a migration of any stored rule key, as the reported facts were renamed in C11.

@@ -1,8 +1,9 @@
 import type { ProviderTypeDescriptor } from '@contract/providers';
 import type { ContentType } from '@contract/schemas';
 import type { MetadataProviderType } from '@server/database/schema';
+import type { ProviderKind, ReportedFactKey } from './facts';
 import { PROVIDER_CLASSES } from './providerClasses';
-import type { AddressColumn, ProviderTypeEntry } from './roles';
+import type { AddressColumn, ProviderTypeEntry, TitleIdColumn } from './roles';
 
 /**
  * Every provider type Warden knows with its catalogue entry, in display order: each entry is the
@@ -18,11 +19,7 @@ export const PROVIDER_CATALOGUE = Object.fromEntries(
 /** Each provider type as the setup screens see it, in display order; capabilities stay here. */
 export function describeProviderTypes(): ProviderTypeDescriptor[] {
   return (Object.entries(PROVIDER_CATALOGUE) as [MetadataProviderType, ProviderTypeEntry][]).map(
-    ([type, { capabilities: _capabilities, filterData, ...entry }]) => ({
-      type,
-      ...entry,
-      filterData: [...filterData],
-    })
+    ([type, { capabilities: _capabilities, ...entry }]) => ({ type, ...entry })
   );
 }
 
@@ -62,6 +59,16 @@ export const MEDIA_SERVER_BY_COLUMN = Object.fromEntries(
   DECLARED.flatMap(({ type, mediaServer }) => (mediaServer ? [[mediaServer, type]] : []))
 ) as Record<AddressColumn, MetadataProviderType>;
 
+/**
+ * The media server type whose `links` refresh a title id column needs: the one whose links write
+ * that column. None for TMDB ids, which no media server links, or for no column.
+ */
+export function mediaServerOfColumn(
+  column: TitleIdColumn | undefined
+): MetadataProviderType | undefined {
+  return column && column !== 'tmdbId' ? MEDIA_SERVER_BY_COLUMN[column] : undefined;
+}
+
 /** Whether a provider type is a media server titles link into (declares `mediaServer`). */
 export function isMediaServerType(type: MetadataProviderType): boolean {
   return PROVIDER_CATALOGUE[type].capabilities.mediaServer !== undefined;
@@ -75,4 +82,32 @@ export function isMediaSourceType(type: MetadataProviderType): boolean {
 /** The content type a catalog-owning provider type owns, if any. */
 export function contentTypeOfSourceType(type: MetadataProviderType): ContentType | undefined {
   return PROVIDER_CATALOGUE[type].capabilities.source;
+}
+
+/** Every provider type whose declaration reports `fact`, in display order. */
+export function reportersOf(fact: ReportedFactKey): MetadataProviderType[] {
+  return DECLARED.filter(({ facts }) => facts?.reports.includes(fact)).map(({ type }) => type);
+}
+
+/**
+ * The kind of fact reporter a type is: a media server by being one, otherwise the kind it
+ * declares. Derivation wins, so a media server's declared kind is never read.
+ */
+export function providerKindOf(type: MetadataProviderType): ProviderKind | undefined {
+  const { mediaServer, providerKind } = PROVIDER_CATALOGUE[type].capabilities;
+  return mediaServer ? 'mediaServer' : providerKind;
+}
+
+/**
+ * The title id column a reporting type's answers are matched by: its address column, or the one
+ * its `facts` declaration names. Undefined for a type that reports no facts.
+ */
+export function titleIdColumnOf(type: MetadataProviderType): TitleIdColumn | undefined {
+  const { facts } = PROVIDER_CATALOGUE[type].capabilities;
+  return facts ? (ADDRESS_COLUMN_BY_TYPE[type] ?? facts.matchedBy) : undefined;
+}
+
+/** Whether a provider type reports facts about titles (declares `facts`). */
+export function reportsFacts(type: MetadataProviderType): boolean {
+  return PROVIDER_CATALOGUE[type].capabilities.facts !== undefined;
 }

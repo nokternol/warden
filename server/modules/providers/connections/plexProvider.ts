@@ -1,6 +1,8 @@
 import { MetadataProviderType } from '@server/database/schema';
-import type { ActuatorTask, MediaActuator, ProviderTypeEntry } from '../roles';
+import type { ReportedFacts } from '../facts';
+import type { ActuatorTask, FactReporter, MediaActuator, ProviderTypeEntry } from '../roles';
 import { BaseProviderConnection } from './baseProviderConnection';
+import { defined, isoFromUnix, playHistoryFacts } from './factMapping';
 
 export interface PlexLibrary {
   key: string;
@@ -41,19 +43,57 @@ export interface PlexMediaItem {
   Media?: PlexMedia[];
 }
 
+/** What Plex reports about one item, from its own fields and its primary file (first Media/Part). */
+function reportedFactsOf(item: PlexMediaItem): Partial<ReportedFacts> {
+  const media = item.Media?.[0];
+  const labels = item.Label?.map((l) => l.tag);
+  return {
+    ...playHistoryFacts(item.viewCount ?? 0, item.lastViewedAt),
+    ...defined({
+      addedToMediaServerAt: item.addedAt !== undefined ? isoFromUnix(item.addedAt) : undefined,
+      studio: item.studio,
+      runtimeMinutes: item.duration !== undefined ? Math.round(item.duration / 60_000) : undefined,
+      fileSizeBytes: media?.Part?.[0]?.size,
+      releaseDate: item.originallyAvailableAt,
+      fileContainer: media?.container,
+      videoCodec: media?.videoCodec,
+      audioCodec: media?.audioCodec,
+      fileResolution: media?.videoResolution,
+      labels: labels && labels.length > 0 ? labels : undefined,
+    }),
+  };
+}
+
 /**
  * PlexProvider handles metadata gathering from a Plex Media Server instance.
  * Auth token validation against plex.tv lives in services/plexService.ts (PlexService).
  */
-export class PlexProvider extends BaseProviderConnection implements MediaActuator {
+export class PlexProvider extends BaseProviderConnection implements MediaActuator, FactReporter {
   /** How this provider type is presented, reached and what it can do. */
   static readonly catalogueEntry = {
     label: 'Plex',
     apiKeyRequired: true,
     hostPlaceholder: 'http://localhost:32400',
     apiPath: '',
-    filterData: ['Library contents', 'Item metadata'],
-    capabilities: { mediaServer: 'plexRatingKey' },
+    capabilities: {
+      mediaServer: 'plexRatingKey',
+      facts: {
+        reports: [
+          'playCount',
+          'lastWatchedAt',
+          'addedToMediaServerAt',
+          'studio',
+          'runtimeMinutes',
+          'fileSizeBytes',
+          'releaseDate',
+          'fileContainer',
+          'videoCodec',
+          'audioCodec',
+          'fileResolution',
+          'labels',
+        ],
+      },
+    },
   } as const satisfies ProviderTypeEntry;
 
   /** One call that needs the key, so a wrong key fails the test. */
@@ -125,6 +165,12 @@ export class PlexProvider extends BaseProviderConnection implements MediaActuato
     const libraries = await this.getLibraries();
     const nested = await Promise.all(libraries.map((lib) => this.getLibraryContents(lib.key)));
     return nested.flat();
+  }
+
+  /** The facts Plex reports about every item in its libraries, by rating key. */
+  async readReportedFacts(): Promise<Map<string, Partial<ReportedFacts>>> {
+    const items = await this.getAllItems();
+    return new Map(items.map((item) => [item.ratingKey, reportedFactsOf(item)]));
   }
 
   /** Deletes each item and its files; the server must allow media deletion. */

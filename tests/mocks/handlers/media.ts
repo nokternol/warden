@@ -230,9 +230,9 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     dataType: 'range',
   },
   {
-    key: 'tmdbStatus',
-    label: 'TMDB status',
-    group: 'TMDB',
+    key: 'productionStatus',
+    label: 'Production status',
+    group: 'Metadata',
     contentTypes: ['movie', 'series'],
     dataType: 'string',
     options: [
@@ -245,8 +245,8 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     shortLabel: 'Status',
   },
   {
-    key: 'seerrRequestStatus',
-    label: 'Seerr request status',
+    key: 'requestStatus',
+    label: 'Request status',
     group: 'Requests',
     contentTypes: ['movie', 'series'],
     dataType: 'number',
@@ -259,8 +259,8 @@ export const MOCK_RULES: MediaRuleDescriptor[] = [
     shortLabel: 'Status',
   },
   {
-    key: 'seerrHasIssue',
-    label: 'Seerr has issue',
+    key: 'hasIssue',
+    label: 'Has issue',
     group: 'Requests',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',

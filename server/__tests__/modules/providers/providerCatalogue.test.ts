@@ -7,6 +7,11 @@ import {
   contentTypeOfSourceType,
   isMediaServerType,
   isMediaSourceType,
+  mediaServerOfColumn,
+  providerKindOf,
+  reportersOf,
+  reportsFacts,
+  titleIdColumnOf,
 } from '@server/modules/providers/providerCatalogue';
 import { describe, expect, it } from 'vitest';
 
@@ -42,6 +47,41 @@ describe('the provider catalogue', () => {
       plexRatingKey: MetadataProviderType.PLEX,
       jellyfinItemId: MetadataProviderType.JELLYFIN,
     });
+  });
+});
+
+describe('mediaServerOfColumn', () => {
+  it('names the media server whose links a column needs, and none for TMDB ids', () => {
+    expect(mediaServerOfColumn('plexRatingKey')).toBe(MetadataProviderType.PLEX);
+    expect(mediaServerOfColumn('jellyfinItemId')).toBe(MetadataProviderType.JELLYFIN);
+    expect(mediaServerOfColumn('tmdbId')).toBeUndefined();
+    expect(mediaServerOfColumn(undefined)).toBeUndefined();
+  });
+});
+
+describe('what each type reports', () => {
+  it('answers who reports a fact, of what kind, and by which title id, from the declarations', () => {
+    const { PLEX, JELLYFIN, RADARR, TAUTULLI, SEERR, TMDB, TVMAZE } = MetadataProviderType;
+
+    expect(reportersOf('playCount')).toEqual([PLEX, JELLYFIN, TAUTULLI]);
+    expect(reportersOf('requestStatus')).toEqual([SEERR]);
+    expect([PLEX, JELLYFIN, TAUTULLI, SEERR, TMDB, RADARR].map(providerKindOf)).toEqual([
+      'mediaServer',
+      'mediaServer',
+      'watchHistory',
+      'requestManager',
+      'metadata',
+      undefined,
+    ]);
+    expect([PLEX, JELLYFIN, TAUTULLI, SEERR, TMDB, RADARR].map(titleIdColumnOf)).toEqual([
+      'plexRatingKey',
+      'jellyfinItemId',
+      'plexRatingKey',
+      'tmdbId',
+      'tmdbId',
+      undefined,
+    ]);
+    expect([PLEX, TMDB, RADARR, TVMAZE].map(reportsFacts)).toEqual([true, true, false, false]);
   });
 });
 

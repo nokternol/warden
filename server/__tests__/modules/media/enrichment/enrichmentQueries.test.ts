@@ -54,7 +54,7 @@ describe('EnrichmentQueries', () => {
 
     await queries.replaceProviderFacts(
       tautulliId,
-      new Map([[id, { playCount: 3, tmdbStatus: 'In "Production"' }]])
+      new Map([[id, { playCount: 3, productionStatus: 'In "Production"' }]])
     );
 
     expect(await queries.allFacts()).toEqual([
@@ -62,7 +62,7 @@ describe('EnrichmentQueries', () => {
       {
         mediaIdentityId: id,
         providerId: tautulliId,
-        field: 'tmdbStatus',
+        field: 'productionStatus',
         value: 'In "Production"',
       },
     ]);
@@ -92,14 +92,14 @@ describe('EnrichmentQueries', () => {
     expect(await queries.allFacts()).toHaveLength(2);
   });
 
-  it('throws when a field key has no seeded enrichment_field row (migration/EnrichmentFields drift)', async () => {
+  it('throws when a field key has no seeded enrichment_field row (migration/ReportedFacts drift)', async () => {
     const id = await title();
     const queries = new EnrichmentQueries({ db: getDb() });
-    // Simulates seed drift: a key EnrichmentFields declares but the migration never seeded.
-    await getDb().delete(enrichmentField).where(eq(enrichmentField.key, 'tmdbStatus'));
+    // Simulates seed drift: a key ReportedFacts declares but the migration never seeded.
+    await getDb().delete(enrichmentField).where(eq(enrichmentField.key, 'productionStatus'));
 
     await expect(
-      queries.replaceProviderFacts(tautulliId, new Map([[id, { tmdbStatus: 'Released' }]]))
-    ).rejects.toThrow(/tmdbStatus/);
+      queries.replaceProviderFacts(tautulliId, new Map([[id, { productionStatus: 'Released' }]]))
+    ).rejects.toThrow(/productionStatus/);
   });
 });

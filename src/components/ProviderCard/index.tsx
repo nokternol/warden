@@ -127,7 +127,6 @@ export default function ProviderCard({
   const serverEnabledIds = tasks.filter((t) => t.enabled).map((t) => t.id);
   const enabledTasks = localEnabledTasks ?? serverEnabledIds;
   const allTasks = tasks;
-  const filterData = typeDescriptor?.filterData ?? [];
   const hasTasks = allTasks.length > 0;
 
   const runTest = async (url: string, apiKey: string) => {
@@ -228,10 +227,6 @@ export default function ProviderCard({
 
   const summary = (() => {
     const parts: string[] = [];
-    if (filterData.length > 0) {
-      const labels = filterData.slice(0, 2).join(' · ');
-      parts.push(`Filter: ${labels}${filterData.length > 2 ? ' +more' : ''}`);
-    }
     if (hasTasks) {
       parts.push(`Tasks: ${enabledTasks.length} of ${allTasks.length} enabled`);
     }
@@ -428,23 +423,6 @@ export default function ProviderCard({
           {/* Capabilities section */}
           {!editing && (
             <>
-              {/* Filter data */}
-              {filterData.length > 0 && (
-                <section>
-                  <h3 className="text-xs font-medium text-text-muted mb-2">Filter data</h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    {filterData.map((label) => (
-                      <span
-                        key={label}
-                        className="text-xs px-2 py-0.5 rounded-full bg-surface-elevated text-text-secondary"
-                      >
-                        {label}
-                      </span>
-                    ))}
-                  </div>
-                </section>
-              )}
-
               {/* Available tasks */}
               {hasTasks && (
                 <section>

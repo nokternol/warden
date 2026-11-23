@@ -50,7 +50,7 @@ export const Broken: Story = () => (
             finding({
               kind: 'no-provider',
               ruleLabel: 'Watched',
-              producerLabels: ['Tautulli', 'Plex', 'Jellyfin'],
+              supplierLabels: ['Tautulli', 'Plex', 'Jellyfin'],
               offered: true,
             }),
           ],
@@ -70,7 +70,7 @@ export const CheckData: Story = () => (
         ...query,
         health: {
           findings: [
-            finding({ kind: 'no-data', ruleLabel: 'Seerr request status', contentType: 'movie' }),
+            finding({ kind: 'no-data', ruleLabel: 'Request status', contentType: 'movie' }),
           ],
           queryList: 'checkData',
         },

@@ -123,7 +123,7 @@ describe('MediaPage', () => {
       ]),
       mockProcedure(contract.media.browse.movie, () => EMPTY_PAGE),
       mockProcedure(contract.providers.types, (): ProviderTypeDescriptor[] => [
-        { type: 'RADARR', label: 'Radarr 4K', apiPath: '/api/v3', filterData: [] },
+        { type: 'RADARR', label: 'Radarr 4K', apiPath: '/api/v3' },
       ])
     );
     render(<MediaPage />, { wrapper: Wrapper });

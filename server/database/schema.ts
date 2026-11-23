@@ -125,8 +125,9 @@ export const appSettings = sqliteTable('app_settings', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   /** ISO 3166-1 alpha-2 country code; null until the user sets one. */
   region: text('region'),
-  /** Which media server's fields win when Plex and Jellyfin both produce a
-   *  contested field — see `contestedFieldPrecedence`. */
+  /** Stored, but not applied: reported-fact precedence ranks kinds of provider and, between
+   *  two media servers, takes the first connected. The owner's choice of a primary provider of a
+   *  kind is a follow-up slice (#264), which reshapes this setting. */
   primaryMediaServer: text('primaryMediaServer').notNull().default('PLEX'),
 });
 
@@ -360,9 +361,8 @@ export const automationRunItems = sqliteTable(
 export type AutomationRunItem = typeof automationRunItems.$inferSelect;
 
 // ---------------------------------------------------------------------------
-// enrichmentField — storage identity for a field key. {id, key} only: which
-// provider produces a field is a compile-time fact (activeFieldSet.ts's
-// fieldsByProviderType), not stored here.
+// enrichmentField — storage identity for a reported fact's key. {id, key} only: which
+// provider reports a fact is declared on its connection (`capabilities.facts`), not stored here.
 // ---------------------------------------------------------------------------
 export const enrichmentField = sqliteTable('enrichment_field', {
   id: integer('id').primaryKey({ autoIncrement: true }),

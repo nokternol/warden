@@ -32,10 +32,10 @@ per-source values, with the raw values and their sources still displayed.**
 Table shape, the weighting algorithm, which sources beyond Radarr and Sonarr feed it, and how a rating
 filter would read it are **not decided here**.
 
-## Why ratings don't fit the shared EnrichmentFields pattern
+## Why ratings don't fit the shared reported-fact pattern
 
-Other fields with several producers (`genres`, `certification`, `studio`, `network`) pick one winning
-value per item through `contestedFieldPrecedence`, and the losing values are discarded. That shape is
+A reported fact with several reporters (`studio`, `playCount`) has one value per title: the kind
+precedence (`REPORTED_FACT_PRECEDENCE`) picks the winning value, and the losing values are not used. That shape is
 wrong for ratings. The sources use different scales that cannot be converted into each other (IMDb
 0–10, Rotten Tomatoes 0–100%, Metacritic 0–100, TMDB 0–10 over a different vote population than
 IMDb's), so picking one winner throws away exactly the signal a blended rating needs.

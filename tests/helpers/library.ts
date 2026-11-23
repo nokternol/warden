@@ -9,8 +9,8 @@ import {
 import { type DrizzleDb, getDb } from '@server/kernel/db';
 import { DomainEventBus } from '@server/kernel/eventBus';
 import { getChildLogger } from '@server/kernel/logger';
-import type { EnrichmentFields } from '@server/modules/media';
 import { LibraryCache } from '@server/modules/media/libraryCache';
+import type { ReportedFacts } from '@server/modules/providers';
 import {
   type IProviderFactory,
   type ProviderSettingsService,
@@ -19,8 +19,10 @@ import {
   type RefreshKind,
   type SonarrProvider,
   type SonarrSeries,
+  isMediaServerType,
   readRefreshRecords,
   recordRefreshed,
+  reportsFacts,
 } from '@server/modules/providers';
 import { CatalogRefreshJob } from '@server/modules/providers/catalogRefreshJob';
 import { ProviderFactory } from '@server/modules/providers/providerFactory';
@@ -41,14 +43,14 @@ export async function refreshCatalog(
 }
 
 /**
- * Stores facts about one title as `providerId` reported them, as the enrichment job would, for
- * tests that need facts without running an enricher. Without `providerId` the facts are credited
+ * Stores reported facts about one title as `providerId` reported them, as Enrichment would, for
+ * tests that need facts without running Enrichment. Without `providerId` the facts are credited
  * to the first configured provider. Other titles' facts are left alone.
  */
 export async function seedFacts(
   db: DrizzleDb,
   mediaIdentityId: number,
-  facts: Partial<EnrichmentFields>,
+  facts: Partial<ReportedFacts>,
   providerId?: number
 ): Promise<void> {
   const fields = new Map((await db.select().from(enrichmentField)).map((f) => [f.key, f.id]));
@@ -149,7 +151,7 @@ export function libraryCacheHolding(libraries: InstanceLibrary[]): LibraryCache 
 }
 
 /**
- * Records every active media server's links and every active enricher's facts as refreshed now,
+ * Records every active media server's links and every active fact reporter's facts as refreshed now,
  * where no record says otherwise, so a test's copy reads as fully refreshed.
  */
 async function markOthersRefreshed(db: DrizzleDb): Promise<void> {
@@ -158,15 +160,13 @@ async function markOthersRefreshed(db: DrizzleDb): Promise<void> {
     .select()
     .from(metadataProviders)
     .where(eq(metadataProviders.isActive, true));
-  const kinds: Partial<Record<string, RefreshKind[]>> = {
-    PLEX: ['links', 'facts'],
-    JELLYFIN: ['links', 'facts'],
-    TAUTULLI: ['facts'],
-    SEERR: ['facts'],
-    TMDB: ['facts'],
-  };
   for (const provider of providers) {
-    for (const kind of kinds[provider.type] ?? []) {
+    const type = provider.type as MetadataProviderType;
+    const kinds: RefreshKind[] = [
+      ...(isMediaServerType(type) ? (['links'] as const) : []),
+      ...(reportsFacts(type) ? (['facts'] as const) : []),
+    ];
+    for (const kind of kinds) {
       if (!records.some((r) => r.providerId === provider.id && r.kind === kind)) {
         await recordRefreshed(db, provider.id, kind);
       }

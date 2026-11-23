@@ -13,7 +13,6 @@ export class OmdbProvider extends BaseProviderConnection {
     apiKeyRequired: true,
     apiPath: '',
     defaultUrl: 'http://www.omdbapi.com',
-    filterData: [],
     capabilities: {},
   } as const satisfies ProviderTypeEntry;
 

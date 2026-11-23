@@ -1,9 +1,13 @@
 import { getChildLogger } from '@server/kernel/logger';
 import type { ProviderConfig } from '@server/modules/providers/connections/baseProviderConnection';
-import { SeerrProvider } from '@server/modules/providers/connections/seerrProvider';
+import {
+  type SeerrIssue,
+  SeerrProvider,
+  type SeerrRequest,
+} from '@server/modules/providers/connections/seerrProvider';
 import { server } from '@tests/mocks/server';
 import { http, HttpResponse } from 'msw';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 const logger = getChildLogger('TestSeerrProvider');
 
@@ -48,5 +52,39 @@ describe.each([
     ).getRequests();
     expect(requests).toHaveLength(107);
     expect(skips).toEqual(['0', '100']);
+  });
+});
+
+describe('SeerrProvider — reported facts', () => {
+  function request(tmdbId: number, status: number): SeerrRequest {
+    return {
+      id: 1,
+      status,
+      type: 'movie',
+      requestedBy: { id: 1, displayName: 'u', email: 'u@u.com' },
+      media: { tmdbId, title: 'T' },
+      createdAt: '',
+    };
+  }
+
+  function issue(tmdbId: number): SeerrIssue {
+    return { id: 1, status: 1, media: { tmdbId } };
+  }
+
+  it('reports request status and whether an issue exists, by TMDB id', async () => {
+    const provider = new SeerrProvider(
+      { name: 'Seerr', url: 'http://localhost:5055', apiKey: 'k', settings: {} },
+      logger
+    );
+    vi.spyOn(provider, 'getRequests').mockResolvedValue([request(100, 2), request(999, 3)]);
+    vi.spyOn(provider, 'getIssues').mockResolvedValue([issue(100), issue(555)]);
+
+    expect(await provider.readReportedFacts()).toEqual(
+      new Map([
+        [100, { requestStatus: 2, hasIssue: true }],
+        [999, { requestStatus: 3 }],
+        [555, { hasIssue: true }],
+      ])
+    );
   });
 });

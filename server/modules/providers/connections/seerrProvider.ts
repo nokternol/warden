@@ -1,4 +1,5 @@
-import type { ProviderTypeEntry } from '../roles';
+import type { ReportedFacts } from '../facts';
+import type { FactReporter, ProviderTypeEntry } from '../roles';
 import { BaseProviderConnection } from './baseProviderConnection';
 
 export interface SeerrRequestedBy {
@@ -45,15 +46,17 @@ interface SeerrSearchResponse {
 
 const SEERR_PAGE_SIZE = 100;
 
-export class SeerrProvider extends BaseProviderConnection {
+export class SeerrProvider extends BaseProviderConnection implements FactReporter {
   /** How this provider type is presented, reached and what it can do. */
   static readonly catalogueEntry = {
     label: 'Seerr',
     apiKeyRequired: true,
     hostPlaceholder: 'http://localhost:5055',
     apiPath: '',
-    filterData: ['Request queue'],
-    capabilities: {},
+    capabilities: {
+      providerKind: 'requestManager',
+      facts: { reports: ['requestStatus', 'hasIssue'], matchedBy: 'tmdbId' },
+    },
   } as const satisfies ProviderTypeEntry;
 
   /** One call that needs the key, so a wrong key fails the test. */
@@ -63,6 +66,16 @@ export class SeerrProvider extends BaseProviderConnection {
 
   private get authHeader() {
     return { 'X-Api-Key': this.provider.apiKey ?? '' };
+  }
+
+  /** Each requested title's request status, and whether Seerr holds an issue about it, by TMDB id. */
+  async readReportedFacts(): Promise<Map<number, Partial<ReportedFacts>>> {
+    const [requests, issues] = await Promise.all([this.getRequests(), this.getIssues()]);
+    const facts = new Map<number, Partial<ReportedFacts>>();
+    const of = (tmdbId: number) => facts.get(tmdbId) ?? facts.set(tmdbId, {}).get(tmdbId)!;
+    for (const request of requests) of(request.media.tmdbId).requestStatus = request.status;
+    for (const issue of issues) of(issue.media.tmdbId).hasIssue = true;
+    return facts;
   }
 
   public async getRequests(): Promise<SeerrRequest[]> {

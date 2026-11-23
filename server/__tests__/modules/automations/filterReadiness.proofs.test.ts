@@ -28,9 +28,6 @@ import { AutomationBlockService } from '@server/modules/automations/automationBl
 import { AutomationExecutor } from '@server/modules/automations/automationExecutor';
 import { AutomationRunService } from '@server/modules/automations/automationRunService';
 import { AutomationService } from '@server/modules/automations/automationService';
-import type { MediaEnricher, MediaItem } from '@server/modules/media';
-import { EnrichmentQueries } from '@server/modules/media/enrichment/enrichment.queries';
-import { EnrichmentJob } from '@server/modules/media/enrichmentJob';
 import type { LibraryCopy } from '@server/modules/media/libraryCache';
 import { MediaQueryEngine } from '@server/modules/media/mediaQueryEngine';
 import type { Filter, NormalizedMovie } from '@server/modules/media/ruleRegistry';
@@ -140,12 +137,12 @@ describe('filter readiness, as automations see it', () => {
 
   describe('safety pins', () => {
     it('refuses to save a query on a rule the scope declaration defers', async () => {
-      // `tmdbStatus` is produced only by TMDB, which the scope declaration defers.
+      // `productionStatus` is produced only by TMDB, which the scope declaration defers.
       await expect(
         mediaQueryService.create({
           name: 'Released',
           contentType: 'movie',
-          filters: [{ ruleKey: 'tmdbStatus', value: 'Released' }],
+          filters: [{ ruleKey: 'productionStatus', value: 'Released' }],
         })
       ).rejects.toThrow(ValidationError);
     });
@@ -165,7 +162,7 @@ describe('filter readiness, as automations see it', () => {
       // Written past `create`'s validation, as a query saved before the rule was deferred.
       await getDb()
         .insert(mediaQueryFilterValues)
-        .values({ mediaQueryId: exclude.id, ruleKey: 'tmdbStatus', value: 'Released' });
+        .values({ mediaQueryId: exclude.id, ruleKey: 'productionStatus', value: 'Released' });
       const automation = await automationOver(radarr.id, [
         { id: include.id, role: 'include' },
         { id: exclude.id, role: 'exclude' },
@@ -175,7 +172,7 @@ describe('filter readiness, as automations see it', () => {
 
       const run = await latestRun();
       expect(run.status).toBe('skipped');
-      expect(run.error).toMatch(/^TMDB status filter/);
+      expect(run.error).toMatch(/^Production status filter/);
       expect(unmonitorCalls).toBe(0);
     });
 
@@ -493,7 +490,7 @@ describe('when a module singleton starts listening on the event bus', () => {
     };
     const before = bus.emitter.listenerCount('provider:changed');
 
-    void container.cradle.activeFieldSetCache;
+    void container.cradle.libraryCache;
 
     expect(bus.emitter.listenerCount('provider:changed')).toBe(before + 1);
   });

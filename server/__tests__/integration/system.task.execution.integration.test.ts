@@ -59,7 +59,7 @@ describe('system task execution via container — system:enrichment', () => {
     expect(run.status).toBe('success');
   });
 
-  it('resolves an active Seerr provider so enrichment writes a non-null seerrRequestStatus', async () => {
+  it('resolves an active Seerr provider so enrichment writes a non-null requestStatus', async () => {
     server.use(
       http.get('http://overseerr.test/api/v1/request', () =>
         HttpResponse.json({
@@ -98,7 +98,7 @@ describe('system task execution via container — system:enrichment', () => {
     expect(facts).toContainEqual(
       expect.objectContaining({
         mediaIdentityId: identity.id,
-        field: 'seerrRequestStatus',
+        field: 'requestStatus',
         value: 2,
       })
     );

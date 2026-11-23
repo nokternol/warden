@@ -222,9 +222,9 @@ const ALL_RULES: GatedRule[] = [
     providers: ['SONARR'],
   },
   {
-    key: 'tmdbStatus',
-    label: 'TMDB Status',
-    group: 'TMDB',
+    key: 'productionStatus',
+    label: 'Production status',
+    group: 'Metadata',
     contentTypes: ['movie', 'series'],
     dataType: 'string',
     options: [
@@ -238,7 +238,7 @@ const ALL_RULES: GatedRule[] = [
     providers: ['TMDB'],
   },
   {
-    key: 'seerrRequestStatus',
+    key: 'requestStatus',
     label: 'Status',
     group: 'Requests',
     contentTypes: ['movie', 'series'],
@@ -253,7 +253,7 @@ const ALL_RULES: GatedRule[] = [
     providers: ['SEERR'],
   },
   {
-    key: 'seerrHasIssue',
+    key: 'hasIssue',
     label: 'Has Issue',
     group: 'Requests',
     contentTypes: ['movie', 'series'],
@@ -413,8 +413,8 @@ const ALL_RULES: GatedRule[] = [
     providers: ['RADARR'],
   },
   {
-    key: 'jellyfinIsFavorite',
-    label: 'Jellyfin favorite',
+    key: 'isFavorite',
+    label: 'Favorite',
     group: 'Media server',
     contentTypes: ['movie', 'series'],
     dataType: 'boolean',
@@ -627,12 +627,12 @@ describe('MediaFilterBar — provider gating', () => {
     expect(screen.queryByRole('button', { name: /watched/i })).not.toBeInTheDocument();
   });
 
-  it('renders a shared rule whose sole active producer is JELLYFIN, reachable via Add filter', async () => {
+  it('renders a shared rule whose sole active supplier is JELLYFIN, reachable via Add filter', async () => {
     const user = setupUser();
     render(
       <MediaFilterBar {...makeProps({ ...propsFor(['JELLYFIN']), lookups: EMPTY_LOOKUPS })} />
     );
-    await addFilter(user, 'Jellyfin favorite');
+    await addFilter(user, 'Favorite');
     expect(screen.getByRole('button', { name: 'Favorited' })).toBeInTheDocument();
   });
 
@@ -1419,14 +1419,14 @@ describe('MediaFilterBar — Seerr controls', () => {
 });
 
 describe('MediaFilterBar — TMDB controls', () => {
-  it('shows TMDB Status options (e.g. Returning Series) when TMDB is configured', async () => {
+  it('shows Production status options (e.g. Returning Series) when TMDB is configured', async () => {
     const user = setupUser();
     render(<MediaFilterBar {...makeProps({ ...propsFor(['TMDB']), lookups: EMPTY_LOOKUPS })} />);
-    await addFilter(user, /tmdb status/i);
+    await addFilter(user, /production status/i);
     expect(screen.getByRole('button', { name: 'Returning Series' })).toBeInTheDocument();
   });
 
-  it('does not show TMDB Status options when TMDB is not configured', () => {
+  it('does not show Production status options when TMDB is not configured', () => {
     render(<MediaFilterBar {...makeProps({ ...propsFor(['RADARR']), lookups: EMPTY_LOOKUPS })} />);
     expect(screen.queryByRole('button', { name: 'Returning Series' })).not.toBeInTheDocument();
   });

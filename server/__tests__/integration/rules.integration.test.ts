@@ -81,7 +81,7 @@ describe('GET /api/rules', () => {
     expect(keys).not.toContain('monitored');
   });
 
-  it('serves no rule whose only configured producers are types that are not offered', async () => {
+  it('serves no rule whose only configured suppliers are types that are not offered', async () => {
     // A TMDB row can exist from before TMDB was deferred; it produces nothing offered.
     await providerSettingsService.create({
       type: MetadataProviderType.TMDB,
@@ -93,6 +93,30 @@ describe('GET /api/rules', () => {
     const res = await supertest(app).get('/api/rules');
     expect(res.status).toBe(200);
     expect(res.body.data.map((r: { key: string }) => r.key)).toEqual([]);
+  });
+
+  it('offers a rule only while a supplier of what it reads is active and offered', async () => {
+    const keysWith = async (type: MetadataProviderType) => {
+      const created = await providerSettingsService.create({
+        type,
+        name: `Test ${type}`,
+        url: 'http://localhost:1234/api',
+        apiKey: 'test-api-key',
+      });
+      const res = await supertest(app).get('/api/rules');
+      await providerSettingsService.delete(created.id);
+      return res.body.data.map((r: { key: string }) => r.key) as string[];
+    };
+
+    const withPlex = await keysWith(MetadataProviderType.PLEX);
+    expect(withPlex).toContain('studio');
+    expect(withPlex).not.toContain('title');
+    expect(withPlex).not.toContain('year');
+    expect(withPlex).not.toContain('hasFile');
+
+    const withSonarr = await keysWith(MetadataProviderType.SONARR);
+    expect(withSonarr).toContain('year');
+    expect(withSonarr).not.toContain('studio');
   });
 
   it('returns only movie-compatible fields when contentType=movie', async () => {
@@ -239,7 +263,7 @@ describe('GET /api/rules', () => {
       expect(groupOf('year')).toBeUndefined();
     });
 
-    it('exposes presentation only — no predicate, producers, field mapping or required flag', async () => {
+    it('exposes presentation only — no predicate, suppliers, field mapping or required flag', async () => {
       const rules = await rulesServedWith(
         MetadataProviderType.RADARR,
         MetadataProviderType.SONARR,

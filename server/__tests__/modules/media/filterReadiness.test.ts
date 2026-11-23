@@ -1,5 +1,5 @@
 /**
- * Filter readiness judged from hand-built facts: no database.
+ * Filter readiness judged from hand-built inputs: no database.
  *
  * Run: vitest run --project server
  */
@@ -7,29 +7,60 @@ import type { ReadinessFinding, ReadinessKind } from '@contract/readiness';
 import { MetadataProviderType } from '@server/database/schema';
 import {
   type FilterList,
-  type ProviderFact,
-  type ReadinessFacts,
+  type ReadinessInputs,
   automationAnswer,
   filterAnswer,
   findingsFor,
 } from '@server/modules/media/filterReadiness';
+import {
+  type RefreshKind,
+  type StoredRefreshRecord,
+  providerTypeLabel,
+} from '@server/modules/providers';
 import { describe, expect, it } from 'vitest';
 
 const { RADARR, SONARR, PLEX, TAUTULLI } = MetadataProviderType;
 
-/** Facts with these instances, every one with a successful `facts` refresh unless given. */
-function facts(
-  providers: ProviderFact[],
-  overrides: Partial<Omit<ReadinessFacts, 'providers'>> = {}
-): ReadinessFacts {
+/** A configured instance, and whether the loaded copy holds it as active. */
+interface Instance {
+  id: number;
+  type: MetadataProviderType;
+  isActive: boolean;
+}
+
+/** One provider's refresh of one kind: when it last succeeded, and when it last failed. */
+interface Refresh {
+  providerId: number;
+  refreshedAt: number | null;
+  failedAt: number | null;
+}
+
+/**
+ * Inputs with these instances, every one with successful `facts` and `links` refreshes unless
+ * given; the active ones are the loaded copy's providers.
+ */
+function inputs(
+  providers: Instance[],
+  given: { factsRecords?: Refresh[]; linksRecords?: Refresh[] } = {}
+): ReadinessInputs {
+  const good = providers.map((p) => ({ providerId: p.id, refreshedAt: 1, failedAt: null }));
+  const records = (kind: RefreshKind, refreshes: Refresh[]): StoredRefreshRecord[] =>
+    refreshes.map((r) => ({ ...r, kind, error: r.failedAt === null ? null : 'down' }));
   return {
-    providers,
-    factsRecords: providers.map((p) => ({ providerId: p.id, refreshedAt: 1, failedAt: null })),
-    ...overrides,
+    providers: providers.map(({ id, type }) => ({ id, type })),
+    library: {
+      providers: providers
+        .filter((p) => p.isActive)
+        .map(({ id, type }) => ({ id, type, name: providerTypeLabel(type) })),
+      records: [
+        ...records('facts', given.factsRecords ?? good),
+        ...records('links', given.linksRecords ?? good),
+      ],
+    },
   };
 }
 
-const active = (id: number, type: MetadataProviderType): ProviderFact => ({
+const active = (id: number, type: MetadataProviderType): Instance => ({
   id,
   type,
   isActive: true,
@@ -41,47 +72,47 @@ const movies = (filters: FilterList['filters'], queryId?: number): FilterList =>
   filters,
 });
 
-const kinds = (list: FilterList, f: ReadinessFacts) => findingsFor(f, list).map((x) => x.kind);
+const kinds = (list: FilterList, f: ReadinessInputs) => findingsFor(f, list).map((x) => x.kind);
 
 describe('findingsFor', () => {
   it('raises no-library for a movie list when no Radarr is active, with or without filters', () => {
-    expect(kinds(movies([]), facts([active(1, SONARR)]))).toEqual(['no-library']);
+    expect(kinds(movies([]), inputs([active(1, SONARR)]))).toEqual(['no-library']);
   });
 
   it('raises nothing for a list with no filters when its library source is active', () => {
-    expect(kinds(movies([]), facts([active(1, RADARR)]))).toEqual([]);
+    expect(kinds(movies([]), inputs([active(1, RADARR)]))).toEqual([]);
   });
 
   it('raises unknown-rule for a filter naming a rule that is not registered', () => {
     const [finding] = findingsFor(
-      facts([active(1, RADARR)]),
+      inputs([active(1, RADARR)]),
       movies([{ ruleKey: 'retiredRule', value: 'x' }], 7)
     );
     expect(finding).toMatchObject({ kind: 'unknown-rule', queryId: 7, ruleKey: 'retiredRule' });
   });
 
-  it('raises no-provider for an enrichment-only filter none of whose producers is active', () => {
+  it('raises no-provider for a reported-fact filter none of whose suppliers is active', () => {
     const [finding] = findingsFor(
-      facts([active(1, RADARR)]),
+      inputs([active(1, RADARR)]),
       movies([{ ruleKey: 'watched', value: true }])
     );
     expect(finding).toMatchObject({ kind: 'no-provider', ruleKey: 'watched' });
   });
 
-  it('raises nothing for an enrichment-only filter when any one of its producers is active', () => {
-    const f = facts([active(1, RADARR), active(2, TAUTULLI)]);
+  it('raises nothing for a reported-fact filter when any one of its suppliers is active', () => {
+    const f = inputs([active(1, RADARR), active(2, TAUTULLI)]);
     expect(kinds(movies([{ ruleKey: 'watched', value: true }]), f)).toEqual([]);
   });
 
   it('raises only no-library for a movie filter on Monitored when Sonarr is the only source', () => {
     expect(
-      kinds(movies([{ ruleKey: 'monitored', value: true }]), facts([active(1, SONARR)]))
+      kinds(movies([{ ruleKey: 'monitored', value: true }]), inputs([active(1, SONARR)]))
     ).toEqual(['no-library']);
   });
 
   it('raises no-provider for a rule only a deferred provider type produces', () => {
-    const f = facts([active(1, RADARR)]);
-    expect(kinds(movies([{ ruleKey: 'tmdbStatus', value: 'Released' }]), f)).toEqual([
+    const f = inputs([active(1, RADARR)]);
+    expect(kinds(movies([{ ruleKey: 'productionStatus', value: 'Released' }]), f)).toEqual([
       'no-provider',
     ]);
   });
@@ -93,54 +124,75 @@ describe('findingsFor', () => {
     });
 
     it('raises inactive-instance when the instance is inactive', () => {
-      const f = facts([active(1, RADARR), { id: 2, type: RADARR, isActive: false }]);
+      const f = inputs([active(1, RADARR), { id: 2, type: RADARR, isActive: false }]);
       expect(findingsFor(f, movies([tagsOn(2)]))).toMatchObject([
         { kind: 'inactive-instance', ruleKey: 'tagIds', providerIds: [2] },
       ]);
     });
 
     it('raises inactive-instance when the instance no longer exists', () => {
-      expect(kinds(movies([tagsOn(9)]), facts([active(1, RADARR)]))).toEqual(['inactive-instance']);
+      expect(kinds(movies([tagsOn(9)]), inputs([active(1, RADARR)]))).toEqual([
+        'inactive-instance',
+      ]);
     });
 
     it('raises inactive-instance when the instance is active but is not a source of the content type', () => {
-      const f = facts([active(1, RADARR), active(2, SONARR)]);
+      const f = inputs([active(1, RADARR), active(2, SONARR)]);
       expect(kinds(movies([tagsOn(2)]), f)).toEqual(['inactive-instance']);
     });
 
     it('raises nothing when the instance is an active source of the content type', () => {
-      expect(kinds(movies([tagsOn(1)]), facts([active(1, RADARR)]))).toEqual([]);
+      expect(kinds(movies([tagsOn(1)]), inputs([active(1, RADARR)]))).toEqual([]);
     });
   });
 
-  describe('an enrichment-only filter with an active producer', () => {
+  describe('a reported-fact filter with an active supplier', () => {
     const watched = movies([{ ruleKey: 'watched', value: true }]);
 
-    it("raises data-incomplete, naming the supplier, while a supplier's facts failed or never refreshed", () => {
+    it('raises data-incomplete, naming the reporters, while no reporter has a good facts refresh', () => {
       const providers = [active(1, RADARR), active(4, PLEX), active(2, TAUTULLI)];
-      const failed = facts(providers, {
+      const failed = inputs(providers, {
+        factsRecords: [
+          { providerId: 4, refreshedAt: 1, failedAt: 5 },
+          { providerId: 2, refreshedAt: 1, failedAt: 5 },
+        ],
+      });
+      const never = inputs(providers, { factsRecords: [] });
+      for (const f of [failed, never]) {
+        expect(findingsFor(f, watched)).toMatchObject([
+          { kind: 'data-incomplete', ruleKey: 'watched', providerIds: [2, 4] },
+        ]);
+      }
+    });
+
+    it('raises nothing while another reporter of the fact still has a good refresh', () => {
+      const providers = [active(1, RADARR), active(4, PLEX), active(2, TAUTULLI)];
+      const f = inputs(providers, {
         factsRecords: [
           { providerId: 4, refreshedAt: 1, failedAt: null },
           { providerId: 2, refreshedAt: 1, failedAt: 5 },
         ],
       });
-      const never = facts(providers, {
-        factsRecords: [{ providerId: 4, refreshedAt: 1, failedAt: null }],
+      expect(kinds(watched, f)).toEqual([]);
+    });
+
+    it('raises data-incomplete for a reporter whose facts are fresh but whose title links failed', () => {
+      const providers = [active(1, RADARR), active(4, PLEX)];
+      const f = inputs(providers, {
+        linksRecords: [{ providerId: 4, refreshedAt: 1, failedAt: 5 }],
       });
-      for (const f of [failed, never]) {
-        expect(findingsFor(f, watched)).toMatchObject([
-          { kind: 'data-incomplete', ruleKey: 'watched', providerIds: [2] },
-        ]);
-      }
+      expect(findingsFor(f, watched)).toMatchObject([
+        { kind: 'data-incomplete', ruleKey: 'watched', providerIds: [4] },
+      ]);
     });
 
     it('believes successful facts records: a fact no title holds raises nothing', () => {
-      const f = facts([active(1, RADARR), active(4, PLEX), active(2, TAUTULLI)]);
+      const f = inputs([active(1, RADARR), active(4, PLEX), active(2, TAUTULLI)]);
       expect(kinds(watched, f)).toEqual([]);
     });
 
     it('treats data-incomplete as informational: the query list is clear and runs proceed', () => {
-      const f = facts([active(1, RADARR), active(2, TAUTULLI)], { factsRecords: [] });
+      const f = inputs([active(1, RADARR), active(2, TAUTULLI)], { factsRecords: [] });
       const findings = findingsFor(f, watched);
       expect(findings.map((x) => x.kind)).toEqual(['data-incomplete']);
       expect(filterAnswer(findings)).toEqual({ queryList: 'clear', mediaPage: 'clear' });
@@ -157,13 +209,13 @@ describe('findingsFor', () => {
       ruleKey: 'tagIds',
       value: { providerId, ids: [id] },
     });
-    const f = facts([active(1, RADARR)]);
+    const f = inputs([active(1, RADARR)]);
     const findings = findingsFor(f, movies([tags(8, 1), tags(8, 2), tags(9, 1)]));
     expect(findings.map((x) => x.providerIds)).toEqual([[8], [9]]);
   });
 
   it("words each finding with its rule's label and provider types' display labels", () => {
-    const f = facts([
+    const f = inputs([
       active(1, RADARR),
       active(2, SONARR),
       { id: 3, type: RADARR, isActive: false },
@@ -174,14 +226,14 @@ describe('findingsFor', () => {
         { ruleKey: 'tagIds', value: { providerId: 3, ids: [1] } },
         { ruleKey: 'tagIds', value: { providerId: 2, ids: [1] } },
         { ruleKey: 'watched', value: true },
-        { ruleKey: 'tmdbStatus', value: 'Released' },
+        { ruleKey: 'productionStatus', value: 'Released' },
       ])
     ).map((x) => x.message);
     expect(messages).toEqual([
       'Tags filter names Radarr instance 3, which is not an active provider',
       'Tags filter names Sonarr instance 2, which is not a Radarr provider',
-      'Watched filter needs a Tautulli, Plex or Jellyfin provider, and none is active',
-      'TMDB status filter needs a TMDB provider, which Warden does not offer',
+      'Watched filter needs a Plex, Jellyfin or Tautulli provider, and none is active',
+      'Production status filter needs a TMDB provider, which Warden does not offer',
     ]);
   });
 });

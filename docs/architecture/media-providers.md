@@ -4,12 +4,10 @@ A ground-truth catalog of every external system this app can talk to, one entry 
 `MetadataProviderType` ([`server/database/schema.ts`](ref:path:server/database/schema.ts)). For each:
 what it is, which role(s) it plays in the shipped role model
 ([`docs/architecture/provider-roles-and-identity.md`](ref:path:docs/architecture/provider-roles-and-identity.md),
-[`media-enricher-role.md`](ref:path:docs/architecture/media-enricher-role.md),
 [`actuator-task-ownership.md`](ref:path:docs/architecture/actuator-task-ownership.md)), what its connection
 class actually implements today, and whether that capability is wired into the media-item pipeline
-(`MediaEnricher`/filter gating) or just sits unused. This is a survey of what exists, not a design — see
-the closing note for how it relates to
-[`docs/architecture/media-field-provider-role.md`](ref:path:docs/architecture/media-field-provider-role.md).
+(the facts it reports and the rules that read them) or just sits unused. This is a survey of what
+exists, not a design.
 
 Every provider authenticates via the single `apiKey` column on `metadata_provider`
 ([`server/database/schema.ts`](ref:path:server/database/schema.ts)) — a per-instance credential string,
@@ -79,8 +77,9 @@ not-yet-built `changeLanguageProfile` task.
 
 **What it is:** Plex watch-history/statistics tracker.
 
-**Role:** `MediaEnricher` + `MediaActuator`. It declares `addressedBy: 'plexRatingKey'`: it addresses
-titles by the Plex column without being the media server for it.
+**Role:** fact reporter (`providerKind: 'watchHistory'`) + `MediaActuator`. It declares
+`addressedBy: 'plexRatingKey'`: it addresses titles, and its answers are matched, by the Plex column
+without being the media server for it.
 
 **Auth:** API key (`?apikey=` query param, plus a `cmd=` command dispatch through a single `api/v2`
 endpoint).
@@ -96,13 +95,10 @@ one viewing (paused, resumed later) into one row that carries a single id; delet
 would leave the other sessions behind. Rows with `row_id: null` (not yet stored, such as a stream
 still playing) are skipped.
 
-**Wired into the media-item pipeline?** Yes — `tautulliEnricher`
-([`enrichment/enricherAdapters.ts`](ref:path:server/modules/media/enrichment/enricherAdapters.ts)) calls
-`getHistory()`, runs it through `tautulliFieldProvider`
-([`mediaFieldProvider.ts`](ref:path:server/modules/media/mediaFieldProvider.ts),
-see [`docs/architecture/media-field-provider-role.md`](ref:path:docs/architecture/media-field-provider-role.md))
-into `playCount`/`lastWatchedAt` keyed by `plexRatingKey`, and wins precedence over Plex for both
-fields in `contestedFieldPrecedence`. Gated into `ruleRegistry.ts` (`watched`, `lastWatchedDaysAgo`).
+**Wired into the media-item pipeline?** Yes. It declares `facts: { reports: ['playCount',
+'lastWatchedAt'] }`, and its `readReportedFacts` translates the history into play count and last
+watched by rating key. As a watch-history tracker it ranks before a media server for both facts
+(`REPORTED_FACT_PRECEDENCE`). Read by the `watched` and `lastWatchedDaysAgo` rules.
 
 **What counts as a view.** History is read grouped (Tautulli's default), so one row is one viewing
 however many sessions it took. Only rows with `watched_status === 1` count — the viewing passed
@@ -116,9 +112,9 @@ its show (`grandparent_rating_key`), which is what a series is matched by.
 
 **What it is:** media server — the thing users actually watch on.
 
-**Role:** `MediaEnricher` + `MediaActuator`. Explicitly *not* `MediaSource` today — "media servers cannot
-own" is a documented limitation in `provider-roles-and-identity.md`; Plex only enriches Radarr/Sonarr-owned
-items by shared `tmdbId`/`tvdbId`/`plexRatingKey`. It declares `mediaServer: 'plexRatingKey'` and
+**Role:** fact reporter (a media server) + `MediaActuator`. Explicitly *not* `MediaSource` today —
+"media servers cannot own" is a documented limitation in `provider-roles-and-identity.md`; Plex only
+reports facts about Radarr/Sonarr-owned titles, matched by `plexRatingKey`. It declares `mediaServer: 'plexRatingKey'` and
 implements `PlexLinks`, the item list the catalog refresh links titles from.
 
 **Auth:** access token (`X-Plex-Token` header). Separate token validation against `plex.tv` lives in
@@ -129,23 +125,22 @@ implements `PlexLinks`, the item list the catalog refresh links titles from.
 tasks (`deleteFromLibrary`, `moveToTrash`, `refreshMetadata`, `markPlayed`, `markUnplayed`) are all
 modelled-only.
 
-**Wired into the media-item pipeline?** Yes — `plexEnricher`
-([`enrichment/enricherAdapters.ts`](ref:path:server/modules/media/enrichment/enricherAdapters.ts)) calls
-`getAllItems()`, runs it through `plexFieldProvider`
-([`mediaFieldProvider.ts`](ref:path:server/modules/media/mediaFieldProvider.ts)) into `playCount`/
-`lastWatchedAt` keyed by `ratingKey`, loses precedence to Tautulli when both are configured. Also
-contributes `plexAddedAt` (Plex's own library-added timestamp, ISO-converted from `addedAt`) —
-single-producer, no precedence entry, gated into `ruleRegistry.ts` as `plexAddedDaysAgo`. Also
-stamped onto `media_identity` groups by the identity job (`runForPlex`) for `plexRatingKey` matching,
-by the `Guid` ids a listing carries with `includeGuids=1` — never inserts a group of its own.
+**Wired into the media-item pipeline?** Yes. Its `facts` declaration lists play count, last watched,
+`addedToMediaServerAt` (its library-added time), studio, runtime, the primary file's details
+(`fileSizeBytes`, `fileContainer`, `videoCodec`, `audioCodec`, `fileResolution`), release date and
+labels; `readReportedFacts` translates `getAllItems()` into them by rating key. A watch-history tracker
+outranks it for play count and last watched; between Plex and Jellyfin the first connected wins per
+title. Also stamped onto `media_identity` groups by the catalog refresh (`runForPlex`) for
+`plexRatingKey` matching, by the `Guid` ids a listing carries with `includeGuids=1` — never inserts a
+group of its own.
 
 ## Jellyfin
 
 **What it is:** alternative media server (Plex analog).
 
-**Role:** `MediaEnricher` + `MediaActuator`. Explicitly *not* `MediaSource`, same "media servers cannot
-own" limitation as Plex — Jellyfin only enriches Radarr/Sonarr-owned items, matched by
-`_sourceIds.jellyfin` (populated by the identity job's `runForJellyfin` stamping pass, matching by
+**Role:** fact reporter (a media server) + `MediaActuator`. Explicitly *not* `MediaSource`, same "media
+servers cannot own" limitation as Plex — Jellyfin only reports facts about Radarr/Sonarr-owned titles,
+matched by `jellyfinItemId` (stamped by the catalog refresh's `runForJellyfin` pass, matching by
 `contentType` + `tmdbId`/`tvdbId`, mirroring `runForPlex`). It declares
 `mediaServer: 'jellyfinItemId'` and implements `JellyfinLinks`.
 
@@ -158,23 +153,14 @@ so the response carries per-user `UserData` — `IsFavorite`/`PlayCount`/`LastPl
 Actuator tasks (`deleteItem`, `refreshMetadata`, `markPlayed`, `markUnplayed`, `addToCollection`,
 `removeFromCollection`) are all real, bound to Jellyfin's API.
 
-**Wired into the media-item pipeline?** Yes — `jellyfinEnricher`
-([`enrichment/enricherAdapters.ts`](ref:path:server/modules/media/enrichment/enricherAdapters.ts)) calls
-`getAllItems()`, runs it through `jellyfinFieldProvider`
-([`mediaFieldProvider.ts`](ref:path:server/modules/media/mediaFieldProvider.ts)) into `playCount`/
-`lastWatchedAt` (synthesized from `Played` when `PlayCount` is absent), `studio`, `runtimeMinutes`
-(`RunTimeTicks` ÷ 10,000 ÷ 60,000), the shared file-tech fields (`fileContainer`/`videoCodec`/
-`audioCodec`/`fileResolution`/`fileSizeBytes`, from `MediaSources`/`MediaStreams`), `releaseDate`
-(`PremiereDate`), `labels` (`Tags`, shared with Plex's `Label` tags), `jellyfinAddedAt` (`DateCreated`,
-kept prefixed and separate from `plexAddedAt` — mutually-exclusive server choices), and `isFavorite`
-(`UserData.IsFavorite`, no other producer). Loses precedence to Tautulli and Plex for `playCount`/
-`lastWatchedAt` (`contestedFieldPrecedence`: Tautulli > Plex > Jellyfin, a fixed literal order pending
-the settings-driven `primaryMediaServer` Plex/Jellyfin swap, which nothing calls yet). `genres`/
-`certification` are deliberately not wired as Jellyfin-producer fields — same construction-time-vs-
-enrichment-overwrite gap Plex's `genres`/`certification` hit, blocked on precedence-ordering machinery.
-Gated into `ruleRegistry.ts` (`studio`, `runtimeMinutes`, `fileContainer`, `videoCodec`, `audioCodec`,
-`fileResolution`, `fileSizeBytes`, `releaseDaysAgo`, `labels`, `watched`, `lastWatchedDaysAgo`,
-`jellyfinAddedDaysAgo`, `jellyfinIsFavorite`).
+**Wired into the media-item pipeline?** Yes. Its `facts` declaration lists the same facts as Plex plus
+`isFavorite`; `readReportedFacts` translates `getAllItems()` by item id: play count (one play for an item
+marked played with no count), last watched, `addedToMediaServerAt` (`DateCreated`), studio, runtime
+(`RunTimeTicks` ÷ 10,000 ÷ 60,000), the primary file's details from `MediaSources`/`MediaStreams` with a
+resolution tier from the video height, release date (`PremiereDate`), labels (`Tags`) and favourite
+(`UserData.IsFavorite`). A watch-history tracker outranks it for play count and last watched; between
+Plex and Jellyfin the first connected wins per title. `genres`/`certification` are catalog facts of the
+source and are not reported by Jellyfin.
 
 ## Seerr
 
@@ -182,19 +168,18 @@ Gated into `ruleRegistry.ts` (`studio`, `runtimeMinutes`, `fileContainer`, `vide
 Overseerr's API-compatible successor, so one provider type (`SEERR`) and one connection class serve a
 Seerr server and an Overseerr server alike; there is no separate Overseerr type.
 
-**Role:** `MediaEnricher`. No `MediaActuator` implementation — `SeerrProvider` does not implement
-`MediaActuator` or declare `tasks()`.
+**Role:** fact reporter (`providerKind: 'requestManager'`). No `MediaActuator` implementation —
+`SeerrProvider` does not implement `MediaActuator` or declare `tasks()`.
 
 **Auth:** API key (`X-Api-Key` header).
 
 **What the app can pull today** ([`connections/seerrProvider.ts`](ref:path:server/modules/providers/connections/seerrProvider.ts)):
 `getRequests()`, `getIssues()`, `search(query)`.
 
-**Wired into the media-item pipeline?** Yes — `seerrEnricher`
-([`enrichment/enricherAdapters.ts`](ref:path:server/modules/media/enrichment/enricherAdapters.ts)) calls
-`getRequests()`+`getIssues()`, runs them through `seerrFieldProvider`
-([`mediaFieldProvider.ts`](ref:path:server/modules/media/mediaFieldProvider.ts)) into
-`seerrRequestStatus`/`seerrHasIssue` keyed by `tmdbId`. Gated into `ruleRegistry.ts`.
+**Wired into the media-item pipeline?** Yes. It declares `facts: { reports: ['requestStatus',
+'hasIssue'], matchedBy: 'tmdbId' }`; `readReportedFacts` reads `getRequests()` and `getIssues()` into
+request status and whether any issue exists, keyed by TMDB id. Read by the `requestStatus` and
+`hasIssue` rules.
 [`ProviderFactory`](ref:path:server/modules/providers/providerFactory.ts) builds it for the `SEERR` type, and
 the connection probe checks `/api/v1/status`. The tests mock both an Overseerr server and a Seerr server; behaviour against a live Seerr
 server is not yet verified.
@@ -203,7 +188,7 @@ server is not yet verified.
 
 **What it is:** general-purpose movie/TV metadata and ratings service.
 
-**Role:** `MediaEnricher`. No `MediaActuator` — read-only metadata source.
+**Role:** fact reporter (`providerKind: 'metadata'`). No `MediaActuator` — read-only metadata source.
 
 **Auth:** API key (`api_key` query param).
 
@@ -212,24 +197,20 @@ server is not yet verified.
 collection, spoken languages, origin country), and `getMovieWatchProviders`/`getTvWatchProviders`
 (streaming-service flags for a region).
 
-**Wired into the media-item pipeline?** Partially. `tmdbEnricher`
-([`enrichment/enricherAdapters.ts`](ref:path:server/modules/media/enrichment/enricherAdapters.ts)) only
-calls `getStatus(tmdbId)`, contributing a single field (`tmdbStatus`), gated into `ruleRegistry.ts`. The
-larger enriched-details and watch-providers surface is implemented but has no consumer, and nothing
-reads TMDB's `vote_average` as a rating. `TmdbService`'s trending-backdrops feature
+**Wired into the media-item pipeline?** Partially. It declares `facts: { reports: ['productionStatus'],
+matchedBy: 'tmdbId' }`; `readReportedFacts` calls `getStatus(tmdbId)` once for each TMDB id it is asked
+about. The `productionStatus` rule reads it and is deferred with the type. The larger enriched-details
+and watch-providers surface is implemented but has no consumer, and nothing reads TMDB's
+`vote_average` as a rating. `TmdbService`'s trending-backdrops feature
 ([`server/modules/providers/tmdbService.ts`](ref:path:server/modules/providers/tmdbService.ts),
-unrelated background-image fetching) calls TMDB on its own. None of it flows through `EnrichmentJob`
-onto a `MediaItem`. Also
-note `ruleRegistry.ts`'s `genres`/`year`/`certification` rules already list TMDB as a `providers`
-entry even though no enricher currently populates those fields from TMDB for a `MediaItem` — those entries
-describe a plausible source, not a wired one.
+unrelated background-image fetching) calls TMDB on its own.
 
 ## OMDB (Open Movie Database)
 
 **What it is:** IMDB-backed ratings/metadata lookup service (also aggregates Rotten Tomatoes and
 Metacritic scores).
 
-**Role:** inert. `OmdbProvider` implements none of `MediaSource`, `MediaEnricher` or `MediaActuator`.
+**Role:** inert. `OmdbProvider` implements none of `MediaSource`, `FactReporter` or `MediaActuator`.
 It is the connection `ProviderFactory` builds for the type, and it carries only what the base
 connection gives every provider.
 
@@ -239,14 +220,14 @@ connection gives every provider.
 nothing. The type is deferred and has no consumer. Per-source ratings would need an identity-keyed
 store before OMDb has anything to feed, since a title search is ambiguous.
 
-**Wired into the media-item pipeline?** No. No enricher or rule names OMDB as a producer.
+**Wired into the media-item pipeline?** No. It declares no facts.
 
 ## TVMaze
 
 **What it is:** free, keyless public TV-show metadata/ratings API.
 
 **Role:** inert toward the media pipeline today — `TvMazeProvider` implements none of `MediaSource`/
-`MediaEnricher`/`MediaActuator`.
+`FactReporter`/`MediaActuator`.
 
 **Auth:** none. `ProviderFactory.tvMazeLookup()`
 ([`server/modules/providers/providerFactory.ts`](ref:path:server/modules/providers/providerFactory.ts))
@@ -257,9 +238,9 @@ use it. Its connection test resolves without a call.
 **What the app can pull today** ([`connections/tvmazeProvider.ts`](ref:path:server/modules/providers/connections/tvmazeProvider.ts)):
 `lookupByTvdbId(tvdbId)`, which resolves a TVmaze show id from a TheTVDB id.
 
-**Wired into the media-item pipeline?** No. `ruleRegistry.ts`'s `network` rule lists `TVMAZE` as a
-`providers` entry beside Sonarr. TVmaze's show endpoint does return per-show `network` data, so this is
-a buildable gap (an enricher and a show read), not a stale entry like TMDB's.
+**Wired into the media-item pipeline?** No. It declares no facts; the `network` rule reads Sonarr's
+catalog record. TVmaze's show endpoint returns per-show `network` data, but `network` is a catalog fact,
+so reporting it would first need an owner decision on source-versus-reporter precedence.
 
 ## Summary table
 
@@ -272,20 +253,19 @@ reaches them.
 |---|---|---|---|
 | Radarr | MediaSource (movie), MediaActuator | Yes — source fields direct to `ruleRegistry` | Yes |
 | Sonarr | MediaSource (series), MediaActuator | Yes — source fields direct to `ruleRegistry` | Yes |
-| Tautulli | MediaEnricher, MediaActuator | Yes — `tautulliEnricher` | Yes |
-| Plex | MediaEnricher, MediaActuator | Yes — `plexEnricher` + identity stamping | Yes |
-| Jellyfin | MediaEnricher, MediaActuator | Yes — `jellyfinEnricher` | Yes |
-| Seerr | MediaEnricher | Yes — `seerrEnricher` | Yes (the request manager) |
-| TMDB | MediaEnricher | Partially — only `getStatus` wired; the enriched-details and watch-providers surface has no consumer | No |
+| Tautulli | Fact reporter (watch history), MediaActuator | Yes — play count, last watched | Yes |
+| Plex | Fact reporter (media server), MediaActuator | Yes — its facts + identity stamping | Yes |
+| Jellyfin | Fact reporter (media server), MediaActuator | Yes — its facts + identity stamping | Yes |
+| Seerr | Fact reporter (request manager) | Yes — request status, has issue | Yes (the request manager) |
+| TMDB | Fact reporter (metadata) | Partially — only production status; the enriched-details and watch-providers surface has no consumer | No |
 | OMDB | inert | No — no consumer | No |
 | TVMaze | inert | No — `network` data is real and buildable | No |
 
-## Relationship to `MediaFieldProvider`/`MediaFieldSource`
+## Adding a fact a provider already exposes
 
-This catalog is the ground-truth input
-[`docs/architecture/media-field-provider-role.md`](ref:path:docs/architecture/media-field-provider-role.md)'s
-adapters bind to — this doc is where to check which providers actually expose data today (and via which
-connection method) before assuming a new enrichable field is easy to add. In particular: TVMaze's
-`network` data is real and already half-declared in `ruleRegistry.ts` but has no adapter; TMDB's
-enriched-details surface is implemented in its connection class with no consumer, so wiring it into a
-`MediaFieldProvider` is plausible future work, not a rebuild from nothing — the Seerr adapter is the model: a thin shell binding a connection to the role.
+This catalog is where to check which providers actually expose data today (and via which connection
+method) before assuming a new fact is easy to add. A reported fact is a key in `ReportedFacts`, an entry
+in the connection's `facts.reports`, its translation in that connection's `readReportedFacts`, a rule
+that reads it and a seeded `enrichment_field` row. TMDB's enriched-details surface is implemented in its
+connection class with no consumer, so reporting more of it is plausible future work, not a rebuild from
+nothing.

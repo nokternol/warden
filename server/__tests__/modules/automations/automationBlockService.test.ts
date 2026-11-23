@@ -29,7 +29,7 @@ const noData = (id: string): ReadinessFinding => ({
   id,
   kind: 'no-data',
   queryId: 1,
-  ruleKey: 'seerrRequestStatus',
+  ruleKey: 'requestStatus',
   providerIds: [4],
   message: 'm',
   clears: 'c',
